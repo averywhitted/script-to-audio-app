@@ -514,7 +514,7 @@ private struct SceneQueueRow: View {
                 } else if isActive {
                     Text("\(Int(progress * 100))%")
                         .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.accentColor)
+                        .foregroundStyle(.tint)
                 } else if isRendering {
                     Text("Queued")
                         .font(.caption2)
