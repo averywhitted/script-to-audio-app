@@ -66,7 +66,7 @@ def _script_summary(script: script_parser.Script) -> Dict[str, Any]:
 
 
 def _voices_for_engine(engine_id: str) -> List[tts_engines.VoiceInfo]:
-    if engine_id == "openai":
+    if engine_id in {"openai", "openAI"}:
         return tts_engines.OpenAIEngine().list_voices()
     return tts_engines.MacSayEngine().list_voices()
 
@@ -119,6 +119,11 @@ def _generate(payload: Dict[str, Any]) -> int:
         "event": "started",
         "message": f"Rendering {len(scene_numbers or script.scenes)} scene(s) with {engine.name}.",
     })
+    _emit({
+        "event": "log",
+        "level": "info",
+        "message": f"Using {len(voices)} available voice(s). Output: {output_dir}",
+    })
 
     def progress_cb(progress: GenerationProgress) -> None:
         _emit({
@@ -148,7 +153,7 @@ def _generate(payload: Dict[str, Any]) -> int:
         "skippedScenes": result.skipped_scenes,
         "seconds": round(time.time() - t0, 1),
     })
-    return 0
+    return 1 if result.errors else 0
 
 
 def handle(payload: Dict[str, Any]) -> Dict[str, Any]:

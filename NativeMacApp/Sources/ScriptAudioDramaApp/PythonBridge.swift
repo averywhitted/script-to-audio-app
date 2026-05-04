@@ -7,6 +7,12 @@ struct WorkerEnvelope<T: Decodable & Sendable>: Decodable, Sendable {
     var estimate: T?
 }
 
+private struct WorkerFailure: Decodable {
+    var ok: Bool
+    var error: String?
+    var traceback: String?
+}
+
 enum PythonBridgeError: Error, LocalizedError {
     case workerMissing
     case failed(String)
@@ -45,11 +51,13 @@ private final class EventLineParser: @unchecked Sendable {
         guard let lineData = line.data(using: .utf8) else { return }
         if let event = try? JSONDecoder().decode(GenerationEvent.self, from: lineData) {
             Task { @MainActor in onEvent(event) }
-        } else if let envelope = try? JSONDecoder().decode(WorkerEnvelope<ScriptSummary>.self, from: lineData),
-                  envelope.ok == false {
-            workerError = envelope.error
-        }
-    }
+                        } else if let failure = try? JSONDecoder().decode(WorkerFailure.self, from: lineData),
+                                  failure.ok == false {
+                            workerError = [failure.error, failure.traceback]
+                                .compactMap { $0 }
+                                .joined(separator: "\n\n")
+                        }
+                    }
 }
 
 @MainActor
@@ -198,7 +206,8 @@ final class PythonBridge {
                     if process.terminationStatus == 0 {
                         continuation.resume()
                     } else {
-                        continuation.resume(throwing: PythonBridgeError.failed(parser.workerError ?? stderr))
+                        let fallback = stderr.isEmpty ? "Worker exited with code \(process.terminationStatus)." : stderr
+                        continuation.resume(throwing: PythonBridgeError.failed(parser.workerError ?? fallback))
                     }
                 } catch {
                     continuation.resume(throwing: error)

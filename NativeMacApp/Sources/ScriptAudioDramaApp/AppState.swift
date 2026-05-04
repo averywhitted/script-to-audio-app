@@ -198,6 +198,13 @@ final class AppState: ObservableObject {
         status = "Generation canceled."
     }
 
+    func copyGenerationLogToClipboard() {
+        let text = generationLog.map(\.text).joined(separator: "\n")
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        appendLog("Copied output log to clipboard.", .success)
+    }
+
     func setOutputDirectory(_ url: URL) {
         outputDirectory = url
         status = "Output folder set to \(url.lastPathComponent)."
@@ -219,11 +226,17 @@ final class AppState: ObservableObject {
             if let message = event.message, !message.isEmpty {
                 appendLog(message, message.lowercased().contains("error") ? .error : .info)
             }
+        case "log":
+            appendLog(event.message ?? "", style(from: event.level))
         case "done":
             generationProgress = 1
             let count = event.files?.count ?? 0
             let seconds = event.seconds ?? 0
-            appendLog("Done. Wrote \(count) file(s) in \(format(seconds: seconds)).", .success)
+            let hasErrors = !(event.errors ?? []).isEmpty
+            appendLog(
+                "\(hasErrors ? "Finished with errors" : "Done"). Wrote \(count) file(s) in \(format(seconds: seconds)).",
+                hasErrors ? .error : .success
+            )
             if let outputDir = event.outputDir {
                 lastOutputDirectory = URL(fileURLWithPath: outputDir)
             }
@@ -249,5 +262,14 @@ final class AppState: ObservableObject {
         let value = Int(seconds.rounded())
         if value < 60 { return "\(value)s" }
         return "\(value / 60)m \(value % 60)s"
+    }
+
+    private func style(from level: String?) -> LogStyle {
+        switch level {
+        case "success": .success
+        case "warning", "warn": .warning
+        case "error": .error
+        default: .info
+        }
     }
 }

@@ -142,6 +142,7 @@ struct EngineDownloadPrompt: Identifiable {
 
 struct GenerationEvent: Codable, Sendable {
     var event: String
+    var level: String?
     var message: String?
     var sceneIndex: Int?
     var totalScenes: Int?

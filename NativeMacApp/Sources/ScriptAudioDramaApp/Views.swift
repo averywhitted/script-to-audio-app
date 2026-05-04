@@ -217,12 +217,34 @@ struct GenerateView: View {
 
                 SectionPanel("Progress") {
                     VStack(alignment: .leading, spacing: 12) {
-                        ProgressView(value: state.generationProgress)
-                            .progressViewStyle(.linear)
+                        HStack {
+                            if state.isGenerating {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                            ProgressView(value: state.generationProgress)
+                                .progressViewStyle(.linear)
+                            Text("\(Int(state.generationProgress * 100))%")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .frame(width: 42, alignment: .trailing)
+                        }
                         if state.generationLog.isEmpty {
                             Text("No generation log yet.")
                                 .foregroundStyle(.secondary)
                         } else {
+                            HStack {
+                                Text("Output Log")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Button {
+                                    state.copyGenerationLogToClipboard()
+                                } label: {
+                                    Label("Copy Log", systemImage: "doc.on.doc")
+                                }
+                                .disabled(state.generationLog.isEmpty)
+                            }
                             LazyVStack(alignment: .leading, spacing: 6) {
                                 ForEach(state.generationLog) { line in
                                     Text(line.text)
