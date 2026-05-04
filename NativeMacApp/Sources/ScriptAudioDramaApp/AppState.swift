@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import SwiftUI
 
 @MainActor
@@ -22,9 +23,24 @@ final class AppState: ObservableObject {
     @Published var status = "Choose a PDF script to begin."
     @Published var errorMessage: String?
 
+    // Voice assignment
+    @Published var voices: [VoiceSummary] = []
+    @Published var voiceAssignment: [String: String] = [:]   // char name → voice id
+    @Published var isFetchingVoices = false
+
     let bridge = PythonBridge()
 
     var sceneList: [SceneSummary] { script?.scenes ?? [] }
+
+    init() {
+        // Restore OpenAI key from Keychain on launch
+        if let stored = KeychainHelper.read(key: "openai_api_key"), !stored.isEmpty {
+            openAIAPIKey = stored
+            installedEngines.insert(.openAI)
+        }
+    }
+
+    // MARK: - Navigation
 
     func canNavigate(to target: WorkflowStep) -> Bool {
         switch target {
@@ -42,7 +58,12 @@ final class AppState: ObservableObject {
     func goTo(_ target: WorkflowStep) {
         guard canNavigate(to: target) else { return }
         step = target
+        if target == .cast && voices.isEmpty {
+            fetchVoices()
+        }
     }
+
+    // MARK: - Import
 
     func importPDF(_ url: URL) {
         selectedPDF = url
@@ -64,6 +85,33 @@ final class AppState: ObservableObject {
             isWorking = false
         }
     }
+
+    // MARK: - Voice fetching
+
+    func fetchVoices() {
+        guard let pdf = selectedPDF else { return }
+        isFetchingVoices = true
+        let engine = selectedEngine
+        Task {
+            do {
+                let (list, autoAssign) = try await bridge.voices(engine: engine, pdf: pdf)
+                voices = list
+                // Apply auto-assign as defaults, but don't overwrite user overrides
+                for (char, voiceId) in autoAssign {
+                    if voiceAssignment[char] == nil {
+                        voiceAssignment[char] = voiceId
+                    }
+                }
+                status = "\(list.count) voices available for \(engine.title)."
+            } catch {
+                errorMessage = error.localizedDescription
+                status = "Could not load voices."
+            }
+            isFetchingVoices = false
+        }
+    }
+
+    // MARK: - OpenAI estimate
 
     func refreshOpenAIEstimate() {
         guard selectedEngine == .openAI, let pdf = selectedPDF else {
@@ -89,6 +137,8 @@ final class AppState: ObservableObject {
         }
     }
 
+    // MARK: - Scene selection
+
     func toggleScene(_ scene: SceneSummary) {
         if selectedScenes.contains(scene.number) {
             selectedScenes.remove(scene.number)
@@ -108,9 +158,14 @@ final class AppState: ObservableObject {
         refreshOpenAIEstimate()
     }
 
+    // MARK: - Engine selection
+
     func chooseEngine(_ engine: EngineKind) {
         selectedEngine = engine
+        voices = []
+        voiceAssignment = [:]   // Reset assignment — voice IDs differ per engine
         if installedEngines.contains(engine) {
+            fetchVoices()
             refreshOpenAIEstimate()
         } else {
             pendingDownload = EngineDownloadPrompt(engine: engine)
@@ -134,6 +189,7 @@ final class AppState: ObservableObject {
             isDownloadingEngine = false
             isWorking = false
             status = "\(engine.title) is ready."
+            fetchVoices()
             refreshOpenAIEstimate()
         }
     }
@@ -142,14 +198,19 @@ final class AppState: ObservableObject {
         let trimmed = openAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             installedEngines.remove(.openAI)
-            status = "OpenAI API key is empty."
+            KeychainHelper.delete(key: "openai_api_key")
+            status = "OpenAI API key cleared."
             return
         }
         openAIAPIKey = trimmed
         installedEngines.insert(.openAI)
+        KeychainHelper.write(key: "openai_api_key", value: trimmed)
         status = "OpenAI TTS is ready for estimates."
+        fetchVoices()
         refreshOpenAIEstimate()
     }
+
+    // MARK: - Generation
 
     func renderPreviewScene() {
         guard let first = sceneList.first(where: { selectedScenes.contains($0.number) }) else {
@@ -172,8 +233,8 @@ final class AppState: ObservableObject {
             errorMessage = "Select at least one scene to render."
             return
         }
-        guard selectedEngine == .macOS else {
-            errorMessage = "\(selectedEngine.title) generation is not wired yet. Use macOS Voices for this slice."
+        guard installedEngines.contains(selectedEngine) else {
+            errorMessage = "\(selectedEngine.title) is not installed. Go back to Voices to download it."
             return
         }
 
@@ -186,14 +247,19 @@ final class AppState: ObservableObject {
         status = "Rendering \(sceneNumbers.count) scene(s)..."
         appendLog("Starting render to \(out.path)", .info)
 
+        let assignment = voiceAssignment
+        let engine = selectedEngine
+        let apiKey = selectedEngine == .openAI ? openAIAPIKey : nil
+
         Task {
             do {
                 try await bridge.generate(
                     pdf: pdf,
                     outputDirectory: out,
-                    engine: selectedEngine,
+                    engine: engine,
                     sceneNumbers: sceneNumbers,
-                    apiKey: selectedEngine == .openAI ? openAIAPIKey : nil
+                    assignment: assignment,
+                    apiKey: apiKey
                 ) { [weak self] event in
                     self?.handleGenerationEvent(event)
                 }
@@ -229,6 +295,8 @@ final class AppState: ObservableObject {
         outputDirectory = url
         status = "Output folder set to \(url.lastPathComponent)."
     }
+
+    // MARK: - Event handling
 
     func handleGenerationEvent(_ event: GenerationEvent) {
         switch event.event {
@@ -273,6 +341,8 @@ final class AppState: ObservableObject {
         generationLog.append(GenerationLogLine(text: text, style: style))
     }
 
+    // MARK: - Helpers
+
     private func defaultOutputDirectory(for pdf: URL) -> URL {
         pdf.deletingLastPathComponent()
             .appendingPathComponent(pdf.deletingPathExtension().lastPathComponent + " - audio drama")
@@ -291,5 +361,47 @@ final class AppState: ObservableObject {
         case "error": .error
         default: .info
         }
+    }
+}
+
+// MARK: - Keychain helper
+
+enum KeychainHelper {
+    static func write(key: String, value: String) {
+        guard let data = value.data(using: .utf8) else { return }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.scriptaudiodrama",
+            kSecAttrAccount as String: key,
+        ]
+        SecItemDelete(query as CFDictionary)
+        var addQuery = query
+        addQuery[kSecValueData as String] = data
+        SecItemAdd(addQuery as CFDictionary, nil)
+    }
+
+    static func read(key: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.scriptaudiodrama",
+            kSecAttrAccount as String: key,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let string = String(data: data, encoding: .utf8) else { return nil }
+        return string
+    }
+
+    static func delete(key: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.scriptaudiodrama",
+            kSecAttrAccount as String: key,
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 }

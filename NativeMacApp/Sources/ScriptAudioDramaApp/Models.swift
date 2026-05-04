@@ -156,6 +156,25 @@ struct GenerationEvent: Codable, Sendable {
     var seconds: Double?
 }
 
+/// Matches NARRATOR_KEY in voice_assignment.py
+let NARRATOR_KEY = "__NARRATOR__"
+
+struct VoiceSummary: Codable, Equatable, Identifiable, Sendable {
+    var id: String
+    var label: String
+    var gender: String?
+    var locale: String?
+    var note: String?
+    var display: String
+}
+
+struct VoicesResponse: Decodable, Sendable {
+    var ok: Bool
+    var error: String?
+    var voices: [VoiceSummary]?
+    var autoAssign: [String: String]?
+}
+
 struct GenerationLogLine: Identifiable, Equatable {
     let id = UUID()
     var text: String

@@ -24,7 +24,7 @@ if str(ROOT) not in sys.path:
 import parser as script_parser
 import tts_engines
 from audio_pipeline import GenerationProgress, estimate_tts_requests, generate_script
-from voice_assignment import Assignment, auto_assign
+from voice_assignment import Assignment, auto_assign, NARRATOR_KEY
 
 
 def _script_summary(script: script_parser.Script) -> Dict[str, Any]:
@@ -101,6 +101,19 @@ def _engine_for_payload(payload: Dict[str, Any]) -> tts_engines.TTSEngine:
     return tts_engines.MacSayEngine()
 
 
+def _build_assignment(payload: Dict[str, Any], script, voices) -> Assignment:
+    """Build an Assignment from an explicit mapping dict (from the UI) or auto-assign."""
+    voices_by_id = {v.id: v for v in voices}
+    explicit_map = payload.get("assignment")
+    if explicit_map:
+        # Fill in any missing characters with auto-assign so we never have a gap.
+        base = auto_assign(script.characters, voices)
+        merged = dict(base.mapping)
+        merged.update(explicit_map)
+        return Assignment(mapping=merged, voices_by_id=voices_by_id)
+    return auto_assign(script.characters, voices)
+
+
 def _generate(payload: Dict[str, Any]) -> int:
     pdf_path = payload["pdfPath"]
     output_dir = payload["outputDir"]
@@ -108,12 +121,13 @@ def _generate(payload: Dict[str, Any]) -> int:
     engine = _engine_for_payload(payload)
     script = script_parser.parse_pdf(pdf_path)
     voices = _voices_for_engine(payload.get("engine", "macOS"))
-    assignment = auto_assign(script.characters, voices)
 
     if not voices:
         raise RuntimeError(f"No voices are available for {engine.name}.")
     if not engine.is_available():
         raise RuntimeError(f"{engine.name} is not available.")
+
+    assignment = _build_assignment(payload, script, voices)
 
     _emit({
         "event": "started",
@@ -163,20 +177,27 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": True, "script": _script_summary(script_parser.parse_pdf(pdf_path))}
     if command == "voices":
         engine_id = payload.get("engine", "mac")
-        return {
+        pdf_path = payload.get("pdfPath")
+        voices = _voices_for_engine(engine_id)
+        result: Dict[str, Any] = {
             "ok": True,
             "voices": [
                 {
-                    "id": voice.id,
-                    "label": voice.label,
-                    "gender": voice.gender,
-                    "locale": voice.locale,
-                    "note": voice.note,
-                    "display": voice.display,
+                    "id": v.id,
+                    "label": v.label,
+                    "gender": v.gender,
+                    "locale": v.locale,
+                    "note": v.note,
+                    "display": v.display,
                 }
-                for voice in _voices_for_engine(engine_id)
+                for v in voices
             ],
         }
+        if pdf_path:
+            script = script_parser.parse_pdf(pdf_path)
+            assignment = auto_assign(script.characters, voices)
+            result["autoAssign"] = assignment.mapping
+        return result
     if command == "estimateOpenAI":
         return {
             "ok": True,

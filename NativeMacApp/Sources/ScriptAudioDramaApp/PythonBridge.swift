@@ -21,7 +21,7 @@ enum PythonBridgeError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .workerMissing:
-            "Could not find the Python worker."
+            "Could not find the Python worker. Make sure the app is run from the repository root."
         case .failed(let message):
             message
         case .badResponse:
@@ -51,28 +51,63 @@ private final class EventLineParser: @unchecked Sendable {
         guard let lineData = line.data(using: .utf8) else { return }
         if let event = try? JSONDecoder().decode(GenerationEvent.self, from: lineData) {
             Task { @MainActor in onEvent(event) }
-                        } else if let failure = try? JSONDecoder().decode(WorkerFailure.self, from: lineData),
-                                  failure.ok == false {
-                            workerError = [failure.error, failure.traceback]
-                                .compactMap { $0 }
-                                .joined(separator: "\n\n")
-                        }
-                    }
+        } else if let failure = try? JSONDecoder().decode(WorkerFailure.self, from: lineData),
+                  failure.ok == false {
+            workerError = [failure.error, failure.traceback]
+                .compactMap { $0 }
+                .joined(separator: "\n\n")
+        }
+    }
 }
 
 @MainActor
 final class PythonBridge {
-    private let repositoryRoot: URL
-    private var generationProcess: Process?
+    let repositoryRoot: URL
 
     init() {
-        let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        if cwd.lastPathComponent == "NativeMacApp" {
-            repositoryRoot = cwd.deletingLastPathComponent()
-        } else {
-            repositoryRoot = cwd
-        }
+        repositoryRoot = Self.findRepositoryRoot()
     }
+
+    // MARK: - Repository root detection
+
+    /// Walk candidate paths looking for backend/audio_worker.py.
+    /// Works for: swift run (CWD = repo root), Xcode (executable inside .build/),
+    /// and future packaged app (worker bundled in Resources).
+    private static func findRepositoryRoot() -> URL {
+        let fm = FileManager.default
+        let workerRelative = "backend/audio_worker.py"
+
+        // 1. Bundled inside a .app (packaged distribution)
+        if let bundleURL = Bundle.main.url(forResource: "audio_worker", withExtension: "py") {
+            // bundleURL is .../Contents/Resources/audio_worker.py
+            // repo root is two levels up from Resources
+            return bundleURL.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        }
+
+        // 2. Walk up from the executable (covers Xcode .build/debug/... paths)
+        var dir = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL.deletingLastPathComponent()
+        for _ in 0..<10 {
+            if fm.fileExists(atPath: dir.appendingPathComponent(workerRelative).path) {
+                return dir
+            }
+            dir = dir.deletingLastPathComponent()
+        }
+
+        // 3. CWD (covers `swift run` from repo root or NativeMacApp/)
+        let cwd = URL(fileURLWithPath: fm.currentDirectoryPath)
+        if fm.fileExists(atPath: cwd.appendingPathComponent(workerRelative).path) {
+            return cwd
+        }
+        let parent = cwd.deletingLastPathComponent()
+        if fm.fileExists(atPath: parent.appendingPathComponent(workerRelative).path) {
+            return parent
+        }
+
+        // 4. Last resort — return CWD and let the error surface naturally
+        return cwd
+    }
+
+    // MARK: - Public API
 
     func parse(pdf: URL) async throws -> ScriptSummary {
         let response: WorkerEnvelope<ScriptSummary> = try await request([
@@ -81,6 +116,20 @@ final class PythonBridge {
         ])
         guard let script = response.script else { throw PythonBridgeError.badResponse }
         return script
+    }
+
+    func voices(engine: EngineKind, pdf: URL?) async throws -> (voices: [VoiceSummary], autoAssign: [String: String]) {
+        var payload: [String: Any] = ["command": "voices", "engine": engine.id]
+        if let pdf {
+            payload["pdfPath"] = pdf.path
+        }
+        let data = try await rawRequest(payload)
+        let decoder = JSONDecoder()
+        let decoded = try decoder.decode(VoicesResponse.self, from: data)
+        guard decoded.ok else {
+            throw PythonBridgeError.failed(decoded.error ?? "Worker failed.")
+        }
+        return (decoded.voices ?? [], decoded.autoAssign ?? [:])
     }
 
     func estimateOpenAI(pdf: URL, sceneNumbers: [Int]) async throws -> OpenAIEstimate {
@@ -98,6 +147,7 @@ final class PythonBridge {
         outputDirectory: URL,
         engine: EngineKind,
         sceneNumbers: [Int],
+        assignment: [String: String] = [:],
         apiKey: String? = nil,
         onEvent: @escaping @MainActor (GenerationEvent) -> Void
     ) async throws {
@@ -108,6 +158,9 @@ final class PythonBridge {
             "engine": engine.id,
             "sceneNumbers": sceneNumbers,
         ]
+        if !assignment.isEmpty {
+            payload["assignment"] = assignment
+        }
         if let apiKey, !apiKey.isEmpty {
             payload["apiKey"] = apiKey
         }
@@ -119,20 +172,36 @@ final class PythonBridge {
         generationProcess = nil
     }
 
-    private func request<T: Decodable & Sendable>(_ payload: [String: Any]) async throws -> WorkerEnvelope<T> {
+    // MARK: - Process management
+
+    private var generationProcess: Process?
+
+    // MARK: - Private helpers
+
+    private func python(root: URL) -> String {
+        let venvPython = root.appendingPathComponent(".venv/bin/python")
+        return FileManager.default.fileExists(atPath: venvPython.path) ? venvPython.path : "python3"
+    }
+
+    private func workerURL() throws -> URL {
         let worker = repositoryRoot.appendingPathComponent("backend/audio_worker.py")
         guard FileManager.default.fileExists(atPath: worker.path) else {
             throw PythonBridgeError.workerMissing
         }
+        return worker
+    }
+
+    /// Run the worker synchronously, return stdout as Data.
+    private func rawRequest(_ payload: [String: Any]) async throws -> Data {
+        let worker = try workerURL()
         let root = repositoryRoot
+        let py = python(root: root)
         let requestData = try JSONSerialization.data(withJSONObject: payload)
 
         return try await Task.detached {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            let venvPython = root.appendingPathComponent(".venv/bin/python")
-            let python = FileManager.default.fileExists(atPath: venvPython.path) ? venvPython.path : "python3"
-            process.arguments = [python, worker.path]
+            process.arguments = [py, worker.path]
             process.currentDirectoryURL = root
 
             let input = Pipe()
@@ -148,31 +217,33 @@ final class PythonBridge {
 
             let response = output.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
-
-            let decoded = try JSONDecoder().decode(WorkerEnvelope<T>.self, from: response)
-            if decoded.ok { return decoded }
-            throw PythonBridgeError.failed(decoded.error ?? "Python worker failed.")
+            return response
         }.value
     }
 
+    /// Decode a WorkerEnvelope<T> from rawRequest.
+    private func request<T: Decodable & Sendable>(_ payload: [String: Any]) async throws -> WorkerEnvelope<T> {
+        let data = try await rawRequest(payload)
+        let decoded = try JSONDecoder().decode(WorkerEnvelope<T>.self, from: data)
+        if decoded.ok { return decoded }
+        throw PythonBridgeError.failed(decoded.error ?? "Python worker failed.")
+    }
+
+    /// Run the worker and stream JSON events line by line via onEvent.
     private func streamRequest(
         _ payload: [String: Any],
         onEvent: @escaping @MainActor (GenerationEvent) -> Void
     ) async throws {
-        let worker = repositoryRoot.appendingPathComponent("backend/audio_worker.py")
-        guard FileManager.default.fileExists(atPath: worker.path) else {
-            throw PythonBridgeError.workerMissing
-        }
+        let worker = try workerURL()
         let root = repositoryRoot
+        let py = python(root: root)
         let requestData = try JSONSerialization.data(withJSONObject: payload)
 
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-                let venvPython = root.appendingPathComponent(".venv/bin/python")
-                let python = FileManager.default.fileExists(atPath: venvPython.path) ? venvPython.path : "python3"
-                process.arguments = [python, worker.path]
+                process.arguments = [py, worker.path]
                 process.currentDirectoryURL = root
 
                 let input = Pipe()

@@ -244,7 +244,7 @@ def _link_btn(parent, text, command, fg=ACCENT, bg=BG0, font=None):
 
 
 def _bind_mousewheel(canvas: tk.Canvas) -> None:
-    """Make scrollable canvas content respond when the pointer is over it."""
+    """Activate canvas scroll when the pointer enters it or any child widget."""
     def _scroll(event):
         if platform.system() == "Darwin":
             delta = -1 * int(event.delta)
@@ -252,8 +252,32 @@ def _bind_mousewheel(canvas: tk.Canvas) -> None:
             delta = -1 * int(event.delta / 120)
         canvas.yview_scroll(delta, "units")
 
-    canvas.bind("<Enter>", lambda _e: canvas.bind_all("<MouseWheel>", _scroll))
-    canvas.bind("<Leave>", lambda _e: canvas.unbind_all("<MouseWheel>"))
+    def _enter(_e):
+        canvas.bind_all("<MouseWheel>", _scroll)
+
+    def _leave(_e):
+        canvas.unbind_all("<MouseWheel>")
+
+    canvas.bind("<Enter>", _enter)
+    canvas.bind("<Leave>", _leave)
+
+
+def _bind_mousewheel_tree(canvas: tk.Canvas, widget: tk.Widget) -> None:
+    """Recursively bind mousewheel on *widget* and all its descendants so
+    that scrolling works when the pointer is over any scene-card child."""
+    def _scroll(event):
+        if platform.system() == "Darwin":
+            delta = -1 * int(event.delta)
+        else:
+            delta = -1 * int(event.delta / 120)
+        canvas.yview_scroll(delta, "units")
+
+    def _attach(w: tk.Widget) -> None:
+        w.bind("<MouseWheel>", _scroll, add="+")
+        for child in w.winfo_children():
+            _attach(child)
+
+    _attach(widget)
 
 
 class CanvasProgress(tk.Canvas):
@@ -269,11 +293,19 @@ class CanvasProgress(tk.Canvas):
         self._height = height
         self._value = 0.0
         self._fill = self.create_rectangle(0, 0, 0, height, fill=ACCENT, outline="")
-        self.bind("<Configure>", lambda _e: self.set(self._value))
+        self.bind("<Configure>", lambda _e: self._redraw())
 
     def set(self, value: float) -> None:
         self._value = max(0.0, min(1.0, value))
-        width = max(1, self.winfo_width())
+        # Skip drawing until the widget has been laid out (winfo_width returns >1).
+        # The <Configure> binding will call _redraw() once layout is complete.
+        if self.winfo_width() > 1:
+            self._redraw()
+
+    def _redraw(self) -> None:
+        width = self.winfo_width()
+        if width <= 1:
+            return
         self.coords(self._fill, 0, 0, int(width * self._value), self._height)
 
 
@@ -943,6 +975,10 @@ class GenerateScreen(tk.Frame):
         self._scene_order: List[int] = []
         self._completed_scenes: set[int] = set()
         self._selected_total = len(script.scenes)
+        # Throttle: last fraction that was *displayed* per scene, so we skip
+        # redraws when the change is smaller than _CARD_THROTTLE (unless it's
+        # a state transition like 0→active or active→done).
+        self._last_displayed_pct: Dict[int, float] = {}
         self._build()
 
     def _build(self):
@@ -1072,6 +1108,7 @@ class GenerateScreen(tk.Frame):
         scene_scroll.columnconfigure(0, weight=1)
 
         sc_canvas = tk.Canvas(scene_scroll, bg=BG1, highlightthickness=0)
+        self._sc_canvas = sc_canvas  # stored so _build_scene_list can reach it
         _bind_mousewheel(sc_canvas)
         sc_vsb = ttk.Scrollbar(scene_scroll, orient="vertical",
                                command=sc_canvas.yview)
@@ -1082,12 +1119,12 @@ class GenerateScreen(tk.Frame):
         self.scene_body = tk.Frame(sc_canvas, bg=BG1)
         sc_win = sc_canvas.create_window((0, 0), window=self.scene_body, anchor="nw")
 
-        def _sc_resize(e):
-            sc_canvas.configure(scrollregion=sc_canvas.bbox("all"))
-        self.scene_body.bind("<Configure>", _sc_resize)
-
+        # Only update scrollregion when the *canvas* itself is resized (e.g. window
+        # resize), not on every child widget configure — which was resetting the
+        # scroll position on every progress tick.
         def _sc_canvas_resize(e):
             sc_canvas.itemconfigure(sc_win, width=e.width)
+            sc_canvas.configure(scrollregion=sc_canvas.bbox("all"))
         sc_canvas.bind("<Configure>", _sc_canvas_resize)
 
         self._build_scene_list()
@@ -1157,7 +1194,18 @@ class GenerateScreen(tk.Frame):
                 "progress": prog,
             }
             self._update_scene_card(sc.number)
+
+        # Bind mousewheel on all card children so scrolling works when the
+        # pointer is over a label, checkbox, or progress bar — not just the canvas.
+        if hasattr(self, "_sc_canvas"):
+            _bind_mousewheel_tree(self._sc_canvas, self.scene_body)
+            # Compute initial scrollregion after layout settles.
+            self._sc_canvas.after(80, lambda: self._sc_canvas.configure(
+                scrollregion=self._sc_canvas.bbox("all")))
+
         self._update_selection_count()
+
+    _CARD_THROTTLE = 0.015  # skip redraws when change < 1.5% (unless state flips)
 
     def _update_scene_card(self, scene_number: int):
         widgets = self._scene_frames.get(scene_number)
@@ -1168,14 +1216,32 @@ class GenerateScreen(tk.Frame):
         active = 0 < pct < 1.0
         var = self._scene_vars.get(scene_number)
         selected = True if var is None else var.get()
+
+        # Determine new visual state key so we can detect transitions.
         if done:
             icon_bg, icon_fg, icon_char, status = GREEN, "#fff", "✓", "Done"
+            state_key = "done"
         elif active:
             icon_bg, icon_fg, icon_char, status = ACCENT, "#fff", "●", f"{int(pct*100)}%"
+            state_key = "active"
         elif selected:
             icon_bg, icon_fg, icon_char, status = BG3, TEXT3, "○", "Queued"
+            state_key = "queued"
         else:
             icon_bg, icon_fg, icon_char, status = BG2, TEXT3, "–", "Skipped"
+            state_key = "skipped"
+
+        # Throttle: skip if change is tiny and we're staying in the same state.
+        last = self._last_displayed_pct.get(scene_number)
+        last_state = getattr(self, f"_last_state_{scene_number}", None)
+        if (last is not None
+                and abs(pct - last) < self._CARD_THROTTLE
+                and state_key == last_state):
+            return
+
+        self._last_displayed_pct[scene_number] = pct
+        setattr(self, f"_last_state_{scene_number}", state_key)
+
         widgets["icon"].configure(text=icon_char, fg=icon_fg, bg=icon_bg)
         widgets["status_lbl"].configure(text=status)
         widgets["progress"].set(pct)

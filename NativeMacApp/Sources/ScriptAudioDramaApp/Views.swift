@@ -76,13 +76,6 @@ struct ReviewView: View {
 struct CastView: View {
     @EnvironmentObject private var state: AppState
 
-    private let library = [
-        VoiceLibraryItem(id: .macOS, installed: true, size: "Included", note: "Best default for reliability."),
-        VoiceLibraryItem(id: .kokoro, installed: false, size: "~100-300 MB", note: "Recommended local neural add-on."),
-        VoiceLibraryItem(id: .piper, installed: false, size: "~50-150 MB/voice", note: "Fast lightweight offline fallback."),
-        VoiceLibraryItem(id: .openAI, installed: true, size: "Cloud", note: "Requires API key and preflight estimate."),
-    ]
-
     var body: some View {
         StepPageFooter(
             leading: state.installedEngines.contains(state.selectedEngine) ? "\(state.selectedEngine.title) ready" : "\(state.selectedEngine.title) needs download",
@@ -93,6 +86,7 @@ struct CastView: View {
         ) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+
                     SectionPanel("Voice Engine") {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 14)], spacing: 14) {
                             ForEach(EngineKind.allCases) { engine in
@@ -101,56 +95,187 @@ struct CastView: View {
                                     selected: state.selectedEngine == engine,
                                     installed: state.installedEngines.contains(engine)
                                 )
-                                    .onTapGesture {
-                                        state.chooseEngine(engine)
-                                    }
+                                .onTapGesture { state.chooseEngine(engine) }
                             }
                         }
                     }
 
-                SectionPanel("Voice Library") {
-                    VStack(spacing: 10) {
-                        ForEach(library) { item in
-                                HStack(spacing: 12) {
-                                    Image(systemName: item.id.symbol)
-                                        .frame(width: 28)
-                                        .foregroundStyle(.tint)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(item.id.title).font(.headline)
-                                        Text(item.note).font(.caption).foregroundStyle(.secondary)
-                                    }
+                    if state.selectedEngine == .openAI {
+                        SectionPanel("OpenAI Setup") {
+                            VStack(alignment: .leading, spacing: 10) {
+                                SecureField("API key", text: $state.openAIAPIKey)
+                                    .textFieldStyle(.roundedBorder)
+                                HStack {
+                                    Text("Key is saved securely in Keychain and restored on next launch.")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
                                     Spacer()
-                                    Text(item.size).font(.caption).foregroundStyle(.secondary)
-                                    Button(item.installed ? "Ready" : "Download") {
-                                        state.chooseEngine(item.id)
-                                    }
-                                        .disabled(item.installed)
+                                    Button("Save Key") { state.saveOpenAIAPIKey() }
+                                        .buttonStyle(.borderedProminent)
                                 }
-                                .padding(12)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+                            }
+                        }
+                    }
+
+                    VoiceAssignmentSection()
+
+                }
+                .padding(24)
+            }
+        }
+    }
+}
+
+private struct VoiceAssignmentSection: View {
+    @EnvironmentObject private var state: AppState
+
+    var body: some View {
+        SectionPanel("Voice Assignment") {
+            if state.isFetchingVoices {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("Loading voices…").foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 8)
+            } else if state.voices.isEmpty {
+                Text("Select and install a voice engine above to assign voices.")
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
+            } else {
+                VStack(spacing: 0) {
+                    // Narrator always first
+                    CharacterVoiceRow(
+                        name: "Narrator",
+                        genderHint: nil,
+                        characterKey: NARRATOR_KEY,
+                        voices: state.voices,
+                        assignment: $state.voiceAssignment
+                    )
+                    if let script = state.script {
+                        ForEach(script.characters) { character in
+                            Divider().padding(.leading, 36)
+                            CharacterVoiceRow(
+                                name: character.name,
+                                genderHint: character.genderHint,
+                                characterKey: character.name,
+                                voices: state.voices,
+                                assignment: $state.voiceAssignment
+                            )
                         }
                     }
                 }
-                if state.selectedEngine == .openAI {
-                    SectionPanel("OpenAI Setup") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            SecureField("API key", text: $state.openAIAPIKey)
-                                .textFieldStyle(.roundedBorder)
-                            HStack {
-                                Text("The key stays in this app session for now. A later pass should store it in Keychain.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Button("Save Key") {
-                                    state.saveOpenAIAPIKey()
+            }
+        }
+    }
+}
+
+private struct CharacterVoiceRow: View {
+    var name: String
+    var genderHint: String?
+    var characterKey: String
+    var voices: [VoiceSummary]
+    @Binding var assignment: [String: String]
+
+    private var selectedVoiceId: String { assignment[characterKey] ?? "" }
+
+    private var selectedVoice: VoiceSummary? {
+        voices.first { $0.id == selectedVoiceId }
+    }
+
+    private var maleVoices:   [VoiceSummary] { voices.filter { $0.gender == "M" } }
+    private var femaleVoices: [VoiceSummary] { voices.filter { $0.gender == "F" } }
+    private var otherVoices:  [VoiceSummary] { voices.filter { $0.gender != "M" && $0.gender != "F" } }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Gender indicator dot
+            Circle()
+                .fill(genderColor)
+                .frame(width: 9, height: 9)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name).font(.headline)
+                if let hint = genderHint {
+                    Text(hint == "M" ? "Male" : hint == "F" ? "Female" : "Unknown")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            // Voice picker menu
+            Menu {
+                if !maleVoices.isEmpty {
+                    Section("Male") {
+                        ForEach(maleVoices) { voice in
+                            Button {
+                                assignment[characterKey] = voice.id
+                            } label: {
+                                if voice.id == selectedVoiceId {
+                                    Label(voice.display, systemImage: "checkmark")
+                                } else {
+                                    Text(voice.display)
                                 }
                             }
                         }
                     }
                 }
+                if !femaleVoices.isEmpty {
+                    Section("Female") {
+                        ForEach(femaleVoices) { voice in
+                            Button {
+                                assignment[characterKey] = voice.id
+                            } label: {
+                                if voice.id == selectedVoiceId {
+                                    Label(voice.display, systemImage: "checkmark")
+                                } else {
+                                    Text(voice.display)
+                                }
+                            }
+                        }
+                    }
+                }
+                if !otherVoices.isEmpty {
+                    Section("Other") {
+                        ForEach(otherVoices) { voice in
+                            Button {
+                                assignment[characterKey] = voice.id
+                            } label: {
+                                if voice.id == selectedVoiceId {
+                                    Label(voice.display, systemImage: "checkmark")
+                                } else {
+                                    Text(voice.display)
+                                }
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(selectedVoice?.label ?? "Choose voice")
+                        .font(.callout)
+                        .foregroundStyle(selectedVoice == nil ? .secondary : .primary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 7))
             }
-            .padding(24)
+            .menuStyle(.borderlessButton)
+            .fixedSize()
         }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 2)
+    }
+
+    private var genderColor: Color {
+        switch genderHint {
+        case "M": return .blue
+        case "F": return .pink
+        default:  return .secondary
         }
     }
 }
