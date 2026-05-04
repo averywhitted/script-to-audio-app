@@ -7,9 +7,10 @@ final class AppState: ObservableObject {
     @Published var selectedPDF: URL?
     @Published var script: ScriptSummary?
     @Published var selectedEngine: EngineKind = .macOS
-    @Published var installedEngines: Set<EngineKind> = [.macOS, .openAI]
+    @Published var installedEngines: Set<EngineKind> = [.macOS]
     @Published var pendingDownload: EngineDownloadPrompt?
     @Published var isDownloadingEngine = false
+    @Published var openAIAPIKey = ""
     @Published var selectedScenes: Set<Int> = []
     @Published var openAIEstimate: OpenAIEstimate?
     @Published var isWorking = false
@@ -118,6 +119,11 @@ final class AppState: ObservableObject {
 
     func downloadPendingEngine() {
         guard let engine = pendingDownload?.engine else { return }
+        if engine == .openAI {
+            pendingDownload = nil
+            status = "Enter an OpenAI API key to use OpenAI TTS."
+            return
+        }
         pendingDownload = nil
         isDownloadingEngine = true
         isWorking = true
@@ -130,6 +136,19 @@ final class AppState: ObservableObject {
             status = "\(engine.title) is ready."
             refreshOpenAIEstimate()
         }
+    }
+
+    func saveOpenAIAPIKey() {
+        let trimmed = openAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            installedEngines.remove(.openAI)
+            status = "OpenAI API key is empty."
+            return
+        }
+        openAIAPIKey = trimmed
+        installedEngines.insert(.openAI)
+        status = "OpenAI TTS is ready for estimates."
+        refreshOpenAIEstimate()
     }
 
     func renderPreviewScene() {
@@ -173,7 +192,8 @@ final class AppState: ObservableObject {
                     pdf: pdf,
                     outputDirectory: out,
                     engine: selectedEngine,
-                    sceneNumbers: sceneNumbers
+                    sceneNumbers: sceneNumbers,
+                    apiKey: selectedEngine == .openAI ? openAIAPIKey : nil
                 ) { [weak self] event in
                     self?.handleGenerationEvent(event)
                 }

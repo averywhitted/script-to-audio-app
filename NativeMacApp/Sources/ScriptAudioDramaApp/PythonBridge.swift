@@ -98,15 +98,19 @@ final class PythonBridge {
         outputDirectory: URL,
         engine: EngineKind,
         sceneNumbers: [Int],
+        apiKey: String? = nil,
         onEvent: @escaping @MainActor (GenerationEvent) -> Void
     ) async throws {
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "command": "generate",
             "pdfPath": pdf.path,
             "outputDir": outputDirectory.path,
             "engine": engine.id,
             "sceneNumbers": sceneNumbers,
         ]
+        if let apiKey, !apiKey.isEmpty {
+            payload["apiKey"] = apiKey
+        }
         try await streamRequest(payload, onEvent: onEvent)
     }
 

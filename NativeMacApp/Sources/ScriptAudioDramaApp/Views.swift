@@ -37,37 +37,35 @@ struct ReviewView: View {
 
     var body: some View {
         if let script = state.script {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    MetricRow(script: script)
-                    SectionPanel("Scenes") {
-                        HStack {
-                            Text("Select the scenes to include, then expand any scene to inspect parsed lines.")
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Button("Select All") { state.selectAllScenes() }
-                            Button("Select None") { state.clearSceneSelection() }
-                        }
-                        LazyVStack(spacing: 8) {
-                            ForEach(script.scenes) { scene in
-                                ExpandableSceneRow(scene: scene, isSelected: state.selectedScenes.contains(scene.number), engine: state.selectedEngine) {
-                                    state.toggleScene(scene)
+            StepPageFooter(
+                leading: "\(state.selectedScenes.count) of \(script.sceneCount) scenes selected",
+                primaryTitle: "Continue to Voices",
+                primarySystemImage: "arrow.right.circle",
+                primaryDisabled: state.selectedScenes.isEmpty,
+                primaryAction: { state.goTo(.cast) }
+            ) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        MetricRow(script: script)
+                        SectionPanel("Scenes") {
+                            HStack {
+                                Text("Select the scenes to include, then expand any scene to inspect parsed lines.")
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Button("Select All") { state.selectAllScenes() }
+                                Button("Select None") { state.clearSceneSelection() }
+                            }
+                            LazyVStack(spacing: 8) {
+                                ForEach(script.scenes) { scene in
+                                    ExpandableSceneRow(scene: scene, isSelected: state.selectedScenes.contains(scene.number), engine: state.selectedEngine) {
+                                        state.toggleScene(scene)
+                                    }
                                 }
                             }
                         }
                     }
-                    HStack {
-                        Spacer()
-                        Button {
-                            state.goTo(.cast)
-                        } label: {
-                            Label("Continue to Voices", systemImage: "arrow.right.circle")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(state.selectedScenes.isEmpty)
-                    }
+                    .padding(24)
                 }
-                .padding(24)
             }
         } else {
             EmptyState(title: "No script loaded", message: "Open a PDF to review parsed scenes and characters.")
@@ -86,58 +84,73 @@ struct CastView: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                SectionPanel("Voice Engine") {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 14)], spacing: 14) {
-                        ForEach(EngineKind.allCases) { engine in
-                            EngineCard(
-                                engine: engine,
-                                selected: state.selectedEngine == engine,
-                                installed: state.installedEngines.contains(engine)
-                            )
-                                .onTapGesture {
-                                    state.chooseEngine(engine)
-                                }
+        StepPageFooter(
+            leading: state.installedEngines.contains(state.selectedEngine) ? "\(state.selectedEngine.title) ready" : "\(state.selectedEngine.title) needs download",
+            primaryTitle: "Continue to Generate",
+            primarySystemImage: "arrow.right.circle",
+            primaryDisabled: !state.installedEngines.contains(state.selectedEngine),
+            primaryAction: { state.goTo(.generate) }
+        ) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    SectionPanel("Voice Engine") {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 14)], spacing: 14) {
+                            ForEach(EngineKind.allCases) { engine in
+                                EngineCard(
+                                    engine: engine,
+                                    selected: state.selectedEngine == engine,
+                                    installed: state.installedEngines.contains(engine)
+                                )
+                                    .onTapGesture {
+                                        state.chooseEngine(engine)
+                                    }
+                            }
                         }
                     }
-                }
 
                 SectionPanel("Voice Library") {
                     VStack(spacing: 10) {
                         ForEach(library) { item in
-                            HStack(spacing: 12) {
-                                Image(systemName: item.id.symbol)
-                                    .frame(width: 28)
-                                    .foregroundStyle(.tint)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(item.id.title).font(.headline)
-                                    Text(item.note).font(.caption).foregroundStyle(.secondary)
+                                HStack(spacing: 12) {
+                                    Image(systemName: item.id.symbol)
+                                        .frame(width: 28)
+                                        .foregroundStyle(.tint)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.id.title).font(.headline)
+                                        Text(item.note).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Text(item.size).font(.caption).foregroundStyle(.secondary)
+                                    Button(item.installed ? "Ready" : "Download") {
+                                        state.chooseEngine(item.id)
+                                    }
+                                        .disabled(item.installed)
                                 }
-                                Spacer()
-                                Text(item.size).font(.caption).foregroundStyle(.secondary)
-                                Button(item.installed ? "Ready" : "Download") {
-                                    state.chooseEngine(item.id)
-                                }
-                                    .disabled(item.installed)
-                            }
-                            .padding(12)
+                                .padding(12)
                             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
                         }
                     }
                 }
-                HStack {
-                    Spacer()
-                    Button {
-                        state.goTo(.generate)
-                    } label: {
-                        Label("Continue to Generate", systemImage: "arrow.right.circle")
+                if state.selectedEngine == .openAI {
+                    SectionPanel("OpenAI Setup") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            SecureField("API key", text: $state.openAIAPIKey)
+                                .textFieldStyle(.roundedBorder)
+                            HStack {
+                                Text("The key stays in this app session for now. A later pass should store it in Keychain.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Button("Save Key") {
+                                    state.saveOpenAIAPIKey()
+                                }
+                            }
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!state.installedEngines.contains(state.selectedEngine))
                 }
             }
             .padding(24)
+        }
         }
     }
 }
@@ -147,34 +160,34 @@ struct GenerateView: View {
     @State private var choosingOutput = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                SectionPanel("Preflight") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Label("\(state.selectedScenes.count) scenes selected", systemImage: "checklist")
-                            Spacer()
-                            Button("Refresh Estimate") {
-                                state.refreshOpenAIEstimate()
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    SectionPanel("Preflight") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Label("\(state.selectedScenes.count) scenes selected", systemImage: "checklist")
+                                Spacer()
+                                Button("Refresh Estimate") {
+                                    state.refreshOpenAIEstimate()
+                                }
+                            }
+                            if state.selectedEngine == .openAI, let estimate = state.openAIEstimate {
+                                OpenAIEstimatePanel(estimate: estimate)
+                            } else if state.selectedEngine == .openAI {
+                                Text("OpenAI needs an estimate before generation so users can see expected requests, minimum time, and quota risk.")
+                                    .foregroundStyle(.secondary)
+                            } else if !state.installedEngines.contains(state.selectedEngine) {
+                                Text("Download \(state.selectedEngine.title) from the Voice screen before generating.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Local/macOS engines do not use cloud request quota. Generation can still take time, but it should be predictable and private.")
+                                    .foregroundStyle(.secondary)
                             }
                         }
-                        if state.selectedEngine == .openAI, let estimate = state.openAIEstimate {
-                            OpenAIEstimatePanel(estimate: estimate)
-                        } else if state.selectedEngine == .openAI {
-                            Text("OpenAI needs an estimate before generation so users can see expected requests, minimum time, and quota risk.")
-                                .foregroundStyle(.secondary)
-                        } else if !state.installedEngines.contains(state.selectedEngine) {
-                            Text("Download \(state.selectedEngine.title) from the Voice screen before generating.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            Text("Local/macOS engines do not use cloud request quota. Generation can still take time, but it should be predictable and private.")
-                                .foregroundStyle(.secondary)
-                        }
                     }
-                }
 
-                SectionPanel("Run Controls") {
-                    VStack(alignment: .leading, spacing: 12) {
+                    SectionPanel("Output") {
                         HStack {
                             Label(outputFolderLabel, systemImage: "folder")
                                 .foregroundStyle(.secondary)
@@ -183,83 +196,56 @@ struct GenerateView: View {
                                 choosingOutput = true
                             }
                         }
-                        HStack {
-                            Button {
-                                state.renderPreviewScene()
-                            } label: {
-                                Label("Render Preview Scene", systemImage: "play.circle")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(state.isGenerating || state.selectedScenes.isEmpty || !state.installedEngines.contains(state.selectedEngine))
-                            Button {
-                                state.renderSelectedScenes()
-                            } label: {
-                                Label("Render Selected Scenes", systemImage: "waveform.badge.play")
-                            }
-                            .disabled(state.isGenerating || state.selectedScenes.isEmpty || !state.installedEngines.contains(state.selectedEngine))
-                            Button(role: .cancel) {
-                                state.cancelGeneration()
-                            } label: {
-                                Label("Cancel", systemImage: "xmark.circle")
-                            }
-                            .disabled(!state.isGenerating)
-                            if let output = state.lastOutputDirectory {
-                                Button {
-                                    NSWorkspace.shared.open(output)
-                                } label: {
-                                    Label("Open Output", systemImage: "folder.badge.gearshape")
-                                }
-                            }
-                            Spacer()
-                        }
                     }
-                }
 
-                SectionPanel("Progress") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            if state.isGenerating {
-                                ProgressView()
-                                    .controlSize(.small)
-                            }
-                            ProgressView(value: state.generationProgress)
-                                .progressViewStyle(.linear)
-                            Text("\(Int(state.generationProgress * 100))%")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                                .frame(width: 42, alignment: .trailing)
-                        }
-                        if state.generationLog.isEmpty {
-                            Text("No generation log yet.")
-                                .foregroundStyle(.secondary)
-                        } else {
+                    SectionPanel("Progress") {
+                        VStack(alignment: .leading, spacing: 12) {
                             HStack {
-                                Text("Output Log")
-                                    .font(.caption.weight(.semibold))
+                                if state.isGenerating {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                }
+                                ProgressView(value: state.generationProgress)
+                                    .progressViewStyle(.linear)
+                                Text("\(Int(state.generationProgress * 100))%")
+                                    .font(.caption.monospacedDigit())
                                     .foregroundStyle(.secondary)
-                                Spacer()
-                                Button {
-                                    state.copyGenerationLogToClipboard()
-                                } label: {
-                                    Label("Copy Log", systemImage: "doc.on.doc")
-                                }
-                                .disabled(state.generationLog.isEmpty)
+                                    .frame(width: 42, alignment: .trailing)
                             }
-                            LazyVStack(alignment: .leading, spacing: 6) {
-                                ForEach(state.generationLog) { line in
-                                    Text(line.text)
-                                        .font(.system(.caption, design: .monospaced))
-                                        .foregroundStyle(color(for: line.style))
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                            if state.generationLog.isEmpty {
+                                Text("No generation log yet.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                HStack {
+                                    Text("Output Log")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Button {
+                                        state.copyGenerationLogToClipboard()
+                                    } label: {
+                                        Label("Copy Log", systemImage: "doc.on.doc")
+                                    }
+                                    .disabled(state.generationLog.isEmpty)
                                 }
+                                LazyVStack(alignment: .leading, spacing: 6) {
+                                    ForEach(state.generationLog) { line in
+                                        Text(line.text)
+                                            .font(.system(.caption, design: .monospaced))
+                                            .foregroundStyle(color(for: line.style))
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                }
+                                .padding(12)
+                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
                             }
-                            .padding(12)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
                         }
                     }
                 }
+                .padding(24)
             }
-            .padding(24)
+            Divider()
+            GenerateFooter(choosingOutput: $choosingOutput)
         }
         .fileImporter(
             isPresented: $choosingOutput,
@@ -289,6 +275,55 @@ struct GenerateView: View {
     }
 }
 
+private struct GenerateFooter: View {
+    @EnvironmentObject private var state: AppState
+    @Binding var choosingOutput: Bool
+
+    var body: some View {
+        HStack {
+            Text("\(state.selectedScenes.count) scenes selected")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button {
+                state.renderPreviewScene()
+            } label: {
+                Label("Render Preview Scene", systemImage: "play.circle")
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(actionsDisabled)
+            Button {
+                state.renderSelectedScenes()
+            } label: {
+                Label("Render Selected Scenes", systemImage: "waveform.badge.play")
+            }
+            .disabled(actionsDisabled)
+            Button(role: .cancel) {
+                state.cancelGeneration()
+            } label: {
+                Label("Cancel", systemImage: "xmark.circle")
+            }
+            .disabled(!state.isGenerating)
+            if let output = state.lastOutputDirectory {
+                Button {
+                    NSWorkspace.shared.open(output)
+                } label: {
+                    Label("Open Output", systemImage: "folder.badge.gearshape")
+                }
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 12)
+        .background(.bar)
+    }
+
+    private var actionsDisabled: Bool {
+        state.isGenerating
+            || state.selectedScenes.isEmpty
+            || !state.installedEngines.contains(state.selectedEngine)
+    }
+}
+
 private struct MetricRow: View {
     var script: ScriptSummary
 
@@ -297,6 +332,37 @@ private struct MetricRow: View {
             MetricCard(value: script.sceneCount, label: "Scenes")
             MetricCard(value: script.characterCount, label: "Characters")
             MetricCard(value: script.lineCount, label: "Lines")
+        }
+    }
+}
+
+private struct StepPageFooter<Content: View>: View {
+    var leading: String
+    var primaryTitle: String
+    var primarySystemImage: String
+    var primaryDisabled: Bool
+    var primaryAction: () -> Void
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Divider()
+            HStack {
+                Text(leading)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(action: primaryAction) {
+                    Label(primaryTitle, systemImage: primarySystemImage)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(primaryDisabled)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(.bar)
         }
     }
 }
