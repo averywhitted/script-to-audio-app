@@ -496,20 +496,8 @@ private struct SceneQueueRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
-                // Status icon
-                Group {
-                    if isDone {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    } else if isActive {
-                        Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90.circle.fill")
-                            .foregroundStyle(.accentColor)
-                            .symbolEffect(.rotate, isActive: true)
-                    } else {
-                        Image(systemName: "circle").foregroundStyle(.secondary.opacity(0.5))
-                    }
-                }
-                .font(.caption)
-                .frame(width: 16)
+                statusIcon
+                    .frame(width: 16, height: 16)
 
                 Text(scene.title)
                     .font(.callout)
@@ -530,7 +518,7 @@ private struct SceneQueueRow: View {
                 } else if isRendering {
                     Text("Queued")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tertiary)
                 }
             }
             // Progress bar (active scenes only)
@@ -543,6 +531,22 @@ private struct SceneQueueRow: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(isActive ? Color.accentColor.opacity(0.06) : Color.clear)
+    }
+
+    @ViewBuilder
+    private var statusIcon: some View {
+        if isDone {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+        } else if isActive {
+            ProgressView()
+                .controlSize(.mini)
+        } else {
+            Image(systemName: "circle")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
     }
 }
 
