@@ -144,6 +144,7 @@ struct CastView: View {
 
 struct GenerateView: View {
     @EnvironmentObject private var state: AppState
+    @State private var choosingOutput = false
 
     var body: some View {
         ScrollView {
@@ -173,26 +174,44 @@ struct GenerateView: View {
                 }
 
                 SectionPanel("Run Controls") {
-                    HStack {
-                        Button {
-                            state.renderPreviewScene()
-                        } label: {
-                            Label("Render Preview Scene", systemImage: "play.circle")
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Label(outputFolderLabel, systemImage: "folder")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button("Choose Output Folder") {
+                                choosingOutput = true
+                            }
                         }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(state.isGenerating || state.selectedScenes.isEmpty || !state.installedEngines.contains(state.selectedEngine))
-                        Button {
-                            state.renderSelectedScenes()
-                        } label: {
-                            Label("Render Selected Scenes", systemImage: "waveform.badge.play")
+                        HStack {
+                            Button {
+                                state.renderPreviewScene()
+                            } label: {
+                                Label("Render Preview Scene", systemImage: "play.circle")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(state.isGenerating || state.selectedScenes.isEmpty || !state.installedEngines.contains(state.selectedEngine))
+                            Button {
+                                state.renderSelectedScenes()
+                            } label: {
+                                Label("Render Selected Scenes", systemImage: "waveform.badge.play")
+                            }
+                            .disabled(state.isGenerating || state.selectedScenes.isEmpty || !state.installedEngines.contains(state.selectedEngine))
+                            Button(role: .cancel) {
+                                state.cancelGeneration()
+                            } label: {
+                                Label("Cancel", systemImage: "xmark.circle")
+                            }
+                            .disabled(!state.isGenerating)
+                            if let output = state.lastOutputDirectory {
+                                Button {
+                                    NSWorkspace.shared.open(output)
+                                } label: {
+                                    Label("Open Output", systemImage: "folder.badge.gearshape")
+                                }
+                            }
+                            Spacer()
                         }
-                        .disabled(state.isGenerating || state.selectedScenes.isEmpty || !state.installedEngines.contains(state.selectedEngine))
-                        Button(role: .cancel) {
-                        } label: {
-                            Label("Cancel", systemImage: "xmark.circle")
-                        }
-                        .disabled(true)
-                        Spacer()
                     }
                 }
 
@@ -220,6 +239,22 @@ struct GenerateView: View {
             }
             .padding(24)
         }
+        .fileImporter(
+            isPresented: $choosingOutput,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                state.setOutputDirectory(url)
+            }
+        }
+    }
+
+    private var outputFolderLabel: String {
+        if let output = state.outputDirectory {
+            return output.path
+        }
+        return "Default output folder next to the PDF"
     }
 
     private func color(for style: LogStyle) -> Color {

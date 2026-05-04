@@ -17,6 +17,7 @@ final class AppState: ObservableObject {
     @Published var generationProgress = 0.0
     @Published var generationLog: [GenerationLogLine] = []
     @Published var outputDirectory: URL?
+    @Published var lastOutputDirectory: URL?
     @Published var status = "Choose a PDF script to begin."
     @Published var errorMessage: String?
 
@@ -177,13 +178,29 @@ final class AppState: ObservableObject {
                     self?.handleGenerationEvent(event)
                 }
             } catch {
-                appendLog(error.localizedDescription, .error)
-                errorMessage = error.localizedDescription
-                status = "Generation failed."
+                if isGenerating {
+                    appendLog(error.localizedDescription, .error)
+                    errorMessage = error.localizedDescription
+                    status = "Generation failed."
+                }
             }
             isGenerating = false
             isWorking = false
         }
+    }
+
+    func cancelGeneration() {
+        guard isGenerating else { return }
+        appendLog("Cancel requested. Stopping the current render job.", .warning)
+        bridge.cancelGeneration()
+        isGenerating = false
+        isWorking = false
+        status = "Generation canceled."
+    }
+
+    func setOutputDirectory(_ url: URL) {
+        outputDirectory = url
+        status = "Output folder set to \(url.lastPathComponent)."
     }
 
     func handleGenerationEvent(_ event: GenerationEvent) {
@@ -207,6 +224,9 @@ final class AppState: ObservableObject {
             let count = event.files?.count ?? 0
             let seconds = event.seconds ?? 0
             appendLog("Done. Wrote \(count) file(s) in \(format(seconds: seconds)).", .success)
+            if let outputDir = event.outputDir {
+                lastOutputDirectory = URL(fileURLWithPath: outputDir)
+            }
             if let errors = event.errors, !errors.isEmpty {
                 errors.forEach { appendLog($0, .error) }
             }

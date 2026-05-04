@@ -24,9 +24,38 @@ enum PythonBridgeError: Error, LocalizedError {
     }
 }
 
+private final class EventLineParser: @unchecked Sendable {
+    private var partial = ""
+    var workerError: String?
+
+    func consume(_ text: String, flush: Bool = false, onEvent: @escaping @MainActor (GenerationEvent) -> Void) {
+        partial += text
+        while let range = partial.range(of: "\n") {
+            let line = String(partial[..<range.lowerBound])
+            partial.removeSubrange(partial.startIndex..<range.upperBound)
+            decode(line, onEvent: onEvent)
+        }
+        if flush, !partial.isEmpty {
+            decode(partial, onEvent: onEvent)
+            partial = ""
+        }
+    }
+
+    private func decode(_ line: String, onEvent: @escaping @MainActor (GenerationEvent) -> Void) {
+        guard let lineData = line.data(using: .utf8) else { return }
+        if let event = try? JSONDecoder().decode(GenerationEvent.self, from: lineData) {
+            Task { @MainActor in onEvent(event) }
+        } else if let envelope = try? JSONDecoder().decode(WorkerEnvelope<ScriptSummary>.self, from: lineData),
+                  envelope.ok == false {
+            workerError = envelope.error
+        }
+    }
+}
+
 @MainActor
 final class PythonBridge {
     private let repositoryRoot: URL
+    private var generationProcess: Process?
 
     init() {
         let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
@@ -71,6 +100,11 @@ final class PythonBridge {
             "sceneNumbers": sceneNumbers,
         ]
         try await streamRequest(payload, onEvent: onEvent)
+    }
+
+    func cancelGeneration() {
+        generationProcess?.terminate()
+        generationProcess = nil
     }
 
     private func request<T: Decodable & Sendable>(_ payload: [String: Any]) async throws -> WorkerEnvelope<T> {
@@ -138,55 +172,33 @@ final class PythonBridge {
 
                 do {
                     try process.run()
+                    Task { @MainActor in self.generationProcess = process }
                     input.fileHandleForWriting.write(requestData)
                     input.fileHandleForWriting.closeFile()
 
                     let eventQueue = DispatchQueue(label: "ScriptAudioDrama.worker.events")
-                    var partial = ""
-                    var workerError: String?
-
-                    func consume(_ text: String, flush: Bool = false) {
-                        partial += text
-                        while let range = partial.range(of: "\n") {
-                            let line = String(partial[..<range.lowerBound])
-                            partial.removeSubrange(partial.startIndex..<range.upperBound)
-                            decode(line)
-                        }
-                        if flush, !partial.isEmpty {
-                            decode(partial)
-                            partial = ""
-                        }
-                    }
-
-                    func decode(_ line: String) {
-                        guard let lineData = line.data(using: .utf8) else { return }
-                        if let event = try? JSONDecoder().decode(GenerationEvent.self, from: lineData) {
-                            Task { @MainActor in onEvent(event) }
-                        } else if let envelope = try? JSONDecoder().decode(WorkerEnvelope<ScriptSummary>.self, from: lineData),
-                                  envelope.ok == false {
-                            workerError = envelope.error
-                        }
-                    }
+                    let parser = EventLineParser()
 
                     output.fileHandleForReading.readabilityHandler = { handle in
                         let chunk = handle.availableData
                         guard !chunk.isEmpty, let text = String(data: chunk, encoding: .utf8) else { return }
                         eventQueue.async {
-                            consume(text)
+                            parser.consume(text, onEvent: onEvent)
                         }
                     }
 
                     process.waitUntilExit()
+                    Task { @MainActor in self.generationProcess = nil }
                     output.fileHandleForReading.readabilityHandler = nil
                     eventQueue.sync {
-                        consume("", flush: true)
+                        parser.consume("", flush: true, onEvent: onEvent)
                     }
                     let stderr = String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
 
                     if process.terminationStatus == 0 {
                         continuation.resume()
                     } else {
-                        continuation.resume(throwing: PythonBridgeError.failed(workerError ?? stderr))
+                        continuation.resume(throwing: PythonBridgeError.failed(parser.workerError ?? stderr))
                     }
                 } catch {
                     continuation.resume(throwing: error)
