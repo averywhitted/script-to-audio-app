@@ -12,6 +12,7 @@ env/
 
 # Build and packaging
 build/
+.build/
 dist/
 *.egg-info/
 
