@@ -28,6 +28,10 @@ final class AppState: ObservableObject {
     @Published var voiceAssignment: [String: String] = [:]   // char name → voice id
     @Published var isFetchingVoices = false
 
+    // Per-scene generation progress
+    @Published var renderingSceneNumbers: [Int] = []          // ordered list of scene numbers being rendered
+    @Published var sceneProgress: [Int: Double] = [:]         // scene number → 0.0–1.0
+
     let bridge = PythonBridge()
 
     var sceneList: [SceneSummary] { script?.scenes ?? [] }
@@ -37,6 +41,13 @@ final class AppState: ObservableObject {
         if let stored = KeychainHelper.read(key: "openai_api_key"), !stored.isEmpty {
             openAIAPIKey = stored
             installedEngines.insert(.openAI)
+        }
+        // Restore last output directory
+        if let savedPath = UserDefaults.standard.string(forKey: "lastOutputDirectory") {
+            let url = URL(fileURLWithPath: savedPath)
+            if FileManager.default.fileExists(atPath: savedPath) {
+                outputDirectory = url
+            }
         }
     }
 
@@ -240,8 +251,11 @@ final class AppState: ObservableObject {
 
         let out = outputDirectory ?? defaultOutputDirectory(for: pdf)
         outputDirectory = out
+        UserDefaults.standard.set(out.path, forKey: "lastOutputDirectory")
         generationLog = []
         generationProgress = 0
+        renderingSceneNumbers = sceneNumbers
+        sceneProgress = Dictionary(uniqueKeysWithValues: sceneNumbers.map { ($0, 0.0) })
         isGenerating = true
         isWorking = true
         status = "Rendering \(sceneNumbers.count) scene(s)..."
@@ -293,6 +307,7 @@ final class AppState: ObservableObject {
 
     func setOutputDirectory(_ url: URL) {
         outputDirectory = url
+        UserDefaults.standard.set(url.path, forKey: "lastOutputDirectory")
         status = "Output folder set to \(url.lastPathComponent)."
     }
 
@@ -305,11 +320,28 @@ final class AppState: ObservableObject {
         case "progress":
             if let sceneIndex = event.sceneIndex,
                let totalScenes = event.totalScenes,
-               let elementIndex = event.elementIndex,
-               let totalElements = event.totalElements,
-               totalScenes > 0 {
-                let sceneFraction = Double(max(elementIndex + 1, 0)) / Double(max(totalElements, 1))
-                generationProgress = (Double(sceneIndex) + sceneFraction) / Double(totalScenes)
+               totalScenes > 0,
+               sceneIndex >= 0,
+               sceneIndex < renderingSceneNumbers.count {
+                let sceneNumber = renderingSceneNumbers[sceneIndex]
+                if let elementIndex = event.elementIndex {
+                    if elementIndex >= 0, let totalElements = event.totalElements, totalElements > 0 {
+                        // Per-element progress within a scene
+                        let frac = Double(elementIndex + 1) / Double(totalElements)
+                        sceneProgress[sceneNumber] = min(frac, 0.99) // cap until ✓ confirms completion
+                        generationProgress = (Double(sceneIndex) + frac) / Double(totalScenes)
+                    } else if elementIndex == -1 {
+                        // Scene-level message: check for completion or error
+                        if let message = event.message {
+                            if message.hasPrefix("✓") {
+                                sceneProgress[sceneNumber] = 1.0
+                            } else if message.lowercased().hasPrefix("error") {
+                                // Leave at last known progress; log handles the display
+                            }
+                        }
+                        generationProgress = (Double(sceneIndex) + 1.0) / Double(totalScenes)
+                    }
+                }
             }
             if let message = event.message, !message.isEmpty {
                 appendLog(message, message.lowercased().contains("error") ? .error : .info)

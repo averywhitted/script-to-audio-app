@@ -286,91 +286,24 @@ struct GenerateView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    SectionPanel("Preflight") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Label("\(state.selectedScenes.count) scenes selected", systemImage: "checklist")
-                                Spacer()
-                                Button("Refresh Estimate") {
-                                    state.refreshOpenAIEstimate()
-                                }
-                            }
-                            if state.selectedEngine == .openAI, let estimate = state.openAIEstimate {
-                                OpenAIEstimatePanel(estimate: estimate)
-                            } else if state.selectedEngine == .openAI {
-                                Text("OpenAI needs an estimate before generation so users can see expected requests, minimum time, and quota risk.")
-                                    .foregroundStyle(.secondary)
-                            } else if !state.installedEngines.contains(state.selectedEngine) {
-                                Text("Download \(state.selectedEngine.title) from the Voice screen before generating.")
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                Text("Local/macOS engines do not use cloud request quota. Generation can still take time, but it should be predictable and private.")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+            // ── Two-column layout: scene list left, controls+log right ──
+            HStack(spacing: 0) {
+                // Left: scene queue
+                SceneQueuePanel()
+                    .frame(width: 260)
+                Divider()
+                // Right: controls + log
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        preflightSection
+                        outputSection
+                        progressSection
                     }
-
-                    SectionPanel("Output") {
-                        HStack {
-                            Label(outputFolderLabel, systemImage: "folder")
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Button("Choose Output Folder") {
-                                choosingOutput = true
-                            }
-                        }
-                    }
-
-                    SectionPanel("Progress") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                if state.isGenerating {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                }
-                                ProgressView(value: state.generationProgress)
-                                    .progressViewStyle(.linear)
-                                Text("\(Int(state.generationProgress * 100))%")
-                                    .font(.caption.monospacedDigit())
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 42, alignment: .trailing)
-                            }
-                            if state.generationLog.isEmpty {
-                                Text("No generation log yet.")
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                HStack {
-                                    Text("Output Log")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Button {
-                                        state.copyGenerationLogToClipboard()
-                                    } label: {
-                                        Label("Copy Log", systemImage: "doc.on.doc")
-                                    }
-                                    .disabled(state.generationLog.isEmpty)
-                                }
-                                LazyVStack(alignment: .leading, spacing: 6) {
-                                    ForEach(state.generationLog) { line in
-                                        Text(line.text)
-                                            .font(.system(.caption, design: .monospaced))
-                                            .foregroundStyle(color(for: line.style))
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                    }
-                                }
-                                .padding(12)
-                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
-                            }
-                        }
-                    }
+                    .padding(24)
                 }
-                .padding(24)
             }
             Divider()
-            GenerateFooter(choosingOutput: $choosingOutput)
+            GenerateFooter()
         }
         .fileImporter(
             isPresented: $choosingOutput,
@@ -383,14 +316,116 @@ struct GenerateView: View {
         }
     }
 
-    private var outputFolderLabel: String {
-        if let output = state.outputDirectory {
-            return output.path
+    // MARK: - Sections
+
+    private var preflightSection: some View {
+        SectionPanel("Preflight") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label("\(state.selectedScenes.count) scenes selected", systemImage: "checklist")
+                    Spacer()
+                    if state.selectedEngine == .openAI {
+                        Button("Refresh Estimate") { state.refreshOpenAIEstimate() }
+                    }
+                }
+                if state.selectedEngine == .openAI, let estimate = state.openAIEstimate {
+                    OpenAIEstimatePanel(estimate: estimate)
+                } else if state.selectedEngine == .openAI {
+                    Text("Run a preflight estimate to see expected requests, time, and quota risk before generating.")
+                        .foregroundStyle(.secondary)
+                        .font(.callout)
+                } else if !state.installedEngines.contains(state.selectedEngine) {
+                    Label("Download \(state.selectedEngine.title) in the Voices step first.", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                        .font(.callout)
+                } else {
+                    Label("Ready. Local engine, no cloud quota.", systemImage: "checkmark.circle")
+                        .foregroundStyle(.green)
+                        .font(.callout)
+                }
+            }
         }
-        return "Default output folder next to the PDF"
     }
 
-    private func color(for style: LogStyle) -> Color {
+    private var outputSection: some View {
+        SectionPanel("Output") {
+            HStack {
+                Label(outputFolderLabel, systemImage: "folder")
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer()
+                Button("Choose…") { choosingOutput = true }
+            }
+            if let output = state.lastOutputDirectory {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
+                    Text("Last output: \(output.lastPathComponent)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Open") { NSWorkspace.shared.open(output) }
+                        .font(.caption)
+                }
+                .padding(.top, 4)
+            }
+        }
+    }
+
+    private var progressSection: some View {
+        SectionPanel("Progress") {
+            VStack(alignment: .leading, spacing: 12) {
+                // Overall bar
+                HStack(spacing: 10) {
+                    if state.isGenerating {
+                        ProgressView().controlSize(.small)
+                    }
+                    ProgressView(value: state.generationProgress)
+                        .progressViewStyle(.linear)
+                    Text("\(Int(state.generationProgress * 100))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 38, alignment: .trailing)
+                }
+                // Log
+                if !state.generationLog.isEmpty {
+                    HStack {
+                        Text("Output Log")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button {
+                            state.copyGenerationLogToClipboard()
+                        } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
+                    }
+                    LazyVStack(alignment: .leading, spacing: 4) {
+                        ForEach(state.generationLog) { line in
+                            Text(line.text)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(logColor(for: line.style))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(12)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+                } else if !state.isGenerating {
+                    Text("Hit Render to start. Log output will appear here.")
+                        .foregroundStyle(.secondary)
+                        .font(.callout)
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var outputFolderLabel: String {
+        state.outputDirectory?.path ?? "Default: next to the PDF"
+    }
+
+    private func logColor(for style: LogStyle) -> Color {
         switch style {
         case .info: .secondary
         case .success: .green
@@ -400,27 +435,137 @@ struct GenerateView: View {
     }
 }
 
+private struct SceneQueuePanel: View {
+    @EnvironmentObject private var state: AppState
+
+    /// Scenes to show: rendering list if active, otherwise the selection from Review.
+    private var displayScenes: [SceneSummary] {
+        guard let script = state.script else { return [] }
+        let numbers: Set<Int> = state.renderingSceneNumbers.isEmpty
+            ? state.selectedScenes
+            : Set(state.renderingSceneNumbers)
+        return script.scenes.filter { numbers.contains($0.number) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text("Scenes")
+                    .font(.headline)
+                Spacer()
+                Text(headerCaption)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            Divider()
+            // Scene rows
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(displayScenes) { scene in
+                        SceneQueueRow(scene: scene,
+                                      progress: state.sceneProgress[scene.number] ?? 0,
+                                      isRendering: state.isGenerating)
+                        Divider().padding(.leading, 36)
+                    }
+                }
+            }
+        }
+        .background(.bar)
+    }
+
+    private var headerCaption: String {
+        if state.isGenerating {
+            let done = state.sceneProgress.values.filter { $0 >= 1.0 }.count
+            return "\(done)/\(state.renderingSceneNumbers.count)"
+        }
+        return "\(state.selectedScenes.count) selected"
+    }
+}
+
+private struct SceneQueueRow: View {
+    var scene: SceneSummary
+    var progress: Double   // 0.0–1.0
+    var isRendering: Bool
+
+    private var isDone:   Bool { progress >= 1.0 }
+    private var isActive: Bool { progress > 0 && progress < 1.0 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                // Status icon
+                Group {
+                    if isDone {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    } else if isActive {
+                        Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90.circle.fill")
+                            .foregroundStyle(.accentColor)
+                            .symbolEffect(.rotate, isActive: true)
+                    } else {
+                        Image(systemName: "circle").foregroundStyle(.secondary.opacity(0.5))
+                    }
+                }
+                .font(.caption)
+                .frame(width: 16)
+
+                Text(scene.title)
+                    .font(.callout)
+                    .lineLimit(2)
+                    .foregroundStyle(isDone ? .secondary : .primary)
+
+                Spacer(minLength: 0)
+
+                // Status badge
+                if isDone {
+                    Text("Done")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.green)
+                } else if isActive {
+                    Text("\(Int(progress * 100))%")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.accentColor)
+                } else if isRendering {
+                    Text("Queued")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            // Progress bar (active scenes only)
+            if isActive {
+                ProgressView(value: progress)
+                    .progressViewStyle(.linear)
+                    .padding(.leading, 24)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(isActive ? Color.accentColor.opacity(0.06) : Color.clear)
+    }
+}
+
 private struct GenerateFooter: View {
     @EnvironmentObject private var state: AppState
-    @Binding var choosingOutput: Bool
 
     var body: some View {
         HStack {
-            Text("\(state.selectedScenes.count) scenes selected")
+            Text(footerCaption)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
             Button {
                 state.renderPreviewScene()
             } label: {
-                Label("Render Preview Scene", systemImage: "play.circle")
+                Label("Render Preview", systemImage: "play.circle")
             }
             .buttonStyle(.borderedProminent)
             .disabled(actionsDisabled)
             Button {
                 state.renderSelectedScenes()
             } label: {
-                Label("Render Selected Scenes", systemImage: "waveform.badge.play")
+                Label("Render All Selected", systemImage: "waveform.badge.play")
             }
             .disabled(actionsDisabled)
             Button(role: .cancel) {
@@ -429,13 +574,6 @@ private struct GenerateFooter: View {
                 Label("Cancel", systemImage: "xmark.circle")
             }
             .disabled(!state.isGenerating)
-            if let output = state.lastOutputDirectory {
-                Button {
-                    NSWorkspace.shared.open(output)
-                } label: {
-                    Label("Open Output", systemImage: "folder.badge.gearshape")
-                }
-            }
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 12)
@@ -446,6 +584,14 @@ private struct GenerateFooter: View {
         state.isGenerating
             || state.selectedScenes.isEmpty
             || !state.installedEngines.contains(state.selectedEngine)
+    }
+
+    private var footerCaption: String {
+        if state.isGenerating {
+            let done = state.sceneProgress.values.filter { $0 >= 1.0 }.count
+            return "Rendering… \(done) of \(state.renderingSceneNumbers.count) done"
+        }
+        return "\(state.selectedScenes.count) scenes selected"
     }
 }
 
@@ -603,9 +749,6 @@ private struct SceneElementRow: View {
                     Label(engine.title, systemImage: engine.symbol)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    Text(defaultVoiceLabel)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
                 }
                 Text(element.text)
                     .font(.callout)
@@ -617,9 +760,8 @@ private struct SceneElementRow: View {
         .padding(.vertical, 4)
     }
 
-    private var defaultVoiceLabel: String {
-        element.displaySpeaker == "Narrator" ? "Narrator voice" : "Assigned voice"
-    }
+    // Voice label removed — assignment isn't known until Cast step
+
 
     private func color(for speaker: String) -> Color {
         let colors: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .indigo, .brown]

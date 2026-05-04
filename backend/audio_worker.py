@@ -24,7 +24,7 @@ if str(ROOT) not in sys.path:
 import parser as script_parser
 import tts_engines
 from audio_pipeline import GenerationProgress, estimate_tts_requests, generate_script
-from voice_assignment import Assignment, auto_assign, NARRATOR_KEY
+from voice_assignment import Assignment, auto_assign
 
 
 def _script_summary(script: script_parser.Script) -> Dict[str, Any]:
