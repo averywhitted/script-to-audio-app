@@ -10,11 +10,16 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 240, ideal: 270)
         } detail: {
             VStack(spacing: 0) {
-                HeaderBar(openImporter: { isImporting = true })
+                HeaderBar()
                 Divider()
                 StepContent(openImporter: { isImporting = true })
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 StatusBar()
+            }
+            .overlay {
+                if state.isWorking && !state.isGenerating {
+                    ProcessingOverlay()
+                }
             }
         }
         .fileImporter(
@@ -34,6 +39,18 @@ struct ContentView: View {
         } message: {
             Text(state.errorMessage ?? "")
         }
+        .alert(item: $state.pendingDownload) { prompt in
+            Alert(
+                title: Text("Download \(prompt.engine.title)?"),
+                message: Text("This engine needs local files before it can be used. The app will download and install what it needs here, then continue."),
+                primaryButton: .default(Text("Download")) {
+                    state.downloadPendingEngine()
+                },
+                secondaryButton: .cancel {
+                    state.selectedEngine = .macOS
+                }
+            )
+        }
     }
 }
 
@@ -43,30 +60,20 @@ private struct Sidebar: View {
     var body: some View {
         List(selection: Binding(
             get: { state.step },
-            set: { state.step = $0 }
+            set: { state.goTo($0) }
         )) {
             Section("Workflow") {
                 ForEach(WorkflowStep.allCases) { step in
-                    Label(step.rawValue, systemImage: symbol(for: step))
+                    StepSidebarRow(step: step, isEnabled: state.canNavigate(to: step))
                         .tag(step)
                 }
             }
-        }
-    }
-
-    private func symbol(for step: WorkflowStep) -> String {
-        switch step {
-        case .importScript: "square.and.arrow.down"
-        case .review: "doc.text.magnifyingglass"
-        case .cast: "person.2.wave.2"
-        case .generate: "waveform.badge.play"
         }
     }
 }
 
 private struct HeaderBar: View {
     @EnvironmentObject private var state: AppState
-    var openImporter: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -80,17 +87,53 @@ private struct HeaderBar: View {
             Spacer()
             Label(state.selectedEngine.title, systemImage: state.selectedEngine.symbol)
                 .foregroundStyle(.secondary)
-
-            Button {
-                openImporter()
-            } label: {
-                Label("Open PDF", systemImage: "doc.badge.plus")
-            }
-            .buttonStyle(.borderedProminent)
         }
         .padding(.horizontal, 22)
         .padding(.vertical, 14)
         .background(.bar)
+    }
+}
+
+private struct StepSidebarRow: View {
+    var step: WorkflowStep
+    var isEnabled: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text("\(step.number)")
+                .font(.system(.caption, design: .rounded).weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(isEnabled ? Color.accentColor : Color.secondary.opacity(0.35), in: Circle())
+            Text(step.rawValue)
+                .foregroundStyle(isEnabled ? .primary : .secondary)
+            Spacer()
+        }
+        .opacity(isEnabled ? 1 : 0.55)
+    }
+}
+
+private struct ProcessingOverlay: View {
+    @EnvironmentObject private var state: AppState
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .ignoresSafeArea()
+            VStack(spacing: 14) {
+                ProgressView()
+                    .controlSize(.large)
+                Text(state.status)
+                    .font(.headline)
+                Text("This can take a moment for large PDFs or voice downloads.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(28)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+            .shadow(radius: 18)
+        }
     }
 }
 

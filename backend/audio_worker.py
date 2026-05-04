@@ -50,6 +50,15 @@ def _script_summary(script: script_parser.Script) -> Dict[str, Any]:
                 "number": scene.number,
                 "title": scene.title,
                 "elementCount": len([e for e in scene.elements if e.text.strip()]),
+                "elements": [
+                    {
+                        "kind": element.kind,
+                        "speaker": element.speaker,
+                        "text": element.text,
+                    }
+                    for element in scene.elements
+                    if element.text.strip()
+                ],
             }
             for scene in script.scenes
         ],

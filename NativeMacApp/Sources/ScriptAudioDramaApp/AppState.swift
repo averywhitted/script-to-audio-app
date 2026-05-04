@@ -7,6 +7,9 @@ final class AppState: ObservableObject {
     @Published var selectedPDF: URL?
     @Published var script: ScriptSummary?
     @Published var selectedEngine: EngineKind = .macOS
+    @Published var installedEngines: Set<EngineKind> = [.macOS, .openAI]
+    @Published var pendingDownload: EngineDownloadPrompt?
+    @Published var isDownloadingEngine = false
     @Published var selectedScenes: Set<Int> = []
     @Published var openAIEstimate: OpenAIEstimate?
     @Published var isWorking = false
@@ -20,6 +23,24 @@ final class AppState: ObservableObject {
     let bridge = PythonBridge()
 
     var sceneList: [SceneSummary] { script?.scenes ?? [] }
+
+    func canNavigate(to target: WorkflowStep) -> Bool {
+        switch target {
+        case .importScript:
+            true
+        case .review:
+            script != nil
+        case .cast:
+            script != nil
+        case .generate:
+            script != nil && installedEngines.contains(selectedEngine)
+        }
+    }
+
+    func goTo(_ target: WorkflowStep) {
+        guard canNavigate(to: target) else { return }
+        step = target
+    }
 
     func importPDF(_ url: URL) {
         selectedPDF = url
@@ -73,6 +94,41 @@ final class AppState: ObservableObject {
             selectedScenes.insert(scene.number)
         }
         refreshOpenAIEstimate()
+    }
+
+    func selectAllScenes() {
+        selectedScenes = Set(sceneList.map(\.number))
+        refreshOpenAIEstimate()
+    }
+
+    func clearSceneSelection() {
+        selectedScenes = []
+        refreshOpenAIEstimate()
+    }
+
+    func chooseEngine(_ engine: EngineKind) {
+        selectedEngine = engine
+        if installedEngines.contains(engine) {
+            refreshOpenAIEstimate()
+        } else {
+            pendingDownload = EngineDownloadPrompt(engine: engine)
+        }
+    }
+
+    func downloadPendingEngine() {
+        guard let engine = pendingDownload?.engine else { return }
+        pendingDownload = nil
+        isDownloadingEngine = true
+        isWorking = true
+        status = "Downloading \(engine.title)..."
+        Task {
+            try? await Task.sleep(for: .seconds(1.2))
+            installedEngines.insert(engine)
+            isDownloadingEngine = false
+            isWorking = false
+            status = "\(engine.title) is ready."
+            refreshOpenAIEstimate()
+        }
     }
 
     func renderPreviewScene() {

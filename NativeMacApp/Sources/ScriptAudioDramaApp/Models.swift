@@ -8,6 +8,15 @@ enum WorkflowStep: String, CaseIterable, Identifiable {
     case generate = "Generate"
 
     var id: String { rawValue }
+
+    var number: Int {
+        switch self {
+        case .importScript: 1
+        case .review: 2
+        case .cast: 3
+        case .generate: 4
+        }
+    }
 }
 
 enum EngineKind: String, CaseIterable, Identifiable {
@@ -80,8 +89,31 @@ struct SceneSummary: Codable, Equatable, Identifiable, Sendable {
     var number: Int
     var title: String
     var elementCount: Int
+    var elements: [SceneElementSummary]
 
     var id: Int { number }
+}
+
+struct SceneElementSummary: Codable, Equatable, Identifiable, Sendable {
+    var kind: String
+    var speaker: String?
+    var text: String
+
+    var id: String { "\(kind)-\(speaker ?? "narrator")-\(text.prefix(24))" }
+
+    var displaySpeaker: String {
+        if kind == "stage_direction" || kind == "parenthetical" { return "Narrator" }
+        return speaker ?? "Narrator"
+    }
+
+    var kindLabel: String {
+        switch kind {
+        case "dialog": "Dialog"
+        case "stage_direction": "Narration"
+        case "parenthetical": "Aside"
+        default: kind
+        }
+    }
 }
 
 struct OpenAIEstimate: Codable, Equatable, Sendable {
@@ -101,6 +133,11 @@ struct VoiceLibraryItem: Identifiable {
     var installed: Bool
     var size: String
     var note: String
+}
+
+struct EngineDownloadPrompt: Identifiable {
+    var id: EngineKind { engine }
+    var engine: EngineKind
 }
 
 struct GenerationEvent: Codable, Sendable {
