@@ -140,23 +140,59 @@ struct GenerateView: View {
                 SectionPanel("Run Controls") {
                     HStack {
                         Button {
+                            state.renderPreviewScene()
                         } label: {
                             Label("Render Preview Scene", systemImage: "play.circle")
                         }
                         .buttonStyle(.borderedProminent)
+                        .disabled(state.isGenerating || state.selectedScenes.isEmpty)
                         Button {
+                            state.renderSelectedScenes()
                         } label: {
                             Label("Render Selected Scenes", systemImage: "waveform.badge.play")
                         }
+                        .disabled(state.isGenerating || state.selectedScenes.isEmpty)
                         Button(role: .cancel) {
                         } label: {
                             Label("Cancel", systemImage: "xmark.circle")
                         }
+                        .disabled(true)
                         Spacer()
+                    }
+                }
+
+                SectionPanel("Progress") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ProgressView(value: state.generationProgress)
+                            .progressViewStyle(.linear)
+                        if state.generationLog.isEmpty {
+                            Text("No generation log yet.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            LazyVStack(alignment: .leading, spacing: 6) {
+                                ForEach(state.generationLog) { line in
+                                    Text(line.text)
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundStyle(color(for: line.style))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                            .padding(12)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        }
                     }
                 }
             }
             .padding(24)
+        }
+    }
+
+    private func color(for style: LogStyle) -> Color {
+        switch style {
+        case .info: .secondary
+        case .success: .green
+        case .warning: .orange
+        case .error: .red
         }
     }
 }

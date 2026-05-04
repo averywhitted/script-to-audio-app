@@ -102,3 +102,31 @@ struct VoiceLibraryItem: Identifiable {
     var size: String
     var note: String
 }
+
+struct GenerationEvent: Codable, Sendable {
+    var event: String
+    var message: String?
+    var sceneIndex: Int?
+    var totalScenes: Int?
+    var sceneTitle: String?
+    var elementIndex: Int?
+    var totalElements: Int?
+    var outputDir: String?
+    var files: [String]?
+    var errors: [String]?
+    var skippedScenes: [String]?
+    var seconds: Double?
+}
+
+struct GenerationLogLine: Identifiable, Equatable {
+    let id = UUID()
+    var text: String
+    var style: LogStyle
+}
+
+enum LogStyle: Equatable {
+    case info
+    case success
+    case warning
+    case error
+}

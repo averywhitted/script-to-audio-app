@@ -10,7 +10,9 @@ while the existing Python parser/audio pipeline remains reusable.
 from __future__ import annotations
 
 import json
+import os
 import sys
+import time
 import traceback
 from pathlib import Path
 from typing import Any, Dict, List
@@ -21,7 +23,7 @@ if str(ROOT) not in sys.path:
 
 import parser as script_parser
 import tts_engines
-from audio_pipeline import estimate_tts_requests
+from audio_pipeline import GenerationProgress, estimate_tts_requests, generate_script
 from voice_assignment import Assignment, auto_assign
 
 
@@ -74,6 +76,72 @@ def _estimate_openai(pdf_path: str, scene_numbers: List[int] | None) -> Dict[str
     }
 
 
+def _emit(event: Dict[str, Any]) -> None:
+    print(json.dumps(event), flush=True)
+
+
+def _engine_for_payload(payload: Dict[str, Any]) -> tts_engines.TTSEngine:
+    engine_id = payload.get("engine", "macOS")
+    if engine_id == "openAI":
+        api_key = payload.get("apiKey") or os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OpenAI generation needs an API key.")
+        return tts_engines.OpenAIEngine(api_key=api_key)
+    if engine_id in {"kokoro", "piper"}:
+        raise RuntimeError(f"{engine_id} generation is not installed yet.")
+    return tts_engines.MacSayEngine()
+
+
+def _generate(payload: Dict[str, Any]) -> int:
+    pdf_path = payload["pdfPath"]
+    output_dir = payload["outputDir"]
+    scene_numbers = payload.get("sceneNumbers")
+    engine = _engine_for_payload(payload)
+    script = script_parser.parse_pdf(pdf_path)
+    voices = _voices_for_engine(payload.get("engine", "macOS"))
+    assignment = auto_assign(script.characters, voices)
+
+    if not voices:
+        raise RuntimeError(f"No voices are available for {engine.name}.")
+    if not engine.is_available():
+        raise RuntimeError(f"{engine.name} is not available.")
+
+    _emit({
+        "event": "started",
+        "message": f"Rendering {len(scene_numbers or script.scenes)} scene(s) with {engine.name}.",
+    })
+
+    def progress_cb(progress: GenerationProgress) -> None:
+        _emit({
+            "event": "progress",
+            "sceneIndex": progress.scene_index,
+            "totalScenes": progress.total_scenes,
+            "sceneTitle": progress.scene_title,
+            "elementIndex": progress.element_index,
+            "totalElements": progress.total_elements_in_scene,
+            "message": progress.message,
+        })
+
+    t0 = time.time()
+    result = generate_script(
+        script=script,
+        engine=engine,
+        assignment=assignment,
+        output_dir=output_dir,
+        progress_cb=progress_cb,
+        scene_filter=scene_numbers,
+    )
+    _emit({
+        "event": "done",
+        "outputDir": result.output_dir,
+        "files": result.files,
+        "errors": result.errors,
+        "skippedScenes": result.skipped_scenes,
+        "seconds": round(time.time() - t0, 1),
+    })
+    return 0
+
+
 def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
     command = payload.get("command")
     if command == "parse":
@@ -109,6 +177,8 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
 def main() -> int:
     try:
         payload = json.load(sys.stdin)
+        if payload.get("command") == "generate":
+            return _generate(payload)
         print(json.dumps(handle(payload)))
         return 0
     except Exception as exc:

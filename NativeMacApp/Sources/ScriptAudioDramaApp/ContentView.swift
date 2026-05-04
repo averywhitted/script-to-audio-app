@@ -51,26 +51,6 @@ private struct Sidebar: View {
                         .tag(step)
                 }
             }
-
-            Section("Voice Engines") {
-                ForEach(EngineKind.allCases) { engine in
-                    HStack {
-                        Image(systemName: engine.symbol)
-                        VStack(alignment: .leading) {
-                            Text(engine.title)
-                            Text(engine.subtitle)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .tag(engine)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        state.selectedEngine = engine
-                        state.refreshOpenAIEstimate()
-                    }
-                }
-            }
         }
     }
 
@@ -98,15 +78,8 @@ private struct HeaderBar: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Picker("Engine", selection: $state.selectedEngine) {
-                ForEach(EngineKind.allCases) { engine in
-                    Text(engine.title).tag(engine)
-                }
-            }
-            .pickerStyle(.menu)
-            .onChange(of: state.selectedEngine) { _, _ in
-                state.refreshOpenAIEstimate()
-            }
+            Label(state.selectedEngine.title, systemImage: state.selectedEngine.symbol)
+                .foregroundStyle(.secondary)
 
             Button {
                 openImporter()

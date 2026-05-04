@@ -21,8 +21,10 @@ dependencies match the current launcher.
 - PDF import through a native file picker
 - Python worker bridge over JSON
 - Script summary, scene selection, engine cards, and OpenAI preflight estimates
+- macOS voice generation for preview or selected scenes through the Python worker
+- Native progress/log surface for generation jobs
 - Voice-library placeholder for future Kokoro/Piper downloads
 
-Generation is still handled by the existing Python app. The next step is moving
-generation to the worker as structured progress events, then wiring the SwiftUI
-run controls to that job stream.
+OpenAI, Kokoro, and Piper generation are still placeholders in the SwiftUI app.
+The next step is adding real cancellation, output-folder selection, and local
+voice-model download/install flows.
