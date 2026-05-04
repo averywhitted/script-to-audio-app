@@ -18,6 +18,8 @@ import os
 import re
 import shutil
 import subprocess
+import threading
+import time
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -56,6 +58,18 @@ class TTSEngine:
 
     def synthesize(self, text: str, voice_id: str, out_path: str) -> None:
         raise NotImplementedError
+
+
+class TTSFatalError(RuntimeError):
+    """A synthesis error that should stop the run instead of skipping a line."""
+
+
+class TTSQuotaError(TTSFatalError):
+    """The cloud provider says the account has no usable quota."""
+
+
+class TTSRateLimitError(TTSFatalError):
+    """The cloud provider kept rate-limiting after retries."""
 
 
 # ---------------------------------------------------------------------------
@@ -232,9 +246,16 @@ class OpenAIEngine(TTSEngine):
 
     DEFAULT_MODEL = "tts-1"  # tts-1 is fast and cheap; tts-1-hd is higher quality
 
+    REQUESTS_PER_MINUTE = 3
+    MAX_RATE_LIMIT_RETRIES = 6
+
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
         self.model = model or self.DEFAULT_MODEL
+        self.requests_per_minute = self.REQUESTS_PER_MINUTE
+        self._min_request_interval = 60.0 / max(self.requests_per_minute, 1)
+        self._last_request_at = 0.0
+        self._lock = threading.Lock()
 
     def is_available(self) -> bool:
         return bool(self.api_key)
@@ -248,6 +269,7 @@ class OpenAIEngine(TTSEngine):
         # Lazy import so the app runs without `requests` if user only uses
         # the macOS engine (we still ship requests in requirements.txt for
         # convenience, but this keeps imports lazy).
+        import urllib.error
         import urllib.request
         import json
         payload = {
@@ -265,15 +287,59 @@ class OpenAIEngine(TTSEngine):
                 "Content-Type": "application/json",
             },
         )
+        for attempt in range(self.MAX_RATE_LIMIT_RETRIES + 1):
+            self._wait_for_rate_slot()
+            try:
+                with urllib.request.urlopen(req, timeout=120) as resp:
+                    with open(out_path, "wb") as f:
+                        f.write(resp.read())
+                    return
+            except urllib.error.HTTPError as e:
+                body = e.read().decode("utf-8", errors="replace") if e.fp else ""
+                if e.code == 429 and self._is_quota_error(body):
+                    raise TTSQuotaError(self._format_openai_error(e.code, body)) from e
+                if e.code == 429 and attempt < self.MAX_RATE_LIMIT_RETRIES:
+                    wait = self._retry_wait_seconds(e, body)
+                    time.sleep(wait)
+                    continue
+                if e.code == 429:
+                    raise TTSRateLimitError(self._format_openai_error(e.code, body)) from e
+                raise RuntimeError(self._format_openai_error(e.code, body)) from e
+
+    def _wait_for_rate_slot(self) -> None:
+        with self._lock:
+            now = time.monotonic()
+            wait = self._min_request_interval - (now - self._last_request_at)
+            if wait > 0:
+                time.sleep(wait)
+            self._last_request_at = time.monotonic()
+
+    def _retry_wait_seconds(self, err, body: str) -> float:
+        header = err.headers.get("retry-after") if getattr(err, "headers", None) else None
+        if header:
+            try:
+                return max(float(header), self._min_request_interval)
+            except ValueError:
+                pass
+        m = re.search(r"try again in\s+(\d+(?:\.\d+)?)s", body, re.I)
+        if m:
+            return max(float(m.group(1)) + 1.0, self._min_request_interval)
+        return self._min_request_interval + 1.0
+
+    def _is_quota_error(self, body: str) -> bool:
+        low = body.lower()
+        return "insufficient_quota" in low or "exceeded your current quota" in low
+
+    def _format_openai_error(self, code: int, body: str) -> str:
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                with open(out_path, "wb") as f:
-                    f.write(resp.read())
-        except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", errors="replace") if e.fp else ""
-            raise RuntimeError(
-                f"OpenAI TTS failed ({e.code}): {body[:300]}"
-            ) from e
+            import json
+            data = json.loads(body)
+            message = data.get("error", {}).get("message")
+            if message:
+                return f"OpenAI TTS failed ({code}): {message}"
+        except Exception:
+            pass
+        return f"OpenAI TTS failed ({code}): {body[:300]}"
 
 
 # ---------------------------------------------------------------------------

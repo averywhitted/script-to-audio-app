@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
 from parser import Element, Scene, Script
-from tts_engines import TTSEngine
+from tts_engines import TTSEngine, TTSFatalError
 from voice_assignment import Assignment, NARRATOR_KEY
 
 
@@ -66,6 +66,16 @@ class GenerationResult:
     files: List[str] = field(default_factory=list)
     skipped_scenes: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
+
+
+@dataclass
+class RenderChunk:
+    start_index: int
+    end_index: int
+    kind: str
+    speaker: Optional[str]
+    voice_id: str
+    text: str
 
 
 # ---------------------------------------------------------------------------
@@ -200,6 +210,8 @@ def generate_scene(
         narrator_voice = assignment.voice_for(None)
         try:
             _synthesize_into(writer, title_text, narrator_voice, engine, work_dir, "title")
+        except TTSFatalError:
+            raise
         except Exception as e:
             # Title is decorative; don't fail the scene over it
             if progress_cb:
@@ -209,40 +221,45 @@ def generate_scene(
                 ))
         writer.writeframes(_silence_frames(0.6))
 
+        chunks = _build_render_chunks(elements, assignment)
         previous_speaker: Optional[str] = None
         previous_kind: Optional[str] = None
 
-        for ei, el in enumerate(elements):
+        for chunk in chunks:
             if cancel_check and cancel_check():
                 writer.close()
                 return None
 
             # Choose the pause to insert BEFORE this element based on transition
-            pause = _transition_pause(previous_kind, previous_speaker, el)
+            first_el = elements[chunk.start_index]
+            pause = _transition_pause(previous_kind, previous_speaker, first_el)
             writer.writeframes(_silence_frames(pause))
 
-            voice_id = _voice_for_element(el, assignment)
-            text_to_speak = _text_for_element(el)
-
             try:
-                _synthesize_into(writer, text_to_speak, voice_id, engine, work_dir, f"e{ei}")
+                _synthesize_into(
+                    writer, chunk.text, chunk.voice_id, engine, work_dir,
+                    f"e{chunk.start_index}"
+                )
+            except TTSFatalError:
+                raise
             except Exception as e:
                 # Don't fail the whole scene; log and skip this element.
                 if progress_cb:
                     progress_cb(GenerationProgress(
-                        scene_index, total_scenes, scene.title, ei, len(elements),
-                        f"skipped element {ei}: {e}"
+                        scene_index, total_scenes, scene.title,
+                        chunk.start_index, len(elements),
+                        f"skipped elements {chunk.start_index}-{chunk.end_index}: {e}"
                     ))
 
-            previous_speaker = el.speaker
-            previous_kind = el.kind
+            previous_speaker = first_el.speaker
+            previous_kind = first_el.kind
 
             if progress_cb:
                 progress_cb(GenerationProgress(
                     scene_index=scene_index,
                     total_scenes=total_scenes,
                     scene_title=scene.title,
-                    element_index=ei,
+                    element_index=chunk.end_index,
                     total_elements_in_scene=len(elements),
                 ))
 
@@ -291,6 +308,41 @@ def _text_for_element(el: Element) -> str:
         # Ensure it sounds like a brief aside
         return el.text.strip()
     return el.text.strip()
+
+
+MAX_TTS_CHUNK_CHARS = 2500
+
+
+def _build_render_chunks(elements: List[Element], assignment: Assignment) -> List[RenderChunk]:
+    chunks: List[RenderChunk] = []
+    for i, el in enumerate(elements):
+        text = _text_for_element(el)
+        if not text:
+            continue
+        voice_id = _voice_for_element(el, assignment)
+        if chunks and _can_merge_chunk(chunks[-1], el, voice_id, text):
+            chunks[-1].end_index = i
+            chunks[-1].text = chunks[-1].text.rstrip() + "\n\n" + text
+        else:
+            chunks.append(RenderChunk(
+                start_index=i,
+                end_index=i,
+                kind=el.kind,
+                speaker=el.speaker,
+                voice_id=voice_id,
+                text=text,
+            ))
+    return chunks
+
+
+def _can_merge_chunk(chunk: RenderChunk, el: Element, voice_id: str, text: str) -> bool:
+    if chunk.voice_id != voice_id:
+        return False
+    if chunk.kind != el.kind or chunk.speaker != el.speaker:
+        return False
+    if el.kind not in {"dialog", "stage_direction"}:
+        return False
+    return len(chunk.text) + len(text) + 2 <= MAX_TTS_CHUNK_CHARS
 
 
 def _synthesize_into(
@@ -367,6 +419,14 @@ def generate_script(
                         ))
                 else:
                     result.skipped_scenes.append(f"Scene {scene.number}: {scene.title}")
+            except TTSFatalError as e:
+                result.errors.append(f"Scene {scene.number} ({scene.title}): {e}")
+                if progress_cb:
+                    progress_cb(GenerationProgress(
+                        i, len(target_scenes), scene.title, -1, 0,
+                        f"error: {e}"
+                    ))
+                break
             except Exception as e:
                 result.errors.append(f"Scene {scene.number} ({scene.title}): {e}")
                 if progress_cb:
@@ -375,6 +435,26 @@ def generate_script(
                         f"error: {e}"
                     ))
     return result
+
+
+def estimate_tts_requests(
+    script: Script,
+    assignment: Assignment,
+    scene_filter: Optional[List[int]] = None,
+    include_scene_titles: bool = True,
+) -> int:
+    target_scenes = script.scenes
+    if scene_filter is not None:
+        target_scenes = [s for s in script.scenes if s.number in scene_filter]
+    total = 0
+    for scene in target_scenes:
+        elements = [e for e in scene.elements if e.text.strip()]
+        if not elements:
+            continue
+        if include_scene_titles:
+            total += 1
+        total += len(_build_render_chunks(elements, assignment))
+    return total
 
 
 # ---------------------------------------------------------------------------

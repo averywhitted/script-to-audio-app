@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import platform
 import queue
+import subprocess
 import sys
 import threading
 import time
@@ -31,26 +32,88 @@ def _dbg(msg: str) -> None:
 _dbg("starting imports")
 import parser as script_parser
 import tts_engines
-from audio_pipeline import generate_script, GenerationProgress
+from audio_pipeline import estimate_tts_requests, generate_script, GenerationProgress
 from voice_assignment import auto_assign, Assignment, NARRATOR_KEY
 _dbg("imports done")
 
 
 APP_TITLE = "Script to Audiodrama"
 
-# ── Color palette (matches design handoff) ──────────────────────────────────
-BG0     = "#141414"   # main window background
-BG1     = "#1c1c1e"   # sidebar / card background
-BG2     = "#242426"   # elevated cards / input fields
-BG3     = "#2e2e30"   # hover state
-BG4     = "#3a3a3c"   # subtle borders
-BORDER  = "#333333"   # card border
-ACCENT  = "#e8824a"   # orange
-GREEN   = "#4caf7d"   # success
-TEXT0   = "#f0ede8"   # primary text
-TEXT1   = "#b8b5b0"   # secondary text
-TEXT2   = "#7a7775"   # muted text
-TEXT3   = "#4a4846"   # very muted
+# ── Color palette ────────────────────────────────────────────────────────────
+
+THEMES = {
+    "dark": {
+        "BG0": "#141414",
+        "BG1": "#1c1c1e",
+        "BG2": "#242426",
+        "BG3": "#2e2e30",
+        "BG4": "#3a3a3c",
+        "BORDER": "#333333",
+        "ACCENT": "#e8824a",
+        "ACCENT_HOVER": "#d4723e",
+        "GREEN": "#4caf7d",
+        "TEXT0": "#f0ede8",
+        "TEXT1": "#b8b5b0",
+        "TEXT2": "#7a7775",
+        "TEXT3": "#4a4846",
+    },
+    "light": {
+        "BG0": "#f5f5f7",
+        "BG1": "#ffffff",
+        "BG2": "#f0f0f3",
+        "BG3": "#e5e5ea",
+        "BG4": "#d2d2d7",
+        "BORDER": "#d9d9de",
+        "ACCENT": "#c96b32",
+        "ACCENT_HOVER": "#b85d27",
+        "GREEN": "#2f8f5b",
+        "TEXT0": "#1d1d1f",
+        "TEXT1": "#424245",
+        "TEXT2": "#6e6e73",
+        "TEXT3": "#a1a1a6",
+    },
+}
+
+_active_theme_name = "dark"
+
+BG0 = BG1 = BG2 = BG3 = BG4 = BORDER = ACCENT = GREEN = TEXT0 = TEXT1 = TEXT2 = TEXT3 = ""
+
+
+def _detect_system_theme() -> str:
+    if platform.system() != "Darwin":
+        return "dark"
+    try:
+        result = subprocess.run(
+            ["defaults", "read", "-g", "AppleInterfaceStyle"],
+            capture_output=True,
+            text=True,
+            timeout=1,
+        )
+        return "dark" if result.returncode == 0 and "Dark" in result.stdout else "light"
+    except Exception:
+        return "dark"
+
+
+def _apply_theme(name: str) -> None:
+    global _active_theme_name, BG0, BG1, BG2, BG3, BG4, BORDER, ACCENT, GREEN
+    global TEXT0, TEXT1, TEXT2, TEXT3
+    _active_theme_name = name if name in THEMES else "dark"
+    p = THEMES[_active_theme_name]
+    BG0 = p["BG0"]
+    BG1 = p["BG1"]
+    BG2 = p["BG2"]
+    BG3 = p["BG3"]
+    BG4 = p["BG4"]
+    BORDER = p["BORDER"]
+    ACCENT = p["ACCENT"]
+    GREEN = p["GREEN"]
+    TEXT0 = p["TEXT0"]
+    TEXT1 = p["TEXT1"]
+    TEXT2 = p["TEXT2"]
+    TEXT3 = p["TEXT3"]
+
+
+_apply_theme(_detect_system_theme())
 
 # ── Fonts ────────────────────────────────────────────────────────────────────
 FONT_SANS   = "Helvetica Neue"
@@ -94,9 +157,17 @@ class _LabelButton(tk.Label):
     def __init__(self, parent, text="", command=None, **kw):
         self._cmd      = command
         self._enabled  = True
-        self._base_bg  = kw.pop("bg",  self._BASE_BG)
-        self._hover_bg = kw.pop("hover_bg", self._HOVER_BG)
-        self._base_fg  = kw.pop("fg",  self._BASE_FG)
+        if self.__class__.__name__ == "AccentButton":
+            default_bg = ACCENT
+            default_hover = THEMES[_active_theme_name]["ACCENT_HOVER"]
+            default_fg = "#ffffff"
+        else:
+            default_bg = BG2
+            default_hover = BG3
+            default_fg = TEXT1 if self.__class__.__name__ == "GhostButton" else TEXT0
+        self._base_bg  = kw.pop("bg",  default_bg)
+        self._hover_bg = kw.pop("hover_bg", default_hover)
+        self._base_fg  = kw.pop("fg",  default_fg)
         super().__init__(
             parent, text=text,
             bg=self._base_bg, fg=self._base_fg,
@@ -170,6 +241,40 @@ def _link_btn(parent, text, command, fg=ACCENT, bg=BG0, font=None):
     lbl.bind("<Enter>", lambda e: lbl.configure(fg=TEXT0))
     lbl.bind("<Leave>", lambda e: lbl.configure(fg=fg))
     return lbl
+
+
+def _bind_mousewheel(canvas: tk.Canvas) -> None:
+    """Make scrollable canvas content respond when the pointer is over it."""
+    def _scroll(event):
+        if platform.system() == "Darwin":
+            delta = -1 * int(event.delta)
+        else:
+            delta = -1 * int(event.delta / 120)
+        canvas.yview_scroll(delta, "units")
+
+    canvas.bind("<Enter>", lambda _e: canvas.bind_all("<MouseWheel>", _scroll))
+    canvas.bind("<Leave>", lambda _e: canvas.unbind_all("<MouseWheel>"))
+
+
+class CanvasProgress(tk.Canvas):
+    def __init__(self, parent, height=5, **kw):
+        super().__init__(
+            parent,
+            height=height,
+            bg=BG4,
+            highlightthickness=0,
+            bd=0,
+            **kw,
+        )
+        self._height = height
+        self._value = 0.0
+        self._fill = self.create_rectangle(0, 0, 0, height, fill=ACCENT, outline="")
+        self.bind("<Configure>", lambda _e: self.set(self._value))
+
+    def set(self, value: float) -> None:
+        self._value = max(0.0, min(1.0, value))
+        width = max(1, self.winfo_width())
+        self.coords(self._fill, 0, 0, int(width * self._value), self._height)
 
 
 # ── Step navigation bar ──────────────────────────────────────────────────────
@@ -435,6 +540,7 @@ class ReviewScreen(tk.Frame):
         sb2_frame.columnconfigure(0, weight=1)
 
         canvas = tk.Canvas(sb2_frame, bg=BG1, highlightthickness=0, bd=0)
+        _bind_mousewheel(canvas)
         vsb = ttk.Scrollbar(sb2_frame, orient="vertical", command=canvas.yview)
         canvas.configure(yscrollcommand=vsb.set)
         canvas.grid(row=0, column=0, sticky="nsew")
@@ -608,6 +714,7 @@ class CastScreen(tk.Frame):
         table_wrap.columnconfigure(0, weight=1)
 
         canvas = tk.Canvas(table_wrap, bg=BG0, highlightthickness=0)
+        _bind_mousewheel(canvas)
         vsb = ttk.Scrollbar(table_wrap, orient="vertical", command=canvas.yview)
         canvas.configure(yscrollcommand=vsb.set)
         canvas.grid(row=0, column=0, sticky="nsew")
@@ -684,6 +791,22 @@ class CastScreen(tk.Frame):
             show="•", bg=BG3, fg=TEXT1, insertbackground=ACCENT,
             relief="flat", bd=0, font=(FONT_MONO, 11))
         self.openai_key_entry.pack(fill="x", pady=(4, 0), ipady=4)
+
+        note = tk.Frame(right, bg=BG1)
+        note.pack(fill="x", padx=16, pady=(12, 0))
+        tk.Label(note, text="OPENAI EXPECTATIONS",
+                 font=(FONT_MONO, 9), fg=TEXT3, bg=BG1).pack(anchor="w")
+        tk.Label(
+            note,
+            text=("Cloud TTS sends one request per voice chunk. Alternating "
+                  "dialogue still means many requests, so full plays can take "
+                  "a while on low rate limits."),
+            font=(FONT_SANS, 10),
+            fg=TEXT2,
+            bg=BG1,
+            wraplength=220,
+            justify="left",
+        ).pack(anchor="w", pady=(4, 0))
 
     def _render_cast_table(self, parent: tk.Frame):
         # voice_pickers now stores StringVar — safe to read after widget destruction
@@ -811,9 +934,15 @@ class GenerateScreen(tk.Frame):
         self._output_dir = output_dir
         self._on_change_output = on_change_output
         self._cancel_flag = False
+        self._paused = False
         self._worker: Optional[threading.Thread] = None
         self._progress_queue: queue.Queue = queue.Queue()
         self._scene_progress: Dict[int, float] = {}
+        self._scene_vars: Dict[int, tk.BooleanVar] = {}
+        self._scene_frames: Dict[int, Dict] = {}
+        self._scene_order: List[int] = []
+        self._completed_scenes: set[int] = set()
+        self._selected_total = len(script.scenes)
         self._build()
 
     def _build(self):
@@ -824,7 +953,7 @@ class GenerateScreen(tk.Frame):
         # ── Main: controls + log ─────────────────────────────────────────
         main = tk.Frame(self, bg=BG0)
         main.grid(row=0, column=0, sticky="nsew")
-        main.rowconfigure(1, weight=1)
+        main.rowconfigure(2, weight=1)
         main.columnconfigure(0, weight=1)
 
         # Controls bar
@@ -848,6 +977,12 @@ class GenerateScreen(tk.Frame):
         self.cancel_btn.pack(side="right", padx=(0, 4))
         self.cancel_btn.configure(state="disabled")
 
+        self.pause_btn = GhostButton(
+            ctrl_inner, text="Pause",
+            command=self.toggle_pause)
+        self.pause_btn.pack(side="right", padx=(0, 4))
+        self.pause_btn.configure(state="disabled")
+
         _link_btn(ctrl_inner, "← Back", self._on_back,
                   bg=BG1, fg=TEXT2).pack(side="right", padx=(0, 8))
 
@@ -867,9 +1002,24 @@ class GenerateScreen(tk.Frame):
                   bg=BG2, fg=ACCENT,
                   font=(FONT_SANS, 11)).pack(side="right", padx=(4, 0))
 
+        # Overall progress
+        progress = tk.Frame(main, bg=BG0)
+        progress.grid(row=1, column=0, sticky="ew", padx=24, pady=(14, 0))
+        progress.columnconfigure(0, weight=1)
+        self.overall_label = tk.Label(
+            progress, text="Overall progress: 0%",
+            font=(FONT_SANS, 11, "bold"), fg=TEXT1, bg=BG0, anchor="w")
+        self.overall_label.grid(row=0, column=0, sticky="w")
+        self.copy_log_btn = GhostButton(
+            progress, text="Copy Log", command=self.copy_log,
+            font=(FONT_SANS, 11), padx=10, pady=5)
+        self.copy_log_btn.grid(row=0, column=1, sticky="e", padx=(8, 0))
+        self.overall_bar = CanvasProgress(progress, height=6)
+        self.overall_bar.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+
         # Log area
         log_frame = tk.Frame(main, bg=BG0)
-        log_frame.grid(row=1, column=0, sticky="nsew")
+        log_frame.grid(row=2, column=0, sticky="nsew")
         log_frame.rowconfigure(0, weight=1)
         log_frame.columnconfigure(0, weight=1)
 
@@ -901,9 +1051,20 @@ class GenerateScreen(tk.Frame):
         right.rowconfigure(1, weight=1)
         right.columnconfigure(0, weight=1)
 
-        tk.Label(right, text="Scenes",
+        scene_hdr = tk.Frame(right, bg=BG1)
+        scene_hdr.grid(row=0, column=0, sticky="ew", padx=16, pady=(14, 4))
+        scene_hdr.columnconfigure(0, weight=1)
+        tk.Label(scene_hdr, text="Scenes",
                  font=(FONT_SANS, 13, "bold"), fg=TEXT0, bg=BG1).grid(
-            row=0, column=0, sticky="w", padx=16, pady=(14, 4))
+            row=0, column=0, sticky="w")
+        tools = tk.Frame(scene_hdr, bg=BG1)
+        tools.grid(row=0, column=1, sticky="e")
+        _link_btn(tools, "All", self.select_all_scenes,
+                  bg=BG1, fg=ACCENT, font=(FONT_SANS, 10)).pack(side="left")
+        tk.Label(tools, text="/", fg=TEXT3, bg=BG1,
+                 font=(FONT_SANS, 10)).pack(side="left", padx=3)
+        _link_btn(tools, "None", self.clear_scene_selection,
+                  bg=BG1, fg=ACCENT, font=(FONT_SANS, 10)).pack(side="left")
 
         scene_scroll = tk.Frame(right, bg=BG1)
         scene_scroll.grid(row=1, column=0, sticky="nsew")
@@ -911,6 +1072,7 @@ class GenerateScreen(tk.Frame):
         scene_scroll.columnconfigure(0, weight=1)
 
         sc_canvas = tk.Canvas(scene_scroll, bg=BG1, highlightthickness=0)
+        _bind_mousewheel(sc_canvas)
         sc_vsb = ttk.Scrollbar(scene_scroll, orient="vertical",
                                command=sc_canvas.yview)
         sc_canvas.configure(yscrollcommand=sc_vsb.set)
@@ -937,6 +1099,7 @@ class GenerateScreen(tk.Frame):
         self._scene_frames: Dict[int, Dict] = {}
 
         for sc in self._script.scenes:
+            self._scene_vars.setdefault(sc.number, tk.BooleanVar(value=True))
             pct = self._scene_progress.get(sc.number, 0.0)
             done = pct >= 1.0
             active = 0 < pct < 1.0
@@ -944,26 +1107,35 @@ class GenerateScreen(tk.Frame):
             card = tk.Frame(self.scene_body, bg=BG2,
                             highlightbackground=BORDER, highlightthickness=1)
             card.pack(fill="x", padx=8, pady=4, ipadx=8, ipady=6)
+            card.columnconfigure(2, weight=1)
 
-            # Status icon
+            chk = tk.Checkbutton(
+                card, variable=self._scene_vars[sc.number],
+                bg=BG2, activebackground=BG2,
+                selectcolor=BG2, fg=TEXT1,
+                highlightthickness=0, bd=0,
+                command=self._update_selection_count)
+            chk.grid(row=0, column=0, sticky="nw", padx=(0, 6), pady=(0, 0))
+
             if done:
-                icon_bg, icon_char = GREEN, "✓"
+                icon_bg, icon_fg, icon_char = GREEN, "#fff", "✓"
             elif active:
-                icon_bg, icon_char = ACCENT, "●"
+                icon_bg, icon_fg, icon_char = ACCENT, "#fff", "●"
             else:
-                icon_bg, icon_char = BG3, "○"
-
+                icon_bg, icon_fg, icon_char = BG3, TEXT3, "○"
             icon = tk.Label(card, text=icon_char,
-                            font=(FONT_SANS, 11), fg="#fff" if done or active else TEXT3,
+                            font=(FONT_SANS, 11), fg=icon_fg,
                             bg=icon_bg, width=2, anchor="center")
-            icon.pack(side="left", padx=(0, 8))
+            icon.grid(row=0, column=1, sticky="nw", padx=(0, 8))
 
             info = tk.Frame(card, bg=BG2)
-            info.pack(side="left", fill="x", expand=True)
+            info.grid(row=0, column=2, sticky="ew")
+            info.columnconfigure(0, weight=1)
 
             tk.Label(info, text=sc.title,
                      font=(FONT_SANS, 11, "bold" if active else "normal"),
-                     fg=TEXT0, bg=BG2, anchor="w").pack(fill="x")
+                     fg=TEXT0, bg=BG2, anchor="w", wraplength=210,
+                     justify="left").grid(row=0, column=0, sticky="ew")
 
             status_text = ("Done" if done
                            else f"{int(pct*100)}%" if active
@@ -971,21 +1143,71 @@ class GenerateScreen(tk.Frame):
             status_lbl = tk.Label(info, text=status_text,
                                   font=(FONT_SANS, 10), fg=TEXT2, bg=BG2,
                                   anchor="w")
-            status_lbl.pack(fill="x")
+            status_lbl.grid(row=1, column=0, sticky="ew")
 
-            # Progress bar
-            if active:
-                prog_bg = tk.Frame(card, bg=BG4, height=3)
-                prog_bg.pack(fill="x", pady=(4, 0), side="bottom")
-                fill_w = int(pct * 260)
-                tk.Frame(prog_bg, bg=ACCENT, height=3,
-                         width=fill_w).pack(side="left")
+            prog = CanvasProgress(card, height=4)
+            prog.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(6, 0))
+            prog.set(pct)
 
             self._scene_frames[sc.number] = {
                 "card": card,
+                "checkbox": chk,
                 "icon": icon,
                 "status_lbl": status_lbl,
+                "progress": prog,
             }
+            self._update_scene_card(sc.number)
+        self._update_selection_count()
+
+    def _update_scene_card(self, scene_number: int):
+        widgets = self._scene_frames.get(scene_number)
+        if not widgets:
+            return
+        pct = self._scene_progress.get(scene_number, 0.0)
+        done = pct >= 1.0
+        active = 0 < pct < 1.0
+        var = self._scene_vars.get(scene_number)
+        selected = True if var is None else var.get()
+        if done:
+            icon_bg, icon_fg, icon_char, status = GREEN, "#fff", "✓", "Done"
+        elif active:
+            icon_bg, icon_fg, icon_char, status = ACCENT, "#fff", "●", f"{int(pct*100)}%"
+        elif selected:
+            icon_bg, icon_fg, icon_char, status = BG3, TEXT3, "○", "Queued"
+        else:
+            icon_bg, icon_fg, icon_char, status = BG2, TEXT3, "–", "Skipped"
+        widgets["icon"].configure(text=icon_char, fg=icon_fg, bg=icon_bg)
+        widgets["status_lbl"].configure(text=status)
+        widgets["progress"].set(pct)
+
+    def _update_selection_count(self):
+        selected = len(self.selected_scene_numbers())
+        total = len(self._script.scenes)
+        if hasattr(self, "overall_label") and not self._worker:
+            self.overall_label.configure(text=f"{selected} of {total} scenes selected")
+        for sc in self._script.scenes:
+            self._update_scene_card(sc.number)
+
+    def select_all_scenes(self):
+        if self._worker:
+            return
+        for var in self._scene_vars.values():
+            var.set(True)
+        self._update_selection_count()
+
+    def clear_scene_selection(self):
+        if self._worker:
+            return
+        for var in self._scene_vars.values():
+            var.set(False)
+        self._update_selection_count()
+
+    def selected_scene_numbers(self) -> List[int]:
+        return [
+            sc.number
+            for sc in self._script.scenes
+            if self._scene_vars.setdefault(sc.number, tk.BooleanVar(value=True)).get()
+        ]
 
     def _log_line(self, text: str, tag: str = ""):
         self.log.configure(state="normal")
@@ -1011,22 +1233,51 @@ class GenerateScreen(tk.Frame):
     def _cancel(self):
         self._cancel_flag = True
 
+    def copy_log(self):
+        text = self.log.get("1.0", "end").strip()
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        self._log_line("Copied output log to clipboard.", "success")
+
+    def toggle_pause(self):
+        self._paused = not self._paused
+        self.pause_btn.configure(text="Resume" if self._paused else "Pause")
+        self._log_line("Paused." if self._paused else "Resumed.", "warn" if self._paused else "active")
+
+    def is_paused(self) -> bool:
+        return self._paused
+
     def update_output_dir(self, path: str):
         self._output_dir = path
         if hasattr(self, "out_label"):
             self.out_label.configure(text=path or "Not set")
 
     def run_generation(self, engine, assignment: Assignment,
-                       cancel_check, progress_cb):
+                       cancel_check, progress_cb, scene_filter: Optional[List[int]] = None,
+                       event_cb=None):
         """Called by App when ready to start."""
         if not self._output_dir:
             messagebox.showinfo("Need a folder", "Choose an output folder first.")
             return
         self._cancel_flag = False
+        self._paused = False
         self.gen_btn.configure(state="disabled")
         self.cancel_btn.configure(state="normal")
+        self.pause_btn.configure(state="normal", text="Pause")
         self._scene_progress.clear()
-        self._build_scene_list()
+        self._completed_scenes.clear()
+        self._scene_order = [
+            sc.number for sc in self._script.scenes
+            if scene_filter is None or sc.number in scene_filter
+        ]
+        self._selected_total = max(len(self._scene_order), 1)
+        for sc in self._script.scenes:
+            self._scene_progress[sc.number] = 0.0
+            self._update_scene_card(sc.number)
+            widgets = self._scene_frames.get(sc.number)
+            if widgets:
+                widgets["checkbox"].configure(state="disabled")
+        self._update_overall_progress()
 
         def worker():
             t0 = time.time()
@@ -1038,36 +1289,77 @@ class GenerateScreen(tk.Frame):
                     output_dir=self._output_dir,
                     progress_cb=progress_cb,
                     cancel_check=cancel_check,
+                    scene_filter=scene_filter,
                 )
-                self._progress_queue.put(("done", (res, time.time() - t0)))
+                if event_cb:
+                    event_cb("done", (res, time.time() - t0))
             except Exception as e:
-                self._progress_queue.put(("error", (str(e), traceback.format_exc())))
+                if event_cb:
+                    event_cb("error", (str(e), traceback.format_exc()))
 
         self._worker = threading.Thread(target=worker, daemon=True)
         self._worker.start()
 
     def handle_progress(self, p: GenerationProgress):
+        scene_number = self._scene_number_for_progress(p)
         if p.element_index >= 0:
             frac = (p.element_index + 1) / max(p.total_elements_in_scene, 1)
-            self._scene_progress[self._script.scenes[p.scene_index].number] = frac
-            self._build_scene_list()
+            if scene_number is not None:
+                self._scene_progress[scene_number] = frac
+                self._update_scene_card(scene_number)
+                self._update_overall_progress()
         if p.message:
+            if p.element_index == -1 and p.message.startswith("✓") and scene_number is not None:
+                self._scene_progress[scene_number] = 1.0
+                self._completed_scenes.add(scene_number)
+                self._update_scene_card(scene_number)
+                self._update_overall_progress()
             tag = ("success" if "✓" in p.message
                    else "warn" if "warn" in p.message.lower()
+                   else "error" if "error" in p.message.lower()
                    else "info")
             self._log_line(p.message, tag)
+
+    def _scene_number_for_progress(self, p: GenerationProgress) -> Optional[int]:
+        if 0 <= p.scene_index < len(self._scene_order):
+            return self._scene_order[p.scene_index]
+        if 0 <= p.scene_index < len(self._script.scenes):
+            return self._script.scenes[p.scene_index].number
+        return None
+
+    def _update_overall_progress(self):
+        active_sum = sum(self._scene_progress.get(n, 0.0) for n in self._scene_order)
+        frac = active_sum / max(self._selected_total, 1)
+        if hasattr(self, "overall_bar"):
+            self.overall_bar.set(frac)
+        if hasattr(self, "overall_label"):
+            self.overall_label.configure(
+                text=f"Overall progress: {int(frac * 100)}% "
+                     f"({len(self._completed_scenes)}/{len(self._scene_order)} scenes)")
 
     def handle_done(self, result, seconds: float):
         self.gen_btn.configure(state="normal", text="✓  Open Output Folder",
                                command=self._open_output)
         self.cancel_btn.configure(state="disabled")
-        for sc in self._script.scenes:
-            self._scene_progress[sc.number] = 1.0
-        self._build_scene_list()
+        self.pause_btn.configure(state="disabled")
+        self._worker = None
+        for widgets in self._scene_frames.values():
+            widgets["checkbox"].configure(state="normal")
+        if not self._cancel_flag:
+            for scene_number in self._scene_order:
+                self._scene_progress[scene_number] = 1.0
+                self._completed_scenes.add(scene_number)
+                self._update_scene_card(scene_number)
+        self._update_overall_progress()
         n = len(result.files)
-        self._log_line(
-            f"Done — {n} scene file{'s' if n != 1 else ''} in "
-            f"{_fmt_duration(seconds)}.", "success")
+        if self._cancel_flag:
+            self._log_line(
+                f"Canceled — {n} scene file{'s' if n != 1 else ''} written before stopping.",
+                "warn")
+        else:
+            self._log_line(
+                f"Done — {n} scene file{'s' if n != 1 else ''} in "
+                f"{_fmt_duration(seconds)}.", "success")
         if result.errors:
             for err in result.errors:
                 self._log_line("ERROR: " + err, "error")
@@ -1075,6 +1367,10 @@ class GenerateScreen(tk.Frame):
     def handle_error(self, msg: str, tb: str):
         self.gen_btn.configure(state="normal")
         self.cancel_btn.configure(state="disabled")
+        self.pause_btn.configure(state="disabled")
+        self._worker = None
+        for widgets in self._scene_frames.values():
+            widgets["checkbox"].configure(state="normal")
         self._log_line("ERROR: " + msg, "error")
         self._log_line(tb, "error")
 
@@ -1118,19 +1414,7 @@ class App(tk.Tk):
         self._progress_queue: queue.Queue = queue.Queue()
         self._recent_files: List[str] = self._load_recent()
 
-        # ttk dark-ish style for comboboxes + scrollbars
-        style = ttk.Style(self)
-        try:
-            style.theme_use("clam")
-        except Exception:
-            pass
-        # Voice pickers now use tk.OptionMenu (not ttk.Combobox) — no Combobox
-        # style needed.  Just darken the scrollbars.
-        style.configure("TScrollbar",
-                        background=BG3, troughcolor=BG1,
-                        arrowcolor=TEXT2, borderwidth=0)
-        style.map("TScrollbar",
-                  background=[("active", BG4)])
+        self._configure_ttk_style()
 
         try:
             self._build_ui()
@@ -1141,27 +1425,40 @@ class App(tk.Tk):
         self._load_engine_voices()
         _dbg("startup complete")
 
+    def _configure_ttk_style(self):
+        style = ttk.Style(self)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+        style.configure("TScrollbar",
+                        background=BG3, troughcolor=BG1,
+                        arrowcolor=TEXT2, borderwidth=0)
+        style.map("TScrollbar",
+                  background=[("active", BG4)])
+
     # ── Layout ────────────────────────────────────────────────────────────
 
     def _build_ui(self):
+        self._build_menu()
         # Title bar
         tbar = tk.Frame(self, bg=BG1,
                         highlightbackground=BORDER, highlightthickness=1)
         tbar.pack(fill="x")
-        # Traffic lights (cosmetic)
-        tl_frame = tk.Frame(tbar, bg=BG1)
-        tl_frame.pack(side="left", padx=12, pady=10)
-        for color in ("#ff5f57", "#febc2e", "#28c840"):
-            tk.Canvas(tl_frame, width=12, height=12, bg=BG1,
-                      highlightthickness=0).pack(side="left", padx=3)
-            # Draw filled circles
-            c = tl_frame.winfo_children()[-1]
-            c.create_oval(1, 1, 11, 11, fill=color, outline="")
         # Title label
         self.title_label = tk.Label(
             tbar, text=APP_TITLE,
             font=(FONT_SANS, 13), fg=TEXT1, bg=BG1)
-        self.title_label.pack(side="left", expand=True)
+        self.title_label.pack(side="left", expand=True, padx=(18, 0), pady=10)
+        self.theme_btn = GhostButton(
+            tbar,
+            text="Light" if _active_theme_name == "dark" else "Dark",
+            command=self._toggle_theme,
+            font=(FONT_SANS, 11),
+            padx=10,
+            pady=5,
+        )
+        self.theme_btn.pack(side="right", padx=12, pady=7)
 
         # Step nav (hidden on import screen)
         self.step_nav = StepNav(self, current_step=1,
@@ -1174,7 +1471,47 @@ class App(tk.Tk):
         self.content.rowconfigure(0, weight=1)
         self.content.columnconfigure(0, weight=1)
 
-        self._show_step(1)
+        self._show_step(self._step)
+
+    def _build_menu(self):
+        menu = tk.Menu(self)
+        file_menu = tk.Menu(menu, tearoff=False)
+        file_menu.add_command(label="Open Script…", command=self._on_choose_pdf, accelerator="⌘O")
+        file_menu.add_separator()
+        file_menu.add_command(label="Choose Output Folder…", command=self._on_choose_output)
+        menu.add_cascade(label="File", menu=file_menu)
+
+        view_menu = tk.Menu(menu, tearoff=False)
+        view_menu.add_command(label="Use System Appearance", command=self._use_system_theme)
+        view_menu.add_command(label="Toggle Light/Dark Mode", command=self._toggle_theme, accelerator="⌘⇧L")
+        menu.add_cascade(label="View", menu=view_menu)
+        self.configure(menu=menu)
+        self.bind_all("<Command-o>", lambda _e: self._on_choose_pdf())
+        self.bind_all("<Command-Shift-L>", lambda _e: self._toggle_theme())
+
+    def _theme_change_allowed(self) -> bool:
+        if hasattr(self, "_gen_screen") and getattr(self._gen_screen, "_worker", None):
+            messagebox.showinfo("Generation in progress", "Finish or cancel generation before changing themes.")
+            return False
+        return True
+
+    def _use_system_theme(self):
+        if not self._theme_change_allowed():
+            return
+        self._set_theme(_detect_system_theme())
+
+    def _toggle_theme(self):
+        if not self._theme_change_allowed():
+            return
+        self._set_theme("light" if _active_theme_name == "dark" else "dark")
+
+    def _set_theme(self, name: str):
+        _apply_theme(name)
+        self.configure(bg=BG0)
+        self._configure_ttk_style()
+        for w in self.winfo_children():
+            w.destroy()
+        self._build_ui()
 
     def _show_step(self, step: int):
         self._step = step
@@ -1357,6 +1694,24 @@ class App(tk.Tk):
         # destroyed — safe to use even though the Combobox Tcl commands are gone.
         assignment = self.assignment
         os.makedirs(self.output_dir, exist_ok=True)
+        scene_filter = self._gen_screen.selected_scene_numbers()
+        if not scene_filter:
+            messagebox.showinfo("No scenes selected", "Select at least one scene to generate.")
+            return
+        if isinstance(engine, tts_engines.OpenAIEngine):
+            request_count = estimate_tts_requests(self.script, assignment, scene_filter)
+            rpm = getattr(engine, "requests_per_minute", 3)
+            minutes = max(1, int((request_count + rpm - 1) // rpm))
+            proceed = messagebox.askyesno(
+                "OpenAI TTS estimate",
+                "OpenAI TTS will use cloud requests and may be slow on low rate limits.\n\n"
+                f"Selected scenes: {len(scene_filter)}\n"
+                f"Estimated TTS requests after batching: {request_count}\n"
+                f"At {rpm} requests/minute: about {_fmt_duration(minutes * 60)} minimum\n\n"
+                "For quick previews, select fewer scenes or use macOS built-in voices."
+            )
+            if not proceed:
+                return
 
         self._cancel_flag = False
 
@@ -1364,13 +1719,28 @@ class App(tk.Tk):
             self._progress_queue.put(("progress", p))
 
         def cancel_check():
+            while (hasattr(self, "_gen_screen")
+                   and self._gen_screen.is_paused()
+                   and not self._cancel_flag):
+                time.sleep(0.1)
             return self._cancel_flag
 
-        self._gen_screen.run_generation(engine, assignment, cancel_check, cb)
+        def event_cb(kind, payload):
+            self._progress_queue.put((kind, payload))
+
+        self._gen_screen.run_generation(
+            engine, assignment, cancel_check, cb,
+            scene_filter=scene_filter,
+            event_cb=event_cb,
+        )
         self._poll_progress()
 
     def _on_cancel(self):
         self._cancel_flag = True
+        if hasattr(self, "_gen_screen"):
+            self._gen_screen._cancel_flag = True
+            self._gen_screen._log_line("Cancel requested. Finishing the current safe point…", "warn")
+            self._gen_screen.cancel_btn.configure(state="disabled")
 
     def _poll_progress(self):
         try:
