@@ -741,13 +741,7 @@ struct GenerateView: View {
         panel.allowsMultipleSelection = false
         panel.title = "Choose Output Folder"
         panel.prompt = "Select"
-        if let window = NSApp.keyWindow {
-            panel.beginSheet(window) { response in
-                if response == .OK, let url = panel.url {
-                    state.setOutputDirectory(url)
-                }
-            }
-        } else if panel.runModal() == .OK, let url = panel.url {
+        if panel.runModal() == .OK, let url = panel.url {
             state.setOutputDirectory(url)
         }
     }
