@@ -75,6 +75,7 @@ struct ContentView: View {
 
 private struct WorkflowStepBar: View {
     @EnvironmentObject private var state: AppState
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         HStack(spacing: 0) {
@@ -110,12 +111,21 @@ private struct WorkflowStepBar: View {
 
             Spacer()
 
-            // Engine badge (right anchor)
-            Label(state.selectedEngine.title, systemImage: state.selectedEngine.symbol)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(minWidth: 140, alignment: .trailing)
-                .lineLimit(1)
+            // Right anchor: engine badge + settings gear
+            HStack(spacing: 10) {
+                Label(state.selectedEngine.title, systemImage: state.selectedEngine.symbol)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Button { openSettings() } label: {
+                    Image(systemName: "gear")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Settings (⌘,)")
+            }
+            .frame(minWidth: 140, alignment: .trailing)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 11)
