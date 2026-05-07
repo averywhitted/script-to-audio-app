@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct ContentView: View {
     @EnvironmentObject private var state: AppState
@@ -34,6 +35,10 @@ struct ContentView: View {
                 }
             }
             StatusBar()
+        }
+        .background(FirstMouseAcceptingView())
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            NSApp.activate(ignoringOtherApps: true)
         }
         .fileImporter(
             isPresented: $isImporting,
@@ -212,4 +217,17 @@ private struct StatusBar: View {
         .padding(.vertical, 7)
         .background(.bar)
     }
+}
+
+// MARK: - First-mouse fix
+// Makes buttons respond on the first click even when the window isn't the key window.
+
+private struct FirstMouseAcceptingView: NSViewRepresentable {
+    func makeNSView(context: Context) -> _FirstMouseNSView { _FirstMouseNSView() }
+    func updateNSView(_ nsView: _FirstMouseNSView, context: Context) {}
+}
+
+private class _FirstMouseNSView: NSView {
+    override var acceptsFirstResponder: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }

@@ -324,11 +324,12 @@ private struct VoiceAssignmentList: View {
 
     var body: some View {
         if state.isFetchingVoices {
-            HStack {
-                ProgressView().controlSize(.small)
+            VStack(spacing: 14) {
+                ProgressView().controlSize(.large)
                 Text("Loading voices…").foregroundStyle(.secondary)
             }
-            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 60)
         } else if state.voices.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 if state.installedEngines.contains(state.selectedEngine) {
@@ -653,7 +654,6 @@ private struct EngineListCard: View {
 
 struct GenerateView: View {
     @EnvironmentObject private var state: AppState
-    @State private var choosingOutput = false
     @State private var showLog = false
     @State private var secondsElapsed: Int = 0
 
@@ -682,50 +682,45 @@ struct GenerateView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                SceneQueuePanel(engine: state.selectedEngine).frame(width: 260)
+            if state.generationComplete {
+                GenerationCompletePanel()
+            } else {
+                HStack(spacing: 0) {
+                    SceneQueuePanel(engine: state.selectedEngine).frame(width: 260)
+                    Divider()
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            // Order: confirm → output → estimate → progress → render (last)
+                            statusStrip
+                            outputCard
+                            if state.selectedEngine == .openAI { openAICard }
+                            if state.isGenerating || !state.generationLog.isEmpty { progressCard }
+                            renderCard     // always last — final action after reviewing above
+                        }
+                        .padding(20)
+                    }
+                }
                 Divider()
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        // Order: confirm → output → estimate → progress → render (last)
-                        statusStrip
-                        outputCard
-                        if state.selectedEngine == .openAI { openAICard }
-                        if state.isGenerating || !state.generationLog.isEmpty { progressCard }
-                        renderCard     // always last — final action after reviewing above
+                HStack {
+                    if state.isGenerating {
+                        ProgressView().controlSize(.small)
+                        Text(runningCaption).font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Button { state.goTo(.cast) } label: {
+                            Label("Back to Voices", systemImage: "chevron.left")
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.caption)
+                        Text(idleCaption).font(.caption).foregroundStyle(.secondary)
                     }
-                    .padding(20)
-                }
-            }
-            Divider()
-            HStack {
-                if state.isGenerating {
-                    ProgressView().controlSize(.small)
-                    Text(runningCaption).font(.caption).foregroundStyle(.secondary)
-                } else {
-                    Button { state.goTo(.cast) } label: {
-                        Label("Back to Voices", systemImage: "chevron.left")
+                    Spacer()
+                    Button(role: .cancel) { state.cancelGeneration() } label: {
+                        Label("Cancel Render", systemImage: "xmark.circle")
                     }
-                    .buttonStyle(.borderless)
-                    .font(.caption)
-                    Text(idleCaption).font(.caption).foregroundStyle(.secondary)
+                    .disabled(!state.isGenerating)
                 }
-                Spacer()
-                Button(role: .cancel) { state.cancelGeneration() } label: {
-                    Label("Cancel Render", systemImage: "xmark.circle")
-                }
-                .disabled(!state.isGenerating)
-            }
-            .padding(.horizontal, 20).padding(.vertical, 10)
-            .background(.bar)
-        }
-        .fileImporter(
-            isPresented: $choosingOutput,
-            allowedContentTypes: [.folder],
-            allowsMultipleSelection: false
-        ) { result in
-            if case .success(let urls) = result, let url = urls.first {
-                state.setOutputDirectory(url)
+                .padding(.horizontal, 20).padding(.vertical, 10)
+                .background(.bar)
             }
         }
         .onReceive(clock) { _ in
@@ -734,6 +729,26 @@ struct GenerateView: View {
         }
         .onChange(of: state.isGenerating) { _, generating in
             if !generating { secondsElapsed = 0 }
+        }
+    }
+
+    // MARK: Output folder picker
+
+    private func chooseOutputFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.title = "Choose Output Folder"
+        panel.prompt = "Select"
+        if let window = NSApp.keyWindow {
+            panel.beginSheet(window) { response in
+                if response == .OK, let url = panel.url {
+                    state.setOutputDirectory(url)
+                }
+            }
+        } else if panel.runModal() == .OK, let url = panel.url {
+            state.setOutputDirectory(url)
         }
     }
 
@@ -786,17 +801,7 @@ struct GenerateView: View {
                     .foregroundStyle(state.outputDirectory == nil ? .secondary : .primary)
                     .lineLimit(1).truncationMode(.middle)
                 Spacer()
-                Button("Change…") { choosingOutput = true }
-            }
-            if let output = state.lastOutputDirectory {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
-                    Text("Last render: \(output.lastPathComponent)")
-                        .font(.caption).foregroundStyle(.secondary)
-                        .lineLimit(1).truncationMode(.middle)
-                    Spacer()
-                    Button("Open in Finder") { NSWorkspace.shared.open(output) }.font(.caption)
-                }
+                Button("Change…") { chooseOutputFolder() }
             }
         }
         .padding(18)
@@ -829,7 +834,7 @@ struct GenerateView: View {
     private var progressCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(state.isGenerating ? "Rendering…" : "Last Run").font(.title3.weight(.semibold))
+                Text(state.isGenerating ? "Rendering…" : "Render Progress").font(.title3.weight(.semibold))
                 Spacer()
                 if state.isGenerating { ProgressView().controlSize(.small) }
             }
@@ -905,8 +910,6 @@ struct GenerateView: View {
 
     private var renderCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Start Render").font(.title3.weight(.semibold))
-
             HStack(spacing: 10) {
                 Button { state.renderPreviewScene() } label: {
                     Label("Preview First Scene", systemImage: "play.circle")
@@ -951,6 +954,86 @@ struct GenerateView: View {
         switch style {
         case .info: .secondary; case .success: .green; case .warning: .orange; case .error: .red
         }
+    }
+}
+
+// MARK: - Generation complete panel
+
+private struct GenerationCompletePanel: View {
+    @EnvironmentObject private var state: AppState
+
+    private var outputDir: URL? { state.lastOutputDirectory }
+    private var scenesRendered: Int { state.sceneProgress.values.filter { $0 >= 1.0 }.count }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            VStack(spacing: 28) {
+                // Icon + headline
+                VStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.green.opacity(0.12))
+                            .frame(width: 88, height: 88)
+                        Image(systemName: "waveform.badge.checkmark")
+                            .font(.system(size: 40, weight: .light))
+                            .foregroundStyle(.green)
+                    }
+                    VStack(spacing: 6) {
+                        Text("Render Complete")
+                            .font(.largeTitle.weight(.semibold))
+                        Text("\(scenesRendered) scene\(scenesRendered == 1 ? "" : "s") rendered successfully")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                        if let dir = outputDir {
+                            HStack(spacing: 5) {
+                                Image(systemName: "folder.fill").font(.caption).foregroundStyle(.secondary)
+                                Text(dir.abbreviatingWithTilde)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1).truncationMode(.middle)
+                            }
+                        }
+                    }
+                }
+
+                // Actions
+                VStack(spacing: 10) {
+                    if let dir = outputDir {
+                        Button {
+                            NSWorkspace.shared.open(dir)
+                        } label: {
+                            Label("Open Output in Finder", systemImage: "folder.badge.checkmark")
+                                .frame(minWidth: 260)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                    }
+
+                    HStack(spacing: 12) {
+                        Button {
+                            // Render again = stay on generate page, reset completion state
+                            state.generationComplete = false
+                        } label: {
+                            Label("Render Again", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+
+                        Button {
+                            state.resetForNewProject()
+                        } label: {
+                            Label("New Project", systemImage: "doc.badge.plus")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                    }
+                }
+            }
+            .padding(48)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -1110,7 +1193,7 @@ private extension SceneSummary {
     }
 }
 
-private extension URL {
+extension URL {
     var abbreviatingWithTilde: String {
         path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
     }

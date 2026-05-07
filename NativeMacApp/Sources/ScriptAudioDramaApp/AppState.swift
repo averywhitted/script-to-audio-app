@@ -44,6 +44,14 @@ final class AppState: ObservableObject {
     @Published var renderingSceneNumbers: [Int] = []          // ordered list of scene numbers being rendered
     @Published var sceneProgress: [Int: Double] = [:]         // scene number → 0.0–1.0
 
+    // Render completion
+    @Published var generationComplete = false
+
+    // Settings — persisted via UserDefaults
+    @Published var autoOpenFinderAfterRender: Bool = UserDefaults.standard.bool(forKey: "autoOpenFinderAfterRender") {
+        didSet { UserDefaults.standard.set(autoOpenFinderAfterRender, forKey: "autoOpenFinderAfterRender") }
+    }
+
     let bridge = PythonBridge()
     private var previewSound: NSSound?
 
@@ -441,6 +449,7 @@ final class AppState: ObservableObject {
         UserDefaults.standard.set(out.path, forKey: "lastOutputDirectory")
         generationLog = []
         generationProgress = 0
+        generationComplete = false
         renderingSceneNumbers = sceneNumbers
         sceneProgress = Dictionary(uniqueKeysWithValues: sceneNumbers.map { ($0, 0.0) })
         renderStartTime = Date()
@@ -493,6 +502,25 @@ final class AppState: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
         appendLog("Copied output log to clipboard.", .success)
+    }
+
+    func resetForNewProject() {
+        navigatingForward = false
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
+            step = .importScript
+        }
+        script = nil
+        selectedPDF = nil
+        voices = []
+        voiceAssignment = [:]
+        selectedScenes = []
+        generationLog = []
+        generationProgress = 0
+        sceneProgress = [:]
+        renderingSceneNumbers = []
+        generationComplete = false
+        renderStartTime = nil
+        status = "Choose a PDF script to begin."
     }
 
     func setOutputDirectory(_ url: URL) {
@@ -575,7 +603,14 @@ final class AppState: ObservableObject {
             if let errors = event.errors, !errors.isEmpty {
                 errors.forEach { appendLog($0, .error) }
             }
-            status = "Generation complete."
+            let renderHadErrors = !(event.errors ?? []).isEmpty
+            status = renderHadErrors ? "Completed with errors." : "Generation complete."
+            if !renderHadErrors {
+                generationComplete = true
+                if autoOpenFinderAfterRender, let dir = lastOutputDirectory {
+                    NSWorkspace.shared.open(dir)
+                }
+            }
         default:
             appendLog(event.message ?? event.event, .info)
         }
