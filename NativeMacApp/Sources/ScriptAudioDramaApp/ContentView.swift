@@ -79,11 +79,13 @@ private struct WorkflowStepBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // Script context (left anchor)
+            // Script context (left anchor) — only shown once a script is loaded
             VStack(alignment: .leading, spacing: 1) {
-                Text(state.script?.title ?? "Table Read")
-                    .font(.callout.weight(.semibold))
-                    .lineLimit(1)
+                if let title = state.script?.title {
+                    Text(title)
+                        .font(.callout.weight(.semibold))
+                        .lineLimit(1)
+                }
                 if let pdf = state.selectedPDF {
                     Text(pdf.lastPathComponent)
                         .font(.caption2)
@@ -111,12 +113,14 @@ private struct WorkflowStepBar: View {
 
             Spacer()
 
-            // Right anchor: engine badge + settings gear
+            // Right anchor: engine badge (only after import) + settings gear
             HStack(spacing: 10) {
-                Label(state.selectedEngine.title, systemImage: state.selectedEngine.symbol)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if state.selectedPDF != nil {
+                    Label(state.selectedEngine.title, systemImage: state.selectedEngine.symbol)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
                 Button { openSettings() } label: {
                     Image(systemName: "gear")
                         .font(.system(size: 13))
