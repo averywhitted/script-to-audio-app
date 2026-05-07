@@ -5,22 +5,35 @@ struct ContentView: View {
     @State private var isImporting = false
 
     var body: some View {
-        NavigationSplitView {
-            Sidebar()
-                .navigationSplitViewColumnWidth(min: 240, ideal: 270)
-        } detail: {
-            VStack(spacing: 0) {
-                HeaderBar()
-                Divider()
-                StepContent(openImporter: { isImporting = true })
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                StatusBar()
+        VStack(spacing: 0) {
+            WorkflowStepBar()
+            Divider()
+            ZStack {
+                if state.step == .importScript {
+                    ImportView(openImporter: { isImporting = true })
+                        .transition(stepTransition)
+                }
+                if state.step == .review {
+                    ReviewView()
+                        .transition(stepTransition)
+                }
+                if state.step == .cast {
+                    CastView()
+                        .transition(stepTransition)
+                }
+                if state.step == .generate {
+                    GenerateView()
+                        .transition(stepTransition)
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
             .overlay {
                 if state.isWorking && !state.isGenerating {
                     ProcessingOverlay()
                 }
             }
+            StatusBar()
         }
         .fileImporter(
             isPresented: $isImporting,
@@ -39,79 +52,122 @@ struct ContentView: View {
         } message: {
             Text(state.errorMessage ?? "")
         }
-        .alert(item: $state.pendingDownload) { prompt in
-            Alert(
-                title: Text("Download \(prompt.engine.title)?"),
-                message: Text("This engine needs local files before it can be used. The app will download and install what it needs here, then continue."),
-                primaryButton: .default(Text("Download")) {
-                    state.downloadPendingEngine()
-                },
-                secondaryButton: .cancel {
-                    state.selectedEngine = .macOS
-                }
-            )
-        }
+    }
+
+    private var stepTransition: AnyTransition {
+        .asymmetric(
+            insertion: state.navigatingForward
+                ? .move(edge: .trailing).combined(with: .opacity)
+                : .move(edge: .leading).combined(with: .opacity),
+            removal: state.navigatingForward
+                ? .move(edge: .leading).combined(with: .opacity)
+                : .move(edge: .trailing).combined(with: .opacity)
+        )
     }
 }
 
-private struct Sidebar: View {
+// MARK: - Horizontal step bar
+
+private struct WorkflowStepBar: View {
     @EnvironmentObject private var state: AppState
 
     var body: some View {
-        List(selection: Binding(
-            get: { state.step },
-            set: { state.goTo($0) }
-        )) {
-            Section("Workflow") {
-                ForEach(WorkflowStep.allCases) { step in
-                    StepSidebarRow(step: step, isEnabled: state.canNavigate(to: step))
-                        .tag(step)
+        HStack(spacing: 0) {
+            // Script context (left anchor)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(state.script?.title ?? "Table Read")
+                    .font(.callout.weight(.semibold))
+                    .lineLimit(1)
+                if let pdf = state.selectedPDF {
+                    Text(pdf.lastPathComponent)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
                 }
             }
-        }
-    }
-}
+            .frame(minWidth: 140, alignment: .leading)
 
-private struct HeaderBar: View {
-    @EnvironmentObject private var state: AppState
-
-    var body: some View {
-        HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(state.script?.title ?? "Script to Audio Drama")
-                    .font(.title3.weight(.semibold))
-                Text(state.selectedPDF?.lastPathComponent ?? "No script selected")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
             Spacer()
+
+            // Step pills
+            HStack(spacing: 4) {
+                ForEach(Array(WorkflowStep.allCases.enumerated()), id: \.element.id) { idx, step in
+                    if idx > 0 {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 2)
+                    }
+                    StepPill(step: step)
+                }
+            }
+
+            Spacer()
+
+            // Engine badge (right anchor)
             Label(state.selectedEngine.title, systemImage: state.selectedEngine.symbol)
+                .font(.caption)
                 .foregroundStyle(.secondary)
+                .frame(minWidth: 140, alignment: .trailing)
+                .lineLimit(1)
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 11)
         .background(.bar)
     }
 }
 
-private struct StepSidebarRow: View {
+private struct StepPill: View {
+    @EnvironmentObject private var state: AppState
     var step: WorkflowStep
-    var isEnabled: Bool
+
+    private var steps: [WorkflowStep] { WorkflowStep.allCases }
+    private var currentIdx: Int { steps.firstIndex(of: state.step) ?? 0 }
+    private var stepIdx: Int    { steps.firstIndex(of: step) ?? 0 }
+
+    private var isCurrent: Bool { state.step == step }
+    private var isPast: Bool    { stepIdx < currentIdx }
+    private var isEnabled: Bool { state.canNavigate(to: step) }
 
     var body: some View {
-        HStack(spacing: 10) {
-            Text("\(step.number)")
-                .font(.system(.caption, design: .rounded).weight(.bold))
-                .foregroundStyle(.white)
-                .frame(width: 22, height: 22)
-                .background(isEnabled ? Color.accentColor : Color.secondary.opacity(0.35), in: Circle())
-            Text(step.rawValue)
-                .foregroundStyle(isEnabled ? .primary : .secondary)
-            Spacer()
+        Button { state.goTo(step) } label: {
+            HStack(spacing: 5) {
+                ZStack {
+                    Circle()
+                        .fill(badgeFill)
+                        .frame(width: 18, height: 18)
+                    if isPast {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(Color.accentColor)
+                    } else {
+                        Text("\(step.number)")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundStyle(isCurrent ? .white : .secondary)
+                    }
+                }
+                Text(step.rawValue)
+                    .font(.callout.weight(isCurrent ? .semibold : .regular))
+                    .foregroundStyle(isCurrent ? .primary : (isEnabled ? .secondary : .tertiary))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(isCurrent ? Color.accentColor.opacity(0.1) : Color.clear,
+                        in: Capsule())
         }
-        .opacity(isEnabled ? 1 : 0.55)
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+
+    private var badgeFill: Color {
+        if isCurrent { return .accentColor }
+        if isPast    { return .accentColor.opacity(0.18) }
+        return .secondary.opacity(0.15)
     }
 }
+
+// MARK: - Processing overlay
 
 private struct ProcessingOverlay: View {
     @EnvironmentObject private var state: AppState
@@ -122,8 +178,7 @@ private struct ProcessingOverlay: View {
                 .fill(.ultraThinMaterial)
                 .ignoresSafeArea()
             VStack(spacing: 14) {
-                ProgressView()
-                    .controlSize(.large)
+                ProgressView().controlSize(.large)
                 Text(state.status)
                     .font(.headline)
                 Text("This can take a moment for large PDFs or voice downloads.")
@@ -137,23 +192,7 @@ private struct ProcessingOverlay: View {
     }
 }
 
-private struct StepContent: View {
-    @EnvironmentObject private var state: AppState
-    var openImporter: () -> Void
-
-    var body: some View {
-        switch state.step {
-        case .importScript:
-            ImportView(openImporter: openImporter)
-        case .review:
-            ReviewView()
-        case .cast:
-            CastView()
-        case .generate:
-            GenerateView()
-        }
-    }
-}
+// MARK: - Status bar
 
 private struct StatusBar: View {
     @EnvironmentObject private var state: AppState
@@ -161,19 +200,16 @@ private struct StatusBar: View {
     var body: some View {
         HStack {
             if state.isWorking {
-                ProgressView()
-                    .controlSize(.small)
+                ProgressView().controlSize(.small)
             }
             Text(state.status)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
             Spacer()
-            Text(state.selectedEngine.title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
         .background(.bar)
     }
 }

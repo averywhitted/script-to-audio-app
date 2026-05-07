@@ -1,14 +1,17 @@
 import Foundation
+import AppKit
 import Security
 import SwiftUI
 
 @MainActor
 final class AppState: ObservableObject {
     @Published var step: WorkflowStep = .importScript
+    @Published var navigatingForward = true
     @Published var selectedPDF: URL?
     @Published var script: ScriptSummary?
     @Published var selectedEngine: EngineKind = .macOS
     @Published var installedEngines: Set<EngineKind> = [.macOS]
+    @Published var engineStatuses: [EngineKind: EngineStatus] = [:]
     @Published var pendingDownload: EngineDownloadPrompt?
     @Published var isDownloadingEngine = false
     @Published var openAIAPIKey = ""
@@ -22,17 +25,27 @@ final class AppState: ObservableObject {
     @Published var lastOutputDirectory: URL?
     @Published var status = "Choose a PDF script to begin."
     @Published var errorMessage: String?
+    @Published var recentScripts: [RecentScript] = []
 
     // Voice assignment
     @Published var voices: [VoiceSummary] = []
     @Published var voiceAssignment: [String: String] = [:]   // char name → voice id
     @Published var isFetchingVoices = false
 
+    // Engine installation
+    @Published var installLog: [GenerationLogLine] = []
+    @Published var installingEngine: EngineKind? = nil
+    @Published var uninstallingEngine: EngineKind? = nil
+    @Published var previewingVoiceId: String?
+    @Published var preparingPreviewVoiceId: String?
+    @Published var renderStartTime: Date?
+
     // Per-scene generation progress
     @Published var renderingSceneNumbers: [Int] = []          // ordered list of scene numbers being rendered
     @Published var sceneProgress: [Int: Double] = [:]         // scene number → 0.0–1.0
 
     let bridge = PythonBridge()
+    private var previewSound: NSSound?
 
     var sceneList: [SceneSummary] { script?.scenes ?? [] }
 
@@ -48,6 +61,10 @@ final class AppState: ObservableObject {
             if FileManager.default.fileExists(atPath: savedPath) {
                 outputDirectory = url
             }
+        }
+        recentScripts = Self.loadRecentScripts()
+        Task {
+            await refreshEngineStatus()
         }
     }
 
@@ -68,7 +85,13 @@ final class AppState: ObservableObject {
 
     func goTo(_ target: WorkflowStep) {
         guard canNavigate(to: target) else { return }
-        step = target
+        let steps = WorkflowStep.allCases
+        let currentIdx = steps.firstIndex(of: step) ?? 0
+        let targetIdx  = steps.firstIndex(of: target) ?? 0
+        navigatingForward = targetIdx >= currentIdx
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
+            step = target
+        }
         if target == .cast && voices.isEmpty {
             fetchVoices()
         }
@@ -86,8 +109,12 @@ final class AppState: ObservableObject {
             do {
                 let parsed = try await bridge.parse(pdf: url)
                 script = parsed
+                rememberRecentScript(url, title: parsed.title)
                 selectedScenes = Set(parsed.scenes.map(\.number))
-                step = .review
+                navigatingForward = true
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
+                    step = .review
+                }
                 status = "\(parsed.sceneCount) scenes, \(parsed.characterCount) characters."
             } catch {
                 errorMessage = error.localizedDescription
@@ -107,11 +134,10 @@ final class AppState: ObservableObject {
             do {
                 let (list, autoAssign) = try await bridge.voices(engine: engine, pdf: pdf)
                 voices = list
-                // Apply auto-assign as defaults, but don't overwrite user overrides
+                // voiceAssignment is cleared whenever the engine changes, so apply
+                // server suggestions unconditionally — they become the starting defaults.
                 for (char, voiceId) in autoAssign {
-                    if voiceAssignment[char] == nil {
-                        voiceAssignment[char] = voiceId
-                    }
+                    voiceAssignment[char] = voiceId
                 }
                 status = "\(list.count) voices available for \(engine.title)."
             } catch {
@@ -171,38 +197,62 @@ final class AppState: ObservableObject {
 
     // MARK: - Engine selection
 
-    func chooseEngine(_ engine: EngineKind) {
+    /// Select an engine card without triggering install — used by card tap.
+    func selectEngine(_ engine: EngineKind) {
+        guard engine.isSupported else { return }
         selectedEngine = engine
         voices = []
-        voiceAssignment = [:]   // Reset assignment — voice IDs differ per engine
+        voiceAssignment = [:]
         if installedEngines.contains(engine) {
             fetchVoices()
             refreshOpenAIEstimate()
+        } else if engine == .openAI {
+            status = "Enter your OpenAI API key to use cloud voices."
         } else {
-            pendingDownload = EngineDownloadPrompt(engine: engine)
+            status = "Click Install to set up \(engine.title)."
+        }
+    }
+
+    /// Select an engine and start install if needed — used by the Install button.
+    func chooseEngine(_ engine: EngineKind) {
+        selectedEngine = engine
+        voices = []
+        voiceAssignment = [:]
+        if installedEngines.contains(engine) {
+            fetchVoices()
+            refreshOpenAIEstimate()
+        } else if engine == .openAI {
+            status = "Enter your OpenAI API key to use cloud voices."
+        } else if engine.isSupported {
+            startEngineInstall(engine)
+        } else {
+            status = "\(engine.title) is coming soon."
+            selectedEngine = .macOS
+            fetchVoices()
         }
     }
 
     func downloadPendingEngine() {
         guard let engine = pendingDownload?.engine else { return }
+        pendingDownload = nil
+
         if engine == .openAI {
-            pendingDownload = nil
             status = "Enter an OpenAI API key to use OpenAI TTS."
             return
         }
-        pendingDownload = nil
-        isDownloadingEngine = true
-        isWorking = true
-        status = "Downloading \(engine.title)..."
-        Task {
-            try? await Task.sleep(for: .seconds(1.2))
-            installedEngines.insert(engine)
-            isDownloadingEngine = false
-            isWorking = false
-            status = "\(engine.title) is ready."
+
+        if !engine.isSupported {
+            selectedEngine = .macOS
+            voices = []
+            voiceAssignment = [:]
+            errorMessage = "\(engine.title) is coming soon and isn't available in this version. Switched back to macOS Voices."
+            status = "\(engine.title) not yet available."
             fetchVoices()
-            refreshOpenAIEstimate()
+            return
         }
+
+        // Supported local engines: stream pip install, then mark ready.
+        startEngineInstall(engine)
     }
 
     func saveOpenAIAPIKey() {
@@ -219,6 +269,143 @@ final class AppState: ObservableObject {
         status = "OpenAI TTS is ready for estimates."
         fetchVoices()
         refreshOpenAIEstimate()
+    }
+
+    // MARK: - Engine installation
+
+    func startEngineInstall(_ engine: EngineKind) {
+        installingEngine = engine
+        installLog = []
+        status = "Installing \(engine.title)…"
+
+        Task {
+            do {
+                try await bridge.installEngine(engine) { [weak self] event in
+                    self?.handleInstallEvent(event)
+                }
+                installedEngines.insert(engine)
+                await refreshEngineStatus()
+                status = "\(engine.title) ready. The neural model downloads on first voice preview."
+                fetchVoices()
+            } catch {
+                appendInstallLog("Installation failed: \(error.localizedDescription)", .error)
+                errorMessage = "Could not install \(engine.title). Check the log for details."
+                status = "Installation failed."
+                selectedEngine = .macOS
+            }
+            installingEngine = nil
+        }
+    }
+
+    func refreshEngineStatus() async {
+        do {
+            var statuses = try await bridge.engineStatus()
+            if installedEngines.contains(.openAI) {
+                statuses[.openAI] = EngineStatus(
+                    installed: true,
+                    sizeBytes: 0,
+                    sizeLabel: "Cloud service",
+                    canUninstall: false
+                )
+            }
+            engineStatuses = statuses
+            var installed: Set<EngineKind> = [.macOS]
+            for (engine, status) in statuses where status.installed {
+                installed.insert(engine)
+            }
+            if !openAIAPIKey.isEmpty {
+                installed.insert(.openAI)
+            }
+            installedEngines = installed
+        } catch {
+            // Keep the current UI state if the worker cannot answer yet.
+        }
+    }
+
+    func uninstallEngine(_ engine: EngineKind) {
+        guard engine != .macOS, engine != .openAI else { return }
+        uninstallingEngine = engine
+        status = "Removing \(engine.title)…"
+        Task {
+            do {
+                try await bridge.uninstallEngine(engine)
+                installedEngines.remove(engine)
+                if selectedEngine == engine {
+                    selectedEngine = .macOS
+                    voices = []
+                    voiceAssignment = [:]
+                    fetchVoices()
+                }
+                await refreshEngineStatus()
+                status = "\(engine.title) removed."
+            } catch {
+                errorMessage = error.localizedDescription
+                status = "Uninstall failed."
+            }
+            uninstallingEngine = nil
+        }
+    }
+
+    func toggleVoicePreview(_ voice: VoiceSummary) {
+        if previewingVoiceId == voice.id {
+            previewSound?.stop()
+            previewSound = nil
+            previewingVoiceId = nil
+            return
+        }
+
+        previewSound?.stop()
+        previewSound = nil
+        preparingPreviewVoiceId = voice.id
+        status = "Preparing \(voice.label) preview…"
+
+        let engine = selectedEngine
+        Task {
+            do {
+                let url = try await bridge.previewVoice(
+                    engine: engine, voice: voice,
+                    apiKey: engine == .openAI ? openAIAPIKey : nil
+                )
+                guard preparingPreviewVoiceId == voice.id else { return }
+                let sound = NSSound(contentsOf: url, byReference: true)
+                previewSound = sound
+                previewingVoiceId = voice.id
+                preparingPreviewVoiceId = nil
+                sound?.play()
+                status = "Playing \(voice.label) preview."
+                let duration = sound?.duration ?? 4
+                Task {
+                    try? await Task.sleep(nanoseconds: UInt64(max(duration, 1) * 1_000_000_000))
+                    if previewingVoiceId == voice.id {
+                        previewingVoiceId = nil
+                        previewSound = nil
+                    }
+                }
+            } catch {
+                preparingPreviewVoiceId = nil
+                errorMessage = error.localizedDescription
+                status = "Preview failed."
+            }
+        }
+    }
+
+    private func handleInstallEvent(_ event: GenerationEvent) {
+        switch event.event {
+        case "started":
+            appendInstallLog(event.message ?? "Starting…", .info)
+        case "log":
+            appendInstallLog(event.message ?? "", style(from: event.level))
+        case "done":
+            appendInstallLog(event.message ?? "Done.", .success)
+        default:
+            if let msg = event.message, !msg.isEmpty {
+                appendInstallLog(msg, style(from: event.level))
+            }
+        }
+    }
+
+    func appendInstallLog(_ text: String, _ style: LogStyle) {
+        installLog.append(GenerationLogLine(text: text, style: style))
     }
 
     // MARK: - Generation
@@ -256,6 +443,7 @@ final class AppState: ObservableObject {
         generationProgress = 0
         renderingSceneNumbers = sceneNumbers
         sceneProgress = Dictionary(uniqueKeysWithValues: sceneNumbers.map { ($0, 0.0) })
+        renderStartTime = Date()
         isGenerating = true
         isWorking = true
         status = "Rendering \(sceneNumbers.count) scene(s)..."
@@ -286,6 +474,7 @@ final class AppState: ObservableObject {
             }
             isGenerating = false
             isWorking = false
+            renderStartTime = nil
         }
     }
 
@@ -295,6 +484,7 @@ final class AppState: ObservableObject {
         bridge.cancelGeneration()
         isGenerating = false
         isWorking = false
+        renderStartTime = nil
         status = "Generation canceled."
     }
 
@@ -309,6 +499,28 @@ final class AppState: ObservableObject {
         outputDirectory = url
         UserDefaults.standard.set(url.path, forKey: "lastOutputDirectory")
         status = "Output folder set to \(url.lastPathComponent)."
+    }
+
+    // MARK: - Recent scripts
+
+    private static let recentScriptsKey = "recentScripts"
+
+    private static func loadRecentScripts() -> [RecentScript] {
+        guard let data = UserDefaults.standard.data(forKey: recentScriptsKey),
+              let decoded = try? JSONDecoder().decode([RecentScript].self, from: data) else {
+            return []
+        }
+        return decoded.filter { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
+    private func rememberRecentScript(_ url: URL, title: String) {
+        let item = RecentScript(path: url.path, title: title, lastOpened: Date())
+        recentScripts.removeAll { $0.path == item.path }
+        recentScripts.insert(item, at: 0)
+        recentScripts = Array(recentScripts.prefix(8))
+        if let data = try? JSONEncoder().encode(recentScripts) {
+            UserDefaults.standard.set(data, forKey: Self.recentScriptsKey)
+        }
     }
 
     // MARK: - Event handling
@@ -377,7 +589,7 @@ final class AppState: ObservableObject {
 
     private func defaultOutputDirectory(for pdf: URL) -> URL {
         pdf.deletingLastPathComponent()
-            .appendingPathComponent(pdf.deletingPathExtension().lastPathComponent + " - audio drama")
+            .appendingPathComponent(pdf.deletingPathExtension().lastPathComponent + " - table read")
     }
 
     private func format(seconds: Double) -> String {
@@ -403,7 +615,7 @@ enum KeychainHelper {
         guard let data = value.data(using: .utf8) else { return }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "com.scriptaudiodrama",
+            kSecAttrService as String: "com.tableread",
             kSecAttrAccount as String: key,
         ]
         SecItemDelete(query as CFDictionary)
@@ -415,7 +627,7 @@ enum KeychainHelper {
     static func read(key: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "com.scriptaudiodrama",
+            kSecAttrService as String: "com.tableread",
             kSecAttrAccount as String: key,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
@@ -431,7 +643,7 @@ enum KeychainHelper {
     static func delete(key: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "com.scriptaudiodrama",
+            kSecAttrService as String: "com.tableread",
             kSecAttrAccount as String: key,
         ]
         SecItemDelete(query as CFDictionary)

@@ -3,10 +3,10 @@
 import PackageDescription
 
 let package = Package(
-    name: "ScriptAudioDrama",
+    name: "TableRead",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "ScriptAudioDrama", targets: ["ScriptAudioDramaApp"])
+        .executable(name: "TableRead", targets: ["ScriptAudioDramaApp"])
     ],
     targets: [
         .executableTarget(

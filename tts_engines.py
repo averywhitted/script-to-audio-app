@@ -2,14 +2,15 @@
 tts_engines.py
 ==============
 
-Two TTS backends with a common interface:
+TTS backends with a common interface:
 
     engine = MacSayEngine()        # offline, ships with macOS
+    engine = KokoroEngine()        # offline, neural quality, Apache-licensed
     engine = OpenAIEngine(api_key) # cloud, higher quality, paid
 
     engine.list_voices() -> list[VoiceInfo]
     engine.synthesize(text, voice_id, out_path) -> writes audio at out_path
-    engine.audio_extension -> ".aiff" / ".mp3"
+    engine.audio_extension -> ".aiff" / ".wav" / ".mp3"
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List, Optional
 
 
@@ -214,6 +216,184 @@ class MacSayEngine(TTSEngine):
 
 
 # ---------------------------------------------------------------------------
+# Kokoro local neural engine
+# ---------------------------------------------------------------------------
+
+# Module-level Kokoro instance cache — loading the ONNX model takes a few
+# seconds; we keep it alive for the lifetime of the worker process.
+_kokoro_instance: Optional[object] = None
+
+# Model files are hosted as public GitHub release assets — no HuggingFace
+# account or token needed.
+_KOKORO_RELEASE = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0"
+_KOKORO_FILES = {
+    "kokoro-v1.0.int8.onnx": "kokoro-v1.0.int8.onnx",
+    "voices-v1.0.bin":       "voices-v1.0.bin",
+}
+_KOKORO_CACHE_DIR = Path.home() / ".cache" / "tableread" / "kokoro"
+
+
+def _download_kokoro_files() -> tuple[str, str]:
+    """Download (or return cached) Kokoro ONNX model and voices files."""
+    import urllib.request
+
+    _KOKORO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    paths = {}
+    for filename in _KOKORO_FILES:
+        dest = _KOKORO_CACHE_DIR / filename
+        if not dest.exists():
+            url = f"{_KOKORO_RELEASE}/{filename}"
+            print(f"Downloading {filename} from {url} …", flush=True)
+            urllib.request.urlretrieve(url, dest)
+        paths[filename] = str(dest)
+    return paths["kokoro-v1.0.int8.onnx"], paths["voices-v1.0.bin"]
+
+
+def _get_kokoro() -> object:
+    """Return a cached Kokoro (kokoro-onnx) instance, downloading model files
+    on first call if not already cached locally."""
+    global _kokoro_instance
+    if _kokoro_instance is not None:
+        return _kokoro_instance
+
+    try:
+        from kokoro_onnx import Kokoro
+    except ImportError as exc:
+        raise RuntimeError(
+            "kokoro-onnx is not installed. "
+            "Run: pip install kokoro-onnx soundfile"
+        ) from exc
+
+    onnx_path, voices_path = _download_kokoro_files()
+    _kokoro_instance = Kokoro(onnx_path, voices_path)
+    return _kokoro_instance
+
+
+class KokoroEngine(TTSEngine):
+    """Apache-2.0-licensed neural TTS via kokoro-onnx.
+
+    Uses the ONNX-exported Kokoro-82M model from the public kokoro-onnx
+    GitHub releases. The quantized model (~88 MB) is downloaded on first
+    synthesis and cached permanently at ~/.cache/tableread/kokoro/.
+    Works on Python 3.9+ including 3.14.
+
+    Prerequisites:
+        pip install kokoro-onnx soundfile
+    """
+
+    name = "Kokoro (local neural)"
+    audio_extension = ".wav"   # soundfile writes PCM WAV; afconvert resamples
+
+    # Voice IDs are a focused English subset from the Kokoro v1.0 voice file.
+    # Prefix convention: af_ = American female, am_ = American male,
+    #                    bf_ = British female,  bm_ = British male.
+    VOICES = [
+        VoiceInfo("af_heart",    "Heart",    gender="F", locale="en_US", note="warm narrator"),
+        VoiceInfo("af_alloy",    "Alloy",    gender="F", locale="en_US", note="neutral"),
+        VoiceInfo("af_aoede",    "Aoede",    gender="F", locale="en_US"),
+        VoiceInfo("af_bella",    "Bella",    gender="F", locale="en_US", note="expressive"),
+        VoiceInfo("af_jessica",  "Jessica",  gender="F", locale="en_US"),
+        VoiceInfo("af_kore",     "Kore",     gender="F", locale="en_US"),
+        VoiceInfo("af_nicole",   "Nicole",   gender="F", locale="en_US", note="asmr"),
+        VoiceInfo("af_nova",     "Nova",     gender="F", locale="en_US", note="bright"),
+        VoiceInfo("af_river",    "River",    gender="F", locale="en_US"),
+        VoiceInfo("af_sarah",    "Sarah",    gender="F", locale="en_US"),
+        VoiceInfo("af_sky",      "Sky",      gender="F", locale="en_US", note="bright"),
+        VoiceInfo("am_adam",     "Adam",     gender="M", locale="en_US"),
+        VoiceInfo("am_echo",     "Echo",     gender="M", locale="en_US"),
+        VoiceInfo("am_eric",     "Eric",     gender="M", locale="en_US"),
+        VoiceInfo("am_fenrir",   "Fenrir",   gender="M", locale="en_US"),
+        VoiceInfo("am_liam",     "Liam",     gender="M", locale="en_US"),
+        VoiceInfo("am_michael",  "Michael",  gender="M", locale="en_US", note="warm"),
+        VoiceInfo("am_onyx",     "Onyx",     gender="M", locale="en_US", note="deep"),
+        VoiceInfo("am_puck",     "Puck",     gender="M", locale="en_US"),
+        VoiceInfo("bf_alice",    "Alice",    gender="F", locale="en_GB"),
+        VoiceInfo("bf_emma",     "Emma",     gender="F", locale="en_GB"),
+        VoiceInfo("bf_isabella", "Isabella", gender="F", locale="en_GB"),
+        VoiceInfo("bf_lily",     "Lily",     gender="F", locale="en_GB"),
+        VoiceInfo("bm_daniel",   "Daniel",   gender="M", locale="en_GB", note="narrator"),
+        VoiceInfo("bm_fable",    "Fable",    gender="M", locale="en_GB", note="narrator"),
+        VoiceInfo("bm_george",   "George",   gender="M", locale="en_GB"),
+        VoiceInfo("bm_lewis",    "Lewis",    gender="M", locale="en_GB"),
+    ]
+
+    _VOICE_FALLBACKS = {
+        # Older builds exposed a synthetic "af" blend that is not present in
+        # Kokoro v1.0 voice files. Keep stale UI assignments rendering.
+        "af": "af_heart",
+    }
+
+    # Map voice-ID prefix → kokoro-onnx lang string
+    _LANG_MAP = {
+        "af": "en-us",
+        "am": "en-us",
+        "bf": "en-gb",
+        "bm": "en-gb",
+    }
+
+    def is_available(self) -> bool:
+        try:
+            import kokoro_onnx       # noqa: F401
+            import soundfile         # noqa: F401
+            return True
+        except ImportError:
+            return False
+
+    def list_voices(self) -> List[VoiceInfo]:
+        return list(self.VOICES)
+
+    def _resolve_voice_id(self, voice_id: str, kokoro: object) -> str:
+        available = getattr(kokoro, "voices", None)
+        if available is not None and voice_id in available:
+            return voice_id
+
+        fallback = self._VOICE_FALLBACKS.get(voice_id)
+        if fallback and available is not None and fallback in available:
+            return fallback
+
+        first_voice = self.VOICES[0].id
+        if available is not None and first_voice in available:
+            return first_voice
+
+        return voice_id
+
+    def synthesize(self, text: str, voice_id: str, out_path: str) -> None:
+        try:
+            import soundfile as sf
+        except ImportError as exc:
+            raise RuntimeError(
+                "soundfile is not installed. Run: pip install soundfile"
+            ) from exc
+
+        kokoro = _get_kokoro()
+
+        resolved_voice_id = self._resolve_voice_id(voice_id, kokoro)
+
+        # Derive lang from the two-letter prefix (e.g. "af_bella" -> "af" -> "en-us")
+        prefix = resolved_voice_id.split("_")[0] if "_" in resolved_voice_id else resolved_voice_id
+        lang = self._LANG_MAP.get(prefix, "en-us")
+
+        try:
+            samples, sample_rate = kokoro.create(
+                text, voice=resolved_voice_id, speed=1.0, lang=lang
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"Kokoro synthesis failed for voice {voice_id!r}: {exc}"
+            ) from exc
+
+        if samples is None or len(samples) == 0:
+            raise RuntimeError(
+                f"Kokoro returned no audio for voice {voice_id!r}. "
+                "The text may be empty or contain unsupported characters."
+            )
+
+        # kokoro-onnx returns float32 at 24 kHz; write as 16-bit WAV so
+        # afconvert can resample it to the pipeline's 22.05 kHz PCM format.
+        sf.write(out_path, samples, samplerate=sample_rate, subtype="PCM_16")
+
+
+# ---------------------------------------------------------------------------
 # OpenAI TTS engine
 # ---------------------------------------------------------------------------
 
@@ -348,7 +528,7 @@ class OpenAIEngine(TTSEngine):
 
 
 def list_engines() -> List[TTSEngine]:
-    return [MacSayEngine(), OpenAIEngine()]
+    return [MacSayEngine(), KokoroEngine(), OpenAIEngine()]
 
 
 if __name__ == "__main__":

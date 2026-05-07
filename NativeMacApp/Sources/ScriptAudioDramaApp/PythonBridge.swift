@@ -167,6 +167,57 @@ final class PythonBridge {
         try await streamRequest(payload, onEvent: onEvent)
     }
 
+    func installEngine(
+        _ engine: EngineKind,
+        onEvent: @escaping @MainActor (GenerationEvent) -> Void
+    ) async throws {
+        try await streamRequest([
+            "command": "installEngine",
+            "engine": engine.id,
+        ], onEvent: onEvent)
+    }
+
+    func engineStatus() async throws -> [EngineKind: EngineStatus] {
+        let data = try await rawRequest(["command": "engineStatus"])
+        let decoded = try JSONDecoder().decode(EngineStatusResponse.self, from: data)
+        guard decoded.ok else {
+            throw PythonBridgeError.failed(decoded.error ?? "Worker failed.")
+        }
+        let raw = decoded.engines ?? [:]
+        return Dictionary(uniqueKeysWithValues: raw.compactMap { key, value in
+            guard let engine = EngineKind(rawValue: key) else { return nil }
+            return (engine, value)
+        })
+    }
+
+    func uninstallEngine(_ engine: EngineKind) async throws {
+        let data = try await rawRequest([
+            "command": "uninstallEngine",
+            "engine": engine.id,
+        ])
+        let decoded = try JSONDecoder().decode(BasicWorkerResponse.self, from: data)
+        guard decoded.ok else {
+            throw PythonBridgeError.failed(decoded.error ?? "Worker failed.")
+        }
+    }
+
+    func previewVoice(engine: EngineKind, voice: VoiceSummary, apiKey: String? = nil) async throws -> URL {
+        var payload: [String: Any] = [
+            "command": "previewVoice",
+            "engine": engine.id,
+            "voiceId": voice.id,
+        ]
+        if let key = apiKey, !key.isEmpty {
+            payload["apiKey"] = key
+        }
+        let data = try await rawRequest(payload)
+        let decoded = try JSONDecoder().decode(BasicWorkerResponse.self, from: data)
+        guard decoded.ok, let path = decoded.path else {
+            throw PythonBridgeError.failed(decoded.error ?? "Could not prepare voice preview.")
+        }
+        return URL(fileURLWithPath: path)
+    }
+
     func cancelGeneration() {
         generationProcess?.terminate()
         generationProcess = nil

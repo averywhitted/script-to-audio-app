@@ -45,6 +45,28 @@ enum EngineKind: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Whether this engine is actually wired up in the Python backend.
+    var isSupported: Bool {
+        switch self {
+        case .macOS, .openAI, .kokoro: true
+        case .piper: false
+        }
+    }
+
+    /// Message shown in the download confirmation alert.
+    var downloadDescription: String {
+        switch self {
+        case .macOS:
+            "macOS voices are built in and need no download."
+        case .kokoro:
+            "Kokoro uses an Apache-licensed neural model (~88 MB) that downloads automatically from GitHub releases on first use. Your internet connection is needed only for that initial download — after that it works fully offline."
+        case .piper:
+            "Piper is coming soon."
+        case .openAI:
+            "OpenAI TTS is a cloud service. Enter your API key on the next screen — no download required."
+        }
+    }
+
     var detail: String {
         switch self {
         case .macOS:
@@ -64,6 +86,15 @@ enum EngineKind: String, CaseIterable, Identifiable {
         case .kokoro: "waveform"
         case .piper: "bolt.horizontal"
         case .openAI: "cloud"
+        }
+    }
+
+    var defaultSizeLabel: String {
+        switch self {
+        case .macOS: "Built in"
+        case .kokoro: "~115 MB after install"
+        case .piper: "Not installed"
+        case .openAI: "Cloud service"
         }
     }
 }
@@ -133,6 +164,36 @@ struct VoiceLibraryItem: Identifiable {
     var installed: Bool
     var size: String
     var note: String
+}
+
+struct RecentScript: Codable, Equatable, Identifiable, Sendable {
+    var path: String
+    var title: String
+    var lastOpened: Date
+
+    var id: String { path }
+
+    var url: URL { URL(fileURLWithPath: path) }
+}
+
+struct EngineStatus: Codable, Equatable, Sendable {
+    var installed: Bool
+    var sizeBytes: Int
+    var sizeLabel: String
+    var canUninstall: Bool
+}
+
+struct EngineStatusResponse: Decodable, Sendable {
+    var ok: Bool
+    var error: String?
+    var engines: [String: EngineStatus]?
+}
+
+struct BasicWorkerResponse: Decodable, Sendable {
+    var ok: Bool
+    var error: String?
+    var message: String?
+    var path: String?
 }
 
 struct EngineDownloadPrompt: Identifiable {
