@@ -99,6 +99,13 @@ PAGE_FOOTER_RE = re.compile(r"^\s*\d+\.\s*\.?\s*$")
 PARENTHETICAL_RE = re.compile(r"^\s*\(.*\)\s*$")
 CONTD_RE = re.compile(r"\s*\([^)]*CONT['']?D[^)]*\)", re.I)
 
+# Dash-dialog format ("SPEAKER – text" inline on one line)
+_DASH_DIALOG_LINE_RE = re.compile(
+    r"^([A-Z0-9][A-Z0-9 /&]*?)\s*[–\-]\s*(.+)$"
+)
+_SCENE_NUM_DOT_RE = re.compile(r"^\s*(\d+)\.\s*$")
+_INLINE_PAREN_RE = re.compile(r"^\(([^)]+)\)\s*(.*)$")
+
 
 # ---------------------------------------------------------------------------
 # Doubled-character normalization
@@ -300,6 +307,9 @@ def parse_lines(lines: List[str], title: str = "Script") -> Script:
         for other in all_speakers:
             if other == name or other in alias_map:
                 continue
+            # Don't fuzzy-merge very short names — "1" and "2" are distinct speakers
+            if len(name) < 3 or len(other) < 3:
+                continue
             if _levenshtein(name, other) <= 2:
                 other_count = speaker_counts.get(other, 0)
                 # Resolution order:
@@ -346,16 +356,34 @@ def parse_lines(lines: List[str], title: str = "Script") -> Script:
 
 
 def _detect_script_format(lines: List[str]) -> str:
-    """Return 'heist' (numbered scene headers) or 'scene_n' (SCENE N / INT/EXT)."""
+    """Return 'dash_dialog', 'heist', or 'scene_n'."""
     heist_count = sum(1 for l in lines if _is_heist_scene_header(l))
     scene_n_count = sum(1 for l in lines if SCENE_NUM_RE.match(l.strip()))
     int_ext_count = sum(1 for l in lines if INT_EXT_RE.match(l.strip()))
+    dash_count = sum(1 for l in lines if _is_dash_dialog_line(l))
+    non_empty = sum(1 for l in lines if l.strip())
+
+    # Dash-dialog: many inline SPEAKER – text lines, outnumbering any indent cues
+    if dash_count >= 15 and non_empty > 0 and dash_count / non_empty > 0.20:
+        if dash_count > heist_count * 3:  # confident it's not just decoration
+            return "dash_dialog"
 
     if heist_count >= 2:
         return "heist"
     if scene_n_count >= 1 or int_ext_count >= 2:
         return "scene_n"
     return "heist"  # Default fallback
+
+
+def _is_dash_dialog_line(raw: str) -> bool:
+    """True for lines in 'SPEAKER – dialog' format (uppercase/digit speaker only)."""
+    s = raw.strip()
+    m = _DASH_DIALOG_LINE_RE.match(s)
+    if not m:
+        return False
+    token = m.group(1).strip()
+    # Speaker token must be purely uppercase/digits — lowercase = stage direction
+    return not re.search(r"[a-z]", token) and len(token) <= 25
 
 
 # ---------------------------------------------------------------------------
@@ -478,6 +506,8 @@ def _extract_scenes(
     zones: Dict[str, int],
     fmt: str,
 ) -> List[Scene]:
+    if fmt == "dash_dialog":
+        return _extract_scenes_dash_dialog(lines)
     if fmt == "scene_n":
         return _extract_scenes_scene_n(lines, known_speakers, zones)
     return _extract_scenes_heist(lines, known_speakers, zones)
@@ -585,6 +615,140 @@ def _extract_scenes_scene_n(
         sc.elements = _parse_scene_body(scene_lines, known_speakers, zones)
         scenes.append(sc)
     return scenes
+
+
+# ---------------------------------------------------------------------------
+# Dash-dialog format (e.g. Cyrano: "SPEAKER – text" inline, "N." scene markers)
+# ---------------------------------------------------------------------------
+
+
+def _extract_scenes_dash_dialog(lines: List[str]) -> List[Scene]:
+    """Scene boundaries are bare 'N.' lines (e.g. '2.' alone at low indent).
+
+    Everything between two boundaries is parsed as dash-dialog body.
+    Falls back to a single scene if no markers are found.
+    """
+    boundaries: List[Tuple[int, int, str]] = []
+    last_num = 0
+    for i, raw in enumerate(lines):
+        s = raw.strip()
+        m = _SCENE_NUM_DOT_RE.match(s)
+        if m:
+            indent = len(raw) - len(raw.lstrip())
+            if indent < 30:  # not a right-margin page number
+                num = int(m.group(1))
+                # If numbering resets (e.g. Act 2 restarts at 1), continue from where we left off
+                if num <= last_num:
+                    num = last_num + 1
+                last_num = num
+                boundaries.append((i, num, f"Scene {num}"))
+
+    if not boundaries:
+        boundaries = [(0, 1, "Script")]
+
+    boundaries.append((len(lines), -1, ""))
+
+    scenes: List[Scene] = []
+    for (start, num, title), (end, _, _) in zip(boundaries, boundaries[1:]):
+        scene_lines = lines[start + 1 : end]
+        sc = Scene(number=num, title=title)
+        sc.elements = _parse_scene_body_dash_dialog(scene_lines)
+        scenes.append(sc)
+    return scenes
+
+
+def _parse_scene_body_dash_dialog(lines: List[str]) -> List[Element]:
+    """Parse one scene's lines in dash-dialog format.
+
+    Recognised patterns:
+      SPEAKER – text                     → dialog
+      SPEAKER – (direction) text         → parenthetical + dialog
+      SPEAKER – (direction)              → parenthetical only
+      anything else                      → stage direction
+      indented continuation of previous  → appended to prior dialog
+    """
+    elements: List[Element] = []
+
+    # Determine the modal (base) indent so we can spot continuation lines
+    indents = [
+        len(r) - len(r.lstrip())
+        for r in lines if r.strip()
+    ]
+    base_indent = Counter(indents).most_common(1)[0][0] if indents else 0
+
+    prev_dialog: Optional[Element] = None
+
+    for raw in lines:
+        s = raw.strip()
+        if not s:
+            prev_dialog = None
+            continue
+
+        indent = len(raw) - len(raw.lstrip())
+
+        # Continuation: deeper indent than the base, and there's an open dialog
+        if prev_dialog is not None and indent > base_indent + 2:
+            prev_dialog.text = _normalize_text(prev_dialog.text + " " + s)
+            continue
+        prev_dialog = None
+
+        # Try dash-dialog match
+        m = _DASH_DIALOG_LINE_RE.match(s)
+        if m:
+            token = m.group(1).strip()
+            # Reject if token contains lowercase — it's a stage direction
+            # e.g. "a silence – they look at each other"
+            if re.search(r"[a-z]", token):
+                _append_stage_direction(elements, _normalize_text(s))
+                continue
+
+            speaker = _normalize_dash_speaker(token)
+            rest = m.group(2).strip()
+
+            # Split off a leading parenthetical: "(direction) remaining text"
+            pm = _INLINE_PAREN_RE.match(rest)
+            if pm:
+                paren_text = pm.group(1).strip()
+                dialog_text = pm.group(2).strip()
+                elements.append(
+                    Element(kind="parenthetical", speaker=speaker, text=paren_text)
+                )
+                if dialog_text:
+                    el = Element(kind="dialog", speaker=speaker,
+                                 text=_normalize_text(dialog_text))
+                    elements.append(el)
+                    prev_dialog = el
+            else:
+                el = Element(kind="dialog", speaker=speaker,
+                             text=_normalize_text(rest))
+                elements.append(el)
+                prev_dialog = el
+            continue
+
+        # Everything else is a stage direction
+        _append_stage_direction(elements, _normalize_text(s))
+
+    return elements
+
+
+def _append_stage_direction(elements: List[Element], text: str) -> None:
+    """Append a stage direction, merging with the previous one if it was mid-sentence."""
+    if (
+        elements
+        and elements[-1].kind == "stage_direction"
+        and elements[-1].text
+        and elements[-1].text[-1] not in ".!?…\""
+    ):
+        elements[-1].text = _normalize_text(elements[-1].text + " " + text)
+    else:
+        elements.append(Element(kind="stage_direction", text=text))
+
+
+def _normalize_dash_speaker(raw: str) -> str:
+    """Normalise speaker token: collapse whitespace around / and &."""
+    s = re.sub(r"\s*/\s*", "/", raw)
+    s = re.sub(r"\s*&\s*", "&", s)
+    return s.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -943,8 +1107,28 @@ def _closest_known_speaker(name: str, known_speakers: set, max_dist: int = 2) ->
 
 
 def _derive_title(pdf_path: str) -> str:
+    """Try to extract a human-readable title from the first page; fall back to filename."""
     import os
-    return os.path.splitext(os.path.basename(pdf_path))[0]
+    filename = os.path.splitext(os.path.basename(pdf_path))[0]
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            if not pdf.pages:
+                return filename
+            text = pdf.pages[0].extract_text() or ""
+            # First non-empty line of the first page is usually the title
+            for line in text.split("\n"):
+                candidate = line.strip()
+                # Must be at least 3 chars, not a URL, not a date-ish string
+                if (
+                    len(candidate) >= 3
+                    and not re.search(r"https?://|@|\d{4}|draft|revision", candidate, re.I)
+                    and not re.fullmatch(r"[\d\s\.]+", candidate)
+                ):
+                    # Truncate very long first lines (they're probably not titles)
+                    return candidate[:80]
+    except Exception:
+        pass
+    return filename
 
 
 # ---------------------------------------------------------------------------
