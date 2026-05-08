@@ -34,7 +34,6 @@ struct ContentView: View {
                     ProcessingOverlay()
                 }
             }
-            StatusBar()
         }
         .background(FirstMouseAcceptingView())
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
@@ -208,28 +207,6 @@ private struct ProcessingOverlay: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
             .shadow(radius: 18)
         }
-    }
-}
-
-// MARK: - Status bar
-
-private struct StatusBar: View {
-    @EnvironmentObject private var state: AppState
-
-    var body: some View {
-        HStack {
-            if state.isWorking {
-                ProgressView().controlSize(.small)
-            }
-            Text(state.status)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Spacer()
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 7)
-        .background(.bar)
     }
 }
 
