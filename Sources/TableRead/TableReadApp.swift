@@ -3,12 +3,8 @@ import AppKit
 
 @main
 struct TableReadApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var state = AppState()
-
-    init() {
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-    }
 
     var body: some Scene {
         WindowGroup {
@@ -22,5 +18,12 @@ struct TableReadApp: App {
             SettingsView()
                 .environmentObject(state)
         }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
