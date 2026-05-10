@@ -78,7 +78,7 @@
 				C260B1B4B72E4FC79C5ADFAC /* Info.plist */,
 				C38C67F9E4D042C8BD2A2F2C /* TableRead.entitlements */,
 			);
-			path = ScriptAudioDramaApp;
+			path = TableRead;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -208,11 +208,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSTCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "Sources/ScriptAudioDramaApp/TableRead.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "Sources/TableRead/TableRead.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = "";
-				INFOPLIST_FILE = "Sources/ScriptAudioDramaApp/Info.plist";
+				INFOPLIST_FILE = "Sources/TableRead/Info.plist";
 				LE_SWIFT_VERSION = 5.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.averywhitted.tableread";
@@ -226,12 +226,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSTCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "Sources/ScriptAudioDramaApp/TableRead.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "Sources/TableRead/TableRead.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
-				INFOPLIST_FILE = "Sources/ScriptAudioDramaApp/Info.plist";
+				INFOPLIST_FILE = "Sources/TableRead/Info.plist";
 				LE_SWIFT_VERSION = 5.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.averywhitted.tableread";

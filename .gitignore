@@ -24,3 +24,10 @@ dist/
 *.m4a
 *.aac
 *.pdf
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+DerivedData/
+.swiftpm/

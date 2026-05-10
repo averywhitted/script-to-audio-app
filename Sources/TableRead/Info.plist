@@ -23,10 +23,10 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2025 Avery Whitted. All rights reserved.</string>
+	<string>Copyright © 2026 Avery Whitted. All rights reserved.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>TRRepoRoot</key>
-	<string>$(SRCROOT)/..</string>
+	<string>$(SRCROOT)</string>
 </dict>
 </plist>
