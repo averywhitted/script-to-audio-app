@@ -77,31 +77,29 @@ final class PythonBridge {
         let fm = FileManager.default
         let workerRelative = "backend/audio_worker.py"
 
-        // 1. Bundled inside a .app (packaged distribution)
-        if let bundleURL = Bundle.main.url(forResource: "audio_worker", withExtension: "py") {
-            // bundleURL is .../Contents/Resources/audio_worker.py
-            // repo root is two levels up from Resources
-            return bundleURL.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        func valid(_ url: URL) -> Bool {
+            fm.fileExists(atPath: url.appendingPathComponent(workerRelative).path)
         }
 
-        // 2. Walk up from the executable (covers Xcode .build/debug/... paths)
-        var dir = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL.deletingLastPathComponent()
-        for _ in 0..<10 {
-            if fm.fileExists(atPath: dir.appendingPathComponent(workerRelative).path) {
-                return dir
-            }
-            dir = dir.deletingLastPathComponent()
+        // 1. Path baked into Info.plist at build time via $(SRCROOT)/..
+        //    Covers Xcode Debug/Release builds where the executable is in DerivedData.
+        if let baked = Bundle.main.infoDictionary?["TRRepoRoot"] as? String {
+            let url = URL(fileURLWithPath: baked).standardizedFileURL
+            if valid(url) { return url }
+        }
+
+        // 2. Bundled inside a .app (packaged distribution)
+        if let bundleURL = Bundle.main.url(forResource: "audio_worker", withExtension: "py") {
+            return bundleURL.deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
         }
 
         // 3. CWD (covers `swift run` from repo root or NativeMacApp/)
         let cwd = URL(fileURLWithPath: fm.currentDirectoryPath)
-        if fm.fileExists(atPath: cwd.appendingPathComponent(workerRelative).path) {
-            return cwd
-        }
+        if valid(cwd) { return cwd }
         let parent = cwd.deletingLastPathComponent()
-        if fm.fileExists(atPath: parent.appendingPathComponent(workerRelative).path) {
-            return parent
-        }
+        if valid(parent) { return parent }
 
         // 4. Last resort — return CWD and let the error surface naturally
         return cwd

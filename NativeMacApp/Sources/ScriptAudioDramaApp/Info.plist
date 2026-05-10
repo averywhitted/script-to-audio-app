@@ -26,5 +26,7 @@
 	<string>Copyright © 2025 Avery Whitted. All rights reserved.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>TRRepoRoot</key>
+	<string>$(SRCROOT)/..</string>
 </dict>
 </plist>

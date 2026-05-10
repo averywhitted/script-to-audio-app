@@ -36,9 +36,6 @@ struct ContentView: View {
             }
         }
         .background(FirstMouseAcceptingView())
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
-            NSApp.activate(ignoringOtherApps: true)
-        }
         .fileImporter(
             isPresented: $isImporting,
             allowedContentTypes: [.pdf],
