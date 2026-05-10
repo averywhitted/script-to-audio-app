@@ -11,8 +11,11 @@ struct SettingsView: View {
 
             EnginesSettingsTab()
                 .tabItem { Label("Engines", systemImage: "waveform") }
+
+            AboutTab()
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 500, height: 340)
+        .frame(width: 520, height: 420)
         .environmentObject(state)
     }
 }
@@ -87,7 +90,7 @@ private struct EnginesSettingsTab: View {
                         .disabled(state.openAIAPIKey.isEmpty)
                 }
                 if state.installedEngines.contains(.openAI) {
-                    Label("Key saved — OpenAI TTS is active.", systemImage: "checkmark.circle.fill")
+                    Label("Key saved in Keychain — OpenAI TTS is active.", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green).font(.caption)
                 }
             } header: {
@@ -98,33 +101,129 @@ private struct EnginesSettingsTab: View {
             }
 
             Section {
-                ForEach(EngineKind.allCases.filter { $0 != .openAI }) { engine in
-                    HStack(spacing: 10) {
-                        Image(systemName: engine.symbol).foregroundStyle(.secondary).frame(width: 20)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(engine.title).font(.callout)
-                            Text(engine.subtitle).font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if state.installedEngines.contains(engine) {
-                            Label("Ready", systemImage: "checkmark.circle.fill")
-                                .font(.caption).foregroundStyle(.green)
-                        } else if engine.isSupported {
-                            Text("Not installed").font(.caption).foregroundStyle(.secondary)
-                        } else {
-                            Text("Coming soon").font(.caption).foregroundStyle(.tertiary)
-                        }
-                    }
-                    .padding(.vertical, 2)
+                ForEach(EngineKind.allCases.filter { $0 != .openAI && $0 != .macOS }) { engine in
+                    EngineManagementRow(engine: engine)
                 }
             } header: {
                 Text("Local Engines")
             } footer: {
-                Text("Install and manage engines on the Cast step of the main workflow.")
+                Text("macOS Voices is always available with no setup required.")
                     .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .padding()
+    }
+}
+
+private struct EngineManagementRow: View {
+    @EnvironmentObject private var state: AppState
+    let engine: EngineKind
+
+    private var isInstalled: Bool { state.installedEngines.contains(engine) }
+    private var isInstalling: Bool { state.installingEngine == engine }
+    private var isUninstalling: Bool { state.uninstallingEngine == engine }
+    private var isBusy: Bool { isInstalling || isUninstalling || state.installingEngine != nil || state.uninstallingEngine != nil }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: engine.symbol)
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(engine.title).font(.callout)
+                Text(engine.subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if isInstalling {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Installing…").font(.caption).foregroundStyle(.secondary)
+                }
+            } else if isUninstalling {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Removing…").font(.caption).foregroundStyle(.secondary)
+                }
+            } else if !engine.isSupported {
+                Text("Coming soon").font(.caption).foregroundStyle(.tertiary)
+            } else if isInstalled {
+                HStack(spacing: 8) {
+                    if let status = state.engineStatuses[engine] {
+                        Text(status.sizeLabel)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Button("Uninstall") { state.uninstallEngine(engine) }
+                        .foregroundStyle(.red)
+                        .disabled(isBusy)
+                }
+            } else {
+                Button("Install") { state.startEngineInstall(engine) }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .disabled(isBusy)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+// MARK: - About tab
+
+private struct AboutTab: View {
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 10) {
+                Image(systemName: "waveform.and.mic")
+                    .font(.system(size: 52, weight: .thin))
+                    .foregroundStyle(.tint)
+
+                Text("Table Read")
+                    .font(.title.weight(.semibold))
+
+                Text("Version \(appVersion)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Text("By Avery Whitted")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Divider()
+
+            VStack(spacing: 10) {
+                Text("Table Read is free for personal use. Not for resale or commercial redistribution.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 340)
+
+                HStack(spacing: 12) {
+                    Button("Donate on Buy Me a Coffee") {
+                        // placeholder — fill in real URL when ready
+                        if let url = URL(string: "https://buymeacoffee.com") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+            .padding(.vertical, 18)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 20)
     }
 }

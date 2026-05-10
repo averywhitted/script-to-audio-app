@@ -266,8 +266,20 @@ final class PythonBridge {
 
             let response = output.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
-            return response
+            // Kokoro (and other engines) may print non-JSON download progress to stdout.
+            // Scan from the end for the last line that looks like a JSON object.
+            return Self.extractLastJSONLine(from: response) ?? response
         }.value
+    }
+
+    private nonisolated static func extractLastJSONLine(from data: Data) -> Data? {
+        guard let text = String(data: data, encoding: .utf8) else { return nil }
+        for line in text.components(separatedBy: "\n").reversed() {
+            let t = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard t.hasPrefix("{"), let lineData = t.data(using: .utf8) else { continue }
+            if (try? JSONSerialization.jsonObject(with: lineData)) != nil { return lineData }
+        }
+        return nil
     }
 
     /// Decode a WorkerEnvelope<T> from rawRequest.
