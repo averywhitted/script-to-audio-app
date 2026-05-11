@@ -1,0 +1,250 @@
+import Foundation
+import SwiftUI
+
+enum WorkflowStep: String, CaseIterable, Identifiable {
+    case importScript = "Import"
+    case review = "Review"
+    case cast = "Cast"
+    case generate = "Generate"
+
+    var id: String { rawValue }
+
+    var number: Int {
+        switch self {
+        case .importScript: 1
+        case .review: 2
+        case .cast: 3
+        case .generate: 4
+        }
+    }
+}
+
+enum EngineKind: String, CaseIterable, Identifiable {
+    case macOS
+    case kokoro
+    case piper
+    case openAI
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .macOS: "macOS Voices"
+        case .kokoro: "Kokoro Local"
+        case .piper: "Piper Local"
+        case .openAI: "OpenAI TTS"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .macOS: "Built in, free, offline"
+        case .kokoro: "Recommended offline neural voices"
+        case .piper: "Small, fast offline voices"
+        case .openAI: "Cloud quality, API key and limits"
+        }
+    }
+
+    /// Whether this engine is actually wired up in the Python backend.
+    var isSupported: Bool {
+        switch self {
+        case .macOS, .openAI, .kokoro: true
+        case .piper: false
+        }
+    }
+
+    /// Message shown in the download confirmation alert.
+    var downloadDescription: String {
+        switch self {
+        case .macOS:
+            "macOS voices are built in and need no download."
+        case .kokoro:
+            "Kokoro uses an Apache-licensed neural model (~88 MB) that downloads automatically from GitHub releases on first use. Your internet connection is needed only for that initial download — after that it works fully offline."
+        case .piper:
+            "Piper is coming soon."
+        case .openAI:
+            "OpenAI TTS is a cloud service. Enter your API key on the next screen — no download required."
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .macOS:
+            "No download, no quota, no setup. Best reliability and privacy."
+        case .kokoro:
+            "High-quality local speech with Apache-licensed weights. Download voices on demand instead of bundling them all."
+        case .piper:
+            "Very practical ONNX voices. Smaller and faster, with quality below Kokoro."
+        case .openAI:
+            "Good cloud quality, but full scripts can be slow or blocked by request limits. Always preflight first."
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .macOS: "desktopcomputer"
+        case .kokoro: "waveform"
+        case .piper: "bolt.horizontal"
+        case .openAI: "cloud"
+        }
+    }
+
+    var defaultSizeLabel: String {
+        switch self {
+        case .macOS: "Built in"
+        case .kokoro: "~115 MB after install"
+        case .piper: "Not installed"
+        case .openAI: "Cloud service"
+        }
+    }
+}
+
+struct ScriptSummary: Codable, Equatable, Sendable {
+    var title: String
+    var sceneCount: Int
+    var characterCount: Int
+    var lineCount: Int
+    var characters: [CharacterSummary]
+    var scenes: [SceneSummary]
+}
+
+struct CharacterSummary: Codable, Equatable, Identifiable, Sendable {
+    var name: String
+    var genderHint: String?
+    var roleHint: String?
+
+    var id: String { name }
+}
+
+struct SceneSummary: Codable, Equatable, Identifiable, Sendable {
+    var number: Int
+    var title: String
+    var elementCount: Int
+    var elements: [SceneElementSummary]
+
+    var id: Int { number }
+}
+
+struct SceneElementSummary: Codable, Equatable, Identifiable, Sendable {
+    var kind: String
+    var speaker: String?
+    var text: String
+
+    var id: String { "\(kind)-\(speaker ?? "narrator")-\(text.prefix(24))" }
+
+    var displaySpeaker: String {
+        if kind == "stage_direction" || kind == "parenthetical" { return "Narrator" }
+        return speaker ?? "Narrator"
+    }
+
+    var kindLabel: String {
+        switch kind {
+        case "dialog": "Dialog"
+        case "stage_direction": "Narration"
+        case "parenthetical": "Aside"
+        default: kind
+        }
+    }
+}
+
+struct OpenAIEstimate: Codable, Equatable, Sendable {
+    var requestCount: Int
+    var requestsPerMinute: Int
+    var minimumSeconds: Int
+
+    var durationText: String {
+        let minutes = max(1, minimumSeconds / 60)
+        if minutes < 60 { return "\(minutes) min" }
+        return "\(minutes / 60)h \(minutes % 60)m"
+    }
+}
+
+struct VoiceLibraryItem: Identifiable {
+    var id: EngineKind
+    var installed: Bool
+    var size: String
+    var note: String
+}
+
+struct RecentScript: Codable, Equatable, Identifiable, Sendable {
+    var path: String
+    var title: String
+    var lastOpened: Date
+
+    var id: String { path }
+
+    var url: URL { URL(fileURLWithPath: path) }
+}
+
+struct EngineStatus: Codable, Equatable, Sendable {
+    var installed: Bool
+    var sizeBytes: Int
+    var sizeLabel: String
+    var canUninstall: Bool
+}
+
+struct EngineStatusResponse: Decodable, Sendable {
+    var ok: Bool
+    var error: String?
+    var engines: [String: EngineStatus]?
+}
+
+struct BasicWorkerResponse: Decodable, Sendable {
+    var ok: Bool
+    var error: String?
+    var message: String?
+    var path: String?
+}
+
+struct EngineDownloadPrompt: Identifiable {
+    var id: EngineKind { engine }
+    var engine: EngineKind
+}
+
+struct GenerationEvent: Codable, Sendable {
+    var event: String
+    var level: String?
+    var message: String?
+    var sceneIndex: Int?
+    var totalScenes: Int?
+    var sceneTitle: String?
+    var elementIndex: Int?
+    var totalElements: Int?
+    var outputDir: String?
+    var files: [String]?
+    var errors: [String]?
+    var skippedScenes: [String]?
+    var seconds: Double?
+}
+
+/// Matches NARRATOR_KEY in voice_assignment.py
+let NARRATOR_KEY = "__NARRATOR__"
+
+struct VoiceSummary: Codable, Equatable, Identifiable, Sendable {
+    var id: String
+    var label: String
+    var gender: String?
+    var locale: String?
+    var note: String?
+    var display: String
+}
+
+struct VoicesResponse: Decodable, Sendable {
+    var ok: Bool
+    var error: String?
+    var voices: [VoiceSummary]?
+    var autoAssign: [String: String]?
+}
+
+struct GenerationLogLine: Identifiable, Equatable {
+    let id = UUID()
+    var text: String
+    var style: LogStyle
+}
+
+enum LogStyle: Equatable {
+    case info
+    case success
+    case warning
+    case error
+}

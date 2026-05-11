@@ -12,6 +12,7 @@ env/
 
 # Build and packaging
 build/
+.build/
 dist/
 *.egg-info/
 
@@ -23,3 +24,10 @@ dist/
 *.m4a
 *.aac
 *.pdf
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+DerivedData/
+.swiftpm/

@@ -1,0 +1,467 @@
+#!/usr/bin/env python3
+"""
+JSON bridge for the native macOS shell.
+
+The SwiftUI app talks to this worker over stdin/stdout using one JSON request
+per process. Keeping the boundary narrow lets the native UI stay responsive
+while the existing Python parser/audio pipeline remains reusable.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import sys
+import time
+import traceback
+from pathlib import Path
+from typing import Any, Dict, List
+
+ROOT = Path(__file__).resolve().parents[0]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import parser as script_parser
+import tts_engines
+from audio_pipeline import GenerationProgress, estimate_tts_requests, generate_script
+from voice_assignment import Assignment, auto_assign
+
+
+KOKORO_CACHE_DIR = Path.home() / ".cache" / "tableread" / "kokoro"
+KOKORO_PREVIEW_DIR = KOKORO_CACHE_DIR / "previews"
+
+
+def _dir_size(path: Path) -> int:
+    if not path.exists():
+        return 0
+    total = 0
+    for item in path.rglob("*"):
+        if item.is_file():
+            try:
+                total += item.stat().st_size
+            except OSError:
+                pass
+    return total
+
+
+def _format_bytes(size: int) -> str:
+    if size <= 0:
+        return "0 MB"
+    units = ["bytes", "KB", "MB", "GB"]
+    value = float(size)
+    unit = 0
+    while value >= 1024 and unit < len(units) - 1:
+        value /= 1024
+        unit += 1
+    if unit == 0:
+        return f"{int(value)} {units[unit]}"
+    return f"{value:.1f} {units[unit]}"
+
+
+def _kokoro_installed() -> bool:
+    """True once the user has completed the install flow (sentinel file exists)."""
+    return (KOKORO_CACHE_DIR / ".installed").exists()
+
+
+def _kokoro_files_present() -> bool:
+    return (
+        (KOKORO_CACHE_DIR / "kokoro-v1.0.int8.onnx").exists()
+        and (KOKORO_CACHE_DIR / "voices-v1.0.bin").exists()
+    )
+
+
+def _voice_preview_text(voice: tts_engines.VoiceInfo) -> str:
+    style = voice.note or "natural"
+    return (
+        f"This is {voice.label}, a {style} voice for Table Read. "
+        "I can carry narration, dialogue, and quick changes in tone."
+    )
+
+
+def _preview_path(engine_id: str, voice_id: str) -> Path:
+    safe_id = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in voice_id)
+    if engine_id == "kokoro":
+        return KOKORO_PREVIEW_DIR / f"{safe_id}.wav"
+    if engine_id in {"openAI", "openai"}:
+        return Path("/tmp") / f"tableread_preview_openai_{safe_id}.mp3"
+    return Path("/tmp") / f"tableread_preview_{engine_id}_{safe_id}.aiff"
+
+
+def _script_summary(script: script_parser.Script) -> Dict[str, Any]:
+    line_count = sum(
+        1 for scene in script.scenes for element in scene.elements
+        if element.kind == "dialog"
+    )
+    return {
+        "title": script.title,
+        "sceneCount": len(script.scenes),
+        "characterCount": len(script.characters),
+        "lineCount": line_count,
+        "characters": [
+            {
+                "name": ch.name,
+                "genderHint": ch.gender_hint,
+                "roleHint": ch.role_hint,
+            }
+            for ch in script.characters
+        ],
+        "scenes": [
+            {
+                "number": scene.number,
+                "title": scene.title,
+                "elementCount": len([e for e in scene.elements if e.text.strip()]),
+                "elements": [
+                    {
+                        "kind": element.kind,
+                        "speaker": element.speaker,
+                        "text": element.text,
+                    }
+                    for element in scene.elements
+                    if element.text.strip()
+                ],
+            }
+            for scene in script.scenes
+        ],
+    }
+
+
+def _voices_for_engine(engine_id: str) -> List[tts_engines.VoiceInfo]:
+    if engine_id in {"openai", "openAI"}:
+        return tts_engines.OpenAIEngine().list_voices()
+    if engine_id == "kokoro":
+        return tts_engines.KokoroEngine().list_voices()
+    return tts_engines.MacSayEngine().list_voices()
+
+
+def _estimate_openai(pdf_path: str, scene_numbers: List[int] | None) -> Dict[str, Any]:
+    script = script_parser.parse_pdf(pdf_path)
+    voices = tts_engines.OpenAIEngine().list_voices()
+    assignment = auto_assign(script.characters, voices)
+    request_count = estimate_tts_requests(script, assignment, scene_numbers)
+    rpm = tts_engines.OpenAIEngine.REQUESTS_PER_MINUTE
+    minimum_seconds = int(((request_count + max(rpm, 1) - 1) // max(rpm, 1)) * 60)
+    return {
+        "requestCount": request_count,
+        "requestsPerMinute": rpm,
+        "minimumSeconds": minimum_seconds,
+    }
+
+
+def _emit(event: Dict[str, Any]) -> None:
+    print(json.dumps(event), flush=True)
+
+
+def _engine_for_payload(payload: Dict[str, Any]) -> tts_engines.TTSEngine:
+    engine_id = payload.get("engine", "macOS")
+    if engine_id == "openAI":
+        api_key = payload.get("apiKey") or os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OpenAI generation needs an API key.")
+        return tts_engines.OpenAIEngine(api_key=api_key)
+    if engine_id == "kokoro":
+        engine = tts_engines.KokoroEngine()
+        if not engine.is_available():
+            raise RuntimeError(
+                "Kokoro is not installed. "
+                "Activate the project virtualenv and run: "
+                "pip install kokoro-onnx soundfile"
+            )
+        return engine
+    if engine_id == "piper":
+        raise RuntimeError("Piper generation is not implemented yet.")
+    return tts_engines.MacSayEngine()
+
+
+def _build_assignment(payload: Dict[str, Any], script, voices) -> Assignment:
+    """Build an Assignment from an explicit mapping dict (from the UI) or auto-assign."""
+    voices_by_id = {v.id: v for v in voices}
+    explicit_map = payload.get("assignment")
+    if explicit_map:
+        # Fill in any missing characters with auto-assign so we never have a gap.
+        base = auto_assign(script.characters, voices)
+        merged = dict(base.mapping)
+        merged.update(explicit_map)
+        return Assignment(mapping=merged, voices_by_id=voices_by_id)
+    return auto_assign(script.characters, voices)
+
+
+def _generate(payload: Dict[str, Any]) -> int:
+    pdf_path = payload["pdfPath"]
+    output_dir = payload["outputDir"]
+    scene_numbers = payload.get("sceneNumbers")
+    engine = _engine_for_payload(payload)
+    script = script_parser.parse_pdf(pdf_path)
+    voices = _voices_for_engine(payload.get("engine", "macOS"))
+
+    if not voices:
+        raise RuntimeError(f"No voices are available for {engine.name}.")
+    if not engine.is_available():
+        raise RuntimeError(f"{engine.name} is not available.")
+
+    assignment = _build_assignment(payload, script, voices)
+
+    _emit({
+        "event": "started",
+        "message": f"Rendering {len(scene_numbers or script.scenes)} scene(s) with {engine.name}.",
+    })
+    _emit({
+        "event": "log",
+        "level": "info",
+        "message": f"Using {len(voices)} available voice(s). Output: {output_dir}",
+    })
+
+    def progress_cb(progress: GenerationProgress) -> None:
+        _emit({
+            "event": "progress",
+            "sceneIndex": progress.scene_index,
+            "totalScenes": progress.total_scenes,
+            "sceneTitle": progress.scene_title,
+            "elementIndex": progress.element_index,
+            "totalElements": progress.total_elements_in_scene,
+            "message": progress.message,
+        })
+
+    t0 = time.time()
+    result = generate_script(
+        script=script,
+        engine=engine,
+        assignment=assignment,
+        output_dir=output_dir,
+        progress_cb=progress_cb,
+        scene_filter=scene_numbers,
+    )
+    _emit({
+        "event": "done",
+        "outputDir": result.output_dir,
+        "files": result.files,
+        "errors": result.errors,
+        "skippedScenes": result.skipped_scenes,
+        "seconds": round(time.time() - t0, 1),
+    })
+    return 1 if result.errors else 0
+
+
+def _install_engine(payload: Dict[str, Any]) -> int:
+    """Install Python dependencies for a voice engine, streaming pip output."""
+    engine_id = payload.get("engine", "")
+
+    PACKAGES: Dict[str, List[str]] = {
+        "kokoro": ["kokoro-onnx>=0.3", "soundfile>=0.12"],
+    }
+
+    packages = PACKAGES.get(engine_id)
+    if not packages:
+        _emit({"event": "log", "level": "error",
+               "message": f"No installable packages defined for engine '{engine_id}'."})
+        return 1
+
+    _emit({"event": "started",
+           "message": f"Installing {engine_id} packages: {', '.join(packages)}"})
+    _emit({"event": "log", "level": "info",
+           "message": f"Using Python: {sys.executable}"})
+
+    import subprocess
+    cmd = [sys.executable, "-m", "pip", "install"] + packages
+
+    try:
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+        for line in iter(process.stdout.readline, ""):
+            line = line.rstrip()
+            if line:
+                _emit({"event": "log", "level": "info", "message": line})
+        process.wait()
+    except Exception as exc:
+        _emit({"event": "log", "level": "error", "message": str(exc)})
+        return 1
+
+    if process.returncode != 0:
+        _emit({"event": "log", "level": "error",
+               "message": f"pip exited with code {process.returncode}."})
+        return 1
+
+    # Verify the import works before declaring victory
+    try:
+        if engine_id == "kokoro":
+            import importlib
+            importlib.import_module("kokoro_onnx")
+            importlib.import_module("soundfile")
+    except ImportError as exc:
+        _emit({"event": "log", "level": "error",
+               "message": f"Installation succeeded but import failed: {exc}"})
+        return 1
+
+    if engine_id == "kokoro":
+        KOKORO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        (KOKORO_CACHE_DIR / ".installed").touch()
+
+    _emit({"event": "done",
+           "message": (
+               f"✓ {engine_id} installed. "
+               "The neural model (~88 MB) downloads from GitHub on first voice preview."
+           )})
+    return 0
+
+
+def _engine_status() -> Dict[str, Any]:
+    kokoro_available = tts_engines.KokoroEngine().is_available()
+    kokoro_size = _dir_size(KOKORO_CACHE_DIR)
+    return {
+        "ok": True,
+        "engines": {
+            "macOS": {
+                "installed": tts_engines.MacSayEngine().is_available(),
+                "sizeBytes": 0,
+                "sizeLabel": "Built in",
+                "canUninstall": False,
+            },
+            "kokoro": {
+                "installed": kokoro_available and _kokoro_installed(),
+                "sizeBytes": kokoro_size,
+                "sizeLabel": _format_bytes(kokoro_size) if kokoro_size else "~115 MB after install",
+                "canUninstall": _kokoro_installed(),
+            },
+            "piper": {
+                "installed": False,
+                "sizeBytes": 0,
+                "sizeLabel": "Not installed",
+                "canUninstall": False,
+            },
+            "openAI": {
+                "installed": False,
+                "sizeBytes": 0,
+                "sizeLabel": "Cloud service",
+                "canUninstall": False,
+            },
+        },
+    }
+
+
+def _uninstall_engine(payload: Dict[str, Any]) -> Dict[str, Any]:
+    engine_id = payload.get("engine", "")
+    if engine_id == "kokoro":
+        shutil.rmtree(KOKORO_CACHE_DIR, ignore_errors=True)
+        return {"ok": True, "message": "Removed Kokoro model and voice previews."}
+    return {"ok": False, "error": f"No local uninstall is defined for '{engine_id}'."}
+
+
+def _engine_for_preview(engine_id: str, api_key: str | None = None) -> tts_engines.TTSEngine:
+    if engine_id == "kokoro":
+        return tts_engines.KokoroEngine()
+    if engine_id in {"macOS", "mac", ""}:
+        return tts_engines.MacSayEngine()
+    if engine_id in {"openAI", "openai"}:
+        if not api_key:
+            raise RuntimeError(
+                "Voice preview for OpenAI requires an API key. "
+                "Save your key in the OpenAI Setup section first."
+            )
+        return tts_engines.OpenAIEngine(api_key=api_key)
+    raise RuntimeError(f"Voice previews are not available for {engine_id}.")
+
+
+def _prepare_voice_previews(engine_id: str) -> None:
+    engine = _engine_for_preview(engine_id)
+    voices = engine.list_voices()
+    if engine_id == "kokoro":
+        KOKORO_PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    for voice in voices:
+        path = _preview_path(engine_id, voice.id)
+        if path.exists():
+            continue
+        engine.synthesize(_voice_preview_text(voice), voice.id, str(path))
+
+
+def _preview_voice(payload: Dict[str, Any]) -> Dict[str, Any]:
+    engine_id = payload.get("engine", "macOS")
+    voice_id = payload.get("voiceId")
+    api_key = payload.get("apiKey")
+    if not voice_id:
+        return {"ok": False, "error": "Missing voiceId."}
+
+    engine = _engine_for_preview(engine_id, api_key)
+    voice = next((v for v in engine.list_voices() if v.id == voice_id), None)
+    if voice is None:
+        return {"ok": False, "error": f"Unknown voice '{voice_id}'."}
+
+    path = _preview_path(engine_id, voice.id)
+    if engine_id == "kokoro":
+        KOKORO_PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    # OpenAI previews are not cached permanently (no disk cost, always fresh).
+    is_cloud = engine_id in {"openAI", "openai"}
+    if not path.exists() or is_cloud:
+        engine.synthesize(_voice_preview_text(voice), voice.id, str(path))
+    return {"ok": True, "path": str(path)}
+
+
+def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
+    command = payload.get("command")
+    if command == "parse":
+        pdf_path = payload["pdfPath"]
+        return {"ok": True, "script": _script_summary(script_parser.parse_pdf(pdf_path))}
+    if command == "voices":
+        engine_id = payload.get("engine", "mac")
+        pdf_path = payload.get("pdfPath")
+        voices = _voices_for_engine(engine_id)
+        result: Dict[str, Any] = {
+            "ok": True,
+            "voices": [
+                {
+                    "id": v.id,
+                    "label": v.label,
+                    "gender": v.gender,
+                    "locale": v.locale,
+                    "note": v.note,
+                    "display": v.display,
+                }
+                for v in voices
+            ],
+        }
+        if pdf_path:
+            script = script_parser.parse_pdf(pdf_path)
+            assignment = auto_assign(script.characters, voices)
+            result["autoAssign"] = assignment.mapping
+        return result
+    if command == "estimateOpenAI":
+        return {
+            "ok": True,
+            "estimate": _estimate_openai(
+                payload["pdfPath"],
+                payload.get("sceneNumbers"),
+            ),
+        }
+    if command == "engineStatus":
+        return _engine_status()
+    if command == "uninstallEngine":
+        return _uninstall_engine(payload)
+    if command == "previewVoice":
+        return _preview_voice(payload)
+    raise ValueError(f"Unknown command: {command!r}")
+
+
+def main() -> int:
+    try:
+        payload = json.load(sys.stdin)
+        if payload.get("command") == "generate":
+            return _generate(payload)
+        if payload.get("command") == "installEngine":
+            return _install_engine(payload)
+        print(json.dumps(handle(payload)))
+        return 0
+    except Exception as exc:
+        print(json.dumps({
+            "ok": False,
+            "error": str(exc),
+            "traceback": traceback.format_exc(),
+        }))
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
