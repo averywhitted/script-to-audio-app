@@ -226,8 +226,85 @@ def _undouble_content(s: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _cid_density(text: str) -> float:
+    """Return fraction of characters that are (cid:N) artifacts."""
+    total = len(text)
+    if total == 0:
+        return 0.0
+    cid_chars = sum(len(m.group()) for m in re.finditer(r"\(cid:\d+\)", text))
+    return cid_chars / total
+
+
+def _pdf_has_cid_artifacts(pdf_path: str) -> bool:
+    """Return True if any of the first few content pages have heavy CID artifacts."""
+    with pdfplumber.open(pdf_path) as pdf:
+        checked = 0
+        for page in pdf.pages:
+            text = page.extract_text() or ""
+            if len(text) < 100:
+                continue
+            if _cid_density(text) > 0.03:
+                return True
+            checked += 1
+            if checked >= 8:
+                break
+    return False
+
+
+def _extract_layout_pypdfium2(pdf_path: str) -> List[str]:
+    """Layout-preserving extraction via pypdfium2 — fallback for CID-heavy PDFs.
+
+    Reconstructs indentation by using the x-position of each line's first
+    character, calibrated to standard US Letter screenplay margins.
+    """
+    import pypdfium2 as pdfium  # optional dependency — only imported when needed
+
+    LEFT_MARGIN = 54.0   # 0.75-inch left margin in PDF points
+    CHAR_WIDTH  = 7.2    # Courier 12pt character width in PDF points
+
+    out: List[str] = []
+    pdf = pdfium.PdfDocument(pdf_path)
+    for page_idx in range(len(pdf)):
+        page = pdf[page_idx]
+        textpage = page.get_textpage()
+        page_height = page.get_height()
+        n = textpage.count_chars()
+
+        line_chars: List[str] = []
+        line_xs: List[float] = []
+
+        def _flush_line() -> None:
+            if not line_chars:
+                return
+            x_start = min(line_xs)
+            text = "".join(line_chars)
+            indent = max(0, round((x_start - LEFT_MARGIN) / CHAR_WIDTH))
+            out.append(" " * indent + text)
+            line_chars.clear()
+            line_xs.clear()
+
+        for i in range(n):
+            box = textpage.get_charbox(i, loose=False)
+            x = box[0]
+            ch = textpage.get_text_range(i, 1)
+            if ch in ("\r", "\n"):
+                _flush_line()
+            else:
+                line_chars.append(ch)
+                line_xs.append(x)
+        _flush_line()
+
+    return out
+
+
 def extract_layout_lines(pdf_path: str) -> List[str]:
     """Return layout-preserving lines (layout=True). Best for heist/screenplay."""
+    if _pdf_has_cid_artifacts(pdf_path):
+        try:
+            return _extract_layout_pypdfium2(pdf_path)
+        except Exception:
+            pass  # pypdfium2 unavailable or failed — fall through to pdfplumber
+
     out: List[str] = []
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
@@ -245,6 +322,28 @@ def _extract_plain_lines(pdf_path: str) -> List[str]:
 
 def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[str]]]:
     """Return (all_lines, per_page_content_sets) for play parsing + noise detection."""
+    if _pdf_has_cid_artifacts(pdf_path):
+        try:
+            import pypdfium2 as pdfium
+            plain_lines: List[str] = []
+            pypdf_page_sets: List[Set[str]] = []
+            pdf_doc = pdfium.PdfDocument(pdf_path)
+            for page_idx in range(len(pdf_doc)):
+                page = pdf_doc[page_idx]
+                textpage = page.get_textpage()
+                text = textpage.get_text_range()
+                pg_set: Set[str] = set()
+                for line in text.splitlines():
+                    normalized = _undouble(line)
+                    plain_lines.append(normalized)
+                    s = normalized.strip()
+                    if s:
+                        pg_set.add(s)
+                pypdf_page_sets.append(pg_set)
+            return plain_lines, pypdf_page_sets
+        except Exception:
+            pass  # fall through to pdfplumber
+
     all_lines: List[str] = []
     page_sets: List[Set[str]] = []
     with pdfplumber.open(pdf_path) as pdf:
