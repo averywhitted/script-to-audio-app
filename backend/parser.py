@@ -14,18 +14,26 @@ Parse a PDF script (play / screenplay) into a structured representation:
                   ├── speaker: str | None      # for dialog/parenthetical
                   └── text: str
 
-Supports two common script formats:
+Supported formats (auto-detected):
 
-  HEIST-style  — Scene headers are numbered: "1  SCENE NAME" at low indent.
-                 Character cues at wide indent (~col 35). Dialog at ~col 12.
+  play          — Standard theatrical play: speaker name on its own line (ALL-CAPS),
+                  dialog on following lines. Scene markers: SCENE N, N., ACT N,
+                  - N -, PART N. Works for the majority of published American plays.
+                  Parsed from plain (non-layout) text extraction.
 
-  Standard-style — "SCENE N" lines at high/centered indent, followed by
-                   "INT./EXT. LOCATION" lines at low indent. Character cues
-                   centered (~col 30). Dialog at ~col 17.
+  colon_play    — TRW / two-column format (e.g. Kate Hamill adaptations): speaker
+                  appears as SPEAKER: (with colon). Often a two-column PDF where
+                  pdfplumber merges columns into "...left-text  SPEAKER:" lines.
 
-Both formats are auto-detected. Indent zones (dialog / cue / stage-direction)
-are calibrated from the document itself so that scripts with different margins
-or typefaces parse correctly without manual tuning.
+  heist         — Numbered scene headers at low indent ("1  SCENE NAME").
+                  Character cues at wide indent (~col 35). Dialog at ~col 12.
+                  Parsed from layout-preserving (layout=True) extraction.
+
+  scene_n       — INT./EXT. scene headers, indent-based cues. Screenplay style.
+                  Parsed from layout-preserving extraction.
+
+  dash_dialog   — Inline "SPEAKER – dialog text" on each line. Bare "N." scene
+                  markers. Parsed from layout-preserving extraction.
 
 PDF font artifacts (some exporters double every character, e.g. "VVIINNNNYY")
 are transparently normalized before parsing.
@@ -36,7 +44,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import pdfplumber
 
@@ -88,7 +96,7 @@ CUE_INDENT_MIN = 28
 PAGE_NUMBER_INDENT_MIN = 60
 
 
-# Regex helpers
+# Regex helpers — heist / scene_n / dash_dialog formats
 SCENE_HEADER_RE = re.compile(
     r"""^\s*(?P<num>\d+)\s+(?P<title>[A-Z0-9][^a-z]*?)\s*$"""
 )
@@ -106,6 +114,70 @@ _DASH_DIALOG_LINE_RE = re.compile(
 _SCENE_NUM_DOT_RE = re.compile(r"^\s*(\d+)\.\s*$")
 _INLINE_PAREN_RE = re.compile(r"^\(([^)]+)\)\s*(.*)$")
 
+# ---------------------------------------------------------------------------
+# Play-format regex constants
+# ---------------------------------------------------------------------------
+
+# All-caps tokens that are stage directions / structural markers, never speaker cues
+_NON_CUE_RE = re.compile(
+    r"""^(
+        (?:THE\s+)?END(\s+OF\s+(ACT|PLAY|SCENE))?
+       |FINIS|CURTAIN
+       |BLACK\s*OUT|WHITE\s*OUT|FADE\s*(IN|OUT|TO\s+BLACK)
+       |LIGHTS?\s*(UP|DOWN|OUT|FADE|RISE|FALL)
+       |SILENCE|BLACKOUT|WHITEOUT
+       |INTERMISSION|ENTR.?ACTE|INTERVAL
+       |PRESET|PRESHOW
+       |PROLOGUE|EPILOGUE|OVERTURE|PRELUDE|CODA
+       |SCENE\b|ACT\b|PART\b|SECTION\b
+       |CONTINUED|CONT.D|MORE
+       |CHARACTERS?\b|CAST\b|SETTING\b|SYNOPSIS\b
+       |NOTES?\b|TIME\b|PLACE\b|LOCATION\b
+       |PRODUCTION\b|ADVISORY\b|ATTRIBUTION\b
+       |COPYRIGHT\b|WARNING\b|DRAMATIS\b|PERSONAE\b
+       |PAUSE\b|BEAT\b|WAIT\b|STOP\b  # common stage directions
+       |.*\s+DAYS?\s*$    # time-section headers: "DEPARTURE DAY", "OPENING DAY"
+    )""",
+    re.VERBOSE | re.IGNORECASE,
+)
+
+# Scene boundary in play format
+_PLAY_SCENE_RE = re.compile(
+    r"""^
+    (?:
+        (?:SCENE|Scene|SCENE)\s+(\d+)          # SCENE 1 / Scene 1
+      | ACT\s+([IVXivx]+|\d+)                  # ACT I / ACT 1
+      | -{1,3}\s*(\d+)\s*-{1,3}               # - 1 - / -- 2 --
+      | ([1-9]\d?)\.\s*$                       # 1. or 12.  (scene number+dot, NOT page numbers)
+      | PART\s+([IVXivx]+|\d+)                 # PART 1 / PART I
+    )
+    [\s:—\-]*(.*)$                             # optional colon / dash / title text
+    """,
+    re.VERBOSE | re.IGNORECASE,
+)
+
+# "The First Act" / "The Second Act" ordinal format (e.g. Mr. Burns)
+# ACT must be at end of line to avoid matching mid-sentence "the third act finale..."
+_ORDINAL_ACT_RE = re.compile(
+    r"^(?:THE\s+)?(FIRST|SECOND|THIRD|FOURTH|FIFTH|SIXTH|SEVENTH|EIGHTH|NINTH|TENTH)\s+ACT\s*$",
+    re.IGNORECASE,
+)
+_ORDINAL_TO_INT = {
+    "FIRST": 1, "SECOND": 2, "THIRD": 3, "FOURTH": 4, "FIFTH": 5,
+    "SIXTH": 6, "SEVENTH": 7, "EIGHTH": 8, "NINTH": 9, "TENTH": 10,
+}
+
+# Time-based section headers: "THREE DAYS TO DEPARTURE", "ONE DAY UNTIL X"
+_TIME_SECTION_RE = re.compile(
+    r"^(?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|\d+)\s+DAYS?\s+(?:TO|UNTIL|BEFORE|AFTER)\b",
+    re.IGNORECASE,
+)
+
+# Speaker cue in colon-play format: "SPEAKER:" or "SPEAKER: inline dialog"
+_COLON_CUE_RE = re.compile(
+    r"""(?:^|(?<=\s))([A-Z][A-Z\s\.\']{0,35}?)\s*:\s*(.*)$"""
+)
+
 
 # ---------------------------------------------------------------------------
 # Doubled-character normalization
@@ -113,15 +185,7 @@ _INLINE_PAREN_RE = re.compile(r"^\(([^)]+)\)\s*(.*)$")
 
 
 def _undouble(line: str) -> str:
-    """Remove doubled-character artifacts from PDF font rendering.
-
-    Some PDF exporters render each glyph twice, producing text like
-    "VVIINNNNYY ((CCOONNTT''DD))" instead of "VINNY (CONT'D)".
-
-    IMPORTANT: Leading whitespace (indentation) is preserved unchanged —
-    only the visible content is normalized. This keeps indent values
-    meaningful for zone calibration even when content is doubled.
-    """
+    """Remove doubled-character artifacts from PDF font rendering."""
     stripped = line.lstrip(" ")
     if not stripped:
         return line
@@ -130,7 +194,7 @@ def _undouble(line: str) -> str:
 
 
 def _undouble_content(s: str) -> str:
-    """Normalize doubled characters in a string that contains no leading spaces."""
+    """Normalize doubled characters in a string with no leading spaces."""
     if len(s) < 4:
         return s
     pairs = 0
@@ -146,7 +210,6 @@ def _undouble_content(s: str) -> str:
     total = pairs + singles
     if total == 0 or pairs / total < 0.70:
         return s
-    # De-duplicate
     result: List[str] = []
     i = 0
     while i < len(s):
@@ -159,16 +222,52 @@ def _undouble_content(s: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Indent-zone auto-calibration
+# Text extraction
+# ---------------------------------------------------------------------------
+
+
+def extract_layout_lines(pdf_path: str) -> List[str]:
+    """Return layout-preserving lines (layout=True). Best for heist/screenplay."""
+    out: List[str] = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text(layout=True, x_tolerance=2) or ""
+            for line in text.split("\n"):
+                out.append(_undouble(line))
+    return out
+
+
+def _extract_plain_lines(pdf_path: str) -> List[str]:
+    """Return plain (non-layout) lines. Best for standard play format."""
+    lines, _ = _extract_plain_lines_with_pages(pdf_path)
+    return lines
+
+
+def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[str]]]:
+    """Return (all_lines, per_page_content_sets) for play parsing + noise detection."""
+    all_lines: List[str] = []
+    page_sets: List[Set[str]] = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text() or ""
+            page_content: Set[str] = set()
+            for line in text.split("\n"):
+                normalized = _undouble(line)
+                all_lines.append(normalized)
+                s = normalized.strip()
+                if s:
+                    page_content.add(s)
+            page_sets.append(page_content)
+    return all_lines, page_sets
+
+
+# ---------------------------------------------------------------------------
+# Indent-zone auto-calibration (heist / scene_n formats)
 # ---------------------------------------------------------------------------
 
 
 def _detect_indent_zones(lines: List[str]) -> Dict[str, int]:
-    """Analyse a script's indentation distribution to calibrate zone thresholds.
-
-    Returns a dict of override values, or {} if calibration is inconclusive.
-    The caller merges these over the module-level defaults.
-    """
+    """Analyse a script's indentation to calibrate zone thresholds."""
     cue_indents: List[int] = []
     lower_indents: List[int] = []
 
@@ -177,17 +276,12 @@ def _detect_indent_zones(lines: List[str]) -> Dict[str, int]:
         if not s or len(s) < 3:
             continue
         indent = len(raw) - len(raw.lstrip(" "))
-        # Skip lines that are just whitespace padding (pdfplumber fills blank
-        # lines to page width with spaces)
         if indent > 70:
             continue
-        # Skip lines that are purely numeric (page numbers)
         if re.fullmatch(r"[\d\.\s]+", s):
             continue
 
-        # Strip trailing parenthetical voice markers for cue detection
         base = re.sub(r"\s*\([^)]*\)\s*$", "", s).strip()
-        # All-caps token of name-ish length, no terminal period → likely a cue
         if (
             re.fullmatch(r"[A-Z][A-Z0-9 \-/'']+", base)
             and 2 <= len(base) <= 35
@@ -206,7 +300,15 @@ def _detect_indent_zones(lines: List[str]) -> Dict[str, int]:
     if len(below_cue) < 5:
         return {}
 
-    dialog_mode = Counter(below_cue).most_common(1)[0][0]
+    # Dialog typically sits closest to the cue zone (above stage directions).
+    # When two strong peaks exist (e.g. stage dirs at indent 24, dialog at 41),
+    # prefer the HIGHER-INDENT peak.  Use 25% of the most-common count as the
+    # significance threshold for a peak to be considered.
+    lc_counts = Counter(below_cue)
+    top_peaks = lc_counts.most_common(6)
+    max_freq = top_peaks[0][1]
+    significant = [ind for ind, freq in top_peaks if freq >= max_freq * 0.25]
+    dialog_mode = max(significant)
 
     if dialog_mode >= cue_mode:
         return {}
@@ -222,7 +324,6 @@ def _detect_indent_zones(lines: List[str]) -> Dict[str, int]:
 
 
 def _make_zones(overrides: Dict[str, int]) -> Dict[str, int]:
-    """Merge calibration overrides with module-level defaults."""
     return {
         "DIALOG_INDENT_MIN": overrides.get("DIALOG_INDENT_MIN", DIALOG_INDENT_MIN),
         "DIALOG_INDENT_MAX": overrides.get("DIALOG_INDENT_MAX", DIALOG_INDENT_MAX),
@@ -244,44 +345,52 @@ def _make_zones(overrides: Dict[str, int]) -> Dict[str, int]:
 # ---------------------------------------------------------------------------
 
 
-def extract_layout_lines(pdf_path: str) -> List[str]:
-    """Return the script as a list of layout-preserving lines, with doubled-
-    character artifacts normalized."""
-    out: List[str] = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text(layout=True, x_tolerance=2) or ""
-            for line in text.split("\n"):
-                out.append(_undouble(line))
-    return out
-
-
 def parse_pdf(pdf_path: str) -> Script:
-    """Parse a PDF script into a Script object."""
-    lines = extract_layout_lines(pdf_path)
-    return parse_lines(lines, title=_derive_title(pdf_path))
+    """Parse a PDF script into a Script object.
+
+    Detection priority:
+      1. heist (numbered scene headers, very distinctive) → layout-based
+      2. colon_play / play (pattern-based, plain text)
+      3. scene_n / dash_dialog (indent-based, layout text)
+    """
+    title = _derive_title(pdf_path)
+    plain_lines, page_sets = _extract_plain_lines_with_pages(pdf_path)
+
+    # Check for heist format first — numbered "N  SCENE TITLE" headers are
+    # unambiguous and must win over the play detector (which also fires on
+    # screenplays with all-caps character cues).
+    heist_count = sum(1 for l in plain_lines if _is_heist_scene_header(l))
+    if heist_count >= 2:
+        layout_lines = extract_layout_lines(pdf_path)
+        return parse_lines(layout_lines, title=title)
+
+    # Play formats (pattern-based on plain text)
+    play_fmt = _detect_play_format(plain_lines)
+    if play_fmt == "play":
+        return _parse_play(plain_lines, page_sets, title)
+    if play_fmt == "colon_play":
+        return _parse_colon_play(plain_lines, page_sets, title)
+
+    # Fall back to indent-based parsing (scene_n, dash_dialog, heist fallback)
+    layout_lines = extract_layout_lines(pdf_path)
+    return parse_lines(layout_lines, title=title)
 
 
 def parse_lines(lines: List[str], title: str = "Script") -> Script:
+    """Parse pre-extracted layout lines (heist / scene_n / dash_dialog formats)."""
     script = Script(title=title)
 
-    # Auto-calibrate indent zones for this document
     overrides = _detect_indent_zones(lines)
     zones = _make_zones(overrides)
 
-    # Detect which scene-boundary format the script uses
     fmt = _detect_script_format(lines)
 
-    # Extract cast list
     script.characters = _extract_cast(lines)
     known_speaker_set = {c.name for c in script.characters}
 
-    # Extract scenes
     script.scenes = _extract_scenes(lines, known_speaker_set, zones, fmt)
 
-    # Pass 1: Fuzzy-normalize against known cast members (edit dist ≤ 2).
-    # Handles partial undoubling of names that have consecutive repeated
-    # letters (VINY→VINNY, JES→JESS, etc.) when those names ARE in the cast.
+    # Fuzzy-normalize against known cast
     if known_speaker_set:
         for sc in script.scenes:
             for el in sc.elements:
@@ -290,9 +399,7 @@ def parse_lines(lines: List[str], title: str = "Script") -> Script:
                     if matched != el.speaker:
                         el.speaker = matched
 
-    # Pass 2: Cross-normalize among all discovered speakers.
-    # Handles supporting characters not listed in the cast (SCOT→SCOTT, etc.)
-    # by preferring whichever variant has more dialog lines.
+    # Cross-normalize among discovered speakers
     speaker_counts: Dict[str, int] = {}
     for sc in script.scenes:
         for el in sc.elements:
@@ -307,23 +414,18 @@ def parse_lines(lines: List[str], title: str = "Script") -> Script:
         for other in all_speakers:
             if other == name or other in alias_map:
                 continue
-            # Don't fuzzy-merge very short names — "1" and "2" are distinct speakers
             if len(name) < 3 or len(other) < 3:
                 continue
             if _levenshtein(name, other) <= 2:
                 other_count = speaker_counts.get(other, 0)
-                # Resolution order:
-                # 1. Prefer known cast names
-                # 2. Prefer the longer name (truncated renderings are shorter)
-                # 3. Prefer the one with more dialog
                 if other in known_speaker_set:
                     alias_map[name] = other
                 elif name in known_speaker_set:
                     alias_map[other] = name
                 elif len(other) > len(name):
-                    alias_map[name] = other  # other is longer → keep other
+                    alias_map[name] = other
                 elif len(name) > len(other):
-                    alias_map[other] = name  # name is longer → keep name
+                    alias_map[other] = name
                 elif other_count > count:
                     alias_map[name] = other
                 else:
@@ -336,8 +438,6 @@ def parse_lines(lines: List[str], title: str = "Script") -> Script:
                 if el.speaker and el.speaker in alias_map:
                     el.speaker = alias_map[el.speaker]
 
-    # Append any character names discovered during scene parsing that are
-    # genuinely new (not resolved by either normalization pass).
     discovered: set = set()
     for sc in script.scenes:
         for el in sc.elements:
@@ -351,7 +451,623 @@ def parse_lines(lines: List[str], title: str = "Script") -> Script:
 
 
 # ---------------------------------------------------------------------------
-# Script format detection
+# Play-format detection
+# ---------------------------------------------------------------------------
+
+
+def _is_caps_cue_candidate(s: str) -> bool:
+    """True if s looks like a speaker cue: all-caps, short, name-like."""
+    # Strip trailing parenthetical: "AVA (she is awake)"
+    base = re.sub(r"\s*\([^)]*\)\s*$", "", s).strip()
+    if not base:
+        return False
+    if re.search(r"[a-z]", base):
+        return False
+    if not re.search(r"[A-Z]", base):
+        return False
+    if len(base) > 40:
+        return False
+    # Speaker names are 1–4 words max; longer = likely a stage direction fragment
+    if len(base.split()) > 4:
+        return False
+    # Sentence punctuation or header markers → not a speaker name
+    if re.search(r"[.!?]", base):
+        return False
+    if base.endswith(":"):  # "AGENT CONTACT:" is a section header, not a cue
+        return False
+    if "," in base:  # Scene locations like "A ROOM IN X, Y" contain commas
+        return False
+    if _NON_CUE_RE.match(base):
+        return False
+    # Must look name-like (2+ uppercase chars forming a word pattern)
+    if not re.search(r"[A-Z]{2,}", base) and not re.fullmatch(r"[A-Z]", base):
+        return False
+    # Reject things that look like stutter/sound effects (3+ repeated chars)
+    if re.search(r"(.)\1{2,}", base):
+        return False
+    return True
+
+
+def _detect_play_format(plain_lines: List[str]) -> Optional[str]:
+    """Return 'play', 'colon_play', or None."""
+    content_lines = [l.strip() for l in plain_lines if l.strip()]
+    total = len(content_lines)
+    if total < 40:
+        return None
+
+    # If 65%+ of content lines have no lowercase, this is probably a notes/
+    # all-caps document, not a script (scripts need mixed-case dialog).
+    all_caps_count = sum(1 for s in content_lines if not re.search(r"[a-z]", s))
+    if all_caps_count / total > 0.65:
+        return None
+
+    # Score: standalone all-caps lines immediately followed by mixed-case text
+    cue_score = 0
+    colon_score = 0
+    for i, s in enumerate(content_lines):
+        # Colon-cue detection: line ends with ALLCAPS: or starts with ALLCAPS:
+        if re.search(r"(?:^|(?<=\s))([A-Z][A-Z\s\.\']{1,30}):\s*$", s):
+            colon_score += 1
+        elif re.match(r"^([A-Z][A-Z\s\.\']{1,30}):\s+\S", s):
+            colon_score += 1
+
+        # Play cue detection: standalone all-caps line → mixed-case next line
+        if _is_caps_cue_candidate(s):
+            for j in range(i + 1, min(i + 4, total)):
+                nxt = content_lines[j]
+                if nxt:
+                    if re.search(r"[a-z]", nxt) and len(nxt) >= 3:
+                        cue_score += 1
+                    break
+
+    cue_ratio = cue_score / total
+    colon_ratio = colon_score / total
+
+    # colon_play needs a clear colon-cue signal AND play cues must be weak
+    if colon_ratio > 0.05 and colon_score > cue_score * 0.5:
+        return "colon_play"
+    if cue_ratio > 0.04:
+        return "play"
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Play-format page noise
+# ---------------------------------------------------------------------------
+
+
+def _collect_page_noise(plain_lines: List[str], page_sets: Optional[List[Set[str]]] = None) -> Set[str]:
+    """Find likely page noise: page numbers, running headers/footers.
+
+    Uses per-page occurrence counts when page_sets is provided (preferred):
+    a line must appear on > 60% of pages to be considered a running header.
+    All-caps tokens (speaker names) are never marked as noise regardless
+    of frequency.
+    """
+    stripped = [l.strip() for l in plain_lines if l.strip()]
+    noise: Set[str] = set()
+
+    # Always noise: bare numbers (page numbers), dates, single chars, revision marks
+    for s in stripped:
+        if re.fullmatch(r"\d+", s):
+            noise.add(s)
+        elif re.fullmatch(r"\d{2,}\.", s):  # "186." style page numbers
+            noise.add(s)
+        elif re.fullmatch(r"\d+/\d+/\d+", s):
+            noise.add(s)
+        elif len(s) == 1:
+            noise.add(s)
+        elif re.match(r"Rev(ision)?\.?\s+\d", s, re.I):
+            noise.add(s)
+
+    def _is_all_caps_token(s: str) -> bool:
+        """True if s is all-caps — likely a speaker name, never a running header."""
+        return bool(re.fullmatch(r"[A-Z][A-Z0-9 '\-/\.]*", s)) and len(s) <= 40
+
+    if page_sets and len(page_sets) >= 5:
+        # Page-aware: mark lines appearing on > 60% of pages as noise
+        total_pages = len(page_sets)
+        threshold = max(4, total_pages * 0.60)
+        candidates = set().union(*page_sets)
+        for s in candidates:
+            if s in noise or _is_all_caps_token(s):
+                continue
+            count = sum(1 for pg in page_sets if s in pg)
+            if count >= threshold:
+                noise.add(s)
+    else:
+        # Fallback (no page info): high threshold + never mark all-caps
+        counts = Counter(stripped)
+        for s, n in counts.items():
+            if s in noise or _is_all_caps_token(s):
+                continue
+            if n >= 20 and len(s) <= 60:
+                noise.add(s)
+
+    return noise
+
+
+# ---------------------------------------------------------------------------
+# Standard play format parser
+# ---------------------------------------------------------------------------
+
+
+def _normalize_play_speaker(s: str) -> str:
+    """Extract speaker name, stripping trailing parenthetical and CONT'D."""
+    base = re.sub(r"\s*\([^)]*\)\s*$", "", s).strip()
+    base = CONTD_RE.sub("", base).strip()
+    base = re.sub(r"\s+", " ", base)
+    return base
+
+
+def _match_play_scene(s: str) -> Optional[Tuple[int, str]]:
+    """If s is a scene boundary, return (scene_number_increment, title). Else None."""
+    m = _PLAY_SCENE_RE.match(s)
+    if m:
+        groups = m.groups()  # (scene_N, act_N, dash_N, dot_N, part_N, title_text)
+        for g in groups[:5]:
+            if g is not None:
+                try:
+                    return (int(g), (groups[5] or "").strip())
+                except ValueError:
+                    roman = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5,
+                             "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10}
+                    return (roman.get(g.upper(), 1), (groups[5] or "").strip())
+
+    # "The First Act" / "Second Act" ordinal format
+    m2 = _ORDINAL_ACT_RE.match(s)
+    if m2:
+        n = _ORDINAL_TO_INT.get(m2.group(1).upper(), 1)
+        return (n, s.strip())
+
+    # "THREE DAYS TO DEPARTURE" / "ONE DAY UNTIL X" time-section format
+    m3 = _TIME_SECTION_RE.match(s)
+    if m3:
+        return (1, s.strip())
+
+    return None
+
+
+def _parse_play(
+    plain_lines: List[str],
+    page_sets: Optional[List[Set[str]]] = None,
+    title: str = "Script",
+) -> Script:
+    """Parse a standard play (speaker name on own line, dialog below)."""
+    script = Script(title=title)
+    noise = _collect_page_noise(plain_lines, page_sets)
+
+    script.characters = _extract_cast(plain_lines)
+    known_speakers = {c.name for c in script.characters}
+
+    script.scenes = _extract_scenes_play(plain_lines, known_speakers, noise)
+
+    _apply_speaker_normalization(script, known_speakers)
+    _discover_new_characters(script, known_speakers)
+    return script
+
+
+def _extract_scenes_play(
+    lines: List[str], known_speakers: Set[str], noise: Set[str]
+) -> List[Scene]:
+    scenes: List[Scene] = []
+    scene_counter = 0
+    scene_title = ""
+    elements: List[Element] = []
+    current_speaker: Optional[str] = None
+    dialog_buf: List[str] = []
+
+    def flush_dialog() -> None:
+        nonlocal current_speaker, dialog_buf
+        if current_speaker and dialog_buf:
+            text = _normalize_text(" ".join(dialog_buf))
+            if text:
+                elements.append(Element(kind="dialog", speaker=current_speaker, text=text))
+            current_speaker = None  # Clear after emitting so flush_orphan_speaker doesn't double-emit
+        dialog_buf.clear()
+
+    def flush_orphan_speaker() -> None:
+        """Speaker set but no dialog arrived — emit as stage direction."""
+        nonlocal current_speaker
+        if current_speaker and not dialog_buf:
+            elements.append(Element(kind="stage_direction", text=current_speaker))
+        current_speaker = None
+
+    def commit_scene(is_final: bool = False) -> None:
+        nonlocal scene_counter, scene_title, elements
+        flush_dialog()
+        # Discard pre-first-scene preamble (cover page / cast / title page).
+        # At non-final commits, also skip scenes with no actual dialog (e.g.,
+        # a TOC "Act 1" line fires a boundary before the real act header).
+        if scene_counter > 0 or is_final:
+            has_dialog = any(e.kind == "dialog" for e in elements)
+            if has_dialog or is_final:
+                num = len(scenes) + 1
+                t = scene_title or f"Scene {num}"
+                scenes.append(Scene(number=num, title=t, elements=elements[:]))
+        elements.clear()
+
+    prev_nonempty = ""  # last non-empty, non-noise stripped line
+
+    for raw in lines:
+        s = raw.strip()
+        if not s:
+            flush_dialog()
+            current_speaker = None
+            continue
+
+        if s in noise:
+            continue
+
+        # Scene / act boundary
+        sm = _match_play_scene(s)
+        if sm is not None:
+            commit_scene()
+            scene_counter += 1
+            raw_title = sm[1]
+            scene_title = raw_title or f"Scene {scene_counter}"
+            current_speaker = None
+            prev_nonempty = s
+            continue
+
+        # Speaker cue (all-caps, name-like)
+        if _is_caps_cue_candidate(s):
+            # Single-char names only valid if known
+            base = re.sub(r"\s*\([^)]*\)\s*$", "", s).strip()
+            if len(base) == 1 and base not in known_speakers:
+                # Treat as stage direction
+                flush_dialog()
+                current_speaker = None
+                _append_stage_direction(elements, _normalize_text(s))
+                prev_nonempty = s
+                continue
+
+            normalized = _normalize_play_speaker(s)
+
+            # Guard: if the previous non-empty line ended with a "dangling"
+            # function word (article, preposition), the line is an incomplete
+            # sentence and the next line is its continuation, not a cue.
+            # e.g., "...you're bloody producing the\nBLOODY ALBUM" or
+            #        "...it's a little harder it's like\nBOOM BOOM".
+            if dialog_buf and normalized not in known_speakers:
+                prev_words = prev_nonempty.split() if prev_nonempty else []
+                last_word = prev_words[-1].lower().rstrip("…") if prev_words else ""
+                _DANGLING = frozenset({
+                    "the", "a", "an", "of", "in", "on", "at", "to", "for",
+                    "with", "and", "or", "but", "that", "which", "like",
+                    "from", "by", "as", "into", "through", "about", "so",
+                })
+                if last_word in _DANGLING:
+                    dialog_buf.append(s)
+                    prev_nonempty = s
+                    continue
+
+            flush_dialog()
+            flush_orphan_speaker()
+            current_speaker = normalized
+            prev_nonempty = s
+            continue
+
+        # Standalone parenthetical with pending speaker
+        if (
+            current_speaker
+            and s.startswith("(")
+            and s.endswith(")")
+            and len(s) < 150
+        ):
+            flush_dialog()
+            inner = s[1:-1].strip()
+            elements.append(
+                Element(kind="parenthetical", speaker=current_speaker, text=inner)
+            )
+            prev_nonempty = s
+            continue
+
+        # Dialog content
+        if current_speaker:
+            dialog_buf.append(s)
+            prev_nonempty = s
+            continue
+
+        # Stage direction (no speaker set)
+        _append_stage_direction(elements, _normalize_text(s))
+        prev_nonempty = s
+
+    # Flush final scene (is_final=True so scene-less scripts get one scene)
+    commit_scene(is_final=True)
+
+    return scenes
+
+
+# ---------------------------------------------------------------------------
+# Colon-cue play format parser (e.g. EMMA / TRW Plays)
+# ---------------------------------------------------------------------------
+
+
+def _parse_colon_play(
+    plain_lines: List[str],
+    page_sets: Optional[List[Set[str]]] = None,
+    title: str = "Script",
+) -> Script:
+    """Parse a colon-cue format script (SPEAKER: dialog text)."""
+    script = Script(title=title)
+    noise = _collect_page_noise(plain_lines, page_sets)
+
+    script.characters = _extract_cast_colon(plain_lines)
+    known_speakers = {c.name for c in script.characters}
+
+    script.scenes = _extract_scenes_colon(plain_lines, known_speakers, noise)
+
+    _apply_speaker_normalization(script, known_speakers)
+    _discover_new_characters(script, known_speakers)
+    return script
+
+
+def _extract_cast_colon(lines: List[str]) -> List[Character]:
+    """Find CHARACTERS / CAST section in colon-cue format scripts."""
+    return _extract_cast(lines)
+
+
+def _extract_scenes_colon(
+    lines: List[str], known_speakers: Set[str], noise: Set[str]
+) -> List[Scene]:
+    scenes: List[Scene] = []
+    scene_counter = 0
+    scene_title = ""
+    elements: List[Element] = []
+    current_speaker: Optional[str] = None
+    dialog_buf: List[str] = []
+
+    def flush_dialog() -> None:
+        nonlocal current_speaker, dialog_buf
+        if current_speaker and dialog_buf:
+            text = _normalize_text(" ".join(dialog_buf))
+            if text:
+                elements.append(Element(kind="dialog", speaker=current_speaker, text=text))
+            current_speaker = None
+        dialog_buf.clear()
+
+    def commit_scene(is_final: bool = False) -> None:
+        nonlocal scene_counter, scene_title, elements
+        flush_dialog()
+        if scene_counter > 0 or is_final:
+            has_dialog = any(e.kind == "dialog" for e in elements)
+            if has_dialog or is_final:
+                num = len(scenes) + 1
+                t = scene_title or f"Scene {num}"
+                scenes.append(Scene(number=num, title=t, elements=elements[:]))
+        elements.clear()
+
+    _TITLE_ABBREVS = frozenset({"MR.", "MRS.", "MS.", "DR.", "SR.", "JR.", "REV.", "HON.", "MISS."})
+
+    def _find_colon_cue(s: str) -> Optional[Tuple[str, str]]:
+        """
+        Return (speaker, remainder) if s contains a valid ALLCAPS: cue.
+
+        Works backwards from the LAST colon in the line, collecting
+        consecutive all-caps words. This correctly handles two-column PDFs
+        where pdfplumber merges "...dialog text  SPEAKER:" into one line:
+          "WHY YES, I certainly AM. KNIGHTLEY:" → KNIGHTLEY
+          "A VISITOR AT HARTFIELD EMMA:"       → EMMA
+        """
+        last_colon = s.rfind(":")
+        if last_colon < 0:
+            return None
+
+        before = s[:last_colon]
+        remainder = s[last_colon + 1:].strip()
+
+        # Walk words backwards from end of `before`, collecting all-caps runs.
+        # Stop at any word that ends with sentence-ending punctuation (unless
+        # it's a recognised title abbreviation like MR. or DR.).
+        words = before.split()
+        name_words: List[str] = []
+        for word in reversed(words):
+            if word.upper() in _TITLE_ABBREVS:
+                name_words.insert(0, word.upper())
+                break  # Title abbreviations are only the first word of a name
+            if word.endswith((".", ",", ";", "!", "?")):
+                break  # Sentence-ending punctuation stops the name
+            if re.fullmatch(r"[A-Z][A-Z0-9\'\-]*", word):
+                name_words.insert(0, word)
+                if len(name_words) >= 3:
+                    break
+            else:
+                break
+
+        if not name_words:
+            return None
+
+        # Prose-context check: reject if the name is embedded in running text.
+        # e.g. "a big noisy GASP:" — "noisy" precedes GASP with no sentence boundary.
+        # Exception: if the preceding word ends with sentence-ending punctuation
+        # (.!?,;) we may be in two-column merged format ("sure? EMMA:") → allow.
+        words_before_name = words[: len(words) - len(name_words)]
+        if words_before_name:
+            preceding = words_before_name[-1]
+            if re.search(r"[a-z]", preceding) and preceding[-1] not in ".!?,;":
+                candidate_name = " ".join(name_words)
+                if candidate_name not in known_speakers:
+                    return None
+
+        # Prefer the shortest suffix that matches a known speaker; fall back
+        # to the single last word (handles cases with no known-speaker context).
+        raw_name: str = ""
+        for length in range(len(name_words), 0, -1):
+            candidate = " ".join(name_words[-length:])
+            if candidate in known_speakers:
+                raw_name = candidate
+                break
+        if not raw_name:
+            raw_name = name_words[-1]  # Just the rightmost word
+
+        # Reject non-speaker patterns
+        if _NON_CUE_RE.match(raw_name):
+            return None
+        if re.search(r"[a-z]", raw_name):
+            return None
+        if len(raw_name) < 1 or len(raw_name) > 40:
+            return None
+        if "@" in raw_name or "HTTP" in raw_name:
+            return None
+        if raw_name in ("NOTE", "NOTES", "ACT", "SCENE", "PART", "SETTING",
+                        "SETTINGS", "WARNING", "IMPORTANT", "COPYRIGHT"):
+            return None
+        # Reject stutter/sound effects (3+ identical consecutive chars)
+        if re.search(r"(.)\1{2,}", raw_name):
+            return None
+        # Short names (1–2 chars) must be in known_speakers (avoids "IS", "AM", etc.)
+        if len(raw_name) <= 2 and raw_name not in known_speakers:
+            return None
+        # Reject if remainder is a pure number/code (ISBN, phone, etc.)
+        if remainder and re.fullmatch(r"[\d\-\.\s/]+", remainder):
+            return None
+
+        speaker = CONTD_RE.sub("", raw_name).strip()
+        return (speaker, remainder)
+
+    for raw in lines:
+        s = raw.strip()
+        if not s:
+            flush_dialog()
+            current_speaker = None
+            continue
+
+        if s in noise:
+            continue
+
+        # Scene boundary: "SCENE N:" style
+        # Try removing trailing colon for scene detection
+        s_no_colon = re.sub(r":\s*$", "", s).strip()
+        sm = _match_play_scene(s_no_colon) or _match_play_scene(s)
+        if sm is not None:
+            commit_scene()
+            scene_counter += 1
+            raw_title = sm[1]
+            scene_title = raw_title or f"Scene {scene_counter}"
+            current_speaker = None
+            continue
+
+        # Check for ALLCAPS: cue (possibly merged with left-column stage direction)
+        cue = _find_colon_cue(s)
+        if cue is not None:
+            speaker, remainder = cue
+            flush_dialog()
+            current_speaker = speaker
+
+            # Handle inline parenthetical + dialog: "SPEAKER: (paren) text"
+            if remainder.startswith("("):
+                pm = _INLINE_PAREN_RE.match(remainder)
+                if pm:
+                    elements.append(
+                        Element(kind="parenthetical", speaker=current_speaker,
+                                text=pm.group(1).strip())
+                    )
+                    remainder = pm.group(2).strip()
+            if remainder:
+                dialog_buf.append(remainder)
+            continue
+
+        # Standalone parenthetical with pending speaker
+        if (
+            current_speaker
+            and s.startswith("(")
+            and s.endswith(")")
+            and len(s) < 150
+        ):
+            flush_dialog()
+            inner = s[1:-1].strip()
+            elements.append(
+                Element(kind="parenthetical", speaker=current_speaker, text=inner)
+            )
+            continue
+
+        # Dialog continuation
+        if current_speaker:
+            dialog_buf.append(s)
+            continue
+
+        # Stage direction
+        _append_stage_direction(elements, _normalize_text(s))
+
+    commit_scene(is_final=True)
+
+    return scenes
+
+
+# ---------------------------------------------------------------------------
+# Speaker normalization (shared by all formats)
+# ---------------------------------------------------------------------------
+
+
+def _apply_speaker_normalization(script: Script, known_speakers: Set[str]) -> None:
+    """Fuzzy-normalize speaker names against known cast, then cross-normalize."""
+    # Pass 1: match against known cast
+    if known_speakers:
+        for sc in script.scenes:
+            for el in sc.elements:
+                if el.speaker and el.speaker not in known_speakers:
+                    matched = _closest_known_speaker(el.speaker, known_speakers)
+                    if matched != el.speaker:
+                        el.speaker = matched
+
+    # Pass 2: cross-normalize discovered speakers
+    speaker_counts: Dict[str, int] = {}
+    for sc in script.scenes:
+        for el in sc.elements:
+            if el.speaker:
+                speaker_counts[el.speaker] = speaker_counts.get(el.speaker, 0) + 1
+
+    all_speakers = set(speaker_counts) | known_speakers
+    alias_map: Dict[str, str] = {}
+    for name, count in sorted(speaker_counts.items(), key=lambda x: -x[1]):
+        if name in alias_map:
+            continue
+        for other in all_speakers:
+            if other == name or other in alias_map:
+                continue
+            if len(name) < 3 or len(other) < 3:
+                continue
+            if _levenshtein(name, other) <= 2:
+                other_count = speaker_counts.get(other, 0)
+                if other in known_speakers:
+                    alias_map[name] = other
+                elif name in known_speakers:
+                    alias_map[other] = name
+                elif len(other) > len(name):
+                    alias_map[name] = other
+                elif len(name) > len(other):
+                    alias_map[other] = name
+                elif other_count > count:
+                    alias_map[name] = other
+                else:
+                    alias_map[other] = name
+                break
+
+    if alias_map:
+        for sc in script.scenes:
+            for el in sc.elements:
+                if el.speaker and el.speaker in alias_map:
+                    el.speaker = alias_map[el.speaker]
+
+
+def _discover_new_characters(script: Script, known_speakers: Set[str]) -> None:
+    """Add speakers found during parsing that aren't in the known cast."""
+    dialog_counts: Dict[str, int] = {}
+    for sc in script.scenes:
+        for el in sc.elements:
+            if el.speaker and el.kind == "dialog":
+                dialog_counts[el.speaker] = dialog_counts.get(el.speaker, 0) + 1
+    for d in sorted(dialog_counts):
+        if d not in known_speakers and not _looks_like_chorus(d):
+            # Require at least 2 dialog occurrences to avoid false positives
+            # (one-off all-caps exclamations in dialog that land on their own line)
+            if dialog_counts[d] >= 2:
+                script.characters.append(Character(name=d))
+
+
+# ---------------------------------------------------------------------------
+# Script format detection (heist / scene_n / dash_dialog — layout-based)
 # ---------------------------------------------------------------------------
 
 
@@ -363,26 +1079,23 @@ def _detect_script_format(lines: List[str]) -> str:
     dash_count = sum(1 for l in lines if _is_dash_dialog_line(l))
     non_empty = sum(1 for l in lines if l.strip())
 
-    # Dash-dialog: many inline SPEAKER – text lines, outnumbering any indent cues
     if dash_count >= 15 and non_empty > 0 and dash_count / non_empty > 0.20:
-        if dash_count > heist_count * 3:  # confident it's not just decoration
+        if dash_count > heist_count * 3:
             return "dash_dialog"
 
     if heist_count >= 2:
         return "heist"
     if scene_n_count >= 1 or int_ext_count >= 2:
         return "scene_n"
-    return "heist"  # Default fallback
+    return "heist"
 
 
 def _is_dash_dialog_line(raw: str) -> bool:
-    """True for lines in 'SPEAKER – dialog' format (uppercase/digit speaker only)."""
     s = raw.strip()
     m = _DASH_DIALOG_LINE_RE.match(s)
     if not m:
         return False
     token = m.group(1).strip()
-    # Speaker token must be purely uppercase/digits — lowercase = stage direction
     return not re.search(r"[a-z]", token) and len(token) <= 25
 
 
@@ -392,35 +1105,24 @@ def _is_dash_dialog_line(raw: str) -> bool:
 
 
 def _extract_cast(lines: List[str]) -> List[Character]:
-    """Find the CAST section and parse each character row.
-
-    Supports two formats:
-
-      HEIST-style:
-        CAST
-        MARVIN       The Boss       40   Male
-
-      Standard-style:
-        CAST OF CHARACTERS
-        Eric:  19, A smart, anxious kid...
-        Jess:  18, Magnetic, volatile...
-    """
+    """Find CAST / CHARACTERS section and parse character rows."""
     cast: List[Character] = []
     cast_idx = None
     for i, raw in enumerate(lines):
         s = raw.strip().upper()
-        if s in ("CAST", "CHARACTERS", "CAST OF CHARACTERS", "DRAMATIS PERSONAE"):
+        if s in ("CAST", "CHARACTERS", "CAST OF CHARACTERS", "DRAMATIS PERSONAE",
+                 "CHARACTER LIST", "CHARACTER DESCRIPTIONS", "CHARACTERS:"):
             cast_idx = i
             break
     if cast_idx is None:
         return cast
 
     blanks_in_a_row = 0
-    for raw in lines[cast_idx + 1 :]:
+    for raw in lines[cast_idx + 1:]:
         s = raw.strip()
         if not s:
             blanks_in_a_row += 1
-            if blanks_in_a_row >= 2:
+            if blanks_in_a_row >= 3:
                 break
             continue
         blanks_in_a_row = 0
@@ -428,34 +1130,47 @@ def _extract_cast(lines: List[str]) -> List[Character]:
         if SCENE_HEADER_RE.match(raw) or SCENE_NUM_RE.match(s) or INT_EXT_RE.match(s):
             break
         su = s.upper()
-        if su.startswith("AUTHOR") or su.startswith("NOTES") or su.startswith("SETTING"):
+        if su.startswith(("AUTHOR", "NOTES", "NOTE ON", "A NOTE", "SETTING", "TIME",
+                           "LOCATION", "PLACE", "PRODUCTION", "SYNOPSIS")):
+            break
+        # A single-word all-caps section label (TIME, PLACE, etc.) also stops the cast
+        if re.fullmatch(r"[A-Z]{2,}", s) and s in (
+            "TIME", "PLACE", "LOCATION", "SETTING", "SYNOPSIS", "NOTES"
+        ):
             break
 
-        # Try both cast row formats
-        char = _parse_cast_row(s) or _parse_cast_row_v2(s)
+        char = (_parse_cast_row(s) or _parse_cast_row_dotted(s)
+                or _parse_cast_row_v2(s) or _parse_cast_row_comma(s))
         if char:
             cast.append(char)
-        # Don't break on unrecognized rows — cast lists often have section
-        # headings like "Supporting-" interspersed; just skip them.
 
     return cast
 
 
 def _parse_cast_row(s: str) -> Optional[Character]:
-    """HEIST-style: 'MARVIN   The Boss   40   Male' (all-caps name first)."""
-    parts = [p for p in re.split(r"\s{2,}", s) if p]
+    """HEIST-style: 'MARVIN   The Boss   40   Male'"""
+    # Normalize multiple spaces
+    s = re.sub(r"\s{2,}", "  ", s)
+    parts = [p for p in s.split("  ") if p.strip()]
     if not parts:
         return None
-    name_raw = parts[0]
+    name_raw = parts[0].strip()
     if re.search(r"[a-z]", name_raw):
         return None
     if not re.search(r"[A-Z]", name_raw) or len(name_raw) > 30:
         return None
+    # Name must be purely letters/spaces/hyphens — reject things like "2F, 3M"
+    if not re.fullmatch(r"[A-Z][A-Z0-9 \-/'\.]*", name_raw):
+        return None
+    # Require at least a role description (not a bare word with nothing else)
+    if len(parts) < 2:
+        return None
 
-    role = parts[1] if len(parts) > 1 else None
+    role = parts[1].strip() if len(parts) > 1 else None
     age = None
     gender = None
     for tail in parts[2:]:
+        tail = tail.strip()
         if re.fullmatch(r"\d{1,3}\+?", tail):
             age = tail
         elif tail.lower().startswith(("male", "female", "non-binary", "nonbinary", "nb")):
@@ -465,23 +1180,24 @@ def _parse_cast_row(s: str) -> Optional[Character]:
 
 
 def _parse_cast_row_v2(s: str) -> Optional[Character]:
-    """Standard-style: 'Eric:  19, A smart, anxious kid who...'
-
-    Name is mixed-case followed by colon. We up-case it to match script cues.
-    Gender is inferred from pronouns in the description.
-    """
+    """Standard-style: 'Eric:  19, A smart anxious kid...' or 'AVA:  30, any ethnicity...'"""
+    # Normalize multiple spaces for matching
+    s_norm = re.sub(r"\s{2,}", " ", s)
     m = re.match(
         r"^([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)?)\s*:\s*(\d{1,3})?\s*[,]?\s*(.*)",
-        s,
+        s_norm,
     )
     if not m:
         return None
     name = m.group(1).upper()
-    # Reject obvious non-names (section headings, etc.)
-    if name in ("SETTING", "SETTINGS", "MAIN", "SUPPORTING", "PRODUCTION", "NOTE"):
+    if name in ("SETTING", "SETTINGS", "MAIN", "SUPPORTING", "PRODUCTION",
+                "NOTE", "NOTES", "TIME", "PLACE"):
         return None
     age = m.group(2)
-    description = m.group(3) or ""
+    description = (m.group(3) or "").strip()
+    # Reject bare "Location:" headings with no description (Pakistan:, Nevada:, etc.)
+    if not age and not description:
+        return None
 
     desc_lower = description.lower()
     she = len(re.findall(r"\bshe\b|\bher\b|\bhers\b|\bherself\b", desc_lower))
@@ -495,8 +1211,59 @@ def _parse_cast_row_v2(s: str) -> Optional[Character]:
     return Character(name=name, gender_hint=gender, age_hint=age)
 
 
+def _parse_cast_row_dotted(s: str) -> Optional[Character]:
+    """Dotted leader: 'REG……….British, 30s, Bass Player' or 'DIANA…U.S., mid-late 20s...'"""
+    m = re.match(r"^([A-Z][A-Z0-9 ]*?)[…\.]{2,}\s*(.+)$", s)
+    if not m:
+        return None
+    name_raw = m.group(1).strip()
+    if re.search(r"[a-z]", name_raw) or len(name_raw) > 30:
+        return None
+    rest = m.group(2).strip()
+    parts = [p.strip() for p in rest.split(",")]
+    age = None
+    gender = None
+    for part in parts:
+        part_clean = part.rstrip(".")
+        if re.fullmatch(r"\d{1,3}s?", part_clean, re.I) or re.match(r"\d{1,3}[-–]\d{1,3}", part_clean):
+            age = part_clean
+        elif part_clean.lower().startswith(("male", "female", "non-binary", "nonbinary", "nb")):
+            t = part_clean.strip().lower()
+            gender = "F" if t.startswith("female") else ("M" if t.startswith("male") else "X")
+    return Character(name=name_raw, gender_hint=gender, age_hint=age)
+
+
+def _parse_cast_row_comma(s: str) -> Optional[Character]:
+    """Comma-delimited: 'ANDY, female, 30s, Caucasian.' or 'B, male, 15, ...'
+
+    All-caps name is first token before the comma; gender/age follow in any order.
+    """
+    m = re.match(r"^([A-Z][A-Z0-9 ]*?),\s*(.+)$", s)
+    if not m:
+        return None
+    name_raw = m.group(1).strip()
+    # Reject non-names: must be all-caps, reasonable length, no digits-only
+    if re.search(r"[a-z]", name_raw) or len(name_raw) > 30:
+        return None
+    if re.fullmatch(r"[\d\s]+", name_raw):
+        return None
+
+    parts = [p.strip() for p in m.group(2).split(",")]
+    age = None
+    gender = None
+    for part in parts:
+        part_clean = part.rstrip(".")
+        if re.fullmatch(r"\d{1,3}s?", part_clean, re.I):
+            age = part_clean
+        elif part_clean.lower().startswith(("male", "female", "non-binary", "nonbinary", "nb")):
+            t = part_clean.strip().lower()
+            gender = "F" if t.startswith("female") else ("M" if t.startswith("male") else "X")
+
+    return Character(name=name_raw, gender_hint=gender, age_hint=age)
+
+
 # ---------------------------------------------------------------------------
-# Scene extraction — format router
+# Scene extraction — format router (heist / scene_n / dash_dialog)
 # ---------------------------------------------------------------------------
 
 
@@ -514,7 +1281,7 @@ def _extract_scenes(
 
 
 # ---------------------------------------------------------------------------
-# HEIST-style scene extraction (numbered headers: "1  SCENE NAME")
+# HEIST-style scene extraction
 # ---------------------------------------------------------------------------
 
 
@@ -546,7 +1313,7 @@ def _extract_scenes_heist(
 
     scenes: List[Scene] = []
     for (start, num, title), (end, _, _) in zip(boundaries, boundaries[1:]):
-        scene_lines = lines[start + 1 : end]
+        scene_lines = lines[start + 1: end]
         sc = Scene(number=num, title=title)
         sc.elements = _parse_scene_body(scene_lines, known_speakers, zones)
         scenes.append(sc)
@@ -563,20 +1330,16 @@ def _extract_scenes_scene_n(
     known_speakers: set,
     zones: Dict[str, int],
 ) -> List[Scene]:
-    """Handle scripts that use 'SCENE N' headers (optionally preceded by
-    'ACT N') and 'INT./EXT. LOCATION' lines for titles."""
     boundaries: List[Tuple[int, int, str]] = []
-    scene_counter = 0          # Global counter for uniqueness across acts
-    last_was_scene_n = False    # True immediately after a SCENE N line
+    scene_counter = 0
+    last_was_scene_n = False
 
     for i, raw in enumerate(lines):
         s = raw.strip()
 
-        # Skip ACT / END OF ACT markers (cosmetic only)
         if ACT_RE.match(s):
             continue
 
-        # SCENE N header
         m = SCENE_NUM_RE.match(s)
         if m:
             scene_counter += 1
@@ -585,16 +1348,13 @@ def _extract_scenes_scene_n(
             last_was_scene_n = True
             continue
 
-        # INT./EXT. location line
         m2 = INT_EXT_RE.match(s)
         if m2:
             loc = _clean_title(m2.group("loc"))
             if last_was_scene_n and boundaries:
-                # Update the pending SCENE N boundary's title with this location
                 idx, num, _ = boundaries[-1]
                 boundaries[-1] = (idx, num, loc)
             else:
-                # Standalone location change mid-scene — start a new sub-scene
                 scene_counter += 1
                 boundaries.append((i, scene_counter, loc))
             last_was_scene_n = False
@@ -610,7 +1370,7 @@ def _extract_scenes_scene_n(
 
     scenes: List[Scene] = []
     for (start, num, title), (end, _, _) in zip(boundaries, boundaries[1:]):
-        scene_lines = lines[start + 1 : end]
+        scene_lines = lines[start + 1: end]
         sc = Scene(number=num, title=title)
         sc.elements = _parse_scene_body(scene_lines, known_speakers, zones)
         scenes.append(sc)
@@ -618,16 +1378,11 @@ def _extract_scenes_scene_n(
 
 
 # ---------------------------------------------------------------------------
-# Dash-dialog format (e.g. Cyrano: "SPEAKER – text" inline, "N." scene markers)
+# Dash-dialog format
 # ---------------------------------------------------------------------------
 
 
 def _extract_scenes_dash_dialog(lines: List[str]) -> List[Scene]:
-    """Scene boundaries are bare 'N.' lines (e.g. '2.' alone at low indent).
-
-    Everything between two boundaries is parsed as dash-dialog body.
-    Falls back to a single scene if no markers are found.
-    """
     boundaries: List[Tuple[int, int, str]] = []
     last_num = 0
     for i, raw in enumerate(lines):
@@ -635,9 +1390,8 @@ def _extract_scenes_dash_dialog(lines: List[str]) -> List[Scene]:
         m = _SCENE_NUM_DOT_RE.match(s)
         if m:
             indent = len(raw) - len(raw.lstrip())
-            if indent < 30:  # not a right-margin page number
+            if indent < 30:
                 num = int(m.group(1))
-                # If numbering resets (e.g. Act 2 restarts at 1), continue from where we left off
                 if num <= last_num:
                     num = last_num + 1
                 last_num = num
@@ -650,7 +1404,7 @@ def _extract_scenes_dash_dialog(lines: List[str]) -> List[Scene]:
 
     scenes: List[Scene] = []
     for (start, num, title), (end, _, _) in zip(boundaries, boundaries[1:]):
-        scene_lines = lines[start + 1 : end]
+        scene_lines = lines[start + 1: end]
         sc = Scene(number=num, title=title)
         sc.elements = _parse_scene_body_dash_dialog(scene_lines)
         scenes.append(sc)
@@ -658,24 +1412,9 @@ def _extract_scenes_dash_dialog(lines: List[str]) -> List[Scene]:
 
 
 def _parse_scene_body_dash_dialog(lines: List[str]) -> List[Element]:
-    """Parse one scene's lines in dash-dialog format.
-
-    Recognised patterns:
-      SPEAKER – text                     → dialog
-      SPEAKER – (direction) text         → parenthetical + dialog
-      SPEAKER – (direction)              → parenthetical only
-      anything else                      → stage direction
-      indented continuation of previous  → appended to prior dialog
-    """
     elements: List[Element] = []
-
-    # Determine the modal (base) indent so we can spot continuation lines
-    indents = [
-        len(r) - len(r.lstrip())
-        for r in lines if r.strip()
-    ]
+    indents = [len(r) - len(r.lstrip()) for r in lines if r.strip()]
     base_indent = Counter(indents).most_common(1)[0][0] if indents else 0
-
     prev_dialog: Optional[Element] = None
 
     for raw in lines:
@@ -686,18 +1425,14 @@ def _parse_scene_body_dash_dialog(lines: List[str]) -> List[Element]:
 
         indent = len(raw) - len(raw.lstrip())
 
-        # Continuation: deeper indent than the base, and there's an open dialog
         if prev_dialog is not None and indent > base_indent + 2:
             prev_dialog.text = _normalize_text(prev_dialog.text + " " + s)
             continue
         prev_dialog = None
 
-        # Try dash-dialog match
         m = _DASH_DIALOG_LINE_RE.match(s)
         if m:
             token = m.group(1).strip()
-            # Reject if token contains lowercase — it's a stage direction
-            # e.g. "a silence – they look at each other"
             if re.search(r"[a-z]", token):
                 _append_stage_direction(elements, _normalize_text(s))
                 continue
@@ -705,7 +1440,6 @@ def _parse_scene_body_dash_dialog(lines: List[str]) -> List[Element]:
             speaker = _normalize_dash_speaker(token)
             rest = m.group(2).strip()
 
-            # Split off a leading parenthetical: "(direction) remaining text"
             pm = _INLINE_PAREN_RE.match(rest)
             if pm:
                 paren_text = pm.group(1).strip()
@@ -725,14 +1459,12 @@ def _parse_scene_body_dash_dialog(lines: List[str]) -> List[Element]:
                 prev_dialog = el
             continue
 
-        # Everything else is a stage direction
         _append_stage_direction(elements, _normalize_text(s))
 
     return elements
 
 
 def _append_stage_direction(elements: List[Element], text: str) -> None:
-    """Append a stage direction, merging with the previous one if it was mid-sentence."""
     if (
         elements
         and elements[-1].kind == "stage_direction"
@@ -745,7 +1477,6 @@ def _append_stage_direction(elements: List[Element], text: str) -> None:
 
 
 def _normalize_dash_speaker(raw: str) -> str:
-    """Normalise speaker token: collapse whitespace around / and &."""
     s = re.sub(r"\s*/\s*", "/", raw)
     s = re.sub(r"\s*&\s*", "&", s)
     return s.strip()
@@ -770,6 +1501,9 @@ def _is_heist_scene_header(raw: str) -> bool:
         return False
     if len(re.findall(r"[A-Z]", title)) < 3:
         return False
+    # Reject screenplay page-continuation markers ("10 CONTINUED: 10")
+    if re.match(r"CONT(INUED)?[:\s]", title):
+        return False
     return True
 
 
@@ -780,7 +1514,7 @@ def _clean_title(title: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Scene body parser
+# Scene body parser (heist / scene_n)
 # ---------------------------------------------------------------------------
 
 
@@ -799,7 +1533,6 @@ def _parse_scene_body(
 
     elements: List[Element] = []
 
-    # Pre-clean: drop page footers, page-break markers, and page headers
     clean: List[str] = []
     for raw in lines:
         if "\x0c" in raw:
@@ -808,16 +1541,12 @@ def _parse_scene_body(
             clean.append("")
             continue
         s = raw.strip()
-        # Standard page footer: "44." or "44.."
         if PAGE_FOOTER_RE.match(s):
             continue
         indent = len(raw) - len(raw.lstrip(" "))
-        # Right-aligned page number (deep indent + just digits)
         if indent >= pn_min and re.fullmatch(r"\s*\d+\.?\.?\s*", raw):
             continue
-        # Page header with script title and page number: e.g. "Fluorescent"   3.
-        # Appears after de-doubling as quoted-text + number at low indent
-        if re.search(r'["“”].+["“”].*\d+\.?\s*$', s) and indent < 25:
+        if re.search(r'["""].+["""].*\d+\.?\s*$', s) and indent < 25:
             continue
         clean.append(raw.rstrip())
 
@@ -870,7 +1599,6 @@ def _parse_scene_body(
             i += 1
             continue
 
-        # --- Parenthetical ---
         if (
             pending_speaker
             and PARENTHETICAL_RE.match(s)
@@ -892,15 +1620,12 @@ def _parse_scene_body(
             i += 1
             continue
 
-        # --- Multi-line parenthetical (opening paren, no closing) ---
-        # e.g. "(Meets his gaze, a quiet challenge in his" ... "voice)"
         if (
             pending_speaker
             and s.startswith("(")
             and not s.endswith(")")
             and p_min <= indent <= p_max + 8
         ):
-            # Collect until we see the closing paren
             paren_parts = [s.lstrip("(")]
             j = i + 1
             while j < n:
@@ -928,17 +1653,14 @@ def _parse_scene_body(
             i = j
             continue
 
-        # --- Dialog continuation ---
         if pending_speaker and d_min <= indent <= d_max:
             dialog_buf.append(s)
             i += 1
             continue
 
-        # --- Flush if something else arrived while speaker is pending ---
         if pending_speaker:
             flush_dialog(force=True)
 
-        # --- Character cue OR stage direction at cue indent ---
         if indent >= cue_min:
             if _looks_like_cue(s, known_speakers):
                 speaker_text, paren_text, advance = _capture_cue(clean, i)
@@ -967,9 +1689,6 @@ def _parse_scene_body(
                 i += 1
                 continue
 
-        # --- Page-break dialog continuation ---
-        # A dialog-indented line with no pending speaker, right after a dialog
-        # element — this happens when a character's speech spans a page break.
         if (
             d_min <= indent <= d_max
             and elements
@@ -980,7 +1699,6 @@ def _parse_scene_body(
             i += 1
             continue
 
-        # --- Anything else → stage direction ---
         sd_buf.append(s)
         i += 1
 
@@ -1056,10 +1774,7 @@ def _capture_cue(lines: List[str], i: int) -> Tuple[str, Optional[str], int]:
 
 
 def _normalize_speaker(s: str) -> str:
-    """Strip voice markers (V.O., O.S.) and CONT'D from a character cue."""
-    # Remove CONT'D / CONTD markers first
     s = CONTD_RE.sub("", s)
-    # Remove other parenthetical markers like (V.O.) (O.S.)
     base = re.sub(r"\s*\([^)]*\)\s*", "", s).strip()
     base = re.sub(r"\s+", " ", base)
     return base
@@ -1078,7 +1793,6 @@ def _looks_like_chorus(name: str) -> bool:
 
 
 def _levenshtein(a: str, b: str) -> int:
-    """Simple Levenshtein distance. Returns 99 if strings differ by more than 3."""
     if abs(len(a) - len(b)) > 3:
         return 99
     m, n = len(a), len(b)
@@ -1095,7 +1809,6 @@ def _levenshtein(a: str, b: str) -> int:
 
 
 def _closest_known_speaker(name: str, known_speakers: set, max_dist: int = 2) -> str:
-    """Return the closest known speaker, or the original name if no match within max_dist."""
     if name in known_speakers:
         return name
     best, best_dist = name, max_dist + 1
@@ -1107,7 +1820,6 @@ def _closest_known_speaker(name: str, known_speakers: set, max_dist: int = 2) ->
 
 
 def _derive_title(pdf_path: str) -> str:
-    """Try to extract a human-readable title from the first page; fall back to filename."""
     import os
     filename = os.path.splitext(os.path.basename(pdf_path))[0]
     try:
@@ -1115,16 +1827,13 @@ def _derive_title(pdf_path: str) -> str:
             if not pdf.pages:
                 return filename
             text = pdf.pages[0].extract_text() or ""
-            # First non-empty line of the first page is usually the title
             for line in text.split("\n"):
                 candidate = line.strip()
-                # Must be at least 3 chars, not a URL, not a date-ish string
                 if (
                     len(candidate) >= 3
                     and not re.search(r"https?://|@|\d{4}|draft|revision", candidate, re.I)
                     and not re.fullmatch(r"[\d\s\.]+", candidate)
                 ):
-                    # Truncate very long first lines (they're probably not titles)
                     return candidate[:80]
     except Exception:
         pass
