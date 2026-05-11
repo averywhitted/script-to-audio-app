@@ -729,6 +729,13 @@ def _detect_play_format(plain_lines: List[str]) -> Optional[str]:
     if all_caps_count / total > 0.65:
         return None
 
+    # Screenplays use INT./EXT. sluglines as scene boundaries — the layout-
+    # based scene_n parser handles these.  If we detect enough sluglines, skip
+    # the play detector so the script falls through to scene_n parsing.
+    int_ext_count = sum(1 for s in content_lines if INT_EXT_RE.match(s))
+    if int_ext_count >= 2:
+        return None
+
     # Score: standalone all-caps lines immediately followed by mixed-case text
     cue_score = 0
     colon_score = 0
