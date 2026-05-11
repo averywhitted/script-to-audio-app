@@ -1239,35 +1239,39 @@ private struct SceneElementRow: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 16)
             VStack(alignment: .leading, spacing: 3) {
-                Text(element.displaySpeaker)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(speakerColor(element.displaySpeaker))
+                // Speaker name + edit button inline — clearly tied to this line
+                HStack(spacing: 5) {
+                    Text(element.displaySpeaker)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(speakerColor(element.displaySpeaker))
+                    if isHovered || showingEdit {
+                        Button {
+                            showingEdit = true
+                        } label: {
+                            Image(systemName: "pencil.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(speakerColor(element.displaySpeaker).opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                        .popover(isPresented: $showingEdit, arrowEdge: .top) {
+                            ElementCorrectionPopover(
+                                element: element,
+                                pdfPath: pdfPath,
+                                sceneNumber: sceneNumber,
+                                allSpeakers: allSpeakers
+                            )
+                            .environmentObject(state)
+                        }
+                    }
+                }
+                .animation(.easeInOut(duration: 0.12), value: isHovered)
                 Text(element.text)
                     .font(.callout)
                     .foregroundStyle(.primary)
                     .lineLimit(4)
             }
             Spacer()
-            // Edit button — visible on hover
-            if isHovered || showingEdit {
-                Button {
-                    showingEdit = true
-                } label: {
-                    Image(systemName: "pencil.circle")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showingEdit, arrowEdge: .trailing) {
-                    ElementCorrectionPopover(
-                        element: element,
-                        pdfPath: pdfPath,
-                        sceneNumber: sceneNumber,
-                        allSpeakers: allSpeakers
-                    )
-                    .environmentObject(state)
-                }
-            }
         }
         .padding(.vertical, 3)
         .onHover { isHovered = $0 }
