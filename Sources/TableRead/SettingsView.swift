@@ -57,6 +57,26 @@ private struct GeneralSettingsTab: View {
                 Text("Audio files are saved here unless you change it during a session.")
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                Toggle("Contribute corrections anonymously", isOn: $state.contributeCorrections)
+                HStack {
+                    let count = state.corrections.count
+                    Text("\(count) correction\(count == 1 ? "" : "s") stored locally")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Export…") { exportCorrections() }
+                        .disabled(state.corrections.isEmpty)
+                    Button("Clear All") { state.corrections.removeAll() }
+                        .foregroundStyle(.red)
+                        .disabled(state.corrections.isEmpty)
+                }
+            } header: {
+                Text("Parser Corrections")
+            } footer: {
+                Text("When enabled, corrections you make in the Review step are flagged for contribution. Export saves them as JSON you can share to help improve the parser for everyone. Nothing is sent automatically — you stay in control.")
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .padding()
@@ -71,6 +91,16 @@ private struct GeneralSettingsTab: View {
         panel.prompt = "Select"
         if panel.runModal() == .OK, let url = panel.url {
             state.setOutputDirectory(url)
+        }
+    }
+
+    private func exportCorrections() {
+        guard let tempURL = state.exportCorrections() else { return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = tempURL.lastPathComponent
+        panel.allowedContentTypes = [.json]
+        if panel.runModal() == .OK, let dest = panel.url {
+            try? FileManager.default.copyItem(at: tempURL, to: dest)
         }
     }
 }

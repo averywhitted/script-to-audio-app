@@ -248,3 +248,59 @@ enum LogStyle: Equatable {
     case warning
     case error
 }
+
+// MARK: - Parser corrections
+
+/// A user-supplied correction to a single parsed script element.
+///
+/// Corrections are stored locally and optionally contributed anonymously
+/// to help improve the parser for everyone.
+struct ParserCorrection: Codable, Equatable, Sendable {
+    /// Stable identifier: first 60 chars of element text (enough for uniqueness within a scene).
+    var textKey: String
+    var pdfIdentifier: String   // URL path — corrections follow the file
+    var sceneNumber: Int
+    var originalKind: String
+    var originalSpeaker: String?
+    var correctedKind: String?        // nil = keep original
+    var correctedSpeaker: String?     // nil = keep original; "" = narrator (no speaker)
+    var markedAsNoise: Bool           // true = exclude this element entirely
+    var timestamp: Date
+    var contributed: Bool             // user opted to share this correction
+}
+
+extension ParserCorrection {
+    /// Key used to look up a correction for a given element.
+    static func key(pdfIdentifier: String, sceneNumber: Int, text: String) -> String {
+        "\(pdfIdentifier)|\(sceneNumber)|\(String(text.prefix(60)))"
+    }
+}
+
+extension ScriptSummary {
+    /// Apply a map of corrections in-place, returning the modified summary.
+    func applying(_ corrections: [String: ParserCorrection], pdfPath: String) -> ScriptSummary {
+        var copy = self
+        copy.scenes = scenes.map { scene in
+            var sc = scene
+            sc.elements = scene.elements.compactMap { el in
+                let k = ParserCorrection.key(
+                    pdfIdentifier: pdfPath,
+                    sceneNumber: scene.number,
+                    text: el.text
+                )
+                guard let fix = corrections[k] else { return el }
+                if fix.markedAsNoise { return nil }
+                var updated = el
+                if let kind = fix.correctedKind { updated.kind = kind }
+                if let speaker = fix.correctedSpeaker {
+                    updated.speaker = speaker.isEmpty ? nil : speaker
+                }
+                return updated
+            }
+            return sc
+        }
+        // Recount after filtering noise
+        copy.lineCount = copy.scenes.reduce(0) { $0 + $1.elements.count }
+        return copy
+    }
+}

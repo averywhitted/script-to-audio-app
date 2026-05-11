@@ -51,6 +51,12 @@ final class AppState: ObservableObject {
     @Published var autoOpenFinderAfterRender: Bool = UserDefaults.standard.bool(forKey: "autoOpenFinderAfterRender") {
         didSet { UserDefaults.standard.set(autoOpenFinderAfterRender, forKey: "autoOpenFinderAfterRender") }
     }
+    @Published var contributeCorrections: Bool = UserDefaults.standard.bool(forKey: "contributeCorrections") {
+        didSet { UserDefaults.standard.set(contributeCorrections, forKey: "contributeCorrections") }
+    }
+
+    // Parser corrections — keyed by ParserCorrection.key(...)
+    @Published var corrections: [String: ParserCorrection] = [:]
 
     let bridge = PythonBridge()
     private var previewSound: NSSound?
@@ -64,6 +70,7 @@ final class AppState: ObservableObject {
         }
         // Load recent scripts without touching the filesystem at launch
         recentScripts = Self.loadRecentScripts()
+        corrections = Self.loadCorrections()
         Task {
             await refreshEngineStatus()
         }
@@ -120,14 +127,17 @@ final class AppState: ObservableObject {
         Task {
             do {
                 let parsed = try await bridge.parse(pdf: url)
-                script = parsed
+                let withFixes = parsed.applying(corrections, pdfPath: url.path)
+                script = withFixes
                 rememberRecentScript(url, title: parsed.title)
                 selectedScenes = Set(parsed.scenes.map(\.number))
                 navigatingForward = true
                 withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
                     step = .review
                 }
-                status = "\(parsed.sceneCount) scenes, \(parsed.characterCount) characters."
+                let correctionCount = corrections.values.filter { $0.pdfIdentifier == url.path }.count
+                let suffix = correctionCount > 0 ? ", \(correctionCount) correction\(correctionCount == 1 ? "" : "s") applied" : ""
+                status = "\(withFixes.sceneCount) scenes, \(withFixes.characterCount) characters\(suffix)."
             } catch {
                 errorMessage = error.localizedDescription
                 status = "Parsing failed."
@@ -653,6 +663,66 @@ final class AppState: ObservableObject {
         case "warning", "warn": .warning
         case "error": .error
         default: .info
+        }
+    }
+}
+
+// MARK: - Corrections
+
+extension AppState {
+    func saveCorrection(_ correction: ParserCorrection) {
+        let k = ParserCorrection.key(
+            pdfIdentifier: correction.pdfIdentifier,
+            sceneNumber: correction.sceneNumber,
+            text: correction.textKey
+        )
+        corrections[k] = correction
+        Self.persistCorrections(corrections)
+
+        // Re-apply all corrections to the in-memory script
+        if let pdf = selectedPDF, var base = script {
+            base = base.applying(corrections, pdfPath: pdf.path)
+            script = base
+        }
+    }
+
+    func deleteCorrection(pdfPath: String, sceneNumber: Int, textKey: String) {
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: textKey)
+        corrections.removeValue(forKey: k)
+        Self.persistCorrections(corrections)
+        if let pdf = selectedPDF, var base = script {
+            base = base.applying(corrections, pdfPath: pdf.path)
+            script = base
+        }
+    }
+
+    func exportCorrections() -> URL? {
+        let toExport = contributeCorrections
+            ? corrections.values.map { $0 }
+            : corrections.values.filter { $0.contributed }
+        guard !toExport.isEmpty else { return nil }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(Array(toExport)) else { return nil }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("table_read_corrections_\(Int(Date().timeIntervalSince1970)).json")
+        try? data.write(to: url)
+        return url
+    }
+
+    static func loadCorrections() -> [String: ParserCorrection] {
+        guard let data = UserDefaults.standard.data(forKey: "parserCorrections"),
+              let decoded = try? JSONDecoder().decode([String: ParserCorrection].self, from: data)
+        else { return [:] }
+        return decoded
+    }
+
+    private static func persistCorrections(_ corrections: [String: ParserCorrection]) {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        if let data = try? encoder.encode(corrections) {
+            UserDefaults.standard.set(data, forKey: "parserCorrections")
         }
     }
 }

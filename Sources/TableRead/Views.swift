@@ -108,6 +108,16 @@ struct ReviewView: View {
                         Label("\(script.characterCount) characters", systemImage: "person.2")
                         Label("\(script.lineCount) lines", systemImage: "text.bubble")
                         Spacer()
+                        // Background activity indicator (voice fetching, etc.)
+                        if state.isFetchingVoices {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.mini)
+                                Text("Loading voices…")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .transition(.opacity)
+                        }
                         Button("Select All") { state.selectAllScenes() }
                             .buttonStyle(.borderless)
                         Button("Select None") { state.clearSceneSelection() }
@@ -117,6 +127,7 @@ struct ReviewView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 22)
                     .padding(.vertical, 10)
+                    .animation(.easeInOut(duration: 0.2), value: state.isFetchingVoices)
                     Divider()
                     // Scene list is the primary content
                     ScrollView {
@@ -124,6 +135,8 @@ struct ReviewView: View {
                             ForEach(script.scenes) { scene in
                                 SceneReviewRow(
                                     scene: scene,
+                                    pdfPath: state.selectedPDF?.path ?? "",
+                                    allSpeakers: script.characters.map(\.name),
                                     isSelected: state.selectedScenes.contains(scene.number)
                                 ) {
                                     state.toggleScene(scene)
@@ -142,6 +155,8 @@ struct ReviewView: View {
 
 private struct SceneReviewRow: View {
     var scene: SceneSummary
+    var pdfPath: String
+    var allSpeakers: [String]
     var isSelected: Bool
     var toggle: () -> Void
     @State private var expanded = false
@@ -164,6 +179,7 @@ private struct SceneReviewRow: View {
                         .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                 }
                 .buttonStyle(.plain)
+                .contentShape(Rectangle())
 
                 Text(String(format: "%02d", scene.number))
                     .font(.system(.caption, design: .monospaced))
@@ -206,17 +222,25 @@ private struct SceneReviewRow: View {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
+                        .frame(width: 28, height: 28)   // larger hit target
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
+            .contentShape(Rectangle())
 
             if expanded {
                 Divider().padding(.horizontal, 14)
                 LazyVStack(alignment: .leading, spacing: 4) {
-                    ForEach(scene.elements.prefix(80).indices, id: \.self) { idx in
-                        SceneElementRow(element: scene.elements[idx])
+                    ForEach(scene.elements.prefix(80)) { element in
+                        SceneElementRow(
+                            element: element,
+                            pdfPath: pdfPath,
+                            sceneNumber: scene.number,
+                            allSpeakers: allSpeakers
+                        )
                     }
                     if scene.elements.count > 80 {
                         Text("\(scene.elements.count - 80) more lines…")
@@ -1196,6 +1220,13 @@ extension URL {
 
 private struct SceneElementRow: View {
     var element: SceneElementSummary
+    var pdfPath: String
+    var sceneNumber: Int
+    var allSpeakers: [String]
+
+    @EnvironmentObject private var state: AppState
+    @State private var isHovered = false
+    @State private var showingEdit = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -1217,14 +1248,166 @@ private struct SceneElementRow: View {
                     .lineLimit(4)
             }
             Spacer()
+            // Edit button — visible on hover
+            if isHovered || showingEdit {
+                Button {
+                    showingEdit = true
+                } label: {
+                    Image(systemName: "pencil.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingEdit, arrowEdge: .trailing) {
+                    ElementCorrectionPopover(
+                        element: element,
+                        pdfPath: pdfPath,
+                        sceneNumber: sceneNumber,
+                        allSpeakers: allSpeakers
+                    )
+                    .environmentObject(state)
+                }
+            }
         }
         .padding(.vertical, 3)
+        .onHover { isHovered = $0 }
     }
 
     private func speakerColor(_ speaker: String) -> Color {
         let palette: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .indigo, .brown]
         let index = abs(speaker.unicodeScalars.reduce(0) { $0 + Int($1.value) }) % palette.count
         return palette[index]
+    }
+}
+
+private struct ElementCorrectionPopover: View {
+    var element: SceneElementSummary
+    var pdfPath: String
+    var sceneNumber: Int
+    var allSpeakers: [String]
+
+    @EnvironmentObject private var state: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedKind: String
+    @State private var speakerText: String
+    @State private var markAsNoise: Bool
+
+    init(element: SceneElementSummary, pdfPath: String, sceneNumber: Int, allSpeakers: [String]) {
+        self.element = element
+        self.pdfPath = pdfPath
+        self.sceneNumber = sceneNumber
+        self.allSpeakers = allSpeakers
+        _selectedKind = State(initialValue: element.kind)
+        _speakerText = State(initialValue: element.speaker ?? "")
+        _markAsNoise = State(initialValue: false)
+    }
+
+    private var kindOptions: [(String, String)] {
+        [("dialog", "Dialog"), ("stage_direction", "Narration"), ("parenthetical", "Aside")]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Correct this line")
+                .font(.headline)
+
+            // Preview
+            Text(element.text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(8)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+
+            Divider()
+
+            // Kind picker
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Type").font(.caption).foregroundStyle(.secondary)
+                Picker("Type", selection: $selectedKind) {
+                    ForEach(kindOptions, id: \.0) { value, label in
+                        Text(label).tag(value)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            // Speaker
+            if selectedKind == "dialog" {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Speaker").font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        TextField("Character name", text: $speakerText)
+                            .textFieldStyle(.roundedBorder)
+                        if !allSpeakers.isEmpty {
+                            Menu {
+                                ForEach(allSpeakers, id: \.self) { name in
+                                    Button(name) { speakerText = name }
+                                }
+                            } label: {
+                                Image(systemName: "chevron.down.circle")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .menuStyle(.borderlessButton)
+                            .fixedSize()
+                        }
+                    }
+                }
+            }
+
+            // Noise toggle
+            Toggle("Hide this line (noise / page artifact)", isOn: $markAsNoise)
+                .font(.caption)
+
+            Divider()
+
+            // Actions
+            HStack {
+                // Show "Remove correction" if one exists
+                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+                if state.corrections[k] != nil {
+                    Button("Remove correction") {
+                        state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: element.text)
+                        dismiss()
+                    }
+                    .foregroundStyle(.red)
+                    .buttonStyle(.borderless)
+                }
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(.borderless)
+                Button("Save") {
+                    let correction = ParserCorrection(
+                        textKey: element.text,
+                        pdfIdentifier: pdfPath,
+                        sceneNumber: sceneNumber,
+                        originalKind: element.kind,
+                        originalSpeaker: element.speaker,
+                        correctedKind: selectedKind != element.kind ? selectedKind : nil,
+                        correctedSpeaker: selectedKind == "dialog" && speakerText != (element.speaker ?? "")
+                            ? speakerText : nil,
+                        markedAsNoise: markAsNoise,
+                        timestamp: Date(),
+                        contributed: state.contributeCorrections
+                    )
+                    state.saveCorrection(correction)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!hasChanges)
+            }
+        }
+        .padding(16)
+        .frame(width: 320)
+    }
+
+    private var hasChanges: Bool {
+        markAsNoise
+            || selectedKind != element.kind
+            || (selectedKind == "dialog" && speakerText != (element.speaker ?? ""))
     }
 }
 

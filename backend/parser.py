@@ -104,6 +104,16 @@ SCENE_NUM_RE = re.compile(r"""^\s*SCENE\s+(?P<num>\d+)\s*$""", re.I)
 INT_EXT_RE = re.compile(r"""^\s*(INT|EXT)\.?\s+(?P<loc>.+)""", re.I)
 ACT_RE = re.compile(r"""^\s*(?:ACT\s+[\dIVX]+|END\s+OF\s+ACT)""", re.I)
 PAGE_FOOTER_RE = re.compile(r"^\s*\d+\.\s*\.?\s*$")
+_DRAFT_DATE_RE = re.compile(
+    r"""^\s*(?:
+        \d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}        # 4/1/19  4.1.19
+      | (?:Rev(?:ision)?\.?\s*)?\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}  # Rev. 4/1/19
+      | Rev(?:ised?|ision)?\.?\s+\w                # Rev. A  Revised  REVISED
+      | DRAFT\s*[-—]?\s*\d                         # DRAFT 1  DRAFT – 2
+      | \d+\s*(?:st|nd|rd|th)\s+DRAFT              # 2nd DRAFT
+    )\s*$""",
+    re.VERBOSE | re.IGNORECASE,
+)
 PARENTHETICAL_RE = re.compile(r"^\s*\(.*\)\s*$")
 CONTD_RE = re.compile(r"\s*\([^)]*CONT['']?D[^)]*\)", re.I)
 
@@ -434,13 +444,49 @@ def extract_layout_lines(pdf_path: str) -> List[str]:
         except Exception:
             pass  # pypdfium2 unavailable or failed — fall through to pdfplumber
 
-    out: List[str] = []
+    all_lines: List[str] = []
+    page_sets: List[Set[str]] = []
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             text = page.extract_text(layout=True, x_tolerance=2) or ""
+            pg_set: Set[str] = set()
             for line in text.split("\n"):
-                out.append(_undouble(line))
-    return out
+                undoubled = _undouble(line)
+                all_lines.append(undoubled)
+                s = undoubled.strip()
+                if s:
+                    pg_set.add(s)
+            page_sets.append(pg_set)
+
+    noise = _layout_page_noise(page_sets)
+    if noise:
+        return [l for l in all_lines if l.strip() not in noise]
+    return all_lines
+
+
+def _layout_page_noise(page_sets: List[Set[str]]) -> Set[str]:
+    """Identify running headers/footers that appear on most pages.
+
+    These are typically the script title, draft date, and revision marks
+    that repeat in the header/footer of every page.
+    """
+    if len(page_sets) < 4:
+        return set()
+    total_pages = len(page_sets)
+    threshold = max(4, total_pages * 0.55)
+    noise: Set[str] = set()
+    candidates: Set[str] = set().union(*page_sets)
+    for s in candidates:
+        if len(s) > 100:
+            continue
+        count = sum(1 for pg in page_sets if s in pg)
+        if count < threshold:
+            continue
+        # Single all-caps words are likely frequent speaker names, not headers
+        if re.fullmatch(r"[A-Z][A-Z0-9]{1,24}", s):
+            continue
+        noise.add(s)
+    return noise
 
 
 def _extract_plain_lines(pdf_path: str) -> List[str]:
@@ -1782,6 +1828,9 @@ def _parse_scene_body(
         if indent >= pn_min and re.fullmatch(r"\s*\d+\.?\.?\s*", raw):
             continue
         if re.search(r'["""].+["""].*\d+\.?\s*$', s) and indent < 25:
+            continue
+        # Draft dates and revision marks that noise detection may have missed
+        if _DRAFT_DATE_RE.match(s):
             continue
         clean.append(raw.rstrip())
 
