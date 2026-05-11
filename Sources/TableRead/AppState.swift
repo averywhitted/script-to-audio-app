@@ -58,22 +58,26 @@ final class AppState: ObservableObject {
     var sceneList: [SceneSummary] { script?.scenes ?? [] }
 
     init() {
-        // Restore OpenAI key from Keychain on launch
-        if let stored = KeychainHelper.read(key: "openai_api_key"), !stored.isEmpty {
-            openAIAPIKey = stored
-            installedEngines.insert(.openAI)
-        }
-        // Restore last output directory
+        // Restore last output directory (path only — no file I/O at launch)
         if let savedPath = UserDefaults.standard.string(forKey: "lastOutputDirectory") {
-            let url = URL(fileURLWithPath: savedPath)
-            if FileManager.default.fileExists(atPath: savedPath) {
-                outputDirectory = url
-            }
+            outputDirectory = URL(fileURLWithPath: savedPath)
         }
+        // Load recent scripts without touching the filesystem at launch
         recentScripts = Self.loadRecentScripts()
         Task {
             await refreshEngineStatus()
         }
+    }
+
+    /// Load the OpenAI key from Keychain on demand (called when Settings opens).
+    /// Avoids a Keychain prompt at launch for users who never use OpenAI.
+    func loadOpenAIKeyIfNeeded() {
+        guard openAIAPIKey.isEmpty,
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+              let stored = KeychainHelper.read(key: "openai_api_key"), !stored.isEmpty
+        else { return }
+        openAIAPIKey = stored
+        installedEngines.insert(.openAI)
     }
 
     // MARK: - Navigation
@@ -538,7 +542,17 @@ final class AppState: ObservableObject {
               let decoded = try? JSONDecoder().decode([RecentScript].self, from: data) else {
             return []
         }
-        return decoded.filter { FileManager.default.fileExists(atPath: $0.path) }
+        // Skip fileExists check here — do it lazily in pruneStaleRecentScripts()
+        // to avoid a Documents-folder TCC prompt at launch.
+        return decoded
+    }
+
+    /// Remove entries whose files no longer exist. Call once the import screen is visible,
+    /// not at launch — defers the filesystem scan past the TCC consent window.
+    func pruneStaleRecentScripts() {
+        recentScripts = recentScripts.filter {
+            FileManager.default.fileExists(atPath: $0.path)
+        }
     }
 
     private func rememberRecentScript(_ url: URL, title: String) {
@@ -654,8 +668,13 @@ enum KeychainHelper {
             kSecAttrAccount as String: key,
         ]
         SecItemDelete(query as CFDictionary)
-        var addQuery = query
-        addQuery[kSecValueData as String] = data
+        let addQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.tableread",
+            kSecAttrAccount as String: key,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecValueData as String: data,
+        ]
         SecItemAdd(addQuery as CFDictionary, nil)
     }
 

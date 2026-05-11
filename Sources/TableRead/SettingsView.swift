@@ -17,6 +17,7 @@ struct SettingsView: View {
         }
         .frame(width: 520, height: 420)
         .environmentObject(state)
+        .onAppear { state.loadOpenAIKeyIfNeeded() }
     }
 }
 

@@ -38,6 +38,7 @@ struct ImportView: View {
             Spacer()
         }
         .padding(48)
+        .onAppear { state.pruneStaleRecentScripts() }
     }
 }
 
@@ -214,8 +215,8 @@ private struct SceneReviewRow: View {
             if expanded {
                 Divider().padding(.horizontal, 14)
                 LazyVStack(alignment: .leading, spacing: 4) {
-                    ForEach(scene.elements.prefix(80)) { element in
-                        SceneElementRow(element: element)
+                    ForEach(scene.elements.prefix(80).indices, id: \.self) { idx in
+                        SceneElementRow(element: scene.elements[idx])
                     }
                     if scene.elements.count > 80 {
                         Text("\(scene.elements.count - 80) more lines…")
@@ -915,7 +916,7 @@ struct GenerateView: View {
                 .help("Renders only the first selected scene — audition pacing and voice cast before the full run.")
 
                 Button { state.renderSelectedScenes() } label: {
-                    Label("Render All \(state.selectedScenes.count) Scenes", systemImage: "waveform.badge.play")
+                    Label("Render All \(state.selectedScenes.count) Scenes", systemImage: "waveform")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -969,7 +970,7 @@ private struct GenerationCompletePanel: View {
                         Circle()
                             .fill(Color.green.opacity(0.12))
                             .frame(width: 88, height: 88)
-                        Image(systemName: "waveform.badge.checkmark")
+                        Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 40, weight: .light))
                             .foregroundStyle(.green)
                     }
@@ -997,7 +998,7 @@ private struct GenerationCompletePanel: View {
                         Button {
                             NSWorkspace.shared.open(dir)
                         } label: {
-                            Label("Open Output in Finder", systemImage: "folder.badge.checkmark")
+                            Label("Open Output in Finder", systemImage: "folder.fill")
                                 .frame(minWidth: 260)
                         }
                         .buttonStyle(.borderedProminent)
@@ -1167,13 +1168,13 @@ private class _ResizeCursorNSView: NSView {
     }
 }
 
-private func formatSeconds(_ seconds: Int) -> String {
+func formatSeconds(_ seconds: Int) -> String {
     if seconds < 60 { return "\(seconds)s" }
     let m = seconds / 60, s = seconds % 60
     return s == 0 ? "\(m)m" : "\(m)m \(s)s"
 }
 
-private extension SceneSummary {
+extension SceneSummary {
     func estimatedSeconds(engine: EngineKind) -> Int {
         let dialogLines = elements.filter { $0.kind == "dialog" }
         let wordCount = dialogLines.reduce(0) { $0 + $1.text.split(separator: " ").count }

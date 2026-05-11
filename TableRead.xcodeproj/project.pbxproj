@@ -14,10 +14,22 @@
 		99848C20CCC945CEAC78167B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36341DE898134A3FA1CB7889 /* SettingsView.swift */; };
 		B35C2323B3F6473D8E7416F6 /* TableReadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D155BFB318744F8BE58A6D2 /* TableReadApp.swift */; };
 		C2F9AC94D2DB4A77913EB54F /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5495890743F443FA0E5EA21 /* Views.swift */; };
+		F1E2D3C4B5A691827364A502 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E2D3C4B5A691827364A501 /* AppStateTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F1E2D3C4B5A691827364A50A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0BEEC5F7968243A19BC2E029 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C06CD91AC3AC4DCB99E681FE;
+			remoteInfo = TableRead;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		ED663123E5CA4556BF79142A /* TableRead.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TableRead.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F1E2D3C4B5A691827364A503 /* TableReadTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TableReadTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C260B1B4B72E4FC79C5ADFAC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C38C67F9E4D042C8BD2A2F2C /* TableRead.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TableRead.entitlements; sourceTree = "<group>"; };
 		B84164F9A9824BCA8825C794 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
@@ -27,6 +39,7 @@
 		36341DE898134A3FA1CB7889 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		7D155BFB318744F8BE58A6D2 /* TableReadApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableReadApp.swift; sourceTree = "<group>"; };
 		A5495890743F443FA0E5EA21 /* Views.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views.swift; sourceTree = "<group>"; };
+		F1E2D3C4B5A691827364A501 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +57,7 @@
 			isa = PBXGroup;
 			children = (
 				20547108D84546F2A46D76F3 /* Sources */,
+				F1E2D3C4B5A691827364A509 /* Tests */,
 				3B344CE14A85448391F634EE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -52,6 +66,7 @@
 			isa = PBXGroup;
 			children = (
 				ED663123E5CA4556BF79142A /* TableRead.app */,
+				F1E2D3C4B5A691827364A503 /* TableReadTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -81,6 +96,15 @@
 			path = TableRead;
 			sourceTree = "<group>";
 		};
+		F1E2D3C4B5A691827364A509 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				F1E2D3C4B5A691827364A501 /* AppStateTests.swift */,
+			);
+			name = Tests;
+			path = Tests/TableReadTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -101,6 +125,22 @@
 			productReference = ED663123E5CA4556BF79142A /* TableRead.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F1E2D3C4B5A691827364A505 /* TableReadTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F1E2D3C4B5A691827364A508 /* Build configuration list for PBXNativeTarget "TableReadTests" */;
+			buildPhases = (
+				F1E2D3C4B5A691827364A504 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F1E2D3C4B5A691827364A50B /* PBXTargetDependency */,
+			);
+			name = TableReadTests;
+			productName = TableReadTests;
+			productReference = F1E2D3C4B5A691827364A503 /* TableReadTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -112,6 +152,9 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					C06CD91AC3AC4DCB99E681FE = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					F1E2D3C4B5A691827364A505 = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
@@ -130,6 +173,7 @@
 			projectRoot = "";
 			targets = (
 				C06CD91AC3AC4DCB99E681FE /* TableRead */,
+				F1E2D3C4B5A691827364A505 /* TableReadTests */,
 			);
 		};
 /* End PBXProject section */
@@ -159,7 +203,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F1E2D3C4B5A691827364A504 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1E2D3C4B5A691827364A502 /* AppStateTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F1E2D3C4B5A691827364A50B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C06CD91AC3AC4DCB99E681FE /* TableRead */;
+			targetProxy = F1E2D3C4B5A691827364A50A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		466A3387792E4B3894A20C24 /* Debug */ = {
@@ -241,6 +301,36 @@
 			};
 			name = Release;
 		};
+		F1E2D3C4B5A691827364A506 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.averywhitted.tableread.tests";
+				PRODUCT_NAME = TableReadTests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TableRead.app/Contents/MacOS/TableRead";
+			};
+			name = Debug;
+		};
+		F1E2D3C4B5A691827364A507 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.averywhitted.tableread.tests";
+				PRODUCT_NAME = TableReadTests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TableRead.app/Contents/MacOS/TableRead";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -258,6 +348,15 @@
 			buildConfigurations = (
 				7E3EC708A49F43E6868EB178 /* Debug */,
 				95C69F6D03244467B94F6B74 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F1E2D3C4B5A691827364A508 /* Build configuration list for PBXNativeTarget "TableReadTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F1E2D3C4B5A691827364A506 /* Debug */,
+				F1E2D3C4B5A691827364A507 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
