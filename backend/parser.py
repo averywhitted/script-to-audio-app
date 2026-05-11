@@ -226,6 +226,135 @@ def _undouble_content(s: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Garbled-font decoder for pypdfium2 output
+# ---------------------------------------------------------------------------
+#
+# Some PDFs use a custom font whose ToUnicode CMap is offset by -29.  When
+# pypdfium2 extracts text it reads the wrong codepoints, producing output like
+# ":KDW·V" for "What's" and "DLYLVLRQ·V" for "division's".  The decoding
+# rule is simply: add 29 to each character whose codepoint is in the ranges
+# 58-61 (→ W-Z) or 68-93 (→ a-z).  The anchor characters · (183), ´ (180),
+# and µ (181) represent apostrophe and smart quotes respectively; they never
+# appear in legitimate English screenplay text, so they are reliable markers
+# that a word — and any contiguous run of similarly-decodable words around
+# it — is garbled.
+
+_GFD: Dict[int, str] = {
+    183: "'",        # · → apostrophe
+    180: "‘",   # ´ → ' (left single quote)
+    181: "’",   # µ → ' (right single quote)
+}
+for _cp in list(range(58, 62)) + list(range(68, 94)):
+    _gd = chr(_cp + 29)
+    if _gd.isalpha():
+        _GFD[_cp] = _gd
+
+_GFD_ANCHORS: frozenset = frozenset({183, 180, 181})
+
+
+_VOWELS: frozenset = frozenset("aeiouAEIOU")
+
+# Codepoints 68-70 (D, E, F) decode to 'a', 'b', 'c' via +29 shift.  When
+# one of these opens a garbled word AND the remainder (decoded chars 2+)
+# contains a vowel, the opener came from the regular (non-shifted) font and
+# should be kept verbatim rather than shifted.
+_GFD_AMBIGUOUS_OPENERS: frozenset = frozenset({68, 69, 70})  # D, E, F
+
+
+def _gfd_decode_word(word: str) -> Optional[str]:
+    """Decode a single non-space token. Returns None if any char can't decode."""
+    out: List[str] = []
+    for i, ch in enumerate(word):
+        cp = ord(ch)
+        if cp in _GFD:
+            out.append(_GFD[cp])
+        elif 65 <= cp <= 67:      # A, B, C — stored as literal in this encoding
+            out.append(ch)
+        elif not ch.isalpha():    # punctuation/digits at token boundary
+            out.append(ch)
+        else:
+            return None
+
+    if not out:
+        return "".join(out)
+
+    # Vowel-in-remainder heuristic: if the first source character is one of the
+    # ambiguous openers (D/E/F) and the decoded remainder contains a vowel,
+    # the opener belongs to the regular font — keep it as the original letter.
+    first_cp = ord(word[0])
+    if first_cp in _GFD_AMBIGUOUS_OPENERS and len(out) > 1:
+        remainder = "".join(out[1:])
+        if any(c in _VOWELS for c in remainder):
+            out[0] = word[0]   # restore original uppercase letter
+
+    return "".join(out)
+
+
+def _fix_garbled_pypdfium2(line: str) -> str:
+    """Decode a text line from a PDF whose font has a +29-shifted encoding.
+
+    Splits the line into whitespace-separated tokens, groups consecutive
+    fully-decodable tokens into runs, and decodes any run that contains at
+    least one anchor character (·, ´, µ).  Runs without an anchor are left
+    unchanged, preventing false positives on intentional all-caps words.
+    """
+    # Tokenise, preserving whitespace
+    parts: List[str] = re.split(r"(\s+)", line)
+
+    decoded: List[Optional[str]] = []
+    is_anchor: List[bool] = []
+    for part in parts:
+        if not part or part.isspace():
+            decoded.append(part)      # spaces pass through verbatim
+            is_anchor.append(False)
+        else:
+            decoded.append(_gfd_decode_word(part))
+            is_anchor.append(any(ord(c) in _GFD_ANCHORS for c in part))
+
+    # Walk parts, collecting contiguous decodable-token runs.
+    result: List[str] = list(parts)
+    n = len(parts)
+    i = 0
+    while i < n:
+        p = parts[i]
+        if not p or p.isspace() or decoded[i] is None:
+            i += 1
+            continue
+
+        # Start of a decodable run.  Collect run indices (spaces included as
+        # pass-through items; they don't break the run but must be followed
+        # by another decodable token to be included).
+        run: List[int] = []
+        anchor = False
+        j = i
+        while j < n:
+            if not parts[j] or parts[j].isspace():
+                # Include space only if the next non-empty part is decodable
+                k = j + 1
+                while k < n and (not parts[k] or parts[k].isspace()):
+                    k += 1
+                if k < n and decoded[k] is not None:
+                    run.append(j)   # include the space
+                    j += 1
+                else:
+                    break
+            elif decoded[j] is not None:
+                run.append(j)
+                anchor = anchor or is_anchor[j]
+                j += 1
+            else:
+                break
+
+        if anchor:
+            for k in run:
+                result[k] = decoded[k]  # decoded[k] is the space itself for spaces
+
+        i = j if j > i else i + 1
+
+    return "".join(result)
+
+
 def _cid_density(text: str) -> float:
     """Return fraction of characters that are (cid:N) artifacts."""
     total = len(text)
@@ -277,7 +406,7 @@ def _extract_layout_pypdfium2(pdf_path: str) -> List[str]:
             if not line_chars:
                 return
             x_start = min(line_xs)
-            text = "".join(line_chars)
+            text = _fix_garbled_pypdfium2("".join(line_chars))
             indent = max(0, round((x_start - LEFT_MARGIN) / CHAR_WIDTH))
             out.append(" " * indent + text)
             line_chars.clear()
@@ -334,7 +463,7 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
                 text = textpage.get_text_range()
                 pg_set: Set[str] = set()
                 for line in text.splitlines():
-                    normalized = _undouble(line)
+                    normalized = _fix_garbled_pypdfium2(_undouble(line))
                     plain_lines.append(normalized)
                     s = normalized.strip()
                     if s:
