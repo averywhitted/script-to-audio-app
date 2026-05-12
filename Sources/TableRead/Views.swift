@@ -1,6 +1,13 @@
 import SwiftUI
 import AppKit
 
+// Stable hue per speaker name — shared by Review and Cast tabs.
+private func speakerColor(_ speaker: String) -> Color {
+    let palette: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .indigo, .brown]
+    let index = abs(speaker.unicodeScalars.reduce(0) { $0 + Int($1.value) }) % palette.count
+    return palette[index]
+}
+
 // MARK: - Import
 
 struct ImportView: View {
@@ -163,6 +170,7 @@ private struct SceneReviewRow: View {
     @State private var expanded = false
     @State private var editingTitle = false
     @State private var titleDraft = ""
+    @State private var isHoveringTitle = false
 
     private var effectiveTitle: String {
         state.effectiveSceneTitle(pdfPath: pdfPath, scene: scene)
@@ -195,18 +203,36 @@ private struct SceneReviewRow: View {
 
                 Group {
                     if editingTitle {
-                        TextField("Scene title", text: $titleDraft)
-                            .font(.callout.weight(.medium))
-                            .textFieldStyle(.plain)
-                            .onSubmit { commitTitle() }
-                            .onExitCommand { editingTitle = false }
+                        HStack(spacing: 6) {
+                            TextField("Scene title", text: $titleDraft)
+                                .font(.callout.weight(.medium))
+                                .textFieldStyle(.plain)
+                                .onSubmit { commitTitle() }
+                                .onExitCommand { editingTitle = false }
+                            Button("Save") { commitTitle() }
+                                .font(.caption.weight(.medium))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.accentColor, in: Capsule())
+                                .foregroundStyle(.white)
+                                .buttonStyle(.plain)
+                        }
                     } else {
-                        Text(effectiveTitle)
-                            .font(.callout.weight(.medium))
-                            .foregroundStyle(isSelected ? .primary : .secondary)
-                            .lineLimit(1)
-                            .onTapGesture(count: 2) { beginEditingTitle() }
-                            .help("Double-click to edit scene title")
+                        HStack(spacing: 6) {
+                            Text(effectiveTitle)
+                                .font(.callout.weight(.medium))
+                                .foregroundStyle(isSelected ? .primary : .secondary)
+                                .lineLimit(1)
+                            Button("Edit") { beginEditingTitle() }
+                                .font(.caption.weight(.medium))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(.quaternary, in: Capsule())
+                                .foregroundStyle(.secondary)
+                                .buttonStyle(.plain)
+                                .opacity(isHoveringTitle ? 1 : 0)
+                        }
+                        .onHover { isHoveringTitle = $0 }
                     }
                 }
 
@@ -287,12 +313,6 @@ private struct SceneReviewRow: View {
         let trimmed = titleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         state.setSceneTitle(trimmed, pdfPath: pdfPath, sceneNumber: scene.number)
         editingTitle = false
-    }
-
-    private func speakerColor(_ speaker: String) -> Color {
-        let palette: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .indigo, .brown]
-        let index = abs(speaker.unicodeScalars.reduce(0) { $0 + Int($1.value) }) % palette.count
-        return palette[index]
     }
 }
 
@@ -443,11 +463,11 @@ private struct CharacterVoiceRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(genderColor)
+                .fill(speakerColor(name))
                 .frame(width: 9, height: 9)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(name).font(.headline)
+                Text(name).font(.headline).foregroundStyle(speakerColor(name))
                 if let hint = genderHint {
                     Text(hint == "M" ? "Male" : hint == "F" ? "Female" : "Unknown")
                         .font(.caption2).foregroundStyle(.secondary)
@@ -543,13 +563,6 @@ private struct CharacterVoiceRow: View {
         .fixedSize()
     }
 
-    private var genderColor: Color {
-        switch genderHint {
-        case "M": return .blue
-        case "F": return .pink
-        default:  return .secondary
-        }
-    }
 }
 
 // MARK: - Engine picker sidebar
@@ -793,6 +806,7 @@ struct GenerateView: View {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         panel.title = "Choose Output Folder"
         panel.prompt = "Select"
@@ -1319,12 +1333,6 @@ private struct SceneElementRow: View {
         .opacity(isRemoved ? 0.45 : 1)
         .padding(.vertical, 3)
         .onHover { isHovered = $0 }
-    }
-
-    private func speakerColor(_ speaker: String) -> Color {
-        let palette: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .indigo, .brown]
-        let index = abs(speaker.unicodeScalars.reduce(0) { $0 + Int($1.value) }) % palette.count
-        return palette[index]
     }
 }
 

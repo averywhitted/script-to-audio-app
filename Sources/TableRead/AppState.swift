@@ -126,8 +126,7 @@ final class AppState: ObservableObject {
         Task {
             do {
                 let parsed = try await bridge.parse(pdf: url)
-                let withFixes = parsed.applying(corrections, pdfPath: url.path)
-                script = withFixes
+                script = parsed
                 rememberRecentScript(url, title: parsed.title)
                 selectedScenes = Set(parsed.scenes.map(\.number))
                 navigatingForward = true
@@ -136,7 +135,7 @@ final class AppState: ObservableObject {
                 }
                 let correctionCount = corrections.values.filter { $0.pdfIdentifier == url.path }.count
                 let suffix = correctionCount > 0 ? ", \(correctionCount) correction\(correctionCount == 1 ? "" : "s") applied" : ""
-                status = "\(withFixes.sceneCount) scenes, \(withFixes.characterCount) characters\(suffix)."
+                status = "\(parsed.sceneCount) scenes, \(parsed.characterCount) characters\(suffix)."
             } catch {
                 errorMessage = error.localizedDescription
                 status = "Parsing failed."
@@ -689,22 +688,12 @@ extension AppState {
         )
         corrections[k] = correction
         Self.persistCorrections(corrections)
-
-        // Re-apply all corrections to the in-memory script
-        if let pdf = selectedPDF, var base = script {
-            base = base.applying(corrections, pdfPath: pdf.path)
-            script = base
-        }
     }
 
     func deleteCorrection(pdfPath: String, sceneNumber: Int, textKey: String) {
         let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: textKey)
         corrections.removeValue(forKey: k)
         Self.persistCorrections(corrections)
-        if let pdf = selectedPDF, var base = script {
-            base = base.applying(corrections, pdfPath: pdf.path)
-            script = base
-        }
     }
 
     func exportCorrections() -> URL? {
