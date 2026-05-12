@@ -251,7 +251,9 @@ final class PythonBridge {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
             process.arguments = [py, worker.path]
-            process.currentDirectoryURL = root
+            // Neutral CWD — avoids a Documents TCC prompt when the repo lives
+            // inside ~/Documents. The worker uses absolute paths throughout.
+            process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
 
             let input = Pipe()
             let output = Pipe()
@@ -305,7 +307,7 @@ final class PythonBridge {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
                 process.arguments = [py, worker.path]
-                process.currentDirectoryURL = root
+                process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
 
                 let input = Pipe()
                 let output = Pipe()

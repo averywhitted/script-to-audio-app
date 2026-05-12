@@ -1239,21 +1239,25 @@ private struct SceneElementRow: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 16)
             VStack(alignment: .leading, spacing: 3) {
-                // Speaker name + edit button inline — clearly tied to this line
-                HStack(spacing: 5) {
+                HStack(spacing: 6) {
                     Text(element.displaySpeaker)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(speakerColor(element.displaySpeaker))
+                    // "Edit" pill — appears on hover, unambiguously tied to this speaker line
                     if isHovered || showingEdit {
                         Button {
                             showingEdit = true
                         } label: {
-                            Image(systemName: "pencil.circle.fill")
-                                .font(.system(size: 11))
-                                .foregroundStyle(speakerColor(element.displaySpeaker).opacity(0.7))
+                            Text("Edit")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(speakerColor(element.displaySpeaker))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(speakerColor(element.displaySpeaker).opacity(0.15),
+                                            in: Capsule())
                         }
                         .buttonStyle(.plain)
-                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                        .transition(.opacity.combined(with: .scale(scale: 0.85, anchor: .leading)))
                         .popover(isPresented: $showingEdit, arrowEdge: .top) {
                             ElementCorrectionPopover(
                                 element: element,
@@ -1265,7 +1269,7 @@ private struct SceneElementRow: View {
                         }
                     }
                 }
-                .animation(.easeInOut(duration: 0.12), value: isHovered)
+                .animation(.easeOut(duration: 0.1), value: isHovered)
                 Text(element.text)
                     .font(.callout)
                     .foregroundStyle(.primary)

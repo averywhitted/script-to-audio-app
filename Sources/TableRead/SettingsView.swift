@@ -11,13 +11,13 @@ struct SettingsView: View {
 
             EnginesSettingsTab()
                 .tabItem { Label("Engines", systemImage: "waveform") }
+                .onAppear { state.loadOpenAIKeyIfNeeded() }
 
             AboutTab()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 520, height: 420)
         .environmentObject(state)
-        .onAppear { state.loadOpenAIKeyIfNeeded() }
     }
 }
 
