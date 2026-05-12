@@ -275,7 +275,7 @@ struct CastView: View {
     var body: some View {
         StepPageFooter(
             leading: state.installedEngines.contains(state.selectedEngine)
-                ? "\(state.selectedEngine.title) ready"
+                ? ""
                 : "\(state.selectedEngine.title) — click Install on the right to set up",
             backAction: { state.goTo(.review) },
             primaryTitle: "Continue to Generate",
@@ -1243,33 +1243,39 @@ private struct SceneElementRow: View {
                     Text(element.displaySpeaker)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(speakerColor(element.displaySpeaker))
-                    // "Edit" pill — appears on hover, unambiguously tied to this speaker line
-                    if isHovered || showingEdit {
-                        Button {
-                            showingEdit = true
-                        } label: {
-                            Text("Edit")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(speakerColor(element.displaySpeaker))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(speakerColor(element.displaySpeaker).opacity(0.15),
-                                            in: Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .transition(.opacity.combined(with: .scale(scale: 0.85, anchor: .leading)))
-                        .popover(isPresented: $showingEdit, arrowEdge: .top) {
-                            ElementCorrectionPopover(
-                                element: element,
-                                pdfPath: pdfPath,
-                                sceneNumber: sceneNumber,
-                                allSpeakers: allSpeakers
-                            )
-                            .environmentObject(state)
-                        }
+                    // Correction indicator — dot when a user fix exists for this line
+                    let correctionKey = ParserCorrection.key(
+                        pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+                    if state.corrections[correctionKey] != nil {
+                        Circle()
+                            .fill(speakerColor(element.displaySpeaker))
+                            .frame(width: 5, height: 5)
+                            .help("User correction applied")
+                    }
+                    // "Edit" pill — always occupies space, just fades in/out to avoid layout shifts
+                    Button {
+                        showingEdit = true
+                    } label: {
+                        Text("Edit")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(speakerColor(element.displaySpeaker))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(speakerColor(element.displaySpeaker).opacity(0.15),
+                                        in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(isHovered || showingEdit ? 1 : 0)
+                    .popover(isPresented: $showingEdit, arrowEdge: .top) {
+                        ElementCorrectionPopover(
+                            element: element,
+                            pdfPath: pdfPath,
+                            sceneNumber: sceneNumber,
+                            allSpeakers: allSpeakers
+                        )
+                        .environmentObject(state)
                     }
                 }
-                .animation(.easeOut(duration: 0.1), value: isHovered)
                 Text(element.text)
                     .font(.callout)
                     .foregroundStyle(.primary)
@@ -1299,6 +1305,7 @@ private struct ElementCorrectionPopover: View {
 
     @State private var selectedKind: String
     @State private var speakerText: String
+    @State private var editedText: String
     @State private var markAsNoise: Bool
 
     init(element: SceneElementSummary, pdfPath: String, sceneNumber: Int, allSpeakers: [String]) {
@@ -1308,6 +1315,7 @@ private struct ElementCorrectionPopover: View {
         self.allSpeakers = allSpeakers
         _selectedKind = State(initialValue: element.kind)
         _speakerText = State(initialValue: element.speaker ?? "")
+        _editedText = State(initialValue: element.text)
         _markAsNoise = State(initialValue: false)
     }
 
@@ -1320,18 +1328,9 @@ private struct ElementCorrectionPopover: View {
             Text("Correct this line")
                 .font(.headline)
 
-            // Preview
-            Text(element.text)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(8)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
-
             Divider()
 
-            // Kind picker
+            // Type
             VStack(alignment: .leading, spacing: 6) {
                 Text("Type").font(.caption).foregroundStyle(.secondary)
                 Picker("Type", selection: $selectedKind) {
@@ -1343,7 +1342,7 @@ private struct ElementCorrectionPopover: View {
                 .labelsHidden()
             }
 
-            // Speaker
+            // Speaker (dialog only)
             if selectedKind == "dialog" {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Speaker").font(.caption).foregroundStyle(.secondary)
@@ -1366,6 +1365,17 @@ private struct ElementCorrectionPopover: View {
                 }
             }
 
+            // Text content
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Text").font(.caption).foregroundStyle(.secondary)
+                TextEditor(text: $editedText)
+                    .font(.callout)
+                    .frame(minHeight: 64, maxHeight: 120)
+                    .padding(6)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                    .scrollContentBackground(.hidden)
+            }
+
             // Noise toggle
             Toggle("Hide this line (noise / page artifact)", isOn: $markAsNoise)
                 .font(.caption)
@@ -1374,10 +1384,9 @@ private struct ElementCorrectionPopover: View {
 
             // Actions
             HStack {
-                // Show "Remove correction" if one exists
                 let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
                 if state.corrections[k] != nil {
-                    Button("Remove correction") {
+                    Button("Remove") {
                         state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: element.text)
                         dismiss()
                     }
@@ -1397,6 +1406,7 @@ private struct ElementCorrectionPopover: View {
                         correctedKind: selectedKind != element.kind ? selectedKind : nil,
                         correctedSpeaker: selectedKind == "dialog" && speakerText != (element.speaker ?? "")
                             ? speakerText : nil,
+                        correctedText: editedText != element.text ? editedText : nil,
                         markedAsNoise: markAsNoise,
                         timestamp: Date(),
                         contributed: state.contributeCorrections
@@ -1409,13 +1419,14 @@ private struct ElementCorrectionPopover: View {
             }
         }
         .padding(16)
-        .frame(width: 320)
+        .frame(width: 340)
     }
 
     private var hasChanges: Bool {
         markAsNoise
             || selectedKind != element.kind
             || (selectedKind == "dialog" && speakerText != (element.speaker ?? ""))
+            || editedText != element.text
     }
 }
 

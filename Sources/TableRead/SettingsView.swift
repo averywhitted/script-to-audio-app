@@ -11,7 +11,6 @@ struct SettingsView: View {
 
             EnginesSettingsTab()
                 .tabItem { Label("Engines", systemImage: "waveform") }
-                .onAppear { state.loadOpenAIKeyIfNeeded() }
 
             AboutTab()
                 .tabItem { Label("About", systemImage: "info.circle") }
@@ -86,6 +85,7 @@ private struct GeneralSettingsTab: View {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         panel.title = "Default Output Folder"
         panel.prompt = "Select"
@@ -113,21 +113,27 @@ private struct EnginesSettingsTab: View {
     var body: some View {
         Form {
             Section {
+                if state.hasStoredOpenAIKey {
+                    Label("API key saved in Keychain — OpenAI TTS is active.", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green).font(.callout)
+                }
                 HStack(alignment: .top, spacing: 12) {
-                    SecureField("Paste your key here…", text: $state.openAIAPIKey)
+                    SecureField(state.hasStoredOpenAIKey ? "Enter new key to replace…" : "Paste your key here…",
+                                text: $state.openAIAPIKey)
                         .textFieldStyle(.roundedBorder)
                     Button("Save") { state.saveOpenAIAPIKey() }
                         .buttonStyle(.borderedProminent)
                         .disabled(state.openAIAPIKey.isEmpty)
-                }
-                if state.installedEngines.contains(.openAI) {
-                    Label("Key saved in Keychain — OpenAI TTS is active.", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green).font(.caption)
+                    if state.hasStoredOpenAIKey {
+                        Button("Clear") { state.saveOpenAIAPIKey() }
+                            .foregroundStyle(.red)
+                            .buttonStyle(.borderless)
+                    }
                 }
             } header: {
                 Text("OpenAI TTS")
             } footer: {
-                Text("Your key is stored in Keychain and never sent anywhere except OpenAI's API. Leave blank to deactivate.")
+                Text("Your key is stored in Keychain and never sent anywhere except OpenAI's API. Type a new key and click Save to update, or Clear to remove it.")
                     .foregroundStyle(.secondary)
             }
 

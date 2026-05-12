@@ -15,6 +15,9 @@ final class AppState: ObservableObject {
     @Published var pendingDownload: EngineDownloadPrompt?
     @Published var isDownloadingEngine = false
     @Published var openAIAPIKey = ""
+    // True when an OpenAI key exists in Keychain — checked via UserDefaults flag,
+    // so we never touch Keychain at launch or when Settings opens.
+    @Published var hasStoredOpenAIKey: Bool = UserDefaults.standard.bool(forKey: "openAIKeyStored")
     @Published var selectedScenes: Set<Int> = []
     @Published var openAIEstimate: OpenAIEstimate?
     @Published var isWorking = false
@@ -71,20 +74,13 @@ final class AppState: ObservableObject {
         // Load recent scripts without touching the filesystem at launch
         recentScripts = Self.loadRecentScripts()
         corrections = Self.loadCorrections()
+        // Mark OpenAI as installed based on UserDefaults flag — no Keychain touch at launch
+        if UserDefaults.standard.bool(forKey: "openAIKeyStored") {
+            installedEngines.insert(.openAI)
+        }
         Task {
             await refreshEngineStatus()
         }
-    }
-
-    /// Load the OpenAI key from Keychain on demand (called when Settings opens).
-    /// Avoids a Keychain prompt at launch for users who never use OpenAI.
-    func loadOpenAIKeyIfNeeded() {
-        guard openAIAPIKey.isEmpty,
-              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
-              let stored = KeychainHelper.read(key: "openai_api_key"), !stored.isEmpty
-        else { return }
-        openAIAPIKey = stored
-        installedEngines.insert(.openAI)
     }
 
     // MARK: - Navigation
@@ -281,12 +277,17 @@ final class AppState: ObservableObject {
         let trimmed = openAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             installedEngines.remove(.openAI)
+            hasStoredOpenAIKey = false
+            UserDefaults.standard.removeObject(forKey: "openAIKeyStored")
             KeychainHelper.delete(key: "openai_api_key")
+            openAIAPIKey = ""
             status = "OpenAI API key cleared."
             return
         }
         openAIAPIKey = trimmed
         installedEngines.insert(.openAI)
+        hasStoredOpenAIKey = true
+        UserDefaults.standard.set(true, forKey: "openAIKeyStored")
         KeychainHelper.write(key: "openai_api_key", value: trimmed)
         status = "OpenAI TTS is ready for estimates."
         fetchVoices()
@@ -335,7 +336,7 @@ final class AppState: ObservableObject {
             for (engine, status) in statuses where status.installed {
                 installed.insert(engine)
             }
-            if !openAIAPIKey.isEmpty {
+            if hasStoredOpenAIKey {
                 installed.insert(.openAI)
             }
             installedEngines = installed
@@ -384,6 +385,9 @@ final class AppState: ObservableObject {
         let engine = selectedEngine
         Task {
             do {
+                if engine == .openAI && openAIAPIKey.isEmpty {
+                    openAIAPIKey = KeychainHelper.read(key: "openai_api_key") ?? ""
+                }
                 let url = try await bridge.previewVoice(
                     engine: engine, voice: voice,
                     apiKey: engine == .openAI ? openAIAPIKey : nil
@@ -474,7 +478,11 @@ final class AppState: ObservableObject {
 
         let assignment = voiceAssignment
         let engine = selectedEngine
-        let apiKey = selectedEngine == .openAI ? openAIAPIKey : nil
+        // Load key from Keychain on demand — only at the point of actual use
+        if engine == .openAI && openAIAPIKey.isEmpty {
+            openAIAPIKey = KeychainHelper.read(key: "openai_api_key") ?? ""
+        }
+        let apiKey = engine == .openAI ? openAIAPIKey : nil
 
         Task {
             do {

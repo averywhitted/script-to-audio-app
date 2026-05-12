@@ -264,6 +264,7 @@ struct ParserCorrection: Codable, Equatable, Sendable {
     var originalSpeaker: String?
     var correctedKind: String?        // nil = keep original
     var correctedSpeaker: String?     // nil = keep original; "" = narrator (no speaker)
+    var correctedText: String?        // nil = keep original
     var markedAsNoise: Bool           // true = exclude this element entirely
     var timestamp: Date
     var contributed: Bool             // user opted to share this correction
@@ -295,6 +296,7 @@ extension ScriptSummary {
                 if let speaker = fix.correctedSpeaker {
                     updated.speaker = speaker.isEmpty ? nil : speaker
                 }
+                if let text = fix.correctedText, !text.isEmpty { updated.text = text }
                 return updated
             }
             return sc
