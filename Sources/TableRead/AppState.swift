@@ -60,6 +60,8 @@ final class AppState: ObservableObject {
 
     // Parser corrections — keyed by ParserCorrection.key(...)
     @Published var corrections: [String: ParserCorrection] = [:]
+    // Scene title overrides — pdfPath → sceneNumber → custom title
+    @Published var sceneTitleOverrides: [String: [Int: String]] = [:]
 
     let bridge = PythonBridge()
     private var previewSound: NSSound?
@@ -74,6 +76,7 @@ final class AppState: ObservableObject {
         // Load recent scripts without touching the filesystem at launch
         recentScripts = Self.loadRecentScripts()
         corrections = Self.loadCorrections()
+        sceneTitleOverrides = Self.loadSceneTitleOverrides()
         // Mark OpenAI as installed based on UserDefaults flag — no Keychain touch at launch
         if UserDefaults.standard.bool(forKey: "openAIKeyStored") {
             installedEngines.insert(.openAI)
@@ -731,6 +734,32 @@ extension AppState {
         encoder.dateEncodingStrategy = .iso8601
         if let data = try? encoder.encode(corrections) {
             UserDefaults.standard.set(data, forKey: "parserCorrections")
+        }
+    }
+
+    // MARK: Scene title overrides
+
+    func setSceneTitle(_ title: String, pdfPath: String, sceneNumber: Int) {
+        var byPDF = sceneTitleOverrides[pdfPath] ?? [:]
+        byPDF[sceneNumber] = title.isEmpty ? nil : title
+        sceneTitleOverrides[pdfPath] = byPDF
+        Self.persistSceneTitleOverrides(sceneTitleOverrides)
+    }
+
+    func effectiveSceneTitle(pdfPath: String, scene: SceneSummary) -> String {
+        sceneTitleOverrides[pdfPath]?[scene.number] ?? scene.title
+    }
+
+    static func loadSceneTitleOverrides() -> [String: [Int: String]] {
+        guard let data = UserDefaults.standard.data(forKey: "sceneTitleOverrides"),
+              let decoded = try? JSONDecoder().decode([String: [Int: String]].self, from: data)
+        else { return [:] }
+        return decoded
+    }
+
+    private static func persistSceneTitleOverrides(_ overrides: [String: [Int: String]]) {
+        if let data = try? JSONEncoder().encode(overrides) {
+            UserDefaults.standard.set(data, forKey: "sceneTitleOverrides")
         }
     }
 }

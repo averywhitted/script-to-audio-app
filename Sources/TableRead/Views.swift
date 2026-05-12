@@ -159,7 +159,14 @@ private struct SceneReviewRow: View {
     var allSpeakers: [String]
     var isSelected: Bool
     var toggle: () -> Void
+    @EnvironmentObject private var state: AppState
     @State private var expanded = false
+    @State private var editingTitle = false
+    @State private var titleDraft = ""
+
+    private var effectiveTitle: String {
+        state.effectiveSceneTitle(pdfPath: pdfPath, scene: scene)
+    }
 
     // Unique speaking characters in scene order
     private var speakers: [String] {
@@ -186,10 +193,22 @@ private struct SceneReviewRow: View {
                     .foregroundStyle(.tertiary)
                     .frame(width: 26, alignment: .trailing)
 
-                Text(scene.title)
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(isSelected ? .primary : .secondary)
-                    .lineLimit(1)
+                Group {
+                    if editingTitle {
+                        TextField("Scene title", text: $titleDraft)
+                            .font(.callout.weight(.medium))
+                            .textFieldStyle(.plain)
+                            .onSubmit { commitTitle() }
+                            .onExitCommand { editingTitle = false }
+                    } else {
+                        Text(effectiveTitle)
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(isSelected ? .primary : .secondary)
+                            .lineLimit(1)
+                            .onTapGesture(count: 2) { beginEditingTitle() }
+                            .help("Double-click to edit scene title")
+                    }
+                }
 
                 Spacer()
 
@@ -257,6 +276,17 @@ private struct SceneReviewRow: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color.clear, lineWidth: 1.5)
         }
+    }
+
+    private func beginEditingTitle() {
+        titleDraft = effectiveTitle
+        editingTitle = true
+    }
+
+    private func commitTitle() {
+        let trimmed = titleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        state.setSceneTitle(trimmed, pdfPath: pdfPath, sceneNumber: scene.number)
+        editingTitle = false
     }
 
     private func speakerColor(_ speaker: String) -> Color {
@@ -1229,6 +1259,11 @@ private struct SceneElementRow: View {
     @State private var showingEdit = false
 
     var body: some View {
+        let correctionKey = ParserCorrection.key(
+            pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        let correction = state.corrections[correctionKey]
+        let isRemoved = correction?.markedAsNoise == true
+
         HStack(alignment: .top, spacing: 10) {
             Circle()
                 .fill(speakerColor(element.displaySpeaker))
@@ -1243,19 +1278,16 @@ private struct SceneElementRow: View {
                     Text(element.displaySpeaker)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(speakerColor(element.displaySpeaker))
-                    // Correction indicator — dot when a user fix exists for this line
-                    let correctionKey = ParserCorrection.key(
-                        pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
-                    if state.corrections[correctionKey] != nil {
+                        .strikethrough(isRemoved)
+                    // Correction dot (non-noise corrections only)
+                    if correction != nil && !isRemoved {
                         Circle()
                             .fill(speakerColor(element.displaySpeaker))
                             .frame(width: 5, height: 5)
                             .help("User correction applied")
                     }
-                    // "Edit" pill — always occupies space, just fades in/out to avoid layout shifts
-                    Button {
-                        showingEdit = true
-                    } label: {
+                    // "Edit" pill — always in layout, fades on hover
+                    Button { showingEdit = true } label: {
                         Text("Edit")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(speakerColor(element.displaySpeaker))
@@ -1278,11 +1310,13 @@ private struct SceneElementRow: View {
                 }
                 Text(element.text)
                     .font(.callout)
-                    .foregroundStyle(.primary)
-                    .lineLimit(4)
+                    .foregroundStyle(isRemoved ? .tertiary : .primary)
+                    .strikethrough(isRemoved, color: .secondary)
+                    .lineLimit(isRemoved ? 1 : 4)
             }
             Spacer()
         }
+        .opacity(isRemoved ? 0.45 : 1)
         .padding(.vertical, 3)
         .onHover { isHovered = $0 }
     }
@@ -1316,7 +1350,7 @@ private struct ElementCorrectionPopover: View {
         _selectedKind = State(initialValue: element.kind)
         _speakerText = State(initialValue: element.speaker ?? "")
         _editedText = State(initialValue: element.text)
-        _markAsNoise = State(initialValue: false)
+        _markAsNoise = State(initialValue: false)   // populated from existing correction below
     }
 
     private var kindOptions: [(String, String)] {
@@ -1376,9 +1410,16 @@ private struct ElementCorrectionPopover: View {
                     .scrollContentBackground(.hidden)
             }
 
-            // Noise toggle
-            Toggle("Hide this line (noise / page artifact)", isOn: $markAsNoise)
-                .font(.caption)
+            // Remove line
+            Button {
+                markAsNoise.toggle()
+            } label: {
+                Label(markAsNoise ? "Restore this line" : "Remove this line",
+                      systemImage: markAsNoise ? "arrow.uturn.backward" : "minus.circle")
+                    .font(.callout)
+                    .foregroundStyle(markAsNoise ? Color.secondary : Color.red)
+            }
+            .buttonStyle(.plain)
 
             Divider()
 
@@ -1386,7 +1427,7 @@ private struct ElementCorrectionPopover: View {
             HStack {
                 let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
                 if state.corrections[k] != nil {
-                    Button("Remove") {
+                    Button("Undo Changes") {
                         state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: element.text)
                         dismiss()
                     }
@@ -1420,6 +1461,16 @@ private struct ElementCorrectionPopover: View {
         }
         .padding(16)
         .frame(width: 340)
+        .onAppear {
+            // Pre-populate from any existing correction for this element
+            let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+            if let existing = state.corrections[k] {
+                if let kind = existing.correctedKind { selectedKind = kind }
+                if let speaker = existing.correctedSpeaker { speakerText = speaker }
+                if let text = existing.correctedText { editedText = text }
+                markAsNoise = existing.markedAsNoise
+            }
+        }
     }
 
     private var hasChanges: Bool {
