@@ -8,6 +8,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             WorkflowStepBar()
+                .animation(.none, value: state.step)
             Divider()
             ZStack {
                 if state.step == .importScript {

@@ -974,14 +974,18 @@ struct GenerateView: View {
     private var renderCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                Button { state.renderPreviewScene() } label: {
-                    Label("Preview First Scene", systemImage: "play.circle")
+                Button {
+                    if let dir = state.outputDirectory {
+                        NSWorkspace.shared.open(dir)
+                    }
+                } label: {
+                    Label("Open Output Folder", systemImage: "folder")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
-                .disabled(!canRender)
-                .help("Renders only the first selected scene — audition pacing and voice cast before the full run.")
+                .disabled(state.outputDirectory == nil)
+                .help("Open the output folder in Finder.")
 
                 Button { state.renderSelectedScenes() } label: {
                     Label("Render All \(state.selectedScenes.count) Scenes", systemImage: "waveform")
@@ -992,9 +996,6 @@ struct GenerateView: View {
                 .disabled(!canRender)
                 .help("Renders every selected scene in order to the output folder.")
             }
-
-            Text("Use Preview to audition voice cast and pacing before committing to the full queue.")
-                .font(.caption).foregroundStyle(.secondary)
         }
         .padding(18)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
@@ -1277,10 +1278,17 @@ private struct SceneElementRow: View {
             pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
         let correction = state.corrections[correctionKey]
         let isRemoved = correction?.markedAsNoise == true
+        let displaySpeaker: String = {
+            if let s = correction?.correctedSpeaker {
+                return s.isEmpty ? "Narrator" : s
+            }
+            return element.displaySpeaker
+        }()
+        let displayText: String = correction?.correctedText ?? element.text
 
         HStack(alignment: .top, spacing: 10) {
             Circle()
-                .fill(speakerColor(element.displaySpeaker))
+                .fill(speakerColor(displaySpeaker))
                 .frame(width: 8, height: 8)
                 .padding(.top, 5)
             Image(systemName: element.kind == "dialog" ? "person.wave.2" : "text.quote")
@@ -1289,14 +1297,14 @@ private struct SceneElementRow: View {
                 .frame(width: 16)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(element.displaySpeaker)
+                    Text(displaySpeaker)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(speakerColor(element.displaySpeaker))
+                        .foregroundStyle(speakerColor(displaySpeaker))
                         .strikethrough(isRemoved)
                     // Correction dot (non-noise corrections only)
                     if correction != nil && !isRemoved {
                         Circle()
-                            .fill(speakerColor(element.displaySpeaker))
+                            .fill(speakerColor(displaySpeaker))
                             .frame(width: 5, height: 5)
                             .help("User correction applied")
                     }
@@ -1304,10 +1312,10 @@ private struct SceneElementRow: View {
                     Button { showingEdit = true } label: {
                         Text("Edit")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(speakerColor(element.displaySpeaker))
+                            .foregroundStyle(speakerColor(displaySpeaker))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(speakerColor(element.displaySpeaker).opacity(0.15),
+                            .background(speakerColor(displaySpeaker).opacity(0.15),
                                         in: Capsule())
                     }
                     .buttonStyle(.plain)
@@ -1322,7 +1330,7 @@ private struct SceneElementRow: View {
                         .environmentObject(state)
                     }
                 }
-                Text(element.text)
+                Text(displayText)
                     .font(.callout)
                     .foregroundStyle(isRemoved ? .tertiary : .primary)
                     .strikethrough(isRemoved, color: .secondary)
@@ -1365,6 +1373,12 @@ private struct ElementCorrectionPopover: View {
         [("dialog", "Dialog"), ("stage_direction", "Narration"), ("parenthetical", "Aside")]
     }
 
+    private var speakerOptions: [String] {
+        var opts = allSpeakers
+        if !speakerText.isEmpty && !opts.contains(speakerText) { opts.insert(speakerText, at: 0) }
+        return opts
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Correct this line")
@@ -1388,22 +1402,12 @@ private struct ElementCorrectionPopover: View {
             if selectedKind == "dialog" {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Speaker").font(.caption).foregroundStyle(.secondary)
-                    HStack {
-                        TextField("Character name", text: $speakerText)
-                            .textFieldStyle(.roundedBorder)
-                        if !allSpeakers.isEmpty {
-                            Menu {
-                                ForEach(allSpeakers, id: \.self) { name in
-                                    Button(name) { speakerText = name }
-                                }
-                            } label: {
-                                Image(systemName: "chevron.down.circle")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .menuStyle(.borderlessButton)
-                            .fixedSize()
+                    Picker("Speaker", selection: $speakerText) {
+                        ForEach(speakerOptions, id: \.self) { name in
+                            Text(name).tag(name)
                         }
                     }
+                    .labelsHidden()
                 }
             }
 
