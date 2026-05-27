@@ -115,6 +115,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = BE056FB0196B418083C30C22 /* Build configuration list for PBXNativeTarget "TableRead" */;
 			buildPhases = (
+				A1B2C3D4E5F6A7B8C9D0BEEF /* Copy Python Runtime */,
 				40D8E4CEA7C648D0A583AC8C /* Sources */,
 				F0516A8E6DF442348E020928 /* Frameworks */,
 				C9DAA953F4374EDD943E5C40 /* Resources */,
@@ -191,6 +192,26 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A1B2C3D4E5F6A7B8C9D0BEEF /* Copy Python Runtime */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/vendor/python",
+			);
+			name = "Copy Python Runtime";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/python",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "bash \"$SRCROOT/scripts/xcode_copy_python.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		40D8E4CEA7C648D0A583AC8C /* Sources */ = {

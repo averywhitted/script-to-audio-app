@@ -117,7 +117,7 @@ final class AppState: ObservableObject {
         // Upload any corrections that didn't make it out last session.
         Task.detached(priority: .background) { [weak self] in
             try? await Task.sleep(nanoseconds: 5_000_000_000)  // 5 s after launch
-            self?.uploadPendingCorrections()
+            await self?.uploadPendingCorrections()
         }
     }
 
@@ -789,7 +789,7 @@ extension AppState {
         Self.persistCorrections(corrections)
         // Upload in the background if the user opted in.
         Task.detached(priority: .background) { [weak self] in
-            self?.uploadPendingCorrections()
+            await self?.uploadPendingCorrections()
         }
     }
 

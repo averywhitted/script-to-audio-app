@@ -18,6 +18,17 @@ import traceback
 from pathlib import Path
 from typing import Any, Dict, List
 
+# ── User-installed packages (Kokoro, etc.) ───────────────────────────────────
+# When Table Read is distributed as a bundled .app the Python interpreter is
+# embedded in Contents/Resources/python/. Optional engines (Kokoro, Piper) are
+# pip-installed to ~/Library/Application Support/TableRead/python-packages/
+# so they live outside the app bundle (avoids breaking code signing on update).
+# PythonBridge sets TABLEREAD_PACKAGES before spawning this worker.
+_user_pkgs = os.environ.get("TABLEREAD_PACKAGES", "").strip()
+if _user_pkgs and _user_pkgs not in sys.path:
+    sys.path.insert(0, _user_pkgs)
+# ─────────────────────────────────────────────────────────────────────────────
+
 ROOT = Path(__file__).resolve().parents[0]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -294,8 +305,18 @@ def _install_engine(payload: Dict[str, Any]) -> int:
     _emit({"event": "log", "level": "info",
            "message": f"Using Python: {sys.executable}"})
 
+    # When running from the bundled .app, install optional packages into the
+    # user-writable Application Support directory so they live outside the
+    # signed bundle and survive app updates.
     import subprocess
-    cmd = [sys.executable, "-m", "pip", "install"] + packages
+    target_dir = _user_pkgs or None
+    if target_dir:
+        os.makedirs(target_dir, exist_ok=True)
+        cmd = [sys.executable, "-m", "pip", "install", "--target", target_dir] + packages
+        _emit({"event": "log", "level": "info",
+               "message": f"Installing to: {target_dir}"})
+    else:
+        cmd = [sys.executable, "-m", "pip", "install"] + packages
 
     try:
         process = subprocess.Popen(
