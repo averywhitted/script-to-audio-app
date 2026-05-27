@@ -15,7 +15,7 @@ struct SettingsView: View {
             AboutTab()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 520, height: 420)
+        .frame(width: 520, height: 520)
         .environmentObject(state)
     }
 }
@@ -32,6 +32,17 @@ private struct GeneralSettingsTab: View {
                     .help("When a render completes without errors, the output folder opens automatically in Finder.")
             } header: {
                 Text("Render")
+            }
+
+            Section {
+                Toggle("Notify when a scene finishes rendering", isOn: $state.notifyOnSceneComplete)
+                Toggle("Notify when the full render completes", isOn: $state.notifyOnRenderComplete)
+                Toggle("Notify if the render finishes with errors", isOn: $state.notifyOnRenderFailed)
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("macOS will ask for permission the first time a notification option is enabled. Notifications appear even when Table Read is in the background.")
+                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -221,9 +232,21 @@ private struct AboutTab: View {
             Spacer()
 
             VStack(spacing: 10) {
-                Image(systemName: "waveform.and.mic")
-                    .font(.system(size: 52, weight: .thin))
-                    .foregroundStyle(.tint)
+                // Use the real app icon so About, dock, and notifications all match.
+                // Falls back to the SF Symbol when running un-bundled via swift run.
+                if let icon = NSImage(named: NSImage.applicationIconName),
+                   icon.size.width > 32 {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 17))
+                        .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
+                } else {
+                    Image(systemName: "waveform.and.mic")
+                        .font(.system(size: 52, weight: .thin))
+                        .foregroundStyle(.tint)
+                }
 
                 Text("Table Read")
                     .font(.title.weight(.semibold))

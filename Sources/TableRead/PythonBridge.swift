@@ -89,10 +89,13 @@ final class PythonBridge {
         }
 
         // 2. Bundled inside a .app (packaged distribution)
+        // audio_worker.py lives at Contents/Resources/backend/audio_worker.py
+        // We want Contents/Resources/ so that backend/audio_worker.py resolves correctly.
         if let bundleURL = Bundle.main.url(forResource: "audio_worker", withExtension: "py") {
-            return bundleURL.deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
+            let candidate = bundleURL
+                .deletingLastPathComponent()   // → .../backend/
+                .deletingLastPathComponent()   // → .../Resources/
+            if valid(candidate) { return candidate }
         }
 
         // 3. CWD (covers `swift run` from repo root or NativeMacApp/)
@@ -147,6 +150,7 @@ final class PythonBridge {
         sceneNumbers: [Int],
         assignment: [String: String] = [:],
         apiKey: String? = nil,
+        userAddedElements: [String: [UserAddedElement]] = [:],
         onEvent: @escaping @MainActor (GenerationEvent) -> Void
     ) async throws {
         var payload: [String: Any] = [
@@ -161,6 +165,25 @@ final class PythonBridge {
         }
         if let apiKey, !apiKey.isEmpty {
             payload["apiKey"] = apiKey
+        }
+        // Build a per-scene-number dict of user-added elements for the selected scenes
+        var bySceneNumber: [String: [[String: Any]]] = [:]
+        for sceneNumber in sceneNumbers {
+            let key = "\(pdf.path)|\(sceneNumber)"
+            if let elements = userAddedElements[key], !elements.isEmpty {
+                bySceneNumber["\(sceneNumber)"] = elements.compactMap { el -> [String: Any]? in
+                    guard !el.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+                    return [
+                        "afterElementTextKey": el.afterElementTextKey,
+                        "speaker": el.speaker,
+                        "text": el.text,
+                        "kind": el.kind,
+                    ]
+                }
+            }
+        }
+        if !bySceneNumber.isEmpty {
+            payload["userAddedElements"] = bySceneNumber
         }
         try await streamRequest(payload, onEvent: onEvent)
     }
@@ -221,6 +244,14 @@ final class PythonBridge {
         generationProcess = nil
     }
 
+    func pauseGeneration() {
+        generationProcess?.suspend()
+    }
+
+    func resumeGeneration() {
+        generationProcess?.resume()
+    }
+
     // MARK: - Process management
 
     private var generationProcess: Process?
@@ -228,8 +259,21 @@ final class PythonBridge {
     // MARK: - Private helpers
 
     private func python(root: URL) -> String {
-        let venvPython = root.appendingPathComponent(".venv/bin/python")
-        return FileManager.default.fileExists(atPath: venvPython.path) ? venvPython.path : "python3"
+        let fm = FileManager.default
+        // 1. Venv alongside the discovered root (development / swift run)
+        for name in [".venv/bin/python3", ".venv/bin/python"] {
+            let p = root.appendingPathComponent(name).path
+            if fm.fileExists(atPath: p) { return p }
+        }
+        // 2. Venv in ~/Library/Application Support/TableRead/ (installed .app)
+        if let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            for name in [".venv/bin/python3", ".venv/bin/python"] {
+                let p = support.appendingPathComponent("TableRead/\(name)").path
+                if fm.fileExists(atPath: p) { return p }
+            }
+        }
+        // 3. Fall back to whatever python3 is on PATH
+        return "python3"
     }
 
     private func workerURL() throws -> URL {

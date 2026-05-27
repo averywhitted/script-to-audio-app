@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import Security
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class AppState: ObservableObject {
@@ -50,6 +51,11 @@ final class AppState: ObservableObject {
     // Render completion
     @Published var generationComplete = false
 
+    // Pause state
+    @Published var isPaused = false
+    private var pauseStartTime: Date?
+    private var totalPausedSeconds: Double = 0
+
     // Settings — persisted via UserDefaults
     @Published var autoOpenFinderAfterRender: Bool = UserDefaults.standard.bool(forKey: "autoOpenFinderAfterRender") {
         didSet { UserDefaults.standard.set(autoOpenFinderAfterRender, forKey: "autoOpenFinderAfterRender") }
@@ -57,6 +63,29 @@ final class AppState: ObservableObject {
     @Published var contributeCorrections: Bool = UserDefaults.standard.bool(forKey: "contributeCorrections") {
         didSet { UserDefaults.standard.set(contributeCorrections, forKey: "contributeCorrections") }
     }
+
+    // Notification settings — persisted via UserDefaults
+    @Published var notifyOnSceneComplete: Bool = UserDefaults.standard.bool(forKey: "notifyOnSceneComplete") {
+        didSet {
+            UserDefaults.standard.set(notifyOnSceneComplete, forKey: "notifyOnSceneComplete")
+            if notifyOnSceneComplete { requestNotificationPermission() }
+        }
+    }
+    @Published var notifyOnRenderComplete: Bool = UserDefaults.standard.bool(forKey: "notifyOnRenderComplete") {
+        didSet {
+            UserDefaults.standard.set(notifyOnRenderComplete, forKey: "notifyOnRenderComplete")
+            if notifyOnRenderComplete { requestNotificationPermission() }
+        }
+    }
+    @Published var notifyOnRenderFailed: Bool = UserDefaults.standard.bool(forKey: "notifyOnRenderFailed") {
+        didSet {
+            UserDefaults.standard.set(notifyOnRenderFailed, forKey: "notifyOnRenderFailed")
+            if notifyOnRenderFailed { requestNotificationPermission() }
+        }
+    }
+
+    // User-added elements — keyed by "\(pdfPath)|\(sceneNumber)"
+    @Published var userAddedElements: [String: [UserAddedElement]] = [:]
 
     // Parser corrections — keyed by ParserCorrection.key(...)
     @Published var corrections: [String: ParserCorrection] = [:]
@@ -77,12 +106,18 @@ final class AppState: ObservableObject {
         recentScripts = Self.loadRecentScripts()
         corrections = Self.loadCorrections()
         sceneTitleOverrides = Self.loadSceneTitleOverrides()
+        userAddedElements = Self.loadUserAddedElements()
         // Mark OpenAI as installed based on UserDefaults flag — no Keychain touch at launch
         if UserDefaults.standard.bool(forKey: "openAIKeyStored") {
             installedEngines.insert(.openAI)
         }
         Task {
             await refreshEngineStatus()
+        }
+        // Upload any corrections that didn't make it out last session.
+        Task.detached(priority: .background) { [weak self] in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)  // 5 s after launch
+            self?.uploadPendingCorrections()
         }
     }
 
@@ -470,6 +505,9 @@ final class AppState: ObservableObject {
         generationLog = []
         generationProgress = 0
         generationComplete = false
+        isPaused = false
+        pauseStartTime = nil
+        totalPausedSeconds = 0
         renderingSceneNumbers = sceneNumbers
         sceneProgress = Dictionary(uniqueKeysWithValues: sceneNumbers.map { ($0, 0.0) })
         renderStartTime = Date()
@@ -486,6 +524,8 @@ final class AppState: ObservableObject {
         }
         let apiKey = engine == .openAI ? openAIAPIKey : nil
 
+        let addedElements = userAddedElements
+
         Task {
             do {
                 try await bridge.generate(
@@ -494,7 +534,8 @@ final class AppState: ObservableObject {
                     engine: engine,
                     sceneNumbers: sceneNumbers,
                     assignment: assignment,
-                    apiKey: apiKey
+                    apiKey: apiKey,
+                    userAddedElements: addedElements
                 ) { [weak self] event in
                     self?.handleGenerationEvent(event)
                 }
@@ -513,12 +554,45 @@ final class AppState: ObservableObject {
 
     func cancelGeneration() {
         guard isGenerating else { return }
+        if isPaused { bridge.resumeGeneration() }  // must resume before terminating
         appendLog("Cancel requested. Stopping the current render job.", .warning)
         bridge.cancelGeneration()
         isGenerating = false
         isWorking = false
+        isPaused = false
+        pauseStartTime = nil
+        totalPausedSeconds = 0
         renderStartTime = nil
         status = "Generation canceled."
+    }
+
+    func pauseGeneration() {
+        guard isGenerating, !isPaused else { return }
+        isPaused = true
+        pauseStartTime = Date()
+        bridge.pauseGeneration()
+        appendLog("Render paused.", .warning)
+        status = "Render paused — click Resume to continue."
+    }
+
+    func resumeGeneration() {
+        guard isGenerating, isPaused else { return }
+        if let start = pauseStartTime {
+            totalPausedSeconds += Date().timeIntervalSince(start)
+        }
+        pauseStartTime = nil
+        isPaused = false
+        bridge.resumeGeneration()
+        appendLog("Render resumed.", .info)
+        status = "Rendering…"
+    }
+
+    /// Effective wall-clock seconds elapsed, excluding time spent paused.
+    var effectiveElapsedSeconds: Int {
+        guard let start = renderStartTime else { return 0 }
+        var paused = totalPausedSeconds
+        if let ps = pauseStartTime { paused += Date().timeIntervalSince(ps) }
+        return max(0, Int(Date().timeIntervalSince(start) - paused))
     }
 
     func copyGenerationLogToClipboard() {
@@ -609,6 +683,14 @@ final class AppState: ObservableObject {
                         if let message = event.message {
                             if message.hasPrefix("✓") {
                                 sceneProgress[sceneNumber] = 1.0
+                                if notifyOnSceneComplete {
+                                    let title = event.sceneTitle ?? "Scene \(sceneNumber)"
+                                    sendNotification(
+                                        title: "Scene rendered",
+                                        body: "\(title) is ready.",
+                                        identifier: "scene-\(sceneNumber)"
+                                    )
+                                }
                             } else if message.lowercased().hasPrefix("error") {
                                 // Leave at last known progress; log handles the display
                             }
@@ -639,8 +721,25 @@ final class AppState: ObservableObject {
             }
             let renderHadErrors = !(event.errors ?? []).isEmpty
             status = renderHadErrors ? "Completed with errors." : "Generation complete."
-            if !renderHadErrors {
+            if renderHadErrors {
+                if notifyOnRenderFailed {
+                    sendNotification(
+                        title: "Table Read — Render finished with errors",
+                        body: "Check the output log for details.",
+                        identifier: "render-complete"
+                    )
+                }
+            } else {
                 generationComplete = true
+                if notifyOnRenderComplete {
+                    let fileCount = event.files?.count ?? 0
+                    let folder = lastOutputDirectory?.lastPathComponent ?? "the output folder"
+                    sendNotification(
+                        title: "Table Read — Render complete",
+                        body: "\(fileCount) file\(fileCount == 1 ? "" : "s") ready in \(folder).",
+                        identifier: "render-complete"
+                    )
+                }
                 if autoOpenFinderAfterRender, let dir = lastOutputDirectory {
                     NSWorkspace.shared.open(dir)
                 }
@@ -688,6 +787,10 @@ extension AppState {
         )
         corrections[k] = correction
         Self.persistCorrections(corrections)
+        // Upload in the background if the user opted in.
+        Task.detached(priority: .background) { [weak self] in
+            self?.uploadPendingCorrections()
+        }
     }
 
     func deleteCorrection(pdfPath: String, sceneNumber: Int, textKey: String) {
@@ -749,6 +852,161 @@ extension AppState {
     private static func persistSceneTitleOverrides(_ overrides: [String: [Int: String]]) {
         if let data = try? JSONEncoder().encode(overrides) {
             UserDefaults.standard.set(data, forKey: "sceneTitleOverrides")
+        }
+    }
+}
+
+// MARK: - Corrections upload
+
+/// Replace this with your deployed Cloudflare Worker URL once you've set it up.
+/// Leave empty to disable automatic upload (corrections are still stored locally).
+private let correctionUploadEndpoint = ""
+
+extension AppState {
+    /// Upload any unuploaded, opted-in corrections to the Cloudflare Worker endpoint.
+    /// Silently no-ops if the endpoint isn't configured or the network is unavailable.
+    func uploadPendingCorrections() {
+        guard contributeCorrections,
+              !correctionUploadEndpoint.isEmpty,
+              let url = URL(string: correctionUploadEndpoint) else { return }
+
+        let pending = corrections.values.filter { $0.contributed && !$0.uploaded }
+        guard !pending.isEmpty else { return }
+
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
+        let payload = pending.map { $0.anonymized(appVersion: version) }
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let body = try? encoder.encode(["corrections": payload]) else { return }
+
+        var request = URLRequest(url: url, timeoutInterval: 20)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+
+        // Keys of corrections we're about to upload — used to mark them after success.
+        let keys: [String] = pending.compactMap { correction in
+            corrections.first(where: { $0.value == correction })?.key
+        }
+
+        URLSession.shared.dataTask(with: request) { [weak self] _, response, _ in
+            guard let self,
+                  let http = response as? HTTPURLResponse,
+                  (200...299).contains(http.statusCode) else { return }
+            Task { @MainActor in
+                for key in keys {
+                    self.corrections[key]?.uploaded = true
+                }
+                Self.persistCorrections(self.corrections)
+            }
+        }.resume()
+    }
+}
+
+// MARK: - Notifications
+
+extension AppState {
+    func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    func sendNotification(title: String, body: String, identifier: String = UUID().uuidString) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+}
+
+// MARK: - User-added elements
+
+extension AppState {
+    private static let userAddedElementsKey = "userAddedElements"
+
+    private func addedKey(pdfPath: String, sceneNumber: Int) -> String {
+        "\(pdfPath)|\(sceneNumber)"
+    }
+
+    func addElement(
+        afterTextKey: String,
+        speaker: String,
+        kind: String = "dialog",
+        sceneNumber: Int,
+        pdfPath: String
+    ) {
+        let el = UserAddedElement(
+            pdfPath: pdfPath,
+            sceneNumber: sceneNumber,
+            afterElementTextKey: afterTextKey,
+            speaker: speaker,
+            text: "",
+            kind: kind,
+            timestamp: Date()
+        )
+        let key = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
+        userAddedElements[key, default: []].append(el)
+        Self.persistUserAddedElements(userAddedElements)
+    }
+
+    func updateAddedElement(
+        id: UUID,
+        speaker: String,
+        text: String,
+        kind: String,
+        sceneNumber: Int,
+        pdfPath: String
+    ) {
+        let key = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
+        guard let idx = userAddedElements[key]?.firstIndex(where: { $0.id == id }) else { return }
+        userAddedElements[key]?[idx].speaker = speaker
+        userAddedElements[key]?[idx].text = text
+        userAddedElements[key]?[idx].kind = kind
+        Self.persistUserAddedElements(userAddedElements)
+    }
+
+    func deleteAddedElement(id: UUID, sceneNumber: Int, pdfPath: String) {
+        let key = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
+        userAddedElements[key]?.removeAll { $0.id == id }
+        if userAddedElements[key]?.isEmpty == true { userAddedElements.removeValue(forKey: key) }
+        Self.persistUserAddedElements(userAddedElements)
+    }
+
+    /// Return parsed elements interleaved with any user-added lines, capped at `limit` parsed elements.
+    func mergedElements(for scene: SceneSummary, pdfPath: String, limit: Int = 80) -> [MergedSceneElement] {
+        let key = addedKey(pdfPath: pdfPath, sceneNumber: scene.number)
+        let added = userAddedElements[key] ?? []
+        var addedByKey: [String: [UserAddedElement]] = [:]
+        for el in added {
+            addedByKey[el.afterElementTextKey, default: []].append(el)
+        }
+        var result: [MergedSceneElement] = []
+        for element in scene.elements.prefix(limit) {
+            result.append(.parsed(element))
+            let textKey = String(element.text.prefix(60))
+            if let bucket = addedByKey[textKey] {
+                for addedEl in bucket.sorted(by: { $0.timestamp < $1.timestamp }) {
+                    result.append(.added(addedEl))
+                }
+            }
+        }
+        return result
+    }
+
+    static func loadUserAddedElements() -> [String: [UserAddedElement]] {
+        guard let data = UserDefaults.standard.data(forKey: userAddedElementsKey) else { return [:] }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return (try? decoder.decode([String: [UserAddedElement]].self, from: data)) ?? [:]
+    }
+
+    private static func persistUserAddedElements(_ elements: [String: [UserAddedElement]]) {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        if let data = try? encoder.encode(elements) {
+            UserDefaults.standard.set(data, forKey: userAddedElementsKey)
         }
     }
 }

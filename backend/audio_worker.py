@@ -201,6 +201,39 @@ def _generate(payload: Dict[str, Any]) -> int:
 
     assignment = _build_assignment(payload, script, voices)
 
+    # Inject user-added elements (from Swift UI) into the parsed scene element lists.
+    # Payload key: {"<sceneNumber>": [{"afterElementTextKey", "speaker", "text", "kind"}, ...]}
+    user_elements_map: Dict[int, List[Dict[str, Any]]] = {}
+    for scene_key, additions in (payload.get("userAddedElements") or {}).items():
+        try:
+            user_elements_map[int(scene_key)] = additions
+        except (ValueError, TypeError):
+            pass
+
+    if user_elements_map:
+        from parser import Element as _Element  # local import to avoid circular reference at module level
+        for scene in script.scenes:
+            additions = user_elements_map.get(scene.number, [])
+            if not additions:
+                continue
+            new_elements = []
+            for el in scene.elements:
+                new_elements.append(el)
+                after_key = el.text[:60]
+                for addition in additions:
+                    if addition.get("afterElementTextKey", "") == after_key:
+                        text = (addition.get("text") or "").strip()
+                        if not text:
+                            continue
+                        raw_speaker = addition.get("speaker") or ""
+                        speaker = None if (not raw_speaker or raw_speaker == "Narrator") else raw_speaker
+                        new_elements.append(_Element(
+                            kind=addition.get("kind", "dialog"),
+                            speaker=speaker,
+                            text=text,
+                        ))
+            scene.elements = new_elements
+
     _emit({
         "event": "started",
         "message": f"Rendering {len(scene_numbers or script.scenes)} scene(s) with {engine.name}.",

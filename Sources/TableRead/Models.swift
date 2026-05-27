@@ -249,6 +249,37 @@ enum LogStyle: Equatable {
     case error
 }
 
+// MARK: - User-added elements
+
+/// A dialogue/narration line manually inserted by the user after a parsed element.
+/// Stored locally alongside corrections; injected into the generation payload so
+/// the Python backend synthesises them in the right position.
+struct UserAddedElement: Codable, Equatable, Identifiable, Sendable {
+    var id: UUID = UUID()
+    var pdfPath: String
+    var sceneNumber: Int
+    /// `element.text.prefix(60)` of the parsed element this line follows.
+    var afterElementTextKey: String
+    var speaker: String       // empty string = narrator
+    var text: String
+    var kind: String          // "dialog", "stage_direction", "parenthetical"
+    var timestamp: Date
+}
+
+/// Unified element type used in the Review scene expansion —
+/// merges parsed elements with any user-inserted lines.
+enum MergedSceneElement: Identifiable {
+    case parsed(SceneElementSummary)
+    case added(UserAddedElement)
+
+    var id: String {
+        switch self {
+        case .parsed(let e): "p-\(e.id)"
+        case .added(let e):  "a-\(e.id.uuidString)"
+        }
+    }
+}
+
 // MARK: - Parser corrections
 
 /// A user-supplied correction to a single parsed script element.
@@ -268,6 +299,34 @@ struct ParserCorrection: Codable, Equatable, Sendable {
     var markedAsNoise: Bool           // true = exclude this element entirely
     var timestamp: Date
     var contributed: Bool             // user opted to share this correction
+    var uploaded: Bool = false        // true once successfully POSTed to the corrections endpoint
+}
+
+/// Privacy-safe version of ParserCorrection for upload — no file paths or personal identifiers.
+struct AnonymousCorrection: Encodable, Sendable {
+    var sceneNumber: Int
+    var originalKind: String
+    var originalSpeaker: String?
+    var correctedKind: String?
+    var correctedSpeaker: String?
+    var correctedText: String?
+    var markedAsNoise: Bool
+    var appVersion: String
+}
+
+extension ParserCorrection {
+    func anonymized(appVersion: String) -> AnonymousCorrection {
+        AnonymousCorrection(
+            sceneNumber: sceneNumber,
+            originalKind: originalKind,
+            originalSpeaker: originalSpeaker,
+            correctedKind: correctedKind,
+            correctedSpeaker: correctedSpeaker,
+            correctedText: correctedText,
+            markedAsNoise: markedAsNoise,
+            appVersion: appVersion
+        )
+    }
 }
 
 extension ParserCorrection {
