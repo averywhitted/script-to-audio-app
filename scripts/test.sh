@@ -24,8 +24,9 @@ fail()    { echo "✗ $*"; FAILED=1; }
 
 run_python() {
     section "Python backend tests"
+    # Prefer the dev venv for tests (pytest lives there, not in the bundled runtime)
     PYTHON=""
-    for candidate in vendor/python/bin/python3 .venv/bin/python3 .venv/bin/python python3; do
+    for candidate in .venv/bin/python3 .venv/bin/python vendor/python/bin/python3 python3; do
         if [ -x "$candidate" ] 2>/dev/null || command -v "$candidate" &>/dev/null; then
             PYTHON="$candidate"
             break
