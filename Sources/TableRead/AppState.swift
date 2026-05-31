@@ -142,9 +142,7 @@ final class AppState: ObservableObject {
         let currentIdx = steps.firstIndex(of: step) ?? 0
         let targetIdx  = steps.firstIndex(of: target) ?? 0
         navigatingForward = targetIdx >= currentIdx
-        withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
-            step = target
-        }
+        step = target   // ZStack.animation() in ContentView drives the transition
         if target == .cast && voices.isEmpty {
             fetchVoices()
         }
@@ -165,9 +163,7 @@ final class AppState: ObservableObject {
                 rememberRecentScript(url, title: parsed.title)
                 selectedScenes = Set(parsed.scenes.map(\.number))
                 navigatingForward = true
-                withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
-                    step = .review
-                }
+                step = .review
                 let correctionCount = corrections.values.filter { $0.pdfIdentifier == url.path }.count
                 let suffix = correctionCount > 0 ? ", \(correctionCount) correction\(correctionCount == 1 ? "" : "s") applied" : ""
                 status = "\(parsed.sceneCount) scenes, \(parsed.characterCount) characters\(suffix)."
@@ -604,9 +600,7 @@ final class AppState: ObservableObject {
 
     func resetForNewProject() {
         navigatingForward = false
-        withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
-            step = .importScript
-        }
+        step = .importScript
         script = nil
         selectedPDF = nil
         voices = []
