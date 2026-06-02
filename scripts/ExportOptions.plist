@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Direct download (outside Mac App Store) distribution -->
+    <key>method</key>
+    <string>developer-id</string>
+
+    <key>teamID</key>
+    <string>__TEAM_ID__</string>
+
+    <!-- Manual signing so xcodebuild uses the exact cert we specify -->
+    <key>signingStyle</key>
+    <string>manual</string>
+
+    <key>signingCertificate</key>
+    <string>__DEVELOPER_ID__</string>
+
+    <!-- Strip Swift stdlib from the export (it's already in the OS for macOS 14+) -->
+    <key>stripSwiftSymbols</key>
+    <true/>
+</dict>
+</plist>
