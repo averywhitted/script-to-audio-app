@@ -114,7 +114,7 @@ if $NOTARIZE; then
         CODE_SIGN_STYLE=Manual \
         ENABLE_HARDENED_RUNTIME=YES \
         CODE_SIGN_ENTITLEMENTS="Sources/TableRead/TableRead-release.entitlements" \
-        2>&1 | grep -E "^(error:|warning: |Build succeeded|** ARCHIVE)" || true
+        2>&1 | grep -E "^(error:|warning: |Build succeeded|\*\* ARCHIVE)" || true
 else
     # Ad-hoc — no team, no hardened runtime required
     xcodebuild archive \
@@ -125,7 +125,7 @@ else
         CODE_SIGN_IDENTITY="-" \
         CODE_SIGN_STYLE=Manual \
         AD_HOC_CODE_SIGNING_ALLOWED=YES \
-        2>&1 | grep -E "^(error:|warning: |Build succeeded|** ARCHIVE)" || true
+        2>&1 | grep -E "^(error:|warning: |Build succeeded|\*\* ARCHIVE)" || true
 fi
 
 ok "Archive created: $ARCHIVE_PATH"
