@@ -188,13 +188,16 @@ _NON_CUE_RE = re.compile(
 )
 
 # Scene boundary in play format
+# NOTE: bare "N." (e.g. "2.") is deliberately excluded — it matches page
+# numbers in virtually every modern script. Dash-dialog scripts have their own
+# _SCENE_NUM_DOT_RE. Add "N. TITLE" (with mandatory title text) if a specific
+# format requires it.
 _PLAY_SCENE_RE = re.compile(
     r"""^
     (?:
         (?:SCENE|Scene|SCENE)\s+(\d+)          # SCENE 1 / Scene 1
       | ACT\s+([IVXivx]+|\d+)                  # ACT I / ACT 1
       | -{1,3}\s*(\d+)\s*-{1,3}               # - 1 - / -- 2 --
-      | ([1-9]\d?)\.\s*$                       # 1. or 12.  (scene number+dot, NOT page numbers)
       | PART\s+([IVXivx]+|\d+)                 # PART 1 / PART I
     )
     [\s:—\-]*(.*)$                             # optional colon / dash / title text
@@ -211,6 +214,29 @@ _ORDINAL_ACT_RE = re.compile(
 _ORDINAL_TO_INT = {
     "FIRST": 1, "SECOND": 2, "THIRD": 3, "FOURTH": 4, "FIFTH": 5,
     "SIXTH": 6, "SEVENTH": 7, "EIGHTH": 8, "NINTH": 9, "TENTH": 10,
+}
+
+# "SCENE ONE" / "SCENE TWO" etc. — cardinal word-form scene numbers.
+# Many plays use this instead of "SCENE 1". Matched before _NON_CUE_RE's bare
+# "SCENE\b" guard so the boundary is recognised rather than filtered.
+_CARDINAL_WORDS = (
+    "ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|"
+    "ELEVEN|TWELVE|THIRTEEN|FOURTEEN|FIFTEEN|SIXTEEN|SEVENTEEN|EIGHTEEN|NINETEEN|"
+    "TWENTY(?:[-\\s](?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE))?"
+)
+_ORDINAL_SCENE_RE = re.compile(
+    rf"^SCENE\s+({_CARDINAL_WORDS})\s*$",
+    re.IGNORECASE,
+)
+_SCENE_CARDINAL_TO_INT: Dict[str, int] = {
+    "ONE": 1, "TWO": 2, "THREE": 3, "FOUR": 4, "FIVE": 5,
+    "SIX": 6, "SEVEN": 7, "EIGHT": 8, "NINE": 9, "TEN": 10,
+    "ELEVEN": 11, "TWELVE": 12, "THIRTEEN": 13, "FOURTEEN": 14, "FIFTEEN": 15,
+    "SIXTEEN": 16, "SEVENTEEN": 17, "EIGHTEEN": 18, "NINETEEN": 19, "TWENTY": 20,
+    **{f"TWENTY-{w}": 20 + i for i, w in enumerate(
+        ["ONE","TWO","THREE","FOUR","FIVE","SIX","SEVEN","EIGHT","NINE"], 1)},
+    **{f"TWENTY {w}": 20 + i for i, w in enumerate(
+        ["ONE","TWO","THREE","FOUR","FIVE","SIX","SEVEN","EIGHT","NINE"], 1)},
 }
 
 # Time-based section headers: "THREE DAYS TO DEPARTURE", "ONE DAY UNTIL X"
@@ -1137,20 +1163,27 @@ def _match_play_scene(s: str) -> Optional[Tuple[int, str]]:
     """If s is a scene boundary, return (scene_number_increment, title). Else None."""
     m = _PLAY_SCENE_RE.match(s)
     if m:
-        groups = m.groups()  # (scene_N, act_N, dash_N, dot_N, part_N, title_text)
-        for g in groups[:5]:
+        groups = m.groups()  # (scene_N, act_N, dash_N, part_N, title_text)
+        for g in groups[:4]:
             if g is not None:
                 try:
-                    return (int(g), (groups[5] or "").strip())
+                    return (int(g), (groups[4] or "").strip())
                 except ValueError:
                     roman = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5,
                              "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10}
-                    return (roman.get(g.upper(), 1), (groups[5] or "").strip())
+                    return (roman.get(g.upper(), 1), (groups[4] or "").strip())
 
     # "The First Act" / "Second Act" ordinal format
     m2 = _ORDINAL_ACT_RE.match(s)
     if m2:
         n = _ORDINAL_TO_INT.get(m2.group(1).upper(), 1)
+        return (n, s.strip())
+
+    # "SCENE ONE" / "SCENE TWO" etc. — cardinal word-form scene numbers
+    m4 = _ORDINAL_SCENE_RE.match(s)
+    if m4:
+        word = m4.group(1).upper()
+        n = _SCENE_CARDINAL_TO_INT.get(word, 1)
         return (n, s.strip())
 
     # "THREE DAYS TO DEPARTURE" / "ONE DAY UNTIL X" time-section format
