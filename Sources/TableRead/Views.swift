@@ -1396,6 +1396,68 @@ private struct SceneElementRow: View {
                         )
                         .environmentObject(state)
                     }
+                    // Remove / restore pill — fades in on hover
+                    Button {
+                        let k = ParserCorrection.key(
+                            pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+                        if isRemoved {
+                            // Already removed — restore by deleting the noise correction.
+                            // If there are other corrections on this element, keep them;
+                            // otherwise just remove the key entirely.
+                            if let existing = state.corrections[k],
+                               existing.correctedKind != nil
+                               || existing.correctedSpeaker != nil
+                               || existing.correctedText != nil {
+                                state.saveCorrection(ParserCorrection(
+                                    textKey: existing.textKey,
+                                    pdfIdentifier: existing.pdfIdentifier,
+                                    sceneNumber: existing.sceneNumber,
+                                    originalKind: existing.originalKind,
+                                    originalSpeaker: existing.originalSpeaker,
+                                    correctedKind: existing.correctedKind,
+                                    correctedSpeaker: existing.correctedSpeaker,
+                                    correctedText: existing.correctedText,
+                                    markedAsNoise: false,
+                                    timestamp: Date(),
+                                    contributed: state.contributeCorrections
+                                ))
+                            } else {
+                                state.deleteCorrection(
+                                    pdfPath: pdfPath, sceneNumber: sceneNumber,
+                                    textKey: element.text)
+                            }
+                        } else {
+                            // Mark as noise, preserving any other corrections already set.
+                            let existing = state.corrections[k]
+                            state.saveCorrection(ParserCorrection(
+                                textKey: element.text,
+                                pdfIdentifier: pdfPath,
+                                sceneNumber: sceneNumber,
+                                originalKind: element.kind,
+                                originalSpeaker: element.speaker,
+                                correctedKind: existing?.correctedKind,
+                                correctedSpeaker: existing?.correctedSpeaker,
+                                correctedText: existing?.correctedText,
+                                markedAsNoise: true,
+                                timestamp: Date(),
+                                contributed: state.contributeCorrections
+                            ))
+                        }
+                    } label: {
+                        Label(isRemoved ? "Restore" : "Remove",
+                              systemImage: isRemoved ? "arrow.uturn.backward" : "minus.circle")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(isRemoved ? Color.secondary : Color.red)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                (isRemoved ? Color.secondary : Color.red).opacity(0.1),
+                                in: Capsule()
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(isHovered ? 1 : 0)
+                    .help(isRemoved ? "Restore this line" : "Mark line as removed (won't be voiced)")
                     // "Add line ↓" — fades in on hover
                     if let addBelow = onAddLineBelow {
                         Button(action: addBelow) {
