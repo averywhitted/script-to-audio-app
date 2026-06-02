@@ -1,9 +1,15 @@
 import SwiftUI
 import AppKit
 
+extension Notification.Name {
+    static let showOnboarding = Notification.Name("TableRead.showOnboarding")
+}
+
 struct ContentView: View {
     @EnvironmentObject private var state: AppState
     @State private var isImporting = false
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @State private var showOnboarding = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -58,6 +64,20 @@ struct ContentView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(state.errorMessage ?? "")
+        }
+        .sheet(isPresented: $showOnboarding) {
+            OnboardingView {
+                hasSeenOnboarding = true
+                showOnboarding = false
+            }
+        }
+        .onAppear {
+            if !hasSeenOnboarding {
+                showOnboarding = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showOnboarding)) { _ in
+            showOnboarding = true
         }
     }
 
@@ -203,6 +223,135 @@ private struct ProcessingOverlay: View {
             .padding(28)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
             .shadow(radius: 18)
+        }
+    }
+}
+
+// MARK: - Onboarding sheet
+
+struct OnboardingView: View {
+    var onDismiss: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 16) {
+                Image(systemName: "waveform.and.magnifyingglass")
+                    .font(.system(size: 52, weight: .light))
+                    .foregroundStyle(.tint)
+                    .padding(.top, 40)
+
+                Text("Welcome to Table Read")
+                    .font(.largeTitle.weight(.bold))
+
+                Text("Turn any screenplay PDF into a full cast audio drama —\neach character voiced differently, scene by scene.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 48)
+            .padding(.bottom, 32)
+
+            Divider()
+
+            // Four-step explanation
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    OnboardingStep(
+                        number: 1,
+                        icon: "doc.badge.plus",
+                        title: "Import a Script PDF",
+                        description: "Click \"Choose PDF\" or drag a file in. Table Read parses the characters, dialog, and scene structure automatically."
+                    )
+                    OnboardingStep(
+                        number: 2,
+                        icon: "text.magnifyingglass",
+                        title: "Review the Parse",
+                        description: "Inspect every line. Fix any mis-attributed dialog, rename speakers, or mark lines as noise. Your corrections are saved and re-applied next time."
+                    )
+                    OnboardingStep(
+                        number: 3,
+                        icon: "person.wave.2",
+                        title: "Cast Your Voices",
+                        description: "Assign a macOS system voice to each character. Upgrade any role to Kokoro (local, free) or OpenAI (natural, API key required) in Settings."
+                    )
+                    OnboardingStep(
+                        number: 4,
+                        icon: "play.circle",
+                        title: "Generate Audio",
+                        description: "Select which scenes to render. Each scene becomes a standalone .m4a file ready for playback or editing. Pause and resume any time."
+                    )
+
+                    Divider().padding(.vertical, 4)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Tips", systemImage: "lightbulb")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                        Text("• Works best with standard US play and screenplay formats.")
+                        Text("• For higher-quality voices, install Kokoro from Settings → Engines.")
+                        Text("• Corrections you make are stored locally and re-applied whenever you re-import the same PDF.")
+                    }
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 8)
+                }
+                .padding(.horizontal, 48)
+                .padding(.vertical, 28)
+            }
+
+            Divider()
+
+            // Footer button
+            HStack {
+                Spacer()
+                Button {
+                    onDismiss()
+                } label: {
+                    Text("Get Started")
+                        .padding(.horizontal, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 48)
+            .padding(.vertical, 20)
+        }
+        .frame(width: 560, height: 620)
+    }
+}
+
+private struct OnboardingStep: View {
+    var number: Int
+    var icon: String
+    var title: String
+    var description: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: icon)
+                    .font(.system(size: 17))
+                    .foregroundStyle(.tint)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text("\(number).")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.tint)
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                }
+                Text(description)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }

@@ -14,6 +14,18 @@ struct TableReadApp: App {
                 .frame(minWidth: 1040, minHeight: 680)
         }
         .windowStyle(.titleBar)
+        .commands {
+            CommandGroup(replacing: .help) {
+                Button("Table Read Help") {
+                    // Reset the flag so the onboarding sheet re-appears on next
+                    // ContentView.onAppear — simplest way without an extra binding.
+                    UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")
+                    // Post a notification that ContentView listens to.
+                    NotificationCenter.default.post(name: .showOnboarding, object: nil)
+                }
+                .keyboardShortcut("?", modifiers: .command)
+            }
+        }
 
         Settings {
             SettingsView()
