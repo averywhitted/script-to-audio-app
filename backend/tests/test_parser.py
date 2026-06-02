@@ -343,3 +343,127 @@ def test_title_page_name_not_added_as_character():
     names = {c.name for c in script.characters}
     assert "MERCURY FUR" not in names, f"Title should not be a character; got: {names}"
     assert "ELLIOT" in names or "DARREN" in names, f"Real characters missing: {names}"
+
+
+# ---------------------------------------------------------------------------
+# ScriptSkeleton / _build_skeleton
+# ---------------------------------------------------------------------------
+
+def test_skeleton_created_from_lines():
+    """_build_skeleton returns a ScriptSkeleton for any line list."""
+    sk = p._build_skeleton(HEIST_LINES)
+    assert isinstance(sk, p.ScriptSkeleton)
+
+
+def test_skeleton_counts_heist_headers():
+    sk = p._build_skeleton(HEIST_LINES)
+    assert sk.heist_count >= 2, f"Expected ≥2 heist headers, got {sk.heist_count}"
+
+
+def test_skeleton_counts_cue_lines():
+    lines = [
+        "SCENE 1",
+        "ALICE",
+        "Hello there.",
+        "BOB",
+        "Hi back.",
+    ]
+    sk = p._build_skeleton(lines)
+    # ALICE and BOB are cue candidates (all-caps, followed by mixed-case)
+    assert len(sk.cue_line_indices) >= 2
+
+
+def test_skeleton_cue_score_positive_for_play():
+    """cue_score > 0 when all-caps lines are followed by mixed-case dialog."""
+    lines = ["ALICE", "Hello there.", "BOB", "Hi back."] * 10
+    sk = p._build_skeleton(lines)
+    assert sk.cue_score > 0
+
+
+def test_skeleton_scene_delimiter_indices_heist():
+    """Numbered heist headers land in scene_delimiter_indices."""
+    sk = p._build_skeleton(HEIST_LINES)
+    assert len(sk.scene_delimiter_indices) >= 2
+
+
+def test_skeleton_first_page_only():
+    """first_page_only contains lines exclusive to page 0."""
+    page0 = {"TITLE PAGE", "by Author", "ALICE"}
+    page1 = {"ALICE", "Hello.", "BOB"}
+    sk = p._build_skeleton([], page_sets=[page0, page1])
+    # "TITLE PAGE" and "by Author" are page-0-only; "ALICE" appears on both
+    assert "TITLE PAGE" in sk.first_page_only
+    assert "by Author" in sk.first_page_only
+    assert "ALICE" not in sk.first_page_only
+
+
+def test_skeleton_empty_page_sets():
+    """_build_skeleton handles empty page_sets gracefully."""
+    sk = p._build_skeleton([], page_sets=[])
+    assert sk.first_page_only == set()
+    assert sk.non_empty_count == 0
+
+
+def test_skeleton_non_empty_count():
+    lines = ["ALICE", "", "Hello.", "", "BOB", "Hi."]
+    sk = p._build_skeleton(lines)
+    assert sk.non_empty_count == 4  # ALICE, Hello., BOB, Hi.
+
+
+def test_skeleton_cast_section_range():
+    """cast_section_range is detected when a CHARACTERS header is present."""
+    lines = [
+        "CHARACTERS",
+        "ALICE  The hero",
+        "BOB    The villain",
+        "",
+        "",
+        "",
+        "SCENE 1",
+        "ALICE",
+        "Hello.",
+    ]
+    sk = p._build_skeleton(lines)
+    assert sk.cast_section_range is not None
+    start, end = sk.cast_section_range
+    assert start == 0
+    assert end > start
+
+
+def test_skeleton_no_cast_section():
+    lines = ["ALICE", "Hello.", "BOB", "Hi."]
+    sk = p._build_skeleton(lines)
+    assert sk.cast_section_range is None
+
+
+def test_format_detection_uses_skeleton():
+    """_detect_play_format produces the same result with and without a skeleton."""
+    lines = ["ALICE", "Hello.", "BOB", "Hi."] * 20
+    sk = p._build_skeleton(lines)
+    result_with    = p._detect_play_format(lines, skeleton=sk)
+    result_without = p._detect_play_format(lines)
+    assert result_with == result_without
+
+
+def test_detect_script_format_uses_skeleton():
+    """_detect_script_format produces the same result with and without a skeleton."""
+    sk = p._build_skeleton(HEIST_LINES)
+    result_with    = p._detect_script_format(HEIST_LINES, skeleton=sk)
+    result_without = p._detect_script_format(HEIST_LINES)
+    assert result_with == result_without
+
+
+def test_parse_lines_builds_skeleton_internally():
+    """parse_lines without an explicit skeleton still works (builds one internally)."""
+    lines = _dd_lines(4) * 4
+    script = p.parse_lines(lines, title="No Skeleton")
+    assert len(script.scenes) >= 1
+
+
+def test_parse_lines_accepts_skeleton():
+    """parse_lines accepts a pre-built skeleton without crashing or changing output."""
+    lines = _dd_lines(4) * 4
+    sk = p._build_skeleton(lines)
+    script_with    = p.parse_lines(lines, title="With", skeleton=sk)
+    script_without = p.parse_lines(lines, title="With")
+    assert len(script_with.scenes) == len(script_without.scenes)

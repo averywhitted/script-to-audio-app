@@ -83,6 +83,41 @@ class Script:
     scenes: List[Scene] = field(default_factory=list)
 
 
+@dataclass
+class ScriptSkeleton:
+    """Pre-computed structural analysis of raw script lines.
+
+    Built once before format detection so every format parser shares the same
+    single pass over the text rather than each re-deriving the universal
+    invariants independently.
+
+    Universal invariants captured here:
+      1. Speaker identification — all-caps lines that pass _is_caps_cue_candidate
+      2. Scene delimiters — lines matching any known boundary pattern
+      3. Page-region classification — title/front-matter vs. script body
+    """
+
+    # --- Line-level sets (indices into the raw lines list) ---
+    cue_line_indices: Set[int]          # candidate speaker-cue lines
+    scene_delimiter_indices: Set[int]   # candidate scene/act boundary lines
+
+    # --- Page-level structure ---
+    page_sets: List[Set[str]]           # per-page content sets (from extraction)
+    first_page_only: Set[str]           # lines exclusive to page 0 (title page)
+    body_start_line: int                # first line of actual script content
+    cast_section_range: Optional[Tuple[int, int]]  # (start, end) if CAST found
+
+    # --- Format detection scores (pre-computed, avoid rescan) ---
+    heist_count: int        # numbered "N  SCENE TITLE" headers
+    int_ext_count: int      # INT./EXT. sluglines
+    scene_n_count: int      # SCENE N markers
+    dash_count: int         # SPEAKER – dialog inline lines
+    cue_score: int          # standalone ALL-CAPS → mixed-case next line
+    colon_score: int        # ALLCAPS: cue pattern count
+    non_empty_count: int    # total non-blank lines (denominator for ratios)
+    all_caps_count: int     # lines with no lowercase (for all-caps-doc filter)
+
+
 # ---------------------------------------------------------------------------
 # Default indent zones (calibrated for HEIST-style; overridden by auto-detect)
 # ---------------------------------------------------------------------------
@@ -620,6 +655,143 @@ def _make_zones(overrides: Dict[str, int]) -> Dict[str, int]:
 # ---------------------------------------------------------------------------
 
 
+def _build_skeleton(
+    lines: List[str],
+    page_sets: Optional[List[Set[str]]] = None,
+) -> ScriptSkeleton:
+    """Single-pass structural analysis — the universal pre-pass.
+
+    Scans raw lines once and produces a ScriptSkeleton that all format parsers
+    and the format detector can consume without rescanning.  Covers the three
+    invariants every script format shares:
+
+      1. Speaker identification  — every all-caps, name-like line
+      2. Scene delimiters        — every line matching a known boundary pattern
+      3. Page-region structure   — title page, cast section, body start
+    """
+    if page_sets is None:
+        page_sets = []
+
+    # --- Page-region structure -------------------------------------------
+    first_page_only: Set[str] = set()
+    if len(page_sets) >= 2:
+        later: Set[str] = set().union(*page_sets[1:])
+        first_page_only = page_sets[0] - later
+    elif len(page_sets) == 1:
+        first_page_only = set(page_sets[0])
+
+    # --- Single line scan ------------------------------------------------
+    content: List[str] = [l.strip() for l in lines]
+    total = len(content)
+
+    cue_line_indices: Set[int] = set()
+    scene_delimiter_indices: Set[int] = set()
+    heist_count = 0
+    int_ext_count = 0
+    scene_n_count = 0
+    dash_count = 0
+    cue_score = 0
+    colon_score = 0
+    non_empty_count = 0
+    all_caps_count = 0
+
+    for i in range(total):
+        raw = lines[i]
+        s = content[i]
+        if not s:
+            continue
+        non_empty_count += 1
+        if not re.search(r"[a-z]", s):
+            all_caps_count += 1
+
+        # Scene delimiter patterns
+        if _is_heist_scene_header(raw):
+            heist_count += 1
+            scene_delimiter_indices.add(i)
+        if INT_EXT_RE.match(s):
+            int_ext_count += 1
+            scene_delimiter_indices.add(i)
+        if SCENE_NUM_RE.match(s):
+            scene_n_count += 1
+            scene_delimiter_indices.add(i)
+        if _match_play_scene(s) is not None:
+            scene_delimiter_indices.add(i)
+        if _SCENE_NUM_DOT_RE.match(s):
+            scene_delimiter_indices.add(i)
+
+        # Dash-dialog lines
+        if _is_dash_dialog_line(raw):
+            dash_count += 1
+
+        # Colon-cue score (all lines, not just cue candidates — same logic as
+        # original _detect_play_format to keep scores identical)
+        if re.search(r"(?:^|(?<=\s))([A-Z][A-Z\s\.\']{1,30}):\s*$", s):
+            colon_score += 1
+        elif re.match(r"^([A-Z][A-Z\s\.\']{1,30}):\s+\S", s):
+            colon_score += 1
+
+        # Speaker-cue candidates + play cue score
+        if _is_caps_cue_candidate(s):
+            cue_line_indices.add(i)
+            for j in range(i + 1, min(i + 4, total)):
+                nxt = content[j]
+                if nxt:
+                    if re.search(r"[a-z]", nxt) and len(nxt) >= 3:
+                        cue_score += 1
+                    break
+
+    # --- Cast section range ----------------------------------------------
+    _CAST_HEADERS: Set[str] = {
+        "CAST", "CHARACTERS", "CAST OF CHARACTERS", "DRAMATIS PERSONAE",
+        "CHARACTER LIST", "CHARACTER DESCRIPTIONS", "CHARACTERS:",
+    }
+    cast_section_range: Optional[Tuple[int, int]] = None
+    for i in range(total):
+        if content[i].upper() in _CAST_HEADERS:
+            end = i + 1
+            blanks = 0
+            while end < total:
+                ns = content[end]
+                if not ns:
+                    blanks += 1
+                    if blanks >= 3:
+                        break
+                else:
+                    blanks = 0
+                    if (SCENE_HEADER_RE.match(lines[end])
+                            or SCENE_NUM_RE.match(ns)
+                            or INT_EXT_RE.match(ns)):
+                        break
+                end += 1
+            cast_section_range = (i, end)
+            break
+
+    # --- Body start estimate ---------------------------------------------
+    body_start_line = 0
+    if cast_section_range:
+        body_start_line = cast_section_range[1]
+    if scene_delimiter_indices:
+        first_delim = min(scene_delimiter_indices)
+        body_start_line = max(body_start_line, first_delim)
+
+    return ScriptSkeleton(
+        cue_line_indices=cue_line_indices,
+        scene_delimiter_indices=scene_delimiter_indices,
+        page_sets=page_sets,
+        first_page_only=first_page_only,
+        body_start_line=body_start_line,
+        cast_section_range=cast_section_range,
+        heist_count=heist_count,
+        int_ext_count=int_ext_count,
+        scene_n_count=scene_n_count,
+        dash_count=dash_count,
+        cue_score=cue_score,
+        colon_score=colon_score,
+        non_empty_count=non_empty_count,
+        all_caps_count=all_caps_count,
+    )
+
+
 def _sanitize_characters(script: Script) -> Script:
     """Post-parse character list hygiene — remove high-confidence false positives.
 
@@ -668,38 +840,61 @@ def parse_pdf(pdf_path: str) -> Script:
       1. heist (numbered scene headers, very distinctive) → layout-based
       2. colon_play / play (pattern-based, plain text)
       3. scene_n / dash_dialog (indent-based, layout text)
+
+    A ScriptSkeleton is built once from the plain-text extraction and passed
+    to both the format detector and the format-specific parser, so no step
+    needs to rescan the raw lines for universal structural features.
     """
     title = _derive_title(pdf_path)
     plain_lines, page_sets = _extract_plain_lines_with_pages(pdf_path)
 
-    # Check for heist format first — numbered "N  SCENE TITLE" headers are
-    # unambiguous and must win over the play detector (which also fires on
-    # screenplays with all-caps character cues).
-    heist_count = sum(1 for l in plain_lines if _is_heist_scene_header(l))
-    if heist_count >= 2:
+    # Single structural scan — shared by format detection and all parsers.
+    skeleton = _build_skeleton(plain_lines, page_sets)
+
+    # Heist format: numbered "N  SCENE TITLE" headers are unambiguous and must
+    # win over the play detector (which also fires on all-caps character cues).
+    if skeleton.heist_count >= 2:
         layout_lines = extract_layout_lines(pdf_path)
-        return _sanitize_characters(parse_lines(layout_lines, title=title))
+        layout_skeleton = _build_skeleton(layout_lines, page_sets)
+        return _sanitize_characters(parse_lines(layout_lines, title=title,
+                                                skeleton=layout_skeleton))
 
-    # Play formats (pattern-based on plain text)
-    play_fmt = _detect_play_format(plain_lines)
+    # Play formats — skeleton replaces raw line rescanning in format detection.
+    play_fmt = _detect_play_format(plain_lines, skeleton=skeleton)
     if play_fmt == "play":
-        return _sanitize_characters(_parse_play(plain_lines, page_sets, title))
+        return _sanitize_characters(_parse_play(plain_lines, page_sets, title,
+                                                skeleton=skeleton))
     if play_fmt == "colon_play":
-        return _sanitize_characters(_parse_colon_play(plain_lines, page_sets, title))
+        return _sanitize_characters(_parse_colon_play(plain_lines, page_sets, title,
+                                                      skeleton=skeleton))
 
-    # Fall back to indent-based parsing (scene_n, dash_dialog, heist fallback)
+    # Indent-based fallback (scene_n, dash_dialog, heist fallback).
     layout_lines = extract_layout_lines(pdf_path)
-    return _sanitize_characters(parse_lines(layout_lines, title=title))
+    layout_skeleton = _build_skeleton(layout_lines, page_sets)
+    return _sanitize_characters(parse_lines(layout_lines, title=title,
+                                            skeleton=layout_skeleton))
 
 
-def parse_lines(lines: List[str], title: str = "Script") -> Script:
-    """Parse pre-extracted layout lines (heist / scene_n / dash_dialog formats)."""
+def parse_lines(
+    lines: List[str],
+    title: str = "Script",
+    skeleton: Optional["ScriptSkeleton"] = None,
+) -> Script:
+    """Parse pre-extracted layout lines (heist / scene_n / dash_dialog formats).
+
+    If a pre-built skeleton is provided (e.g. from parse_pdf), it is used for
+    format detection and any structural data the parsers can consume.  When
+    called directly (e.g. from tests), a skeleton is built on-demand.
+    """
     script = Script(title=title)
+
+    if skeleton is None:
+        skeleton = _build_skeleton(lines)
 
     overrides = _detect_indent_zones(lines)
     zones = _make_zones(overrides)
 
-    fmt = _detect_script_format(lines)
+    fmt = _detect_script_format(lines, skeleton=skeleton)
 
     script.characters = _extract_cast(lines)
     known_speaker_set = {c.name for c in script.characters}
@@ -804,37 +999,53 @@ def _is_caps_cue_candidate(s: str) -> bool:
     return True
 
 
-def _detect_play_format(plain_lines: List[str]) -> Optional[str]:
-    """Return 'play', 'colon_play', or None."""
+def _detect_play_format(
+    plain_lines: List[str],
+    skeleton: Optional["ScriptSkeleton"] = None,
+) -> Optional[str]:
+    """Return 'play', 'colon_play', or None.
+
+    When a skeleton is provided the pre-computed scores are used directly,
+    avoiding a second full scan of the lines.  When called without one (e.g.
+    from tests or legacy call sites) the scores are computed inline as before.
+    """
+    if skeleton is not None:
+        total = skeleton.non_empty_count
+        if total < 40:
+            return None
+        if skeleton.all_caps_count / total > 0.65:
+            return None
+        if skeleton.int_ext_count >= 2:
+            return None
+        cue_ratio   = skeleton.cue_score   / total
+        colon_ratio = skeleton.colon_score / total
+        if colon_ratio > 0.05 and skeleton.colon_score > skeleton.cue_score * 0.5:
+            return "colon_play"
+        if cue_ratio > 0.04:
+            return "play"
+        return None
+
+    # --- Legacy path: no skeleton provided — compute inline (unchanged) ---
     content_lines = [l.strip() for l in plain_lines if l.strip()]
     total = len(content_lines)
     if total < 40:
         return None
 
-    # If 65%+ of content lines have no lowercase, this is probably a notes/
-    # all-caps document, not a script (scripts need mixed-case dialog).
     all_caps_count = sum(1 for s in content_lines if not re.search(r"[a-z]", s))
     if all_caps_count / total > 0.65:
         return None
 
-    # Screenplays use INT./EXT. sluglines as scene boundaries — the layout-
-    # based scene_n parser handles these.  If we detect enough sluglines, skip
-    # the play detector so the script falls through to scene_n parsing.
     int_ext_count = sum(1 for s in content_lines if INT_EXT_RE.match(s))
     if int_ext_count >= 2:
         return None
 
-    # Score: standalone all-caps lines immediately followed by mixed-case text
     cue_score = 0
     colon_score = 0
     for i, s in enumerate(content_lines):
-        # Colon-cue detection: line ends with ALLCAPS: or starts with ALLCAPS:
         if re.search(r"(?:^|(?<=\s))([A-Z][A-Z\s\.\']{1,30}):\s*$", s):
             colon_score += 1
         elif re.match(r"^([A-Z][A-Z\s\.\']{1,30}):\s+\S", s):
             colon_score += 1
-
-        # Play cue detection: standalone all-caps line → mixed-case next line
         if _is_caps_cue_candidate(s):
             for j in range(i + 1, min(i + 4, total)):
                 nxt = content_lines[j]
@@ -843,10 +1054,9 @@ def _detect_play_format(plain_lines: List[str]) -> Optional[str]:
                         cue_score += 1
                     break
 
-    cue_ratio = cue_score / total
+    cue_ratio   = cue_score   / total
     colon_ratio = colon_score / total
 
-    # colon_play needs a clear colon-cue signal AND play cues must be weak
     if colon_ratio > 0.05 and colon_score > cue_score * 0.5:
         return "colon_play"
     if cue_ratio > 0.04:
@@ -955,6 +1165,7 @@ def _parse_play(
     plain_lines: List[str],
     page_sets: Optional[List[Set[str]]] = None,
     title: str = "Script",
+    skeleton: Optional["ScriptSkeleton"] = None,
 ) -> Script:
     """Parse a standard play (speaker name on own line, dialog below)."""
     script = Script(title=title)
@@ -963,12 +1174,15 @@ def _parse_play(
     script.characters = _extract_cast(plain_lines)
     known_speakers = {c.name for c in script.characters}
 
-    # Lines that appear ONLY on the first page (title, author, production info).
-    # Used to block title-page content from being parsed as speaker cues.
-    first_page_only: Set[str] = set()
-    if page_sets and len(page_sets) >= 2:
-        later = set().union(*page_sets[1:])
-        first_page_only = page_sets[0] - later
+    # first_page_only: lines exclusive to page 0 (title/author/production).
+    # Use skeleton data when available; compute on the fly otherwise.
+    if skeleton is not None:
+        first_page_only = skeleton.first_page_only
+    else:
+        first_page_only = set()
+        if page_sets and len(page_sets) >= 2:
+            later = set().union(*page_sets[1:])
+            first_page_only = page_sets[0] - later
 
     script.scenes = _extract_scenes_play(plain_lines, known_speakers, noise, first_page_only)
 
@@ -1134,6 +1348,7 @@ def _parse_colon_play(
     plain_lines: List[str],
     page_sets: Optional[List[Set[str]]] = None,
     title: str = "Script",
+    skeleton: Optional["ScriptSkeleton"] = None,
 ) -> Script:
     """Parse a colon-cue format script (SPEAKER: dialog text)."""
     script = Script(title=title)
@@ -1142,7 +1357,11 @@ def _parse_colon_play(
     script.characters = _extract_cast_colon(plain_lines)
     known_speakers = {c.name for c in script.characters}
 
-    script.scenes = _extract_scenes_colon(plain_lines, known_speakers, noise)
+    # Use skeleton's first_page_only if available (title-page cue guard).
+    first_page_only: Set[str] = skeleton.first_page_only if skeleton is not None else set()
+
+    script.scenes = _extract_scenes_colon(plain_lines, known_speakers, noise,
+                                          first_page_only=first_page_only)
 
     _apply_speaker_normalization(script, known_speakers)
     _discover_new_characters(script, known_speakers)
@@ -1155,7 +1374,8 @@ def _extract_cast_colon(lines: List[str]) -> List[Character]:
 
 
 def _extract_scenes_colon(
-    lines: List[str], known_speakers: Set[str], noise: Set[str]
+    lines: List[str], known_speakers: Set[str], noise: Set[str],
+    first_page_only: Optional[Set[str]] = None,
 ) -> List[Scene]:
     scenes: List[Scene] = []
     scene_counter = 0
@@ -1298,6 +1518,15 @@ def _extract_scenes_colon(
         cue = _find_colon_cue(s)
         if cue is not None:
             speaker, remainder = cue
+            # Title-page guard: skip first-page-only cues before the first boundary
+            if (
+                scene_counter == 0
+                and speaker not in known_speakers
+                and first_page_only
+                and s in first_page_only
+            ):
+                _append_stage_direction(elements, _normalize_text(s))
+                continue
             flush_dialog()
             current_speaker = speaker
 
@@ -1417,13 +1646,27 @@ def _discover_new_characters(script: Script, known_speakers: Set[str]) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _detect_script_format(lines: List[str]) -> str:
-    """Return 'dash_dialog', 'heist', or 'scene_n'."""
-    heist_count = sum(1 for l in lines if _is_heist_scene_header(l))
-    scene_n_count = sum(1 for l in lines if SCENE_NUM_RE.match(l.strip()))
-    int_ext_count = sum(1 for l in lines if INT_EXT_RE.match(l.strip()))
-    dash_count = sum(1 for l in lines if _is_dash_dialog_line(l))
-    non_empty = sum(1 for l in lines if l.strip())
+def _detect_script_format(
+    lines: List[str],
+    skeleton: Optional["ScriptSkeleton"] = None,
+) -> str:
+    """Return 'dash_dialog', 'heist', or 'scene_n'.
+
+    Uses pre-computed skeleton counts when available; falls back to inline
+    scanning for backward compatibility.
+    """
+    if skeleton is not None:
+        heist_count  = skeleton.heist_count
+        scene_n_count = skeleton.scene_n_count
+        int_ext_count = skeleton.int_ext_count
+        dash_count   = skeleton.dash_count
+        non_empty    = skeleton.non_empty_count
+    else:
+        heist_count  = sum(1 for l in lines if _is_heist_scene_header(l))
+        scene_n_count = sum(1 for l in lines if SCENE_NUM_RE.match(l.strip()))
+        int_ext_count = sum(1 for l in lines if INT_EXT_RE.match(l.strip()))
+        dash_count   = sum(1 for l in lines if _is_dash_dialog_line(l))
+        non_empty    = sum(1 for l in lines if l.strip())
 
     if dash_count >= 15 and non_empty > 0 and dash_count / non_empty > 0.20:
         if dash_count > heist_count * 3:
