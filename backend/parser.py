@@ -163,6 +163,11 @@ _INLINE_PAREN_RE = re.compile(r"^\(([^)]+)\)\s*(.*)$")
 # Play-format regex constants
 # ---------------------------------------------------------------------------
 
+# Narrator speaker names — used to detect when the "narrator" turn should yield
+# back to the last character speaker after a parenthetical.  Matches "NARRATOR",
+# "NARRATOR 1", "NARRATOR (V.O.)", etc.
+_NARRATOR_NAME_RE = re.compile(r"^NARRATOR\b", re.IGNORECASE)
+
 # All-caps tokens that are stage directions / structural markers, never speaker cues
 _NON_CUE_RE = re.compile(
     r"""^(
@@ -1361,6 +1366,7 @@ def _extract_scenes_play(
     scene_title = ""
     elements: List[Element] = []
     current_speaker: Optional[str] = None
+    last_non_narrator_speaker: Optional[str] = None  # most recent non-NARRATOR speaker
     dialog_buf: List[str] = []
 
     def flush_dialog() -> None:
@@ -1466,6 +1472,10 @@ def _extract_scenes_play(
             flush_dialog()
             flush_orphan_speaker()
             current_speaker = normalized
+            # Track the most recent non-narrator speaker so we can fall back to
+            # them after a narrator parenthetical (see parenthetical handler below).
+            if not _NARRATOR_NAME_RE.match(normalized):
+                last_non_narrator_speaker = normalized
             prev_nonempty = s
             continue
 
@@ -1476,11 +1486,27 @@ def _extract_scenes_play(
             and s.endswith(")")
             and len(s) < 150
         ):
+            # Save speaker NOW — flush_dialog() clears current_speaker when it
+            # has queued dialog to emit, so we'd lose the attribution otherwise.
+            paren_speaker = current_speaker
             flush_dialog()
             inner = s[1:-1].strip()
             elements.append(
-                Element(kind="parenthetical", speaker=current_speaker, text=inner)
+                Element(kind="parenthetical", speaker=paren_speaker, text=inner)
             )
+            # Restore speaker after the parenthetical so subsequent lines are
+            # still attributed correctly.  flush_dialog() clears current_speaker
+            # whenever it emits queued dialog, but a mid-speech parenthetical
+            # must not drop the speaker's attribution for what follows.
+            #
+            # Special case: after a NARRATOR parenthetical, yield back to the
+            # last non-narrator character — many scripts use narrator
+            # parentheticals as stage-direction interludes between character
+            # lines and don't re-announce the character afterward.
+            if _NARRATOR_NAME_RE.match(paren_speaker):
+                current_speaker = last_non_narrator_speaker
+            else:
+                current_speaker = paren_speaker
             prev_nonempty = s
             continue
 
@@ -1543,6 +1569,7 @@ def _extract_scenes_colon(
     scene_title = ""
     elements: List[Element] = []
     current_speaker: Optional[str] = None
+    last_non_narrator_speaker: Optional[str] = None  # most recent non-NARRATOR speaker
     dialog_buf: List[str] = []
 
     def flush_dialog() -> None:
@@ -1690,6 +1717,8 @@ def _extract_scenes_colon(
                 continue
             flush_dialog()
             current_speaker = speaker
+            if not _NARRATOR_NAME_RE.match(speaker):
+                last_non_narrator_speaker = speaker
 
             # Handle inline parenthetical + dialog: "SPEAKER: (paren) text"
             if remainder.startswith("("):
@@ -1711,11 +1740,20 @@ def _extract_scenes_colon(
             and s.endswith(")")
             and len(s) < 150
         ):
+            paren_speaker = current_speaker
             flush_dialog()
             inner = s[1:-1].strip()
             elements.append(
-                Element(kind="parenthetical", speaker=current_speaker, text=inner)
+                Element(kind="parenthetical", speaker=paren_speaker, text=inner)
             )
+            # Restore speaker — flush_dialog() clears current_speaker when it
+            # emits queued dialog; a mid-speech parenthetical must not break
+            # the speaker's attribution for what follows.
+            # NARRATOR parentheticals yield to the last non-narrator character.
+            if _NARRATOR_NAME_RE.match(paren_speaker):
+                current_speaker = last_non_narrator_speaker
+            else:
+                current_speaker = paren_speaker
             continue
 
         # Dialog continuation

@@ -559,3 +559,126 @@ def test_tiny_tail_merged():
     # The 5-line tail should be absorbed, not left as its own chunk
     last_chunk_dialog = sum(1 for e in result[-1].elements if e.kind == "dialog")
     assert last_chunk_dialog >= 20 or len(result) == 1
+
+
+# ---------------------------------------------------------------------------
+# Narrator parenthetical fallback
+# ---------------------------------------------------------------------------
+
+def _play_lines(*args: str) -> list[str]:
+    """Helper: interleave raw play-format lines."""
+    return list(args)
+
+
+def test_narrator_paren_yields_to_last_character():
+    """After a narrator parenthetical, the next unannotated line goes to the
+    last non-narrator character rather than the narrator."""
+    lines = [
+        "SCENE ONE",
+        "EDDIE",
+        "Hello there.",
+        "NARRATOR",
+        "(Eddie picks up the phone)",
+        "This line should be Eddie's.",
+    ]
+    scenes = p._extract_scenes_play(lines, set(), set())
+    dialogs = [e for sc in scenes for e in sc.elements if e.kind == "dialog"]
+    # Find the last dialog line
+    last = dialogs[-1]
+    assert last.speaker == "EDDIE", (
+        f"Expected last dialog to be EDDIE, got '{last.speaker}'"
+    )
+    assert "Eddie" in last.text or "should be" in last.text
+
+
+def test_narrator_paren_no_prior_character_becomes_stage_dir():
+    """If no character has spoken yet, a post-narrator-paren line falls back
+    to stage direction (rather than crashing or being mis-attributed)."""
+    lines = [
+        "SCENE ONE",
+        "NARRATOR",
+        "(setting the scene)",
+        "An unannotated line with no prior character.",
+    ]
+    scenes = p._extract_scenes_play(lines, set(), set())
+    all_elements = [e for sc in scenes for e in sc.elements]
+    # The unannotated line should be a stage direction, not narrator dialog
+    # (last_non_narrator_speaker is None → current_speaker reset to None)
+    dialogs = [e for e in all_elements if e.kind == "dialog" and e.speaker == "NARRATOR"]
+    assert dialogs == [], (
+        f"Narrator dialog was emitted but should not be: {[d.text for d in dialogs]}"
+    )
+
+
+def test_narrator_paren_speaker_preserved_in_parenthetical():
+    """The parenthetical itself is still attributed to the narrator."""
+    lines = [
+        "SCENE ONE",
+        "EDDIE",
+        "Hello.",
+        "NARRATOR",
+        "(a note from the narrator)",
+        "Eddie continues.",
+    ]
+    scenes = p._extract_scenes_play(lines, set(), set())
+    parens = [e for sc in scenes for e in sc.elements if e.kind == "parenthetical"]
+    assert len(parens) == 1
+    assert parens[0].speaker == "NARRATOR"
+
+
+def test_regular_character_paren_does_not_reset_speaker():
+    """A non-narrator parenthetical does NOT reset current_speaker — the
+    character's following lines are still attributed to them (no prior dialog)."""
+    lines = [
+        "SCENE ONE",
+        "EDDIE",
+        "(answering the phone)",
+        "Hello, yes speaking.",
+    ]
+    scenes = p._extract_scenes_play(lines, set(), set())
+    dialogs = [e for sc in scenes for e in sc.elements if e.kind == "dialog"]
+    assert len(dialogs) == 1
+    assert dialogs[0].speaker == "EDDIE"
+    assert "Hello" in dialogs[0].text
+
+
+def test_character_paren_mid_speech_continues_attribution():
+    """flush_dialog() clears current_speaker when it emits queued dialog.
+    A parenthetical in the middle of a character's speech must restore the
+    speaker so the lines that follow are still attributed to them — not
+    treated as stage directions."""
+    lines = [
+        "SCENE ONE",
+        "EDDIE",
+        "I'm gonna freeze or say the wrong thing or . . .",
+        "No. Eddie, you'll be fine.",
+        "What's the worst that could happen?",
+        "(He tries not to think of the worst that could happen.)",
+        "I probably shouldn't say this, but, you know, I wouldn't have money problems.",
+    ]
+    scenes = p._extract_scenes_play(lines, set(), set())
+    dialogs = [e for sc in scenes for e in sc.elements if e.kind == "dialog"]
+    last = dialogs[-1]
+    assert last.speaker == "EDDIE", (
+        f"Expected last line attributed to EDDIE, got '{last.speaker}'"
+    )
+    assert "money problems" in last.text
+
+
+def test_narrator_dialog_then_paren_fallback():
+    """Narrator has dialog + parenthetical; following line goes to last character."""
+    lines = [
+        "SCENE ONE",
+        "ALICE",
+        "First line.",
+        "NARRATOR",
+        "Some narration.",
+        "(stage direction note)",
+        "Alice speaks again.",
+    ]
+    scenes = p._extract_scenes_play(lines, set(), set())
+    dialogs = [e for sc in scenes for e in sc.elements if e.kind == "dialog"]
+    last = dialogs[-1]
+    assert last.speaker == "ALICE", (
+        f"Expected ALICE after narrator paren, got '{last.speaker}'"
+    )
