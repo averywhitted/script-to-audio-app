@@ -41,12 +41,17 @@ are transparently normalized before parsing.
 
 from __future__ import annotations
 
+import json
+import logging
+import os
 import re
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
 import pdfplumber
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -992,6 +997,167 @@ def _finalise(script: Script) -> Script:
     return _sanitize_characters(script)
 
 
+# ---------------------------------------------------------------------------
+# Corrections config — data-driven rule extensions
+# ---------------------------------------------------------------------------
+
+# Default search path: corrections_config.json next to this file.
+_DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "corrections_config.json")
+
+# Module-level cache: (path, mtime) → parsed config dict.  Reloaded whenever
+# the file changes on disk so edits take effect without restarting the process.
+_config_cache: Dict[str, object] = {}
+
+
+def _load_corrections_config(path: str = _DEFAULT_CONFIG_PATH) -> Dict:
+    """Load and cache corrections_config.json.
+
+    Returns a dict with keys:
+      non_cue_words        — list[str]: extra words to block as speaker cues
+      speaker_aliases      — dict[str, str]: wrong → correct name mapping
+      noise_line_patterns  — list[str]: extra regex patterns for layout noise
+
+    Gracefully returns an empty config if the file is missing or malformed
+    so parsing never hard-fails due to a config problem.
+    """
+    global _config_cache
+
+    # Fast path: file unchanged since last load.
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        mtime = None
+
+    cache_key = path
+    cached = _config_cache.get(cache_key)
+    if cached and cached.get("_mtime") == mtime:
+        return cached
+
+    empty: Dict = {
+        "non_cue_words": [],
+        "speaker_aliases": {},
+        "noise_line_patterns": [],
+        "_mtime": mtime,
+    }
+
+    if mtime is None:
+        # File doesn't exist — not an error, just no config.
+        _config_cache[cache_key] = empty
+        return empty
+
+    try:
+        with open(path, encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("corrections_config: failed to load %s — %s", path, exc)
+        _config_cache[cache_key] = empty
+        return empty
+
+    config: Dict = {
+        "non_cue_words": [],
+        "speaker_aliases": {},
+        "noise_line_patterns": [],
+        "_mtime": mtime,
+    }
+
+    # non_cue_words: list of strings
+    words = raw.get("non_cue_words", [])
+    if isinstance(words, list):
+        config["non_cue_words"] = [
+            str(w).strip().upper()
+            for w in words
+            if isinstance(w, str) and w.strip()
+        ]
+
+    # speaker_aliases: dict mapping wrong → correct (both uppercased)
+    aliases = raw.get("speaker_aliases", {})
+    if isinstance(aliases, dict):
+        config["speaker_aliases"] = {
+            str(k).strip().upper(): str(v).strip().upper()
+            for k, v in aliases.items()
+            if isinstance(k, str) and isinstance(v, str) and k.strip()
+        }
+
+    # noise_line_patterns: list of regex strings
+    patterns = raw.get("noise_line_patterns", [])
+    if isinstance(patterns, list):
+        compiled = []
+        for p in patterns:
+            if not isinstance(p, str) or not p.strip():
+                continue
+            try:
+                compiled.append(re.compile(p, re.IGNORECASE))
+            except re.error as exc:
+                logger.warning("corrections_config: invalid pattern %r — %s", p, exc)
+        config["noise_line_patterns"] = compiled
+
+    _config_cache[cache_key] = config
+    return config
+
+
+def _apply_corrections_config(script: Script, config: Dict) -> Script:
+    """Apply data-driven corrections from corrections_config.json to a parsed script.
+
+    Runs as a post-parse pass so the format parsers stay unchanged.  Three
+    operations:
+
+      1. Speaker aliases — rename any speaker that appears in the alias map
+         (e.g. "EDDIE PHONE" → "EDDIE" for a discovered two-column artifact).
+
+      2. Non-cue word filter — remove characters whose names match any of the
+         extra words from the config (same logic as _sanitize_characters but
+         using the config-supplied word list rather than _NON_CUE_RE).
+
+      3. Noise line patterns — re-tag elements whose text matches a noise
+         pattern as stage_direction so they don't get voiced.
+    """
+    aliases: Dict[str, str] = config.get("speaker_aliases", {})
+    extra_words: List[str] = config.get("non_cue_words", [])
+    noise_patterns = config.get("noise_line_patterns", [])
+
+    # Build extra-words set for O(1) lookup (whole-word match via re)
+    extra_word_re: Optional[re.Pattern] = None
+    if extra_words:
+        pat = r"^(?:" + "|".join(re.escape(w) + r"\b" for w in extra_words) + r")"
+        extra_word_re = re.compile(pat, re.IGNORECASE)
+
+    # 1 + 3: walk every element, apply alias and noise-pattern fixes
+    for sc in script.scenes:
+        for el in sc.elements:
+            if el.speaker and el.speaker in aliases:
+                el.speaker = aliases[el.speaker]
+            if noise_patterns and el.kind == "dialog":
+                if any(p.search(el.text) for p in noise_patterns):
+                    el.kind = "stage_direction"
+                    el.speaker = None
+
+    # 2: remove config-flagged names from character list
+    if extra_word_re:
+        script.characters = [
+            c for c in script.characters
+            if not extra_word_re.match(c.name)
+        ]
+        # Also clear speaker on elements whose speaker was one of those names
+        flagged: Set[str] = {
+            c.name for c in script.characters
+            if extra_word_re.match(c.name)
+        }
+        # Re-collect the actually-removed names before filtering
+        all_names = {c.name for c in script.characters}
+        removed: Set[str] = set()
+        for sc in script.scenes:
+            for el in sc.elements:
+                if el.speaker and extra_word_re.match(el.speaker):
+                    removed.add(el.speaker)
+        for sc in script.scenes:
+            for el in sc.elements:
+                if el.speaker in removed:
+                    el.kind = "stage_direction"
+                    el.speaker = None
+
+    return script
+
+
 def parse_pdf(pdf_path: str) -> Script:
     """Parse a PDF script into a Script object.
 
@@ -1007,6 +1173,9 @@ def parse_pdf(pdf_path: str) -> Script:
     title = _derive_title(pdf_path)
     plain_lines, page_sets = _extract_plain_lines_with_pages(pdf_path)
 
+    # Load data-driven corrections (cached; reloaded only when file changes).
+    config = _load_corrections_config()
+
     # Single structural scan — shared by format detection and all parsers.
     skeleton = _build_skeleton(plain_lines, page_sets)
 
@@ -1015,23 +1184,27 @@ def parse_pdf(pdf_path: str) -> Script:
     if skeleton.heist_count >= 2:
         layout_lines = extract_layout_lines(pdf_path)
         layout_skeleton = _build_skeleton(layout_lines, page_sets)
-        return _finalise(parse_lines(layout_lines, title=title,
-                                     skeleton=layout_skeleton))
+        script = _finalise(parse_lines(layout_lines, title=title,
+                                       skeleton=layout_skeleton))
+        return _apply_corrections_config(script, config)
 
     # Play formats — skeleton replaces raw line rescanning in format detection.
     play_fmt = _detect_play_format(plain_lines, skeleton=skeleton)
     if play_fmt == "play":
-        return _finalise(_parse_play(plain_lines, page_sets, title,
-                                     skeleton=skeleton))
+        script = _finalise(_parse_play(plain_lines, page_sets, title,
+                                       skeleton=skeleton))
+        return _apply_corrections_config(script, config)
     if play_fmt == "colon_play":
-        return _finalise(_parse_colon_play(plain_lines, page_sets, title,
-                                           skeleton=skeleton))
+        script = _finalise(_parse_colon_play(plain_lines, page_sets, title,
+                                             skeleton=skeleton))
+        return _apply_corrections_config(script, config)
 
     # Indent-based fallback (scene_n, dash_dialog, heist fallback).
     layout_lines = extract_layout_lines(pdf_path)
     layout_skeleton = _build_skeleton(layout_lines, page_sets)
-    return _finalise(parse_lines(layout_lines, title=title,
-                                 skeleton=layout_skeleton))
+    script = _finalise(parse_lines(layout_lines, title=title,
+                                   skeleton=layout_skeleton))
+    return _apply_corrections_config(script, config)
 
 
 def parse_lines(

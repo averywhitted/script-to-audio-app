@@ -5,7 +5,9 @@ Run from the repo root:
     .venv/bin/python -m pytest backend/tests/ -v
 """
 
+import json
 import sys
+import tempfile
 from pathlib import Path
 
 # Make backend/ importable
@@ -682,3 +684,116 @@ def test_narrator_dialog_then_paren_fallback():
     assert last.speaker == "ALICE", (
         f"Expected ALICE after narrator paren, got '{last.speaker}'"
     )
+
+
+# ---------------------------------------------------------------------------
+# corrections_config.json loader
+# ---------------------------------------------------------------------------
+
+def _write_config(data: dict) -> str:
+    """Write a config dict to a temp file and return the path."""
+    fh = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False, encoding="utf-8"
+    )
+    json.dump(data, fh)
+    fh.close()
+    # Bust the module-level cache for this path
+    p._config_cache.pop(fh.name, None)
+    return fh.name
+
+
+def test_load_corrections_config_missing_file():
+    """Missing config file returns empty defaults without crashing."""
+    cfg = p._load_corrections_config("/nonexistent/corrections_config.json")
+    assert cfg["non_cue_words"] == []
+    assert cfg["speaker_aliases"] == {}
+    assert cfg["noise_line_patterns"] == []
+
+
+def test_load_corrections_config_malformed_json(tmp_path):
+    """Malformed JSON returns empty defaults without crashing."""
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not valid json", encoding="utf-8")
+    cfg = p._load_corrections_config(str(bad))
+    assert cfg["non_cue_words"] == []
+
+
+def test_load_corrections_config_reads_non_cue_words():
+    """non_cue_words list is loaded and uppercased."""
+    path = _write_config({"non_cue_words": ["Voice", "CROWD", "offstage"]})
+    cfg = p._load_corrections_config(path)
+    assert "VOICE" in cfg["non_cue_words"]
+    assert "CROWD" in cfg["non_cue_words"]
+    assert "OFFSTAGE" in cfg["non_cue_words"]
+
+
+def test_load_corrections_config_reads_aliases():
+    """speaker_aliases dict is loaded with keys/values uppercased."""
+    path = _write_config({"speaker_aliases": {"Eddie Phone": "EDDIE"}})
+    cfg = p._load_corrections_config(path)
+    assert cfg["speaker_aliases"].get("EDDIE PHONE") == "EDDIE"
+
+
+def test_load_corrections_config_invalid_pattern_skipped(tmp_path):
+    """An invalid regex in noise_line_patterns is skipped, others kept."""
+    data = {"noise_line_patterns": ["[invalid", r"\bpage\b"]}
+    path = _write_config(data)
+    cfg = p._load_corrections_config(path)
+    # Bad pattern skipped, good one kept
+    assert len(cfg["noise_line_patterns"]) == 1
+
+
+def test_apply_corrections_config_alias():
+    """speaker_aliases renames a speaker throughout the script."""
+    script = p.Script(
+        title="Test",
+        characters=[p.Character(name="EDDIE PHONE"), p.Character(name="ALICE")],
+        scenes=[p.Scene(number=1, title="S1", elements=[
+            p.Element(kind="dialog", speaker="EDDIE PHONE", text="Hello?"),
+            p.Element(kind="dialog", speaker="ALICE", text="Hi."),
+        ])]
+    )
+    config = {"speaker_aliases": {"EDDIE PHONE": "EDDIE"}, "non_cue_words": [],
+              "noise_line_patterns": []}
+    result = p._apply_corrections_config(script, config)
+    speakers = {e.speaker for sc in result.scenes for e in sc.elements}
+    assert "EDDIE PHONE" not in speakers
+    assert "EDDIE" in speakers
+
+
+def test_apply_corrections_config_non_cue_removes_character():
+    """A name matching a non_cue_word is removed from characters."""
+    script = p.Script(
+        title="Test",
+        characters=[p.Character(name="VOICE"), p.Character(name="ALICE")],
+        scenes=[p.Scene(number=1, title="S1", elements=[
+            p.Element(kind="dialog", speaker="VOICE", text="Hear me."),
+            p.Element(kind="dialog", speaker="ALICE", text="Who speaks?"),
+        ])]
+    )
+    config = {"speaker_aliases": {}, "non_cue_words": ["VOICE"],
+              "noise_line_patterns": []}
+    result = p._apply_corrections_config(script, config)
+    names = {c.name for c in result.characters}
+    assert "VOICE" not in names
+
+
+def test_load_corrections_config_cached(tmp_path):
+    """Second call with same path and mtime returns cached result."""
+    cfg_file = tmp_path / "cfg.json"
+    cfg_file.write_text(json.dumps({"non_cue_words": ["GHOST"]}), encoding="utf-8")
+    p._config_cache.pop(str(cfg_file), None)
+    cfg1 = p._load_corrections_config(str(cfg_file))
+    cfg2 = p._load_corrections_config(str(cfg_file))
+    assert cfg1 is cfg2  # same object → cache hit
+
+
+def test_bundled_corrections_config_loads():
+    """The real corrections_config.json in the backend directory loads cleanly."""
+    cfg = p._load_corrections_config()
+    assert isinstance(cfg["non_cue_words"], list)
+    assert isinstance(cfg["speaker_aliases"], dict)
+    assert isinstance(cfg["noise_line_patterns"], list)
+    # Spot-check a few expected entries
+    assert "VOICE" in cfg["non_cue_words"]
+    assert "CROWD" in cfg["non_cue_words"]
