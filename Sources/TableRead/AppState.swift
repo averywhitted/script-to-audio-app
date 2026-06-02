@@ -152,6 +152,7 @@ final class AppState: ObservableObject {
 
     func importPDF(_ url: URL) {
         selectedPDF = url
+        outputDirectory = nil   // reset so the new script defaults to "next to the PDF"
         isWorking = true
         status = "Parsing script..."
         errorMessage = nil

@@ -35,3 +35,6 @@ xcuserdata/
 *.xcworkspace/xcuserdata/
 DerivedData/
 .swiftpm/
+
+# Claude Code internal state
+.claude/worktrees/
