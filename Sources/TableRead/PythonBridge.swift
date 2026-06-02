@@ -89,10 +89,13 @@ final class PythonBridge {
         }
 
         // 2. Bundled inside a .app (packaged distribution)
+        // audio_worker.py lives at Contents/Resources/backend/audio_worker.py
+        // We want Contents/Resources/ so that backend/audio_worker.py resolves correctly.
         if let bundleURL = Bundle.main.url(forResource: "audio_worker", withExtension: "py") {
-            return bundleURL.deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
+            let candidate = bundleURL
+                .deletingLastPathComponent()   // → .../backend/
+                .deletingLastPathComponent()   // → .../Resources/
+            if valid(candidate) { return candidate }
         }
 
         // 3. CWD (covers `swift run` from repo root or NativeMacApp/)
@@ -147,6 +150,7 @@ final class PythonBridge {
         sceneNumbers: [Int],
         assignment: [String: String] = [:],
         apiKey: String? = nil,
+        userAddedElements: [String: [UserAddedElement]] = [:],
         onEvent: @escaping @MainActor (GenerationEvent) -> Void
     ) async throws {
         var payload: [String: Any] = [
@@ -161,6 +165,25 @@ final class PythonBridge {
         }
         if let apiKey, !apiKey.isEmpty {
             payload["apiKey"] = apiKey
+        }
+        // Build a per-scene-number dict of user-added elements for the selected scenes
+        var bySceneNumber: [String: [[String: Any]]] = [:]
+        for sceneNumber in sceneNumbers {
+            let key = "\(pdf.path)|\(sceneNumber)"
+            if let elements = userAddedElements[key], !elements.isEmpty {
+                bySceneNumber["\(sceneNumber)"] = elements.compactMap { el -> [String: Any]? in
+                    guard !el.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+                    return [
+                        "afterElementTextKey": el.afterElementTextKey,
+                        "speaker": el.speaker,
+                        "text": el.text,
+                        "kind": el.kind,
+                    ]
+                }
+            }
+        }
+        if !bySceneNumber.isEmpty {
+            payload["userAddedElements"] = bySceneNumber
         }
         try await streamRequest(payload, onEvent: onEvent)
     }
@@ -221,18 +244,58 @@ final class PythonBridge {
         generationProcess = nil
     }
 
+    func pauseGeneration() {
+        generationProcess?.suspend()
+    }
+
+    func resumeGeneration() {
+        generationProcess?.resume()
+    }
+
     // MARK: - Process management
 
     private var generationProcess: Process?
 
     // MARK: - Private helpers
 
+    /// The embedded Python interpreter inside the app bundle, if present.
+    /// Returns nil when running in dev mode (Xcode / swift run).
+    private var bundledPython: URL? {
+        let candidate = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Resources/python/bin/python3")
+        return FileManager.default.fileExists(atPath: candidate.path) ? candidate : nil
+    }
+
+    /// ~/Library/Application Support/TableRead/python-packages
+    /// Used as the pip --target for optional engine installs (Kokoro, Piper)
+    /// so they land outside the signed bundle and survive app updates.
+    private var userPackagesDir: URL {
+        let base = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return base.appendingPathComponent("TableRead/python-packages")
+    }
+
     private func python(root: URL) -> String {
-        let venvPython = root.appendingPathComponent(".venv/bin/python")
-        return FileManager.default.fileExists(atPath: venvPython.path) ? venvPython.path : "python3"
+        let fm = FileManager.default
+        // 1. Bundled Python (production .app)
+        if let bundled = bundledPython { return bundled.path }
+        // 2. Venv alongside the repo root (development / swift run)
+        for name in [".venv/bin/python3", ".venv/bin/python"] {
+            let p = root.appendingPathComponent(name).path
+            if fm.fileExists(atPath: p) { return p }
+        }
+        // 3. Fall back to whatever python3 is on PATH
+        return "python3"
     }
 
     private func workerURL() throws -> URL {
+        // Bundled inside the .app
+        if let bundled = Bundle.main.url(forResource: "audio_worker",
+                                          withExtension: "py",
+                                          subdirectory: "backend") {
+            return bundled
+        }
+        // Dev: repo root
         let worker = repositoryRoot.appendingPathComponent("backend/audio_worker.py")
         guard FileManager.default.fileExists(atPath: worker.path) else {
             throw PythonBridgeError.workerMissing
@@ -240,18 +303,39 @@ final class PythonBridge {
         return worker
     }
 
+    /// Environment variables to set on every worker process.
+    /// When running from the bundled .app, TABLEREAD_PACKAGES points to the
+    /// user-writable site-packages directory for optional engines.
+    private var workerEnvironment: [String: String]? {
+        guard bundledPython != nil else { return nil }   // dev: inherit parent env
+        let pkgsPath = userPackagesDir.path
+        // Ensure the directory exists so pip can install into it immediately.
+        try? FileManager.default.createDirectory(at: userPackagesDir,
+                                                  withIntermediateDirectories: true)
+        return [
+            "TABLEREAD_PACKAGES": pkgsPath,
+            "HOME": NSHomeDirectory(),
+            "PATH": "/usr/bin:/bin:/usr/local/bin",
+            "TMPDIR": NSTemporaryDirectory(),
+        ]
+    }
+
     /// Run the worker synchronously, return stdout as Data.
     private func rawRequest(_ payload: [String: Any]) async throws -> Data {
         let worker = try workerURL()
         let root = repositoryRoot
         let py = python(root: root)
+        let env = workerEnvironment
         let requestData = try JSONSerialization.data(withJSONObject: payload)
 
         return try await Task.detached {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
             process.arguments = [py, worker.path]
-            process.currentDirectoryURL = root
+            // Neutral CWD — avoids a Documents TCC prompt when the repo lives
+            // inside ~/Documents. The worker uses absolute paths throughout.
+            process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            if let env { process.environment = env }
 
             let input = Pipe()
             let output = Pipe()
@@ -298,6 +382,7 @@ final class PythonBridge {
         let worker = try workerURL()
         let root = repositoryRoot
         let py = python(root: root)
+        let env = workerEnvironment
         let requestData = try JSONSerialization.data(withJSONObject: payload)
 
         try await withCheckedThrowingContinuation { continuation in
@@ -305,7 +390,8 @@ final class PythonBridge {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
                 process.arguments = [py, worker.path]
-                process.currentDirectoryURL = root
+                process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
+                if let env { process.environment = env }
 
                 let input = Pipe()
                 let output = Pipe()

@@ -1,6 +1,13 @@
 import SwiftUI
 import AppKit
 
+// Stable hue per speaker name — shared by Review and Cast tabs.
+private func speakerColor(_ speaker: String) -> Color {
+    let palette: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .indigo, .brown]
+    let index = abs(speaker.unicodeScalars.reduce(0) { $0 + Int($1.value) }) % palette.count
+    return palette[index]
+}
+
 // MARK: - Import
 
 struct ImportView: View {
@@ -108,6 +115,16 @@ struct ReviewView: View {
                         Label("\(script.characterCount) characters", systemImage: "person.2")
                         Label("\(script.lineCount) lines", systemImage: "text.bubble")
                         Spacer()
+                        // Background activity indicator (voice fetching, etc.)
+                        if state.isFetchingVoices {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.mini)
+                                Text("Loading voices…")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .transition(.opacity)
+                        }
                         Button("Select All") { state.selectAllScenes() }
                             .buttonStyle(.borderless)
                         Button("Select None") { state.clearSceneSelection() }
@@ -117,6 +134,7 @@ struct ReviewView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 22)
                     .padding(.vertical, 10)
+                    .animation(.easeInOut(duration: 0.2), value: state.isFetchingVoices)
                     Divider()
                     // Scene list is the primary content
                     ScrollView {
@@ -124,6 +142,8 @@ struct ReviewView: View {
                             ForEach(script.scenes) { scene in
                                 SceneReviewRow(
                                     scene: scene,
+                                    pdfPath: state.selectedPDF?.path ?? "",
+                                    allSpeakers: script.characters.map(\.name),
                                     isSelected: state.selectedScenes.contains(scene.number)
                                 ) {
                                     state.toggleScene(scene)
@@ -142,9 +162,22 @@ struct ReviewView: View {
 
 private struct SceneReviewRow: View {
     var scene: SceneSummary
+    var pdfPath: String
+    var allSpeakers: [String]
     var isSelected: Bool
     var toggle: () -> Void
+    @EnvironmentObject private var state: AppState
     @State private var expanded = false
+    @State private var showAllLines = false
+    @State private var editingTitle = false
+    @State private var titleDraft = ""
+    @State private var isHoveringTitle = false
+
+    private static let initialLineLimit = 30
+
+    private var effectiveTitle: String {
+        state.effectiveSceneTitle(pdfPath: pdfPath, scene: scene)
+    }
 
     // Unique speaking characters in scene order
     private var speakers: [String] {
@@ -164,16 +197,47 @@ private struct SceneReviewRow: View {
                         .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                 }
                 .buttonStyle(.plain)
+                .contentShape(Rectangle())
 
                 Text(String(format: "%02d", scene.number))
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.tertiary)
                     .frame(width: 26, alignment: .trailing)
 
-                Text(scene.title)
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(isSelected ? .primary : .secondary)
-                    .lineLimit(1)
+                Group {
+                    if editingTitle {
+                        HStack(spacing: 6) {
+                            TextField("Scene title", text: $titleDraft)
+                                .font(.callout.weight(.medium))
+                                .textFieldStyle(.plain)
+                                .onSubmit { commitTitle() }
+                                .onExitCommand { editingTitle = false }
+                            Button("Save") { commitTitle() }
+                                .font(.caption.weight(.medium))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.accentColor, in: Capsule())
+                                .foregroundStyle(.white)
+                                .buttonStyle(.plain)
+                        }
+                    } else {
+                        HStack(spacing: 6) {
+                            Text(effectiveTitle)
+                                .font(.callout.weight(.medium))
+                                .foregroundStyle(isSelected ? .primary : .secondary)
+                                .lineLimit(1)
+                            Button("Edit") { beginEditingTitle() }
+                                .font(.caption.weight(.medium))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(.quaternary, in: Capsule())
+                                .foregroundStyle(.secondary)
+                                .buttonStyle(.plain)
+                                .opacity(isHoveringTitle ? 1 : 0)
+                        }
+                        .onHover { isHoveringTitle = $0 }
+                    }
+                }
 
                 Spacer()
 
@@ -206,22 +270,66 @@ private struct SceneReviewRow: View {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
+                        .frame(width: 28, height: 28)   // larger hit target
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
+            .contentShape(Rectangle())
 
             if expanded {
                 Divider().padding(.horizontal, 14)
+                let limit = showAllLines ? Int.max : Self.initialLineLimit
+                let merged = state.mergedElements(for: scene, pdfPath: pdfPath, limit: limit)
+                let hiddenCount = scene.elements.count - min(scene.elements.count, limit)
+
                 LazyVStack(alignment: .leading, spacing: 4) {
-                    ForEach(scene.elements.prefix(80).indices, id: \.self) { idx in
-                        SceneElementRow(element: scene.elements[idx])
+                    ForEach(merged) { item in
+                        switch item {
+                        case .parsed(let element):
+                            SceneElementRow(
+                                element: element,
+                                pdfPath: pdfPath,
+                                sceneNumber: scene.number,
+                                allSpeakers: allSpeakers
+                            ) {
+                                state.addElement(
+                                    afterTextKey: String(element.text.prefix(60)),
+                                    speaker: element.kind == "dialog" ? (element.speaker ?? "") : "",
+                                    kind: "dialog",
+                                    sceneNumber: scene.number,
+                                    pdfPath: pdfPath
+                                )
+                            }
+                        case .added(let addedEl):
+                            AddedElementRow(
+                                element: addedEl,
+                                sceneNumber: scene.number,
+                                pdfPath: pdfPath,
+                                allSpeakers: allSpeakers
+                            )
+                        }
                     }
-                    if scene.elements.count > 80 {
-                        Text("\(scene.elements.count - 80) more lines…")
-                            .font(.caption)
+
+                    // Show-more / show-fewer toggle
+                    if scene.elements.count > Self.initialLineLimit {
+                        Button {
+                            withAnimation(.snappy(duration: 0.2)) { showAllLines.toggle() }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: showAllLines ? "chevron.up" : "chevron.down")
+                                    .font(.caption2)
+                                Text(showAllLines
+                                     ? "Show fewer lines"
+                                     : "Show all \(scene.elements.count) lines (\(hiddenCount) more)")
+                                    .font(.caption)
+                            }
                             .foregroundStyle(.secondary)
+                            .padding(.top, 4)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(14)
@@ -233,12 +341,20 @@ private struct SceneReviewRow: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color.clear, lineWidth: 1.5)
         }
+        .onChange(of: expanded) { _, isExpanded in
+            if !isExpanded { showAllLines = false }
+        }
     }
 
-    private func speakerColor(_ speaker: String) -> Color {
-        let palette: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .indigo, .brown]
-        let index = abs(speaker.unicodeScalars.reduce(0) { $0 + Int($1.value) }) % palette.count
-        return palette[index]
+    private func beginEditingTitle() {
+        titleDraft = effectiveTitle
+        editingTitle = true
+    }
+
+    private func commitTitle() {
+        let trimmed = titleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        state.setSceneTitle(trimmed, pdfPath: pdfPath, sceneNumber: scene.number)
+        editingTitle = false
     }
 }
 
@@ -251,7 +367,7 @@ struct CastView: View {
     var body: some View {
         StepPageFooter(
             leading: state.installedEngines.contains(state.selectedEngine)
-                ? "\(state.selectedEngine.title) ready"
+                ? ""
                 : "\(state.selectedEngine.title) — click Install on the right to set up",
             backAction: { state.goTo(.review) },
             primaryTitle: "Continue to Generate",
@@ -389,11 +505,11 @@ private struct CharacterVoiceRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(genderColor)
+                .fill(speakerColor(name))
                 .frame(width: 9, height: 9)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(name).font(.headline)
+                Text(name).font(.headline).foregroundStyle(speakerColor(name))
                 if let hint = genderHint {
                     Text(hint == "M" ? "Male" : hint == "F" ? "Female" : "Unknown")
                         .font(.caption2).foregroundStyle(.secondary)
@@ -489,13 +605,6 @@ private struct CharacterVoiceRow: View {
         .fixedSize()
     }
 
-    private var genderColor: Color {
-        switch genderHint {
-        case "M": return .blue
-        case "F": return .pink
-        default:  return .secondary
-        }
-    }
 }
 
 // MARK: - Engine picker sidebar
@@ -671,12 +780,11 @@ struct GenerateView: View {
             .reduce(0) { $0 + $1.estimatedSeconds(engine: state.selectedEngine) }
     }
 
-    // Time remaining extrapolated from elapsed + progress
+    // Time remaining extrapolated from effective elapsed + progress (paused time excluded)
     private var estimatedRemainingSeconds: Int? {
-        guard state.isGenerating,
-              let start = state.renderStartTime,
+        guard state.isGenerating, !state.isPaused,
               state.generationProgress > 0.04 else { return nil }
-        let elapsed = Date().timeIntervalSince(start)
+        let elapsed = Double(state.effectiveElapsedSeconds)
         let total = elapsed / state.generationProgress
         return max(0, Int(total - elapsed))
     }
@@ -704,8 +812,15 @@ struct GenerateView: View {
                 Divider()
                 HStack {
                     if state.isGenerating {
-                        ProgressView().controlSize(.small)
-                        Text(runningCaption).font(.caption).foregroundStyle(.secondary)
+                        if state.isPaused {
+                            Image(systemName: "pause.circle.fill")
+                                .foregroundStyle(.orange)
+                                .font(.caption)
+                            Text("Paused").font(.caption).foregroundStyle(.orange)
+                        } else {
+                            ProgressView().controlSize(.small)
+                            Text(runningCaption).font(.caption).foregroundStyle(.secondary)
+                        }
                     } else {
                         Button { state.goTo(.cast) } label: {
                             Label("Back to Voices", systemImage: "chevron.left")
@@ -715,6 +830,19 @@ struct GenerateView: View {
                         Text(idleCaption).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
+                    if state.isGenerating {
+                        Button {
+                            if state.isPaused { state.resumeGeneration() }
+                            else { state.pauseGeneration() }
+                        } label: {
+                            Label(
+                                state.isPaused ? "Resume" : "Pause",
+                                systemImage: state.isPaused ? "play.circle" : "pause.circle"
+                            )
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(state.isPaused ? .green : .orange)
+                    }
                     Button(role: .cancel) { state.cancelGeneration() } label: {
                         Label("Cancel Render", systemImage: "xmark.circle")
                     }
@@ -725,8 +853,8 @@ struct GenerateView: View {
             }
         }
         .onReceive(clock) { _ in
-            guard state.isGenerating, let start = state.renderStartTime else { return }
-            secondsElapsed = Int(Date().timeIntervalSince(start))
+            guard state.isGenerating else { return }
+            secondsElapsed = state.effectiveElapsedSeconds
         }
         .onChange(of: state.isGenerating) { _, generating in
             if !generating { secondsElapsed = 0 }
@@ -739,6 +867,7 @@ struct GenerateView: View {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         panel.title = "Choose Output Folder"
         panel.prompt = "Select"
@@ -829,9 +958,14 @@ struct GenerateView: View {
     private var progressCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(state.isGenerating ? "Rendering…" : "Render Progress").font(.title3.weight(.semibold))
+                Text(state.isPaused ? "Render Paused" : state.isGenerating ? "Rendering…" : "Render Progress")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(state.isPaused ? .orange : .primary)
                 Spacer()
-                if state.isGenerating { ProgressView().controlSize(.small) }
+                if state.isGenerating && !state.isPaused { ProgressView().controlSize(.small) }
+                if state.isPaused {
+                    Image(systemName: "pause.circle.fill").foregroundStyle(.orange)
+                }
             }
 
             HStack(spacing: 10) {
@@ -906,14 +1040,18 @@ struct GenerateView: View {
     private var renderCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                Button { state.renderPreviewScene() } label: {
-                    Label("Preview First Scene", systemImage: "play.circle")
+                Button {
+                    if let dir = state.outputDirectory {
+                        NSWorkspace.shared.open(dir)
+                    }
+                } label: {
+                    Label("Open Output Folder", systemImage: "folder")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
-                .disabled(!canRender)
-                .help("Renders only the first selected scene — audition pacing and voice cast before the full run.")
+                .disabled(state.outputDirectory == nil)
+                .help("Open the output folder in Finder.")
 
                 Button { state.renderSelectedScenes() } label: {
                     Label("Render All \(state.selectedScenes.count) Scenes", systemImage: "waveform")
@@ -924,9 +1062,6 @@ struct GenerateView: View {
                 .disabled(!canRender)
                 .help("Renders every selected scene in order to the output folder.")
             }
-
-            Text("Use Preview to audition voice cast and pacing before committing to the full queue.")
-                .font(.caption).foregroundStyle(.secondary)
         }
         .padding(18)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
@@ -1196,11 +1331,31 @@ extension URL {
 
 private struct SceneElementRow: View {
     var element: SceneElementSummary
+    var pdfPath: String
+    var sceneNumber: Int
+    var allSpeakers: [String]
+    var onAddLineBelow: (() -> Void)? = nil
+
+    @EnvironmentObject private var state: AppState
+    @State private var isHovered = false
+    @State private var showingEdit = false
 
     var body: some View {
+        let correctionKey = ParserCorrection.key(
+            pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        let correction = state.corrections[correctionKey]
+        let isRemoved = correction?.markedAsNoise == true
+        let displaySpeaker: String = {
+            if let s = correction?.correctedSpeaker {
+                return s.isEmpty ? "Narrator" : s
+            }
+            return element.displaySpeaker
+        }()
+        let displayText: String = correction?.correctedText ?? element.text
+
         HStack(alignment: .top, spacing: 10) {
             Circle()
-                .fill(speakerColor(element.displaySpeaker))
+                .fill(speakerColor(displaySpeaker))
                 .frame(width: 8, height: 8)
                 .padding(.top, 5)
             Image(systemName: element.kind == "dialog" ? "person.wave.2" : "text.quote")
@@ -1208,23 +1363,421 @@ private struct SceneElementRow: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 16)
             VStack(alignment: .leading, spacing: 3) {
-                Text(element.displaySpeaker)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(speakerColor(element.displaySpeaker))
-                Text(element.text)
+                HStack(spacing: 6) {
+                    Text(displaySpeaker)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(speakerColor(displaySpeaker))
+                        .strikethrough(isRemoved)
+                    // Correction dot (non-noise corrections only)
+                    if correction != nil && !isRemoved {
+                        Circle()
+                            .fill(speakerColor(displaySpeaker))
+                            .frame(width: 5, height: 5)
+                            .help("User correction applied")
+                    }
+                    // "Edit" pill — fades in on hover
+                    Button { showingEdit = true } label: {
+                        Text("Edit")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(speakerColor(displaySpeaker))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(speakerColor(displaySpeaker).opacity(0.15),
+                                        in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(isHovered || showingEdit ? 1 : 0)
+                    .popover(isPresented: $showingEdit, arrowEdge: .top) {
+                        ElementCorrectionPopover(
+                            element: element,
+                            pdfPath: pdfPath,
+                            sceneNumber: sceneNumber,
+                            allSpeakers: allSpeakers
+                        )
+                        .environmentObject(state)
+                    }
+                    // "Add line ↓" — fades in on hover
+                    if let addBelow = onAddLineBelow {
+                        Button(action: addBelow) {
+                            Label("Add line", systemImage: "plus.circle")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(.quaternary, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .opacity(isHovered ? 1 : 0)
+                        .help("Insert a new line below this one")
+                    }
+                }
+                Text(displayText)
                     .font(.callout)
-                    .foregroundStyle(.primary)
-                    .lineLimit(4)
+                    .foregroundStyle(isRemoved ? .tertiary : .primary)
+                    .strikethrough(isRemoved, color: .secondary)
+                    .lineLimit(isRemoved ? 1 : 4)
+            }
+            Spacer()
+        }
+        .opacity(isRemoved ? 0.45 : 1)
+        .padding(.vertical, 3)
+        .onHover { isHovered = $0 }
+    }
+}
+
+// MARK: - User-added element row
+
+private struct AddedElementRow: View {
+    var element: UserAddedElement
+    var sceneNumber: Int
+    var pdfPath: String
+    var allSpeakers: [String]
+
+    @EnvironmentObject private var state: AppState
+    @State private var isHovered = false
+    @State private var showingEdit = false
+
+    private var displaySpeaker: String {
+        element.speaker.isEmpty ? "Narrator" : element.speaker
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            // Dashed circle — visual cue that this line was user-added
+            Circle()
+                .strokeBorder(
+                    speakerColor(displaySpeaker),
+                    style: StrokeStyle(lineWidth: 1.5, dash: [3, 2])
+                )
+                .frame(width: 8, height: 8)
+                .padding(.top, 5)
+
+            Image(systemName: "plus.circle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(displaySpeaker)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(speakerColor(displaySpeaker))
+
+                    Text("Added")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(.secondary.opacity(0.65), in: Capsule())
+
+                    // Edit pill
+                    Button { showingEdit = true } label: {
+                        Text("Edit")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(speakerColor(displaySpeaker))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(speakerColor(displaySpeaker).opacity(0.15), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(isHovered || showingEdit ? 1 : 0)
+                    .popover(isPresented: $showingEdit, arrowEdge: .top) {
+                        AddedElementEditPopover(
+                            element: element,
+                            pdfPath: pdfPath,
+                            sceneNumber: sceneNumber,
+                            allSpeakers: allSpeakers
+                        )
+                        .environmentObject(state)
+                    }
+
+                    // Delete button
+                    Button {
+                        withAnimation(.snappy(duration: 0.15)) {
+                            state.deleteAddedElement(id: element.id, sceneNumber: sceneNumber, pdfPath: pdfPath)
+                        }
+                    } label: {
+                        Image(systemName: "minus.circle")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red.opacity(0.8))
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(isHovered ? 1 : 0)
+                    .help("Remove this added line")
+                }
+
+                if element.text.isEmpty {
+                    Text("Empty — hover and tap Edit to add text")
+                        .font(.callout)
+                        .foregroundStyle(.tertiary)
+                        .italic()
+                } else {
+                    Text(element.text)
+                        .font(.callout)
+                        .lineLimit(4)
+                }
             }
             Spacer()
         }
         .padding(.vertical, 3)
+        .padding(.leading, 2)
+        .background(
+            RoundedRectangle(cornerRadius: 5)
+                .fill(speakerColor(displaySpeaker).opacity(0.04))
+        )
+        .onHover { isHovered = $0 }
+    }
+}
+
+private struct AddedElementEditPopover: View {
+    var element: UserAddedElement
+    var pdfPath: String
+    var sceneNumber: Int
+    var allSpeakers: [String]
+
+    @EnvironmentObject private var state: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedKind: String
+    @State private var speakerText: String
+    @State private var editedText: String
+
+    private var kindOptions: [(String, String)] {
+        [("dialog", "Dialog"), ("stage_direction", "Narration"), ("parenthetical", "Aside")]
     }
 
-    private func speakerColor(_ speaker: String) -> Color {
-        let palette: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .indigo, .brown]
-        let index = abs(speaker.unicodeScalars.reduce(0) { $0 + Int($1.value) }) % palette.count
-        return palette[index]
+    private var speakerOptions: [String] {
+        var opts = allSpeakers
+        if !speakerText.isEmpty && !opts.contains(speakerText) { opts.insert(speakerText, at: 0) }
+        return opts
+    }
+
+    init(element: UserAddedElement, pdfPath: String, sceneNumber: Int, allSpeakers: [String]) {
+        self.element = element
+        self.pdfPath = pdfPath
+        self.sceneNumber = sceneNumber
+        self.allSpeakers = allSpeakers
+        _selectedKind = State(initialValue: element.kind)
+        _speakerText = State(initialValue: element.speaker)
+        _editedText = State(initialValue: element.text)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Edit added line")
+                .font(.headline)
+
+            Divider()
+
+            // Type
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Type").font(.caption).foregroundStyle(.secondary)
+                Picker("Type", selection: $selectedKind) {
+                    ForEach(kindOptions, id: \.0) { value, label in
+                        Text(label).tag(value)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            // Speaker (dialog / aside only)
+            if selectedKind != "stage_direction" {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Speaker").font(.caption).foregroundStyle(.secondary)
+                    Picker("Speaker", selection: $speakerText) {
+                        ForEach(speakerOptions, id: \.self) { name in
+                            Text(name).tag(name)
+                        }
+                    }
+                    .labelsHidden()
+                }
+            }
+
+            // Text
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Text").font(.caption).foregroundStyle(.secondary)
+                TextEditor(text: $editedText)
+                    .font(.callout)
+                    .frame(minHeight: 64, maxHeight: 120)
+                    .padding(6)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                    .scrollContentBackground(.hidden)
+            }
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(.borderless)
+                Button("Save") {
+                    let speaker = selectedKind == "stage_direction" ? "" : speakerText
+                    state.updateAddedElement(
+                        id: element.id,
+                        speaker: speaker,
+                        text: editedText,
+                        kind: selectedKind,
+                        sceneNumber: sceneNumber,
+                        pdfPath: pdfPath
+                    )
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(editedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(16)
+        .frame(width: 340)
+    }
+}
+
+private struct ElementCorrectionPopover: View {
+    var element: SceneElementSummary
+    var pdfPath: String
+    var sceneNumber: Int
+    var allSpeakers: [String]
+
+    @EnvironmentObject private var state: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedKind: String
+    @State private var speakerText: String
+    @State private var editedText: String
+    @State private var markAsNoise: Bool
+
+    init(element: SceneElementSummary, pdfPath: String, sceneNumber: Int, allSpeakers: [String]) {
+        self.element = element
+        self.pdfPath = pdfPath
+        self.sceneNumber = sceneNumber
+        self.allSpeakers = allSpeakers
+        _selectedKind = State(initialValue: element.kind)
+        _speakerText = State(initialValue: element.speaker ?? "")
+        _editedText = State(initialValue: element.text)
+        _markAsNoise = State(initialValue: false)   // populated from existing correction below
+    }
+
+    private var kindOptions: [(String, String)] {
+        [("dialog", "Dialog"), ("stage_direction", "Narration"), ("parenthetical", "Aside")]
+    }
+
+    private var speakerOptions: [String] {
+        var opts = allSpeakers
+        if !speakerText.isEmpty && !opts.contains(speakerText) { opts.insert(speakerText, at: 0) }
+        return opts
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Correct this line")
+                .font(.headline)
+
+            Divider()
+
+            // Type
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Type").font(.caption).foregroundStyle(.secondary)
+                Picker("Type", selection: $selectedKind) {
+                    ForEach(kindOptions, id: \.0) { value, label in
+                        Text(label).tag(value)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            // Speaker (dialog only)
+            if selectedKind == "dialog" {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Speaker").font(.caption).foregroundStyle(.secondary)
+                    Picker("Speaker", selection: $speakerText) {
+                        ForEach(speakerOptions, id: \.self) { name in
+                            Text(name).tag(name)
+                        }
+                    }
+                    .labelsHidden()
+                }
+            }
+
+            // Text content
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Text").font(.caption).foregroundStyle(.secondary)
+                TextEditor(text: $editedText)
+                    .font(.callout)
+                    .frame(minHeight: 64, maxHeight: 120)
+                    .padding(6)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                    .scrollContentBackground(.hidden)
+            }
+
+            // Remove line
+            Button {
+                markAsNoise.toggle()
+            } label: {
+                Label(markAsNoise ? "Restore this line" : "Remove this line",
+                      systemImage: markAsNoise ? "arrow.uturn.backward" : "minus.circle")
+                    .font(.callout)
+                    .foregroundStyle(markAsNoise ? Color.secondary : Color.red)
+            }
+            .buttonStyle(.plain)
+
+            Divider()
+
+            // Actions
+            HStack {
+                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+                if state.corrections[k] != nil {
+                    Button("Undo Changes") {
+                        state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: element.text)
+                        dismiss()
+                    }
+                    .foregroundStyle(.red)
+                    .buttonStyle(.borderless)
+                }
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(.borderless)
+                Button("Save") {
+                    let correction = ParserCorrection(
+                        textKey: element.text,
+                        pdfIdentifier: pdfPath,
+                        sceneNumber: sceneNumber,
+                        originalKind: element.kind,
+                        originalSpeaker: element.speaker,
+                        correctedKind: selectedKind != element.kind ? selectedKind : nil,
+                        correctedSpeaker: selectedKind == "dialog" && speakerText != (element.speaker ?? "")
+                            ? speakerText : nil,
+                        correctedText: editedText != element.text ? editedText : nil,
+                        markedAsNoise: markAsNoise,
+                        timestamp: Date(),
+                        contributed: state.contributeCorrections
+                    )
+                    state.saveCorrection(correction)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!hasChanges)
+            }
+        }
+        .padding(16)
+        .frame(width: 340)
+        .onAppear {
+            // Pre-populate from any existing correction for this element
+            let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+            if let existing = state.corrections[k] {
+                if let kind = existing.correctedKind { selectedKind = kind }
+                if let speaker = existing.correctedSpeaker { speakerText = speaker }
+                if let text = existing.correctedText { editedText = text }
+                markAsNoise = existing.markedAsNoise
+            }
+        }
+    }
+
+    private var hasChanges: Bool {
+        markAsNoise
+            || selectedKind != element.kind
+            || (selectedKind == "dialog" && speakerText != (element.speaker ?? ""))
+            || editedText != element.text
     }
 }
 

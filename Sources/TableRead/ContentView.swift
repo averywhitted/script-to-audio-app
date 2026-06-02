@@ -7,6 +7,8 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // The step bar has NO animation — it always snaps to the correct
+            // state immediately. Animation lives on the ZStack below.
             WorkflowStepBar()
             Divider()
             ZStack {
@@ -27,6 +29,10 @@ struct ContentView: View {
                         .transition(stepTransition)
                 }
             }
+            // Animation is attached here (on the content ZStack) rather than
+            // inside goTo()'s withAnimation, so the step bar is never caught
+            // in a mid-animation state.
+            .animation(.spring(response: 0.38, dampingFraction: 0.88), value: state.step)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
             .overlay {

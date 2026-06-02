@@ -15,9 +15,8 @@ struct SettingsView: View {
             AboutTab()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 520, height: 420)
+        .frame(width: 520, height: 520)
         .environmentObject(state)
-        .onAppear { state.loadOpenAIKeyIfNeeded() }
     }
 }
 
@@ -33,6 +32,17 @@ private struct GeneralSettingsTab: View {
                     .help("When a render completes without errors, the output folder opens automatically in Finder.")
             } header: {
                 Text("Render")
+            }
+
+            Section {
+                Toggle("Notify when a scene finishes rendering", isOn: $state.notifyOnSceneComplete)
+                Toggle("Notify when the full render completes", isOn: $state.notifyOnRenderComplete)
+                Toggle("Notify if the render finishes with errors", isOn: $state.notifyOnRenderFailed)
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("macOS will ask for permission the first time a notification option is enabled. Notifications appear even when Table Read is in the background.")
+                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -57,6 +67,26 @@ private struct GeneralSettingsTab: View {
                 Text("Audio files are saved here unless you change it during a session.")
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                Toggle("Contribute corrections anonymously", isOn: $state.contributeCorrections)
+                HStack {
+                    let count = state.corrections.count
+                    Text("\(count) correction\(count == 1 ? "" : "s") stored locally")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Export…") { exportCorrections() }
+                        .disabled(state.corrections.isEmpty)
+                    Button("Clear All") { state.corrections.removeAll() }
+                        .foregroundStyle(.red)
+                        .disabled(state.corrections.isEmpty)
+                }
+            } header: {
+                Text("Parser Corrections")
+            } footer: {
+                Text("When enabled, corrections you make in the Review step are flagged for contribution. Export saves them as JSON you can share to help improve the parser for everyone. Nothing is sent automatically — you stay in control.")
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .padding()
@@ -66,11 +96,22 @@ private struct GeneralSettingsTab: View {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         panel.title = "Default Output Folder"
         panel.prompt = "Select"
         if panel.runModal() == .OK, let url = panel.url {
             state.setOutputDirectory(url)
+        }
+    }
+
+    private func exportCorrections() {
+        guard let tempURL = state.exportCorrections() else { return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = tempURL.lastPathComponent
+        panel.allowedContentTypes = [.json]
+        if panel.runModal() == .OK, let dest = panel.url {
+            try? FileManager.default.copyItem(at: tempURL, to: dest)
         }
     }
 }
@@ -83,21 +124,27 @@ private struct EnginesSettingsTab: View {
     var body: some View {
         Form {
             Section {
+                if state.hasStoredOpenAIKey {
+                    Label("API key saved in Keychain — OpenAI TTS is active.", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green).font(.callout)
+                }
                 HStack(alignment: .top, spacing: 12) {
-                    SecureField("Paste your key here…", text: $state.openAIAPIKey)
+                    SecureField(state.hasStoredOpenAIKey ? "Enter new key to replace…" : "Paste your key here…",
+                                text: $state.openAIAPIKey)
                         .textFieldStyle(.roundedBorder)
                     Button("Save") { state.saveOpenAIAPIKey() }
                         .buttonStyle(.borderedProminent)
                         .disabled(state.openAIAPIKey.isEmpty)
-                }
-                if state.installedEngines.contains(.openAI) {
-                    Label("Key saved in Keychain — OpenAI TTS is active.", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green).font(.caption)
+                    if state.hasStoredOpenAIKey {
+                        Button("Clear") { state.saveOpenAIAPIKey() }
+                            .foregroundStyle(.red)
+                            .buttonStyle(.borderless)
+                    }
                 }
             } header: {
                 Text("OpenAI TTS")
             } footer: {
-                Text("Your key is stored in Keychain and never sent anywhere except OpenAI's API. Leave blank to deactivate.")
+                Text("Your key is stored in Keychain and never sent anywhere except OpenAI's API. Type a new key and click Save to update, or Clear to remove it.")
                     .foregroundStyle(.secondary)
             }
 
@@ -185,9 +232,21 @@ private struct AboutTab: View {
             Spacer()
 
             VStack(spacing: 10) {
-                Image(systemName: "waveform.and.mic")
-                    .font(.system(size: 52, weight: .thin))
-                    .foregroundStyle(.tint)
+                // Use the real app icon so About, dock, and notifications all match.
+                // Falls back to the SF Symbol when running un-bundled via swift run.
+                if let icon = NSImage(named: NSImage.applicationIconName),
+                   icon.size.width > 32 {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 17))
+                        .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
+                } else {
+                    Image(systemName: "waveform.and.mic")
+                        .font(.system(size: 52, weight: .thin))
+                        .foregroundStyle(.tint)
+                }
 
                 Text("Table Read")
                     .font(.title.weight(.semibold))

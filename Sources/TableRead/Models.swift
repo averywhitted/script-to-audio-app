@@ -248,3 +248,120 @@ enum LogStyle: Equatable {
     case warning
     case error
 }
+
+// MARK: - User-added elements
+
+/// A dialogue/narration line manually inserted by the user after a parsed element.
+/// Stored locally alongside corrections; injected into the generation payload so
+/// the Python backend synthesises them in the right position.
+struct UserAddedElement: Codable, Equatable, Identifiable, Sendable {
+    var id: UUID = UUID()
+    var pdfPath: String
+    var sceneNumber: Int
+    /// `element.text.prefix(60)` of the parsed element this line follows.
+    var afterElementTextKey: String
+    var speaker: String       // empty string = narrator
+    var text: String
+    var kind: String          // "dialog", "stage_direction", "parenthetical"
+    var timestamp: Date
+}
+
+/// Unified element type used in the Review scene expansion —
+/// merges parsed elements with any user-inserted lines.
+enum MergedSceneElement: Identifiable {
+    case parsed(SceneElementSummary)
+    case added(UserAddedElement)
+
+    var id: String {
+        switch self {
+        case .parsed(let e): "p-\(e.id)"
+        case .added(let e):  "a-\(e.id.uuidString)"
+        }
+    }
+}
+
+// MARK: - Parser corrections
+
+/// A user-supplied correction to a single parsed script element.
+///
+/// Corrections are stored locally and optionally contributed anonymously
+/// to help improve the parser for everyone.
+struct ParserCorrection: Codable, Equatable, Sendable {
+    /// Stable identifier: first 60 chars of element text (enough for uniqueness within a scene).
+    var textKey: String
+    var pdfIdentifier: String   // URL path — corrections follow the file
+    var sceneNumber: Int
+    var originalKind: String
+    var originalSpeaker: String?
+    var correctedKind: String?        // nil = keep original
+    var correctedSpeaker: String?     // nil = keep original; "" = narrator (no speaker)
+    var correctedText: String?        // nil = keep original
+    var markedAsNoise: Bool           // true = exclude this element entirely
+    var timestamp: Date
+    var contributed: Bool             // user opted to share this correction
+    var uploaded: Bool = false        // true once successfully POSTed to the corrections endpoint
+}
+
+/// Privacy-safe version of ParserCorrection for upload — no file paths or personal identifiers.
+struct AnonymousCorrection: Encodable, Sendable {
+    var sceneNumber: Int
+    var originalKind: String
+    var originalSpeaker: String?
+    var correctedKind: String?
+    var correctedSpeaker: String?
+    var correctedText: String?
+    var markedAsNoise: Bool
+    var appVersion: String
+}
+
+extension ParserCorrection {
+    func anonymized(appVersion: String) -> AnonymousCorrection {
+        AnonymousCorrection(
+            sceneNumber: sceneNumber,
+            originalKind: originalKind,
+            originalSpeaker: originalSpeaker,
+            correctedKind: correctedKind,
+            correctedSpeaker: correctedSpeaker,
+            correctedText: correctedText,
+            markedAsNoise: markedAsNoise,
+            appVersion: appVersion
+        )
+    }
+}
+
+extension ParserCorrection {
+    /// Key used to look up a correction for a given element.
+    static func key(pdfIdentifier: String, sceneNumber: Int, text: String) -> String {
+        "\(pdfIdentifier)|\(sceneNumber)|\(String(text.prefix(60)))"
+    }
+}
+
+extension ScriptSummary {
+    /// Apply a map of corrections in-place, returning the modified summary.
+    func applying(_ corrections: [String: ParserCorrection], pdfPath: String) -> ScriptSummary {
+        var copy = self
+        copy.scenes = scenes.map { scene in
+            var sc = scene
+            sc.elements = scene.elements.compactMap { el in
+                let k = ParserCorrection.key(
+                    pdfIdentifier: pdfPath,
+                    sceneNumber: scene.number,
+                    text: el.text
+                )
+                guard let fix = corrections[k] else { return el }
+                if fix.markedAsNoise { return nil }
+                var updated = el
+                if let kind = fix.correctedKind { updated.kind = kind }
+                if let speaker = fix.correctedSpeaker {
+                    updated.speaker = speaker.isEmpty ? nil : speaker
+                }
+                if let text = fix.correctedText, !text.isEmpty { updated.text = text }
+                return updated
+            }
+            return sc
+        }
+        // Recount after filtering noise
+        copy.lineCount = copy.scenes.reduce(0) { $0 + $1.elements.count }
+        return copy
+    }
+}

@@ -15,6 +15,7 @@
 		B35C2323B3F6473D8E7416F6 /* TableReadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D155BFB318744F8BE58A6D2 /* TableReadApp.swift */; };
 		C2F9AC94D2DB4A77913EB54F /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5495890743F443FA0E5EA21 /* Views.swift */; };
 		F1E2D3C4B5A691827364A502 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E2D3C4B5A691827364A501 /* AppStateTests.swift */; };
+		D4E5F6A7B8C9D0E1F2A3B4C5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,6 +41,7 @@
 		7D155BFB318744F8BE58A6D2 /* TableReadApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableReadApp.swift; sourceTree = "<group>"; };
 		A5495890743F443FA0E5EA21 /* Views.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views.swift; sourceTree = "<group>"; };
 		F1E2D3C4B5A691827364A501 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +92,7 @@
 				36341DE898134A3FA1CB7889 /* SettingsView.swift */,
 				7D155BFB318744F8BE58A6D2 /* TableReadApp.swift */,
 				A5495890743F443FA0E5EA21 /* Views.swift */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets */,
 				C260B1B4B72E4FC79C5ADFAC /* Info.plist */,
 				C38C67F9E4D042C8BD2A2F2C /* TableRead.entitlements */,
 			);
@@ -112,6 +115,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = BE056FB0196B418083C30C22 /* Build configuration list for PBXNativeTarget "TableRead" */;
 			buildPhases = (
+				A1B2C3D4E5F6A7B8C9D0BEEF /* Copy Python Runtime */,
 				40D8E4CEA7C648D0A583AC8C /* Sources */,
 				F0516A8E6DF442348E020928 /* Frameworks */,
 				C9DAA953F4374EDD943E5C40 /* Resources */,
@@ -183,10 +187,31 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D4E5F6A7B8C9D0E1F2A3B4C5 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A1B2C3D4E5F6A7B8C9D0BEEF /* Copy Python Runtime */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/vendor/python",
+			);
+			name = "Copy Python Runtime";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/python",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "bash \"$SRCROOT/scripts/xcode_copy_python.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		40D8E4CEA7C648D0A583AC8C /* Sources */ = {
@@ -267,7 +292,7 @@
 		7E3EC708A49F43E6868EB178 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSTCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "Sources/TableRead/TableRead.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -285,7 +310,7 @@
 		95C69F6D03244467B94F6B74 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSTCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "Sources/TableRead/TableRead.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;

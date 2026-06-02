@@ -104,6 +104,16 @@ SCENE_NUM_RE = re.compile(r"""^\s*SCENE\s+(?P<num>\d+)\s*$""", re.I)
 INT_EXT_RE = re.compile(r"""^\s*(INT|EXT)\.?\s+(?P<loc>.+)""", re.I)
 ACT_RE = re.compile(r"""^\s*(?:ACT\s+[\dIVX]+|END\s+OF\s+ACT)""", re.I)
 PAGE_FOOTER_RE = re.compile(r"^\s*\d+\.\s*\.?\s*$")
+_DRAFT_DATE_RE = re.compile(
+    r"""^\s*(?:
+        \d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}        # 4/1/19  4.1.19
+      | (?:Rev(?:ision)?\.?\s*)?\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}  # Rev. 4/1/19
+      | Rev(?:ised?|ision)?\.?\s+\w                # Rev. A  Revised  REVISED
+      | DRAFT\s*[-—]?\s*\d                         # DRAFT 1  DRAFT – 2
+      | \d+\s*(?:st|nd|rd|th)\s+DRAFT              # 2nd DRAFT
+    )\s*$""",
+    re.VERBOSE | re.IGNORECASE,
+)
 PARENTHETICAL_RE = re.compile(r"^\s*\(.*\)\s*$")
 CONTD_RE = re.compile(r"\s*\([^)]*CONT['']?D[^)]*\)", re.I)
 
@@ -136,6 +146,7 @@ _NON_CUE_RE = re.compile(
        |PRODUCTION\b|ADVISORY\b|ATTRIBUTION\b
        |COPYRIGHT\b|WARNING\b|DRAMATIS\b|PERSONAE\b
        |PAUSE\b|BEAT\b|WAIT\b|STOP\b  # common stage directions
+       |ALL\b|BOTH\b|TOGETHER\b|EVERYONE\b|ENSEMBLE\b  # collective-speaker markers
        |.*\s+DAYS?\s*$    # time-section headers: "DEPARTURE DAY", "OPENING DAY"
     )""",
     re.VERBOSE | re.IGNORECASE,
@@ -226,15 +237,257 @@ def _undouble_content(s: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Garbled-font decoder for pypdfium2 output
+# ---------------------------------------------------------------------------
+#
+# Some PDFs use a custom font whose ToUnicode CMap is offset by -29.  When
+# pypdfium2 extracts text it reads the wrong codepoints, producing output like
+# ":KDW·V" for "What's" and "DLYLVLRQ·V" for "division's".  The decoding
+# rule is simply: add 29 to each character whose codepoint is in the ranges
+# 58-61 (→ W-Z) or 68-93 (→ a-z).  The anchor characters · (183), ´ (180),
+# and µ (181) represent apostrophe and smart quotes respectively; they never
+# appear in legitimate English screenplay text, so they are reliable markers
+# that a word — and any contiguous run of similarly-decodable words around
+# it — is garbled.
+
+_GFD: Dict[int, str] = {
+    183: "'",        # · → apostrophe
+    180: "‘",   # ´ → ' (left single quote)
+    181: "’",   # µ → ' (right single quote)
+}
+for _cp in list(range(58, 62)) + list(range(68, 94)):
+    _gd = chr(_cp + 29)
+    if _gd.isalpha():
+        _GFD[_cp] = _gd
+
+_GFD_ANCHORS: frozenset = frozenset({183, 180, 181})
+
+
+_VOWELS: frozenset = frozenset("aeiouAEIOU")
+
+# Codepoints 68-70 (D, E, F) decode to 'a', 'b', 'c' via +29 shift.  When
+# one of these opens a garbled word AND the remainder (decoded chars 2+)
+# contains a vowel, the opener came from the regular (non-shifted) font and
+# should be kept verbatim rather than shifted.
+_GFD_AMBIGUOUS_OPENERS: frozenset = frozenset({68, 69, 70})  # D, E, F
+
+
+def _gfd_decode_word(word: str) -> Optional[str]:
+    """Decode a single non-space token. Returns None if any char can't decode."""
+    out: List[str] = []
+    for i, ch in enumerate(word):
+        cp = ord(ch)
+        if cp in _GFD:
+            out.append(_GFD[cp])
+        elif 65 <= cp <= 67:      # A, B, C — stored as literal in this encoding
+            out.append(ch)
+        elif not ch.isalpha():    # punctuation/digits at token boundary
+            out.append(ch)
+        else:
+            return None
+
+    if not out:
+        return "".join(out)
+
+    # Vowel-in-remainder heuristic: if the first source character is one of the
+    # ambiguous openers (D/E/F) and the decoded remainder contains a vowel,
+    # the opener belongs to the regular font — keep it as the original letter.
+    first_cp = ord(word[0])
+    if first_cp in _GFD_AMBIGUOUS_OPENERS and len(out) > 1:
+        remainder = "".join(out[1:])
+        if any(c in _VOWELS for c in remainder):
+            out[0] = word[0]   # restore original uppercase letter
+
+    return "".join(out)
+
+
+def _fix_garbled_pypdfium2(line: str) -> str:
+    """Decode a text line from a PDF whose font has a +29-shifted encoding.
+
+    Splits the line into whitespace-separated tokens, groups consecutive
+    fully-decodable tokens into runs, and decodes any run that contains at
+    least one anchor character (·, ´, µ).  Runs without an anchor are left
+    unchanged, preventing false positives on intentional all-caps words.
+    """
+    # Tokenise, preserving whitespace
+    parts: List[str] = re.split(r"(\s+)", line)
+
+    decoded: List[Optional[str]] = []
+    is_anchor: List[bool] = []
+    for part in parts:
+        if not part or part.isspace():
+            decoded.append(part)      # spaces pass through verbatim
+            is_anchor.append(False)
+        else:
+            decoded.append(_gfd_decode_word(part))
+            is_anchor.append(any(ord(c) in _GFD_ANCHORS for c in part))
+
+    # Walk parts, collecting contiguous decodable-token runs.
+    result: List[str] = list(parts)
+    n = len(parts)
+    i = 0
+    while i < n:
+        p = parts[i]
+        if not p or p.isspace() or decoded[i] is None:
+            i += 1
+            continue
+
+        # Start of a decodable run.  Collect run indices (spaces included as
+        # pass-through items; they don't break the run but must be followed
+        # by another decodable token to be included).
+        run: List[int] = []
+        anchor = False
+        j = i
+        while j < n:
+            if not parts[j] or parts[j].isspace():
+                # Include space only if the next non-empty part is decodable
+                k = j + 1
+                while k < n and (not parts[k] or parts[k].isspace()):
+                    k += 1
+                if k < n and decoded[k] is not None:
+                    run.append(j)   # include the space
+                    j += 1
+                else:
+                    break
+            elif decoded[j] is not None:
+                run.append(j)
+                anchor = anchor or is_anchor[j]
+                j += 1
+            else:
+                break
+
+        if anchor:
+            for k in run:
+                result[k] = decoded[k]  # decoded[k] is the space itself for spaces
+
+        i = j if j > i else i + 1
+
+    return "".join(result)
+
+
+def _cid_density(text: str) -> float:
+    """Return fraction of characters that are (cid:N) artifacts."""
+    total = len(text)
+    if total == 0:
+        return 0.0
+    cid_chars = sum(len(m.group()) for m in re.finditer(r"\(cid:\d+\)", text))
+    return cid_chars / total
+
+
+def _pdf_has_cid_artifacts(pdf_path: str) -> bool:
+    """Return True if any of the first few content pages have heavy CID artifacts."""
+    with pdfplumber.open(pdf_path) as pdf:
+        checked = 0
+        for page in pdf.pages:
+            text = page.extract_text() or ""
+            if len(text) < 100:
+                continue
+            if _cid_density(text) > 0.03:
+                return True
+            checked += 1
+            if checked >= 8:
+                break
+    return False
+
+
+def _extract_layout_pypdfium2(pdf_path: str) -> List[str]:
+    """Layout-preserving extraction via pypdfium2 — fallback for CID-heavy PDFs.
+
+    Reconstructs indentation by using the x-position of each line's first
+    character, calibrated to standard US Letter screenplay margins.
+    """
+    import pypdfium2 as pdfium  # optional dependency — only imported when needed
+
+    LEFT_MARGIN = 54.0   # 0.75-inch left margin in PDF points
+    CHAR_WIDTH  = 7.2    # Courier 12pt character width in PDF points
+
+    out: List[str] = []
+    pdf = pdfium.PdfDocument(pdf_path)
+    for page_idx in range(len(pdf)):
+        page = pdf[page_idx]
+        textpage = page.get_textpage()
+        page_height = page.get_height()
+        n = textpage.count_chars()
+
+        line_chars: List[str] = []
+        line_xs: List[float] = []
+
+        def _flush_line() -> None:
+            if not line_chars:
+                return
+            x_start = min(line_xs)
+            text = _fix_garbled_pypdfium2("".join(line_chars))
+            indent = max(0, round((x_start - LEFT_MARGIN) / CHAR_WIDTH))
+            out.append(" " * indent + text)
+            line_chars.clear()
+            line_xs.clear()
+
+        for i in range(n):
+            box = textpage.get_charbox(i, loose=False)
+            x = box[0]
+            ch = textpage.get_text_range(i, 1)
+            if ch in ("\r", "\n"):
+                _flush_line()
+            else:
+                line_chars.append(ch)
+                line_xs.append(x)
+        _flush_line()
+
+    return out
+
+
 def extract_layout_lines(pdf_path: str) -> List[str]:
     """Return layout-preserving lines (layout=True). Best for heist/screenplay."""
-    out: List[str] = []
+    if _pdf_has_cid_artifacts(pdf_path):
+        try:
+            return _extract_layout_pypdfium2(pdf_path)
+        except Exception:
+            pass  # pypdfium2 unavailable or failed — fall through to pdfplumber
+
+    all_lines: List[str] = []
+    page_sets: List[Set[str]] = []
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             text = page.extract_text(layout=True, x_tolerance=2) or ""
+            pg_set: Set[str] = set()
             for line in text.split("\n"):
-                out.append(_undouble(line))
-    return out
+                undoubled = _undouble(line)
+                all_lines.append(undoubled)
+                s = undoubled.strip()
+                if s:
+                    pg_set.add(s)
+            page_sets.append(pg_set)
+
+    noise = _layout_page_noise(page_sets)
+    if noise:
+        return [l for l in all_lines if l.strip() not in noise]
+    return all_lines
+
+
+def _layout_page_noise(page_sets: List[Set[str]]) -> Set[str]:
+    """Identify running headers/footers that appear on most pages.
+
+    These are typically the script title, draft date, and revision marks
+    that repeat in the header/footer of every page.
+    """
+    if len(page_sets) < 4:
+        return set()
+    total_pages = len(page_sets)
+    threshold = max(4, total_pages * 0.55)
+    noise: Set[str] = set()
+    candidates: Set[str] = set().union(*page_sets)
+    for s in candidates:
+        if len(s) > 100:
+            continue
+        count = sum(1 for pg in page_sets if s in pg)
+        if count < threshold:
+            continue
+        # Single all-caps words are likely frequent speaker names, not headers
+        if re.fullmatch(r"[A-Z][A-Z0-9]{1,24}", s):
+            continue
+        noise.add(s)
+    return noise
 
 
 def _extract_plain_lines(pdf_path: str) -> List[str]:
@@ -245,6 +498,28 @@ def _extract_plain_lines(pdf_path: str) -> List[str]:
 
 def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[str]]]:
     """Return (all_lines, per_page_content_sets) for play parsing + noise detection."""
+    if _pdf_has_cid_artifacts(pdf_path):
+        try:
+            import pypdfium2 as pdfium
+            plain_lines: List[str] = []
+            pypdf_page_sets: List[Set[str]] = []
+            pdf_doc = pdfium.PdfDocument(pdf_path)
+            for page_idx in range(len(pdf_doc)):
+                page = pdf_doc[page_idx]
+                textpage = page.get_textpage()
+                text = textpage.get_text_range()
+                pg_set: Set[str] = set()
+                for line in text.splitlines():
+                    normalized = _fix_garbled_pypdfium2(_undouble(line))
+                    plain_lines.append(normalized)
+                    s = normalized.strip()
+                    if s:
+                        pg_set.add(s)
+                pypdf_page_sets.append(pg_set)
+            return plain_lines, pypdf_page_sets
+        except Exception:
+            pass  # fall through to pdfplumber
+
     all_lines: List[str] = []
     page_sets: List[Set[str]] = []
     with pdfplumber.open(pdf_path) as pdf:
@@ -345,6 +620,47 @@ def _make_zones(overrides: Dict[str, int]) -> Dict[str, int]:
 # ---------------------------------------------------------------------------
 
 
+def _sanitize_characters(script: Script) -> Script:
+    """Post-parse character list hygiene — remove high-confidence false positives.
+
+    Three narrow, low-false-positive checks applied after all parsing is done:
+
+    1. Name matches _NON_CUE_RE — structural / stage-direction word that slipped
+       through (e.g. a format variant not yet covered by the per-parser guards).
+    2. Name equals the script title — play title on the cover page mistaken for
+       a speaker (the "MERCURY FUR" class of bug).
+    3. Character never appears as a dialog speaker in any parsed scene — can
+       happen when _extract_cast picks up a non-speaking character from the
+       DRAMATIS PERSONAE, or when a spurious name was added to known_speakers
+       before scene parsing began.
+
+    This is intentionally narrow. It does NOT apply frequency thresholds or
+    length heuristics; those carry real false-positive risk for edge-case
+    characters (one-line cameos, two-letter names, etc.).
+    """
+    # Collect every name that actually speaks dialog in the parsed scenes.
+    dialog_speakers: Set[str] = set()
+    for sc in script.scenes:
+        for el in sc.elements:
+            if el.kind == "dialog" and el.speaker:
+                dialog_speakers.add(el.speaker)
+
+    title_upper = script.title.strip().upper()
+
+    def _keep(c: Character) -> bool:
+        name = c.name.strip()
+        if _NON_CUE_RE.match(name):
+            return False
+        if name == title_upper:
+            return False
+        if name not in dialog_speakers:
+            return False
+        return True
+
+    script.characters = [c for c in script.characters if _keep(c)]
+    return script
+
+
 def parse_pdf(pdf_path: str) -> Script:
     """Parse a PDF script into a Script object.
 
@@ -362,18 +678,18 @@ def parse_pdf(pdf_path: str) -> Script:
     heist_count = sum(1 for l in plain_lines if _is_heist_scene_header(l))
     if heist_count >= 2:
         layout_lines = extract_layout_lines(pdf_path)
-        return parse_lines(layout_lines, title=title)
+        return _sanitize_characters(parse_lines(layout_lines, title=title))
 
     # Play formats (pattern-based on plain text)
     play_fmt = _detect_play_format(plain_lines)
     if play_fmt == "play":
-        return _parse_play(plain_lines, page_sets, title)
+        return _sanitize_characters(_parse_play(plain_lines, page_sets, title))
     if play_fmt == "colon_play":
-        return _parse_colon_play(plain_lines, page_sets, title)
+        return _sanitize_characters(_parse_colon_play(plain_lines, page_sets, title))
 
     # Fall back to indent-based parsing (scene_n, dash_dialog, heist fallback)
     layout_lines = extract_layout_lines(pdf_path)
-    return parse_lines(layout_lines, title=title)
+    return _sanitize_characters(parse_lines(layout_lines, title=title))
 
 
 def parse_lines(lines: List[str], title: str = "Script") -> Script:
@@ -447,7 +763,7 @@ def parse_lines(lines: List[str], title: str = "Script") -> Script:
         if d not in known_speaker_set and not _looks_like_chorus(d):
             script.characters.append(Character(name=d))
 
-    return script
+    return _sanitize_characters(script)
 
 
 # ---------------------------------------------------------------------------
@@ -499,6 +815,13 @@ def _detect_play_format(plain_lines: List[str]) -> Optional[str]:
     # all-caps document, not a script (scripts need mixed-case dialog).
     all_caps_count = sum(1 for s in content_lines if not re.search(r"[a-z]", s))
     if all_caps_count / total > 0.65:
+        return None
+
+    # Screenplays use INT./EXT. sluglines as scene boundaries — the layout-
+    # based scene_n parser handles these.  If we detect enough sluglines, skip
+    # the play detector so the script falls through to scene_n parsing.
+    int_ext_count = sum(1 for s in content_lines if INT_EXT_RE.match(s))
+    if int_ext_count >= 2:
         return None
 
     # Score: standalone all-caps lines immediately followed by mixed-case text
@@ -640,7 +963,14 @@ def _parse_play(
     script.characters = _extract_cast(plain_lines)
     known_speakers = {c.name for c in script.characters}
 
-    script.scenes = _extract_scenes_play(plain_lines, known_speakers, noise)
+    # Lines that appear ONLY on the first page (title, author, production info).
+    # Used to block title-page content from being parsed as speaker cues.
+    first_page_only: Set[str] = set()
+    if page_sets and len(page_sets) >= 2:
+        later = set().union(*page_sets[1:])
+        first_page_only = page_sets[0] - later
+
+    script.scenes = _extract_scenes_play(plain_lines, known_speakers, noise, first_page_only)
 
     _apply_speaker_normalization(script, known_speakers)
     _discover_new_characters(script, known_speakers)
@@ -648,7 +978,8 @@ def _parse_play(
 
 
 def _extract_scenes_play(
-    lines: List[str], known_speakers: Set[str], noise: Set[str]
+    lines: List[str], known_speakers: Set[str], noise: Set[str],
+    first_page_only: Optional[Set[str]] = None,
 ) -> List[Scene]:
     scenes: List[Scene] = []
     scene_counter = 0
@@ -723,6 +1054,21 @@ def _extract_scenes_play(
                 continue
 
             normalized = _normalize_play_speaker(s)
+
+            # Title-page guard: before the first scene boundary, an all-caps line
+            # that appears ONLY on the first page (not repeated in the script body)
+            # is almost certainly title/author/production info — treat as stage dir.
+            if (
+                scene_counter == 0
+                and normalized not in known_speakers
+                and first_page_only
+                and s in first_page_only
+            ):
+                flush_dialog()
+                current_speaker = None
+                _append_stage_direction(elements, _normalize_text(s))
+                prev_nonempty = s
+                continue
 
             # Guard: if the previous non-empty line ended with a "dangling"
             # function word (article, preposition), the line is an incomplete
@@ -1547,6 +1893,9 @@ def _parse_scene_body(
         if indent >= pn_min and re.fullmatch(r"\s*\d+\.?\.?\s*", raw):
             continue
         if re.search(r'["""].+["""].*\d+\.?\s*$', s) and indent < 25:
+            continue
+        # Draft dates and revision marks that noise detection may have missed
+        if _DRAFT_DATE_RE.match(s):
             continue
         clean.append(raw.rstrip())
 
