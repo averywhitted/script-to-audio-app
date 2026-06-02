@@ -6,24 +6,23 @@
   <title>Table Read — Download</title>
   <meta name="description" content="Table Read converts screenplay PDFs into full-cast audio dramas. Free macOS app. Download now." />
 
-  <!-- Update these two lines each release -->
-  <meta name="version" content="0.1.0" />
-  <meta name="release-date" content="2026" />
-
   <style>
-    /* ── Reset & base ──────────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --accent:       #4f7eff;
-      --accent-dark:  #3a63d8;
-      --bg:           #0a0a0f;
-      --surface:      #111118;
-      --border:       rgba(255,255,255,.08);
-      --text:         #e8e8f0;
-      --muted:        #888898;
-      --radius:       14px;
-      --max-w:        680px;
+      --accent:      #4f7eff;
+      --accent-dark: #3a63d8;
+      --bg:          #0a0a0f;
+      --surface:     #111118;
+      --surface2:    #16161f;
+      --border:      rgba(255,255,255,.08);
+      --text:        #e8e8f0;
+      --muted:       #888898;
+      --warn-bg:     rgba(255,190,50,.07);
+      --warn-border: rgba(255,190,50,.25);
+      --warn-text:   #f0c040;
+      --radius:      14px;
+      --max-w:       680px;
     }
 
     body {
@@ -36,11 +35,14 @@
       align-items: center;
     }
 
-    /* ── Hero ──────────────────────────────────────────────────────────────── */
+    a { color: var(--accent); text-underline-offset: 3px; }
+    a:hover { color: #7faeff; }
+
+    /* ── Hero ── */
     .hero {
       width: 100%;
       max-width: var(--max-w);
-      padding: 80px 24px 48px;
+      padding: 72px 24px 40px;
       text-align: center;
     }
 
@@ -52,195 +54,221 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
       box-shadow: 0 8px 32px rgba(79,126,255,.25), 0 2px 8px rgba(0,0,0,.4);
     }
-
-    .app-icon svg {
-      width: 52px;
-      height: 52px;
-      color: #7faeff;
-    }
+    .app-icon svg { width: 52px; height: 52px; color: #7faeff; }
 
     h1 {
-      font-size: clamp(2rem, 5vw, 2.8rem);
+      font-size: clamp(1.9rem, 5vw, 2.6rem);
       font-weight: 700;
       letter-spacing: -.03em;
       line-height: 1.1;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .tagline {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       color: var(--muted);
-      line-height: 1.55;
-      max-width: 480px;
-      margin: 0 auto 40px;
+      line-height: 1.6;
+      max-width: 460px;
+      margin: 0 auto 36px;
     }
 
-    /* ── Download card ─────────────────────────────────────────────────────── */
+    /* ── Download card ── */
     .download-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 28px 32px;
+      padding: 24px 28px;
       display: flex;
       align-items: center;
       gap: 20px;
       max-width: var(--max-w);
       width: calc(100% - 48px);
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
-    .download-meta {
-      flex: 1;
-      text-align: left;
-    }
-
+    .download-meta { flex: 1; text-align: left; }
     .download-meta .label {
-      font-size: .75rem;
+      font-size: .72rem;
       font-weight: 600;
       letter-spacing: .08em;
       text-transform: uppercase;
       color: var(--accent);
       margin-bottom: 4px;
     }
+    .download-meta .filename { font-size: .95rem; font-weight: 600; margin-bottom: 2px; }
+    .download-meta .details  { font-size: .78rem; color: var(--muted); }
+    .download-meta .details a { color: var(--muted); }
 
-    .download-meta .filename {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 2px;
-    }
-
-    .download-meta .details {
-      font-size: .8rem;
-      color: var(--muted);
-    }
-
-    /* Primary download button */
     .btn-download {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       background: var(--accent);
       color: #fff;
-      font-size: .95rem;
+      font-size: .9rem;
       font-weight: 600;
       text-decoration: none;
-      padding: 12px 22px;
+      padding: 11px 20px;
       border-radius: 10px;
       transition: background .15s, transform .1s, box-shadow .15s;
       white-space: nowrap;
-      box-shadow: 0 4px 16px rgba(79,126,255,.35);
+      box-shadow: 0 4px 16px rgba(79,126,255,.3);
     }
-
-    .btn-download:hover {
-      background: var(--accent-dark);
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(79,126,255,.45);
-    }
-
+    .btn-download:hover { background: var(--accent-dark); transform: translateY(-1px); color: #fff; }
     .btn-download:active { transform: translateY(0); }
+    .btn-download svg { width: 16px; height: 16px; flex-shrink: 0; }
 
-    .btn-download svg { width: 18px; height: 18px; flex-shrink: 0; }
-
-    /* ── System requirements note ──────────────────────────────────────────── */
     .requirements {
-      font-size: .8rem;
+      font-size: .78rem;
       color: var(--muted);
-      margin-bottom: 48px;
+      margin-bottom: 52px;
+    }
+    .requirements span {
+      display: inline-block;
+      margin: 0 6px;
+      opacity: .4;
     }
 
-    /* ── Feature grid ──────────────────────────────────────────────────────── */
-    .features {
+    /* ── Section headings ── */
+    .section {
       width: 100%;
       max-width: var(--max-w);
       padding: 0 24px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 64px;
+      margin-bottom: 52px;
     }
 
-    .feature {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-    }
-
-    .feature-icon {
-      font-size: 1.5rem;
-      margin-bottom: 10px;
-    }
-
-    .feature h3 {
-      font-size: .9rem;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-
-    .feature p {
-      font-size: .82rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    /* ── How it works ──────────────────────────────────────────────────────── */
-    .steps {
-      width: 100%;
-      max-width: var(--max-w);
-      padding: 0 24px;
-      margin-bottom: 64px;
-    }
-
-    .steps h2 {
-      font-size: 1.2rem;
-      font-weight: 600;
-      margin-bottom: 20px;
-      color: var(--muted);
+    .section-label {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .1em;
       text-transform: uppercase;
-      letter-spacing: .06em;
-      font-size: .75rem;
+      color: var(--muted);
+      margin-bottom: 16px;
     }
 
-    .step-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
+    /* ── Install instructions ── */
+    .gatekeeper-note {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
       margin-bottom: 20px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .gatekeeper-note .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .gatekeeper-note p {
+      font-size: .83rem;
+      color: var(--warn-text);
+      line-height: 1.55;
+    }
+    .gatekeeper-note strong { font-weight: 600; }
+
+    /* Tabs */
+    .os-tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .os-tab {
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: none;
+      color: var(--muted);
+      transition: background .12s, color .12s;
+      user-select: none;
+    }
+    .os-tab.active {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: rgba(255,255,255,.15);
+    }
+
+    .os-panel { display: none; }
+    .os-panel.active { display: block; }
+
+    .install-steps { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+
+    .install-steps li {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
     }
 
     .step-num {
-      width: 32px;
-      height: 32px;
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
       background: rgba(79,126,255,.15);
       color: var(--accent);
-      font-size: .85rem;
+      font-size: .78rem;
       font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
-    .step-text h3 { font-size: .95rem; font-weight: 600; margin-bottom: 3px; }
-    .step-text p  { font-size: .83rem; color: var(--muted); line-height: 1.5; }
+    .install-steps .body { font-size: .88rem; line-height: 1.55; color: var(--text); }
+    .install-steps .body .sub { color: var(--muted); font-size: .82rem; margin-top: 3px; }
 
-    /* ── Footer ────────────────────────────────────────────────────────────── */
+    kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 5px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.07);
+      font-family: inherit;
+      font-size: .8em;
+      white-space: nowrap;
+    }
+
+    /* ── Feature grid ── */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .feature {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .feature .fi { font-size: 1.3rem; margin-bottom: 8px; }
+    .feature h3 { font-size: .88rem; font-weight: 600; margin-bottom: 5px; }
+    .feature p  { font-size: .8rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── How it works ── */
+    .step-row { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; }
+    .step-row:last-child { margin-bottom: 0; }
+    .step-circle {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: rgba(79,126,255,.12);
+      color: var(--accent);
+      font-size: .82rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .step-row h3 { font-size: .9rem; font-weight: 600; margin-bottom: 3px; }
+    .step-row p  { font-size: .81rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Footer ── */
     footer {
       width: 100%;
       border-top: 1px solid var(--border);
-      padding: 28px 24px;
+      padding: 24px;
       text-align: center;
       color: var(--muted);
-      font-size: .78rem;
+      font-size: .76rem;
     }
-
-    footer a { color: var(--muted); text-underline-offset: 3px; }
+    footer a { color: var(--muted); }
     footer a:hover { color: var(--text); }
   </style>
 </head>
@@ -249,38 +277,37 @@
   <!-- ── Hero ── -->
   <section class="hero">
     <div class="app-icon" aria-hidden="true">
-      <!-- Waveform icon — swap for a real <img> of your app icon once you have one -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round">
         <path d="M2 12h2m4-6v12m4-9v6m4-9v12m4-3h2"/>
       </svg>
     </div>
-
     <h1>Table Read</h1>
     <p class="tagline">
-      Turn any screenplay PDF into a full-cast audio drama — every character voiced differently,
-      scene by scene. Free, private, runs entirely on your Mac.
+      Turn any screenplay PDF into a full-cast audio drama — every character
+      voiced differently, scene by scene. Free. Runs entirely on your Mac.
     </p>
   </section>
 
-  <!-- ── Download card ── -->
-  <!--
-    RELEASE CHECKLIST — update before each release:
-      1. Update href to the new DMG filename / URL
-      2. Update the version number in .filename
-      3. Update the file size in .details
-      4. Update the SHA-256 checksum href (point to your .sha256 file)
+  <!-- ── Download card ──
+       UPDATE THESE for each release:
+         • href on .btn-download → new DMG filename/URL
+         • .filename text
+         • .details file size
+         • SHA-256 href
   -->
   <div class="download-card">
     <div class="download-meta">
       <div class="label">Latest Release</div>
       <div class="filename">TableRead-0.1.0.dmg</div>
       <div class="details">
-        macOS 14 Ventura or later &nbsp;·&nbsp; Apple Silicon &amp; Intel
-        &nbsp;·&nbsp; <a href="TableRead-0.1.0.sha256" style="color:var(--muted);text-underline-offset:3px">SHA-256</a>
+        macOS 14 or later &nbsp;·&nbsp; Apple Silicon &amp; Intel
+        &nbsp;·&nbsp; <a href="TableRead-0.1.0.sha256">SHA-256</a>
       </div>
     </div>
     <a class="btn-download" href="TableRead-0.1.0.dmg" download>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 3v12m0 0l-4-4m4 4l4-4M3 18h18"/>
       </svg>
       Download
@@ -288,75 +315,205 @@
   </div>
 
   <p class="requirements">
-    Free for personal use &nbsp;·&nbsp; No account required &nbsp;·&nbsp; Signed &amp; notarized by Apple
+    Free for personal use <span>·</span>
+    No account required <span>·</span>
+    macOS 14 Sonoma or later
   </p>
 
+  <!-- ── Installation Instructions ── -->
+  <div class="section">
+    <div class="section-label">Installation</div>
+
+    <div class="gatekeeper-note">
+      <div class="icon">⚠️</div>
+      <p>
+        <strong>First-time Gatekeeper prompt.</strong>
+        Because Table Read is distributed outside the Mac App Store,
+        macOS will block it the first time you try to open it.
+        This is normal for indie apps — follow the steps below to allow it.
+        You'll only need to do this once.
+      </p>
+    </div>
+
+    <!-- OS version tabs -->
+    <div class="os-tabs" role="tablist">
+      <button class="os-tab active" role="tab" onclick="showTab('seq')"  id="tab-seq">macOS 15 Sequoia</button>
+      <button class="os-tab"        role="tab" onclick="showTab('son')"  id="tab-son">macOS 14 Sonoma</button>
+      <button class="os-tab"        role="tab" onclick="showTab('ven')"  id="tab-ven">macOS 13 Ventura</button>
+    </div>
+
+    <!-- Sequoia -->
+    <div class="os-panel active" id="panel-seq">
+      <ol class="install-steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="body">
+            Open the downloaded <kbd>TableRead-0.1.0.dmg</kbd> file.
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="body">
+            Drag <strong>Table Read</strong> into the <strong>Applications</strong> folder shortcut in the window.
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="body">
+            Open <strong>Applications</strong> in Finder and double-click <strong>Table Read</strong>.
+            <div class="sub">macOS will show: <em>"Table Read cannot be opened because it is from an unidentified developer."</em> Click <strong>Done</strong> to dismiss it for now.</div>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="body">
+            Open <strong>System Settings</strong> → <strong>Privacy &amp; Security</strong>.
+            Scroll down until you see a message about Table Read being blocked.
+            Click <strong>Open Anyway</strong>.
+          </div>
+        </li>
+        <li>
+          <div class="step-num">5</div>
+          <div class="body">
+            Enter your Mac password or use Touch ID to confirm.
+            Table Read will open — and won't ask again.
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <!-- Sonoma -->
+    <div class="os-panel" id="panel-son">
+      <ol class="install-steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="body">Open the downloaded <kbd>TableRead-0.1.0.dmg</kbd> file.</div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="body">Drag <strong>Table Read</strong> into the <strong>Applications</strong> folder.</div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="body">
+            Open <strong>Applications</strong> and double-click <strong>Table Read</strong>.
+            <div class="sub">You'll see a block dialog. Click <strong>Done</strong>.</div>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="body">
+            Open <strong>System Settings</strong> → <strong>Privacy &amp; Security</strong>.
+            Scroll to the bottom and click <strong>Open Anyway</strong> next to the Table Read message.
+          </div>
+        </li>
+        <li>
+          <div class="step-num">5</div>
+          <div class="body">Authenticate and click <strong>Open Anyway</strong> again in the confirmation sheet. Done.</div>
+        </li>
+      </ol>
+    </div>
+
+    <!-- Ventura -->
+    <div class="os-panel" id="panel-ven">
+      <ol class="install-steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="body">Open the downloaded <kbd>TableRead-0.1.0.dmg</kbd> file.</div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="body">Drag <strong>Table Read</strong> into the <strong>Applications</strong> folder.</div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="body">
+            In <strong>Applications</strong>, <strong>right-click</strong> (or Control-click) Table Read and choose <strong>Open</strong>.
+            <div class="sub">This is different from double-clicking — right-click is important the first time.</div>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="body">In the dialog that appears, click <strong>Open</strong>. Table Read will launch and won't ask again.</div>
+        </li>
+      </ol>
+    </div>
+  </div>
+
   <!-- ── Features ── -->
-  <div class="features">
-    <div class="feature">
-      <div class="feature-icon">🎭</div>
-      <h3>Full-Cast Voices</h3>
-      <p>Every character gets a unique voice — macOS system voices included, Kokoro and OpenAI TTS optional.</p>
-    </div>
-    <div class="feature">
-      <div class="feature-icon">📄</div>
-      <h3>PDF-to-Audio</h3>
-      <p>Drop in any standard screenplay PDF. Table Read parses dialog, scenes, and stage directions automatically.</p>
-    </div>
-    <div class="feature">
-      <div class="feature-icon">✏️</div>
-      <h3>Editable Parse</h3>
-      <p>Review every line, fix mis-attributed dialog, rename speakers, and remove noise — corrections are remembered.</p>
-    </div>
-    <div class="feature">
-      <div class="feature-icon">🔒</div>
-      <h3>Fully Offline</h3>
-      <p>Runs 100% on your Mac. No data leaves your machine unless you choose to use OpenAI voices.</p>
+  <div class="section">
+    <div class="section-label">What it does</div>
+    <div class="features">
+      <div class="feature">
+        <div class="fi">🎭</div>
+        <h3>Full cast of voices</h3>
+        <p>Every character gets a unique voice. macOS system voices are built in. Kokoro (free, local) and OpenAI TTS are optional upgrades.</p>
+      </div>
+      <div class="feature">
+        <div class="fi">📄</div>
+        <h3>PDF to audio</h3>
+        <p>Drop in any standard screenplay or play PDF. Table Read parses dialog, scenes, and stage directions automatically.</p>
+      </div>
+      <div class="feature">
+        <div class="fi">✏️</div>
+        <h3>Editable parse</h3>
+        <p>Review every line, fix mis-attributed dialog, rename speakers, or remove noise. Corrections are saved and re-applied next time.</p>
+      </div>
+      <div class="feature">
+        <div class="fi">🔒</div>
+        <h3>Fully private</h3>
+        <p>Runs 100% on your Mac. Nothing leaves your machine unless you choose to use OpenAI voices.</p>
+      </div>
     </div>
   </div>
 
   <!-- ── How it works ── -->
-  <div class="steps">
-    <h2>How it works</h2>
-
+  <div class="section">
+    <div class="section-label">How it works</div>
     <div class="step-row">
-      <div class="step-num">1</div>
-      <div class="step-text">
+      <div class="step-circle">1</div>
+      <div>
         <h3>Import a script PDF</h3>
         <p>Click "Choose PDF" or drag a file in. Table Read parses all characters, dialog, and scenes in seconds.</p>
       </div>
     </div>
     <div class="step-row">
-      <div class="step-num">2</div>
-      <div class="step-text">
+      <div class="step-circle">2</div>
+      <div>
         <h3>Review &amp; correct</h3>
         <p>Inspect every line. Fix any mis-attributed dialog or mark lines as noise. Corrections persist across re-imports.</p>
       </div>
     </div>
     <div class="step-row">
-      <div class="step-num">3</div>
-      <div class="step-text">
+      <div class="step-circle">3</div>
+      <div>
         <h3>Cast your voices</h3>
         <p>Assign a voice to each character. Install Kokoro (free, local) or connect OpenAI for the most natural results.</p>
       </div>
     </div>
     <div class="step-row">
-      <div class="step-num">4</div>
-      <div class="step-text">
+      <div class="step-circle">4</div>
+      <div>
         <h3>Generate audio</h3>
-        <p>Select scenes and hit Generate. Each scene becomes a standalone .m4a — ready for playback or editing.</p>
+        <p>Select scenes and hit Generate. Each scene becomes a standalone .m4a file ready for playback or editing.</p>
       </div>
     </div>
   </div>
 
   <!-- ── Footer ── -->
   <footer>
-    <p>
-      Table Read is free for personal use. Not for commercial redistribution.
-      &nbsp;·&nbsp; &copy; 2026 Avery Whitted
-      &nbsp;·&nbsp; <a href="https://github.com/averywhitted" target="_blank" rel="noopener">GitHub</a>
-    </p>
+    Table Read is free for personal use. Not for commercial redistribution.
+    &nbsp;·&nbsp; &copy; 2026 Avery Whitted
+    &nbsp;·&nbsp; <a href="https://github.com/averywhitted/script-to-audio-app" target="_blank" rel="noopener">Source on GitHub</a>
   </footer>
 
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.os-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.os-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.add('active');
+      document.getElementById('panel-' + id).classList.add('active');
+    }
+  </script>
 </body>
 </html>
