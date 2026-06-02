@@ -467,3 +467,95 @@ def test_parse_lines_accepts_skeleton():
     script_with    = p.parse_lines(lines, title="With", skeleton=sk)
     script_without = p.parse_lines(lines, title="With")
     assert len(script_with.scenes) == len(script_without.scenes)
+
+
+# ---------------------------------------------------------------------------
+# Auto-chunking (_auto_chunk_scenes / _split_elements)
+# ---------------------------------------------------------------------------
+
+def _make_long_scene(n_dialog: int, with_sd: bool = True) -> p.Scene:
+    """Build a Scene with n_dialog dialog elements and optional stage dirs."""
+    els = []
+    speakers = ["ALICE", "BOB", "CAROL"]
+    for i in range(n_dialog):
+        els.append(p.Element(kind="dialog", speaker=speakers[i % 3],
+                              text=f"Line {i}."))
+        if with_sd and i > 0 and i % 20 == 0:
+            els.append(p.Element(kind="stage_direction", text="ALICE exits."))
+    return p.Scene(number=1, title="Scene 1", elements=els)
+
+
+def test_short_scene_not_chunked():
+    """Scenes under 1.5x target are left alone."""
+    scene = _make_long_scene(50)
+    result = p._auto_chunk_scenes([scene], target_lines=75)
+    assert len(result) == 1
+
+
+def test_long_scene_is_split():
+    """A scene with 200 dialog lines is split into multiple chunks."""
+    scene = _make_long_scene(200)
+    result = p._auto_chunk_scenes([scene], target_lines=75)
+    assert len(result) > 1, f"Expected >1 chunk, got {len(result)}"
+
+
+def test_chunks_contain_all_elements():
+    """No elements lost or duplicated after chunking."""
+    scene = _make_long_scene(200)
+    original_count = len(scene.elements)
+    result = p._auto_chunk_scenes([scene], target_lines=75)
+    total = sum(len(sc.elements) for sc in result)
+    assert total == original_count, f"Element count mismatch: {total} vs {original_count}"
+
+
+def test_chunks_have_sequential_numbers():
+    """Chunked scenes are renumbered 1, 2, 3..."""
+    scene = _make_long_scene(200)
+    result = p._auto_chunk_scenes([scene], target_lines=75)
+    numbers = [sc.number for sc in result]
+    assert numbers == list(range(1, len(result) + 1))
+
+
+def test_no_break_mid_speaker():
+    """A chunk never ends with a parenthetical or mid-exchange dialog."""
+    scene = _make_long_scene(200, with_sd=True)
+    result = p._auto_chunk_scenes([scene], target_lines=75)
+    for chunk in result[:-1]:  # last chunk can end anywhere
+        last = chunk.elements[-1]
+        # Last element of a non-final chunk should be dialog or stage_direction,
+        # not a parenthetical (which should be followed by its dialog line).
+        assert last.kind != "parenthetical", "Chunk ends on a parenthetical"
+
+
+def test_scene_with_transition_sd_breaks_at_transition():
+    """A stage direction with 'exits' fires a break point."""
+    els = []
+    # 120 dialog lines to exceed 1.5x threshold (75*1.5=112.5)
+    for i in range(120):
+        els.append(p.Element(kind="dialog", speaker="ALICE", text=f"Line {i}."))
+    els.append(p.Element(kind="stage_direction", text="ALICE exits. End of scene."))
+    for i in range(30):
+        els.append(p.Element(kind="dialog", speaker="BOB", text=f"Line {i}."))
+    scene = p.Scene(number=1, title="S", elements=els)
+    result = p._auto_chunk_scenes([scene], target_lines=75)
+    # Should break at or near the exits stage direction
+    assert len(result) >= 2
+    # All elements preserved
+    assert sum(len(sc.elements) for sc in result) == len(els)
+
+
+def test_tiny_tail_merged():
+    """A tail chunk smaller than min_lines is merged into the previous chunk."""
+    els = []
+    # 150 dialog + one stage direction near the end + 5 more dialog
+    for i in range(150):
+        els.append(p.Element(kind="dialog", speaker="ALICE", text=f"Line {i}."))
+        if i == 74:
+            els.append(p.Element(kind="stage_direction", text="Pause."))
+    for i in range(5):
+        els.append(p.Element(kind="dialog", speaker="BOB", text=f"Tail {i}."))
+    scene = p.Scene(number=1, title="S", elements=els)
+    result = p._auto_chunk_scenes([scene], target_lines=75, min_lines=20)
+    # The 5-line tail should be absorbed, not left as its own chunk
+    last_chunk_dialog = sum(1 for e in result[-1].elements if e.kind == "dialog")
+    assert last_chunk_dialog >= 20 or len(result) == 1

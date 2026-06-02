@@ -677,6 +677,125 @@ def _make_zones(overrides: Dict[str, int]) -> Dict[str, int]:
 
 
 # ---------------------------------------------------------------------------
+# Auto-chunking for scene-less scripts
+# ---------------------------------------------------------------------------
+
+# Stage-direction text that strongly signals a scene/location transition.
+_SCENE_CHANGE_SD_RE = re.compile(
+    r"\b(exit|exits|exiting|enter|enters|entering|"
+    r"lights?\s+(?:up|down|out|fade|change|shift)|"
+    r"blackout|fade\s+(?:to|out|in)|"
+    r"(?:the\s+)?(?:next|following)\s+(?:day|morning|night|afternoon|evening)|"
+    r"(?:an?|one|two|several|many)\s+(?:hour|day|week|month|year)s?\s+later|"
+    r"later\b|meanwhile\b|elsewhere\b)\b",
+    re.IGNORECASE,
+)
+
+# Target and minimum dialog-line counts per auto-chunk.
+_CHUNK_TARGET_LINES = 75
+_CHUNK_MIN_LINES    = 20
+
+
+def _auto_chunk_scenes(
+    scenes: List[Scene],
+    target_lines: int = _CHUNK_TARGET_LINES,
+    min_lines: int    = _CHUNK_MIN_LINES,
+) -> List[Scene]:
+    """Split over-long scenes at logical break points.
+
+    Called when a script has no (or very few) explicit scene boundaries,
+    resulting in a single enormous scene.  Splits it into chunks of roughly
+    *target_lines* dialog lines, always breaking *between* elements so no
+    line is ever cut mid-speech.
+
+    Break-point priority:
+      1. Stage direction that mentions a location/time transition (strongest)
+      2. Any stage direction (natural pause in the action)
+      3. Speaker change when we are significantly over the target (last resort)
+
+    Chunks smaller than *min_lines* are merged into the previous chunk rather
+    than left as tiny orphans.
+    """
+    result: List[Scene] = []
+    for scene in scenes:
+        dialog_count = sum(1 for e in scene.elements if e.kind == "dialog")
+        # Only chunk scenes that are substantially over the target.
+        if dialog_count <= target_lines * 1.5:
+            result.append(scene)
+            continue
+
+        chunks = _split_elements(scene.elements, target_lines, min_lines)
+        base_title = scene.title
+        for idx, chunk_els in enumerate(chunks):
+            num   = len(result) + 1
+            title = base_title if idx == 0 else f"{base_title} (part {idx + 1})"
+            result.append(Scene(number=num, title=title, elements=chunk_els))
+
+    # Re-number sequentially so scene numbers stay contiguous.
+    for i, sc in enumerate(result):
+        sc.number = i + 1
+    return result
+
+
+def _split_elements(
+    elements: List[Element],
+    target: int,
+    min_lines: int,
+) -> List[List[Element]]:
+    """Core splitting logic — returns a list of element-lists (chunks)."""
+    chunks: List[List[Element]] = []
+    current: List[Element] = []
+    dialog_count = 0
+    n = len(elements)
+
+    for i, el in enumerate(elements):
+        current.append(el)
+        if el.kind == "dialog":
+            dialog_count += 1
+
+        if dialog_count < target:
+            continue
+
+        # We have reached the target.  Look for a break point.
+
+        # Priority 1 — stage direction with a transition signal.
+        if el.kind == "stage_direction" and _SCENE_CHANGE_SD_RE.search(el.text):
+            chunks.append(current[:])
+            current = []
+            dialog_count = 0
+            continue
+
+        # Priority 2 — any stage direction (weaker natural pause).
+        if el.kind == "stage_direction" and dialog_count >= target:
+            chunks.append(current[:])
+            current = []
+            dialog_count = 0
+            continue
+
+        # Priority 3 — speaker change when heavily over target.
+        if dialog_count >= target * 2 and el.kind == "dialog":
+            next_el = elements[i + 1] if i + 1 < n else None
+            # Break after this line if the next element is a different speaker
+            # or a stage direction — avoid splitting mid-exchange.
+            if next_el is None or next_el.kind == "stage_direction" or (
+                next_el.kind == "dialog" and next_el.speaker != el.speaker
+            ):
+                chunks.append(current[:])
+                current = []
+                dialog_count = 0
+
+    # Handle any remaining elements.
+    if current:
+        if chunks and dialog_count < min_lines:
+            # Merge tiny tail into the last chunk rather than making an orphan.
+            chunks[-1].extend(current)
+        else:
+            chunks.append(current)
+
+    return chunks or [elements]
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -859,6 +978,15 @@ def _sanitize_characters(script: Script) -> Script:
     return script
 
 
+def _finalise(script: Script) -> Script:
+    """Apply post-parse finishing passes in order:
+      1. Auto-chunk over-long scenes that have no structural boundaries.
+      2. Sanitize the character list.
+    """
+    script.scenes = _auto_chunk_scenes(script.scenes)
+    return _sanitize_characters(script)
+
+
 def parse_pdf(pdf_path: str) -> Script:
     """Parse a PDF script into a Script object.
 
@@ -882,23 +1010,23 @@ def parse_pdf(pdf_path: str) -> Script:
     if skeleton.heist_count >= 2:
         layout_lines = extract_layout_lines(pdf_path)
         layout_skeleton = _build_skeleton(layout_lines, page_sets)
-        return _sanitize_characters(parse_lines(layout_lines, title=title,
-                                                skeleton=layout_skeleton))
+        return _finalise(parse_lines(layout_lines, title=title,
+                                     skeleton=layout_skeleton))
 
     # Play formats — skeleton replaces raw line rescanning in format detection.
     play_fmt = _detect_play_format(plain_lines, skeleton=skeleton)
     if play_fmt == "play":
-        return _sanitize_characters(_parse_play(plain_lines, page_sets, title,
-                                                skeleton=skeleton))
+        return _finalise(_parse_play(plain_lines, page_sets, title,
+                                     skeleton=skeleton))
     if play_fmt == "colon_play":
-        return _sanitize_characters(_parse_colon_play(plain_lines, page_sets, title,
-                                                      skeleton=skeleton))
+        return _finalise(_parse_colon_play(plain_lines, page_sets, title,
+                                           skeleton=skeleton))
 
     # Indent-based fallback (scene_n, dash_dialog, heist fallback).
     layout_lines = extract_layout_lines(pdf_path)
     layout_skeleton = _build_skeleton(layout_lines, page_sets)
-    return _sanitize_characters(parse_lines(layout_lines, title=title,
-                                            skeleton=layout_skeleton))
+    return _finalise(parse_lines(layout_lines, title=title,
+                                 skeleton=layout_skeleton))
 
 
 def parse_lines(
@@ -984,7 +1112,7 @@ def parse_lines(
         if d not in known_speaker_set and not _looks_like_chorus(d):
             script.characters.append(Character(name=d))
 
-    return _sanitize_characters(script)
+    return _finalise(script)
 
 
 # ---------------------------------------------------------------------------
