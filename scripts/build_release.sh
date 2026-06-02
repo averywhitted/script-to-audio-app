@@ -55,7 +55,7 @@ ARCHIVE_PATH="$BUILD_DIR/TableRead.xcarchive"
 APP_PATH="$BUILD_DIR/TableRead.app"
 VERSION="$(defaults read "$REPO_ROOT/Sources/TableRead/Info.plist" \
     CFBundleShortVersionString 2>/dev/null || echo "0.1.0")"
-DMG_NAME="TableRead-$VERSION.dmg"
+DMG_NAME="TableRead.dmg"
 DMG_PATH="$BUILD_DIR/$DMG_NAME"
 
 # ── COLOURS ──────────────────────────────────────────────────────────────────
@@ -253,7 +253,7 @@ fi
 
 # ── CHECKSUM ─────────────────────────────────────────────────────────────────
 step "Generating checksum"
-CHECKSUM_FILE="$BUILD_DIR/${DMG_NAME%.dmg}.sha256"
+CHECKSUM_FILE="$BUILD_DIR/TableRead.sha256"
 shasum -a 256 "$DMG_PATH" | tee "$CHECKSUM_FILE"
 ok "Checksum: $CHECKSUM_FILE"
 

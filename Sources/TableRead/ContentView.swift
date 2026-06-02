@@ -135,8 +135,15 @@ private struct WorkflowStepBar: View {
 
             Spacer()
 
-            // Right anchor: settings gear
+            // Right anchor: beta badge + settings gear
             HStack(spacing: 10) {
+                Text("BETA")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(.secondary.opacity(0.12), in: Capsule())
+
                 Button { openSettings() } label: {
                     Image(systemName: "gear")
                         .font(.system(size: 13))
