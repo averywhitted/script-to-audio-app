@@ -36,6 +36,10 @@ final class AppState: ObservableObject {
     @Published var voiceAssignment: [String: String] = [:]   // char name → voice id
     @Published var isFetchingVoices = false
 
+    // OpenAI key validation state
+    enum OpenAIKeyStatus { case idle, checking, valid, invalid(String) }
+    @Published var openAIKeyStatus: OpenAIKeyStatus = .idle
+
     // Engine installation
     @Published var installLog: [GenerationLogLine] = []
     @Published var installingEngine: EngineKind? = nil
@@ -312,6 +316,7 @@ final class AppState: ObservableObject {
         guard !trimmed.isEmpty else {
             installedEngines.remove(.openAI)
             hasStoredOpenAIKey = false
+            openAIKeyStatus = .idle
             UserDefaults.standard.removeObject(forKey: "openAIKeyStored")
             KeychainHelper.delete(key: "openai_api_key")
             openAIAPIKey = ""
@@ -323,9 +328,54 @@ final class AppState: ObservableObject {
         hasStoredOpenAIKey = true
         UserDefaults.standard.set(true, forKey: "openAIKeyStored")
         KeychainHelper.write(key: "openai_api_key", value: trimmed)
-        status = "OpenAI TTS is ready for estimates."
-        fetchVoices()
-        refreshOpenAIEstimate()
+        status = "Checking OpenAI API key…"
+        Task { await validateOpenAIKey(trimmed) }
+    }
+
+    /// Validate an OpenAI API key by calling the lightweight /v1/models endpoint.
+    /// Updates openAIKeyStatus on the main actor when done.
+    func validateOpenAIKey(_ key: String) async {
+        openAIKeyStatus = .checking
+        guard var request = makeOpenAIRequest(path: "/v1/models", key: key) else {
+            openAIKeyStatus = .invalid("Malformed key")
+            status = "OpenAI key looks malformed."
+            return
+        }
+        request.httpMethod = "GET"
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            switch code {
+            case 200:
+                openAIKeyStatus = .valid
+                status = "OpenAI API key verified ✓"
+                fetchVoices()
+                refreshOpenAIEstimate()
+            case 401:
+                openAIKeyStatus = .invalid("Invalid key (401 Unauthorized)")
+                status = "OpenAI key rejected — check for typos."
+            case 429:
+                // Rate-limited, but the key itself exists — treat as valid.
+                openAIKeyStatus = .valid
+                status = "OpenAI API key verified ✓ (rate-limited)"
+                fetchVoices()
+                refreshOpenAIEstimate()
+            default:
+                openAIKeyStatus = .invalid("Unexpected response (HTTP \(code))")
+                status = "OpenAI preflight returned HTTP \(code)."
+            }
+        } catch {
+            // Network error — don't mark key invalid, just note the failure.
+            openAIKeyStatus = .invalid("Network error: \(error.localizedDescription)")
+            status = "Could not reach OpenAI to validate key."
+        }
+    }
+
+    private func makeOpenAIRequest(path: String, key: String) -> URLRequest? {
+        guard let url = URL(string: "https://api.openai.com\(path)") else { return nil }
+        var req = URLRequest(url: url, timeoutInterval: 10)
+        req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        return req
     }
 
     // MARK: - Engine installation
@@ -493,6 +543,11 @@ final class AppState: ObservableObject {
         }
         guard installedEngines.contains(selectedEngine) else {
             errorMessage = "\(selectedEngine.title) is not installed. Go back to Voices to download it."
+            return
+        }
+        // OpenAI preflight: block generation if the key was explicitly rejected.
+        if selectedEngine == .openAI, case .invalid(let reason) = openAIKeyStatus {
+            errorMessage = "OpenAI key is invalid: \(reason). Update it in Settings → Engines."
             return
         }
 

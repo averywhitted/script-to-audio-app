@@ -124,10 +124,7 @@ private struct EnginesSettingsTab: View {
     var body: some View {
         Form {
             Section {
-                if state.hasStoredOpenAIKey {
-                    Label("API key saved in Keychain — OpenAI TTS is active.", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green).font(.callout)
-                }
+                OpenAIKeyStatusBadge()
                 HStack(alignment: .top, spacing: 12) {
                     SecureField(state.hasStoredOpenAIKey ? "Enter new key to replace…" : "Paste your key here…",
                                 text: $state.openAIAPIKey)
@@ -161,6 +158,35 @@ private struct EnginesSettingsTab: View {
         }
         .formStyle(.grouped)
         .padding()
+    }
+}
+
+// MARK: - OpenAI key status badge
+
+private struct OpenAIKeyStatusBadge: View {
+    @EnvironmentObject private var state: AppState
+
+    var body: some View {
+        switch state.openAIKeyStatus {
+        case .idle:
+            if state.hasStoredOpenAIKey {
+                Label("API key saved in Keychain", systemImage: "key.fill")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        case .checking:
+            Label("Checking key…", systemImage: "arrow.trianglehead.2.clockwise")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        case .valid:
+            Label("API key verified — OpenAI TTS is active", systemImage: "checkmark.circle.fill")
+                .font(.callout)
+                .foregroundStyle(.green)
+        case .invalid(let reason):
+            Label(reason, systemImage: "xmark.circle.fill")
+                .font(.callout)
+                .foregroundStyle(.red)
+        }
     }
 }
 
