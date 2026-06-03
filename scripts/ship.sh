@@ -65,7 +65,7 @@ gh release create "v$VERSION" \
     "build/TableRead.sha256#TableRead.sha256" \
     --title "Table Read Beta v$VERSION" \
     --notes "See [installation instructions](https://averywhitted.com/table-read.html) for the one-time Gatekeeper bypass steps." \
-    --prerelease
+    --latest
 
 echo ""
 echo -e "${GREEN}════════════════════════════════════════════${NC}"
