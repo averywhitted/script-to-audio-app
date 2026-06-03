@@ -307,6 +307,7 @@ struct AnonymousCorrection: Encodable, Sendable {
     var sceneNumber: Int
     var originalKind: String
     var originalSpeaker: String?
+    var originalText: String        // first 60 chars of the original element text
     var correctedKind: String?
     var correctedSpeaker: String?
     var correctedText: String?
@@ -316,10 +317,13 @@ struct AnonymousCorrection: Encodable, Sendable {
 
 extension ParserCorrection {
     func anonymized(appVersion: String) -> AnonymousCorrection {
-        AnonymousCorrection(
+        // textKey format: "pdfPath|sceneNumber|originalText(60chars)"
+        let originalText = textKey.components(separatedBy: "|").last ?? ""
+        return AnonymousCorrection(
             sceneNumber: sceneNumber,
             originalKind: originalKind,
             originalSpeaker: originalSpeaker,
+            originalText: originalText,
             correctedKind: correctedKind,
             correctedSpeaker: correctedSpeaker,
             correctedText: correctedText,

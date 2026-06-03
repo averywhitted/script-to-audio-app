@@ -128,16 +128,22 @@ private struct GeneralSettingsTab: View {
     private func contributeCorrections() {
         contributionState = .sending
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
-        let payload  = state.corrections.values.map { $0.anonymized(appVersion: version) }
-        let encoder  = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        guard let json = try? encoder.encode(payload),
-              let jsonString = String(data: json, encoding: .utf8) else {
-            contributionState = .failed; return
-        }
+        let payload = state.corrections.values.map { $0.anonymized(appVersion: version) }
+        let text = payload.map { c in
+            """
+            Scene \(c.sceneNumber) · \(c.originalKind)\(c.originalSpeaker.map { " (\($0))" } ?? "")
+            Original:  \(c.originalText)
+            \(c.correctedText.map    { "Text fix:  \($0)" } ?? "")
+            \(c.correctedKind.map    { "Kind fix:  \($0)" } ?? "")
+            \(c.correctedSpeaker.map { "Speaker:   \($0.isEmpty ? "(narrator)" : $0)" } ?? "")
+            \(c.markedAsNoise        ? "Removed:   yes" : "")
+            """
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .joined(separator: "\n")
+        }.joined(separator: "\n\n---\n\n")
         EmailReporter.send(
-            subject: "Table Read Parser Corrections v\(version)",
-            text: jsonString
+            subject: "Table Read Parser Corrections v\(version) (\(payload.count) correction\(payload.count == 1 ? "" : "s"))",
+            text: text
         ) { [self] result in
             DispatchQueue.main.async {
                 switch result {
