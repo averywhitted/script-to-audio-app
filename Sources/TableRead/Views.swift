@@ -1,5 +1,7 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#endif
 
 // Stable hue per speaker name — shared by Review and Cast tabs.
 private func speakerColor(_ speaker: String) -> Color {
@@ -864,6 +866,7 @@ struct GenerateView: View {
     // MARK: Output folder picker
 
     private func chooseOutputFolder() {
+        #if os(macOS)
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -874,6 +877,7 @@ struct GenerateView: View {
         if panel.runModal() == .OK, let url = panel.url {
             state.setOutputDirectory(url)
         }
+        #endif
     }
 
     // MARK: Status strip
@@ -1042,7 +1046,11 @@ struct GenerateView: View {
             HStack(spacing: 10) {
                 Button {
                     if let dir = state.outputDirectory {
+                        #if os(macOS)
                         NSWorkspace.shared.open(dir)
+                        #else
+                        UIApplication.shared.open(dir)
+                        #endif
                     }
                 } label: {
                     Label("Open Output Folder", systemImage: "folder")
@@ -1131,7 +1139,11 @@ private struct GenerationCompletePanel: View {
                 VStack(spacing: 10) {
                     if let dir = outputDir {
                         Button {
+                            #if os(macOS)
                             NSWorkspace.shared.open(dir)
+                            #else
+                            UIApplication.shared.open(dir)
+                            #endif
                         } label: {
                             Label("Open Output in Finder", systemImage: "folder.fill")
                                 .frame(minWidth: 260)
@@ -1278,10 +1290,13 @@ private struct ResizableDivider: View {
     var range: ClosedRange<CGFloat>
 
     var body: some View {
-        // NSViewRepresentable backing makes the cursor change reliable on macOS
+        #if os(macOS)
         ResizeCursorHost()
             .frame(width: 8)
             .overlay(Divider())
+        #else
+        Divider().frame(width: 8)
+        #endif
             .contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 1).onChanged { value in
                 width = max(range.lowerBound, min(range.upperBound, width - value.translation.width))
@@ -1289,6 +1304,7 @@ private struct ResizableDivider: View {
     }
 }
 
+#if os(macOS)
 private struct ResizeCursorHost: NSViewRepresentable {
     func makeNSView(context: Context) -> _ResizeCursorNSView { _ResizeCursorNSView() }
     func updateNSView(_ nsView: _ResizeCursorNSView, context: Context) {
@@ -1302,6 +1318,7 @@ private class _ResizeCursorNSView: NSView {
         addCursorRect(bounds, cursor: .resizeLeftRight)
     }
 }
+#endif
 
 func formatSeconds(_ seconds: Int) -> String {
     if seconds < 60 { return "\(seconds)s" }

@@ -1,5 +1,7 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#endif
 
 struct ContentView: View {
     @EnvironmentObject private var state: AppState
@@ -41,7 +43,9 @@ struct ContentView: View {
                 }
             }
         }
+        #if os(macOS)
         .background(FirstMouseAcceptingView())
+        #endif
         .fileImporter(
             isPresented: $isImporting,
             allowedContentTypes: [.pdf],
@@ -77,7 +81,9 @@ struct ContentView: View {
 
 private struct WorkflowStepBar: View {
     @EnvironmentObject private var state: AppState
+    #if os(macOS)
     @Environment(\.openSettings) private var openSettings
+    #endif
 
     var body: some View {
         HStack(spacing: 0) {
@@ -117,6 +123,7 @@ private struct WorkflowStepBar: View {
 
             // Right anchor: settings gear
             HStack(spacing: 10) {
+                #if os(macOS)
                 Button { openSettings() } label: {
                     Image(systemName: "gear")
                         .font(.system(size: 13))
@@ -124,6 +131,7 @@ private struct WorkflowStepBar: View {
                 }
                 .buttonStyle(.plain)
                 .help("Settings (⌘,)")
+                #endif
             }
             .frame(minWidth: 140, alignment: .trailing)
         }
@@ -207,6 +215,7 @@ private struct ProcessingOverlay: View {
     }
 }
 
+#if os(macOS)
 // MARK: - First-mouse fix
 // Makes buttons respond on the first click even when the window isn't the key window.
 
@@ -219,3 +228,4 @@ private class _FirstMouseNSView: NSView {
     override var acceptsFirstResponder: Bool { false }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
+#endif

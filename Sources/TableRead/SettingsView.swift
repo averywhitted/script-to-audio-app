@@ -1,5 +1,7 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#endif
 
 struct SettingsView: View {
     @EnvironmentObject private var state: AppState
@@ -93,6 +95,7 @@ private struct GeneralSettingsTab: View {
     }
 
     private func chooseOutputFolder() {
+        #if os(macOS)
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -103,9 +106,11 @@ private struct GeneralSettingsTab: View {
         if panel.runModal() == .OK, let url = panel.url {
             state.setOutputDirectory(url)
         }
+        #endif
     }
 
     private func exportCorrections() {
+        #if os(macOS)
         guard let tempURL = state.exportCorrections() else { return }
         let panel = NSSavePanel()
         panel.nameFieldStringValue = tempURL.lastPathComponent
@@ -113,6 +118,7 @@ private struct GeneralSettingsTab: View {
         if panel.runModal() == .OK, let dest = panel.url {
             try? FileManager.default.copyItem(at: tempURL, to: dest)
         }
+        #endif
     }
 }
 
@@ -275,7 +281,11 @@ private struct AboutTab: View {
                     Button("Donate on Buy Me a Coffee") {
                         // placeholder — fill in real URL when ready
                         if let url = URL(string: "https://buymeacoffee.com") {
+                            #if os(macOS)
                             NSWorkspace.shared.open(url)
+                            #else
+                            UIApplication.shared.open(url)
+                            #endif
                         }
                     }
                     .buttonStyle(.borderedProminent)

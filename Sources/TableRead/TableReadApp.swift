@@ -1,13 +1,18 @@
 import SwiftUI
-import AppKit
 import UserNotifications
+#if os(macOS)
+import AppKit
+#endif
 
 @main
 struct TableReadApp: App {
+    #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    #endif
     @StateObject private var state = AppState()
 
     var body: some Scene {
+        #if os(macOS)
         WindowGroup {
             ContentView()
                 .environmentObject(state)
@@ -19,25 +24,28 @@ struct TableReadApp: App {
             SettingsView()
                 .environmentObject(state)
         }
+        #else
+        WindowGroup {
+            ContentView()
+                .environmentObject(state)
+        }
+        #endif
     }
 }
 
+#if os(macOS)
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        // Register as delegate so notifications appear even when the app is in the foreground.
         UNUserNotificationCenter.current().delegate = self
     }
 
     func applicationWillBecomeActive(_ notification: Notification) {
-        // Make the window key *before* the activating click is processed so
-        // that first click fires buttons directly instead of just focusing.
         NSApp.windows.first { $0.isVisible && !$0.isMiniaturized }?
             .makeKeyAndOrderFront(nil)
     }
 
-    // Show notification banners even while Table Read is the active app.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
@@ -46,3 +54,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         completionHandler([.banner, .sound])
     }
 }
+#endif

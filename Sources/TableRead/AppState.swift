@@ -1,8 +1,10 @@
 import Foundation
-import AppKit
 import Security
 import SwiftUI
 import UserNotifications
+#if os(macOS)
+import AppKit
+#endif
 
 @MainActor
 final class AppState: ObservableObject {
@@ -92,8 +94,10 @@ final class AppState: ObservableObject {
     // Scene title overrides — pdfPath → sceneNumber → custom title
     @Published var sceneTitleOverrides: [String: [Int: String]] = [:]
 
+    #if os(macOS)
     let bridge = PythonBridge()
     private var previewSound: NSSound?
+    #endif
 
     var sceneList: [SceneSummary] { script?.scenes ?? [] }
 
@@ -159,6 +163,7 @@ final class AppState: ObservableObject {
 
         Task {
             do {
+                #if os(macOS)
                 let parsed = try await bridge.parse(pdf: url)
                 script = parsed
                 rememberRecentScript(url, title: parsed.title)
@@ -168,6 +173,10 @@ final class AppState: ObservableObject {
                 let correctionCount = corrections.values.filter { $0.pdfIdentifier == url.path }.count
                 let suffix = correctionCount > 0 ? ", \(correctionCount) correction\(correctionCount == 1 ? "" : "s") applied" : ""
                 status = "\(parsed.sceneCount) scenes, \(parsed.characterCount) characters\(suffix)."
+                #else
+                throw NSError(domain: "TableRead", code: 1,
+                              userInfo: [NSLocalizedDescriptionKey: "PDF parsing not yet available on iOS."])
+                #endif
             } catch {
                 errorMessage = error.localizedDescription
                 status = "Parsing failed."
@@ -184,14 +193,17 @@ final class AppState: ObservableObject {
         let engine = selectedEngine
         Task {
             do {
+                #if os(macOS)
                 let (list, autoAssign) = try await bridge.voices(engine: engine, pdf: pdf)
                 voices = list
-                // voiceAssignment is cleared whenever the engine changes, so apply
-                // server suggestions unconditionally — they become the starting defaults.
                 for (char, voiceId) in autoAssign {
                     voiceAssignment[char] = voiceId
                 }
                 status = "\(list.count) voices available for \(engine.title)."
+                #else
+                voices = []
+                status = "Voice loading not yet available on iOS."
+                #endif
             } catch {
                 errorMessage = error.localizedDescription
                 status = "Could not load voices."
@@ -211,6 +223,7 @@ final class AppState: ObservableObject {
         status = "Estimating OpenAI request count..."
         Task {
             do {
+                #if os(macOS)
                 openAIEstimate = try await bridge.estimateOpenAI(
                     pdf: pdf,
                     sceneNumbers: Array(selectedScenes).sorted()
@@ -218,6 +231,9 @@ final class AppState: ObservableObject {
                 if let estimate = openAIEstimate {
                     status = "\(estimate.requestCount) requests, about \(estimate.durationText) minimum."
                 }
+                #else
+                status = "Estimation not yet available on iOS."
+                #endif
             } catch {
                 errorMessage = error.localizedDescription
                 status = "Estimate failed."
@@ -337,6 +353,7 @@ final class AppState: ObservableObject {
 
         Task {
             do {
+                #if os(macOS)
                 try await bridge.installEngine(engine) { [weak self] event in
                     self?.handleInstallEvent(event)
                 }
@@ -344,6 +361,9 @@ final class AppState: ObservableObject {
                 await refreshEngineStatus()
                 status = "\(engine.title) ready. The neural model downloads on first voice preview."
                 fetchVoices()
+                #else
+                status = "Engine installation not available on iOS."
+                #endif
             } catch {
                 appendInstallLog("Installation failed: \(error.localizedDescription)", .error)
                 errorMessage = "Could not install \(engine.title). Check the log for details."
@@ -355,6 +375,7 @@ final class AppState: ObservableObject {
     }
 
     func refreshEngineStatus() async {
+        #if os(macOS)
         do {
             var statuses = try await bridge.engineStatus()
             if installedEngines.contains(.openAI) {
@@ -377,6 +398,7 @@ final class AppState: ObservableObject {
         } catch {
             // Keep the current UI state if the worker cannot answer yet.
         }
+        #endif
     }
 
     func uninstallEngine(_ engine: EngineKind) {
@@ -385,6 +407,7 @@ final class AppState: ObservableObject {
         status = "Removing \(engine.title)…"
         Task {
             do {
+                #if os(macOS)
                 try await bridge.uninstallEngine(engine)
                 installedEngines.remove(engine)
                 if selectedEngine == engine {
@@ -395,6 +418,7 @@ final class AppState: ObservableObject {
                 }
                 await refreshEngineStatus()
                 status = "\(engine.title) removed."
+                #endif
             } catch {
                 errorMessage = error.localizedDescription
                 status = "Uninstall failed."
@@ -404,6 +428,7 @@ final class AppState: ObservableObject {
     }
 
     func toggleVoicePreview(_ voice: VoiceSummary) {
+        #if os(macOS)
         if previewingVoiceId == voice.id {
             previewSound?.stop()
             previewSound = nil
@@ -447,6 +472,9 @@ final class AppState: ObservableObject {
                 status = "Preview failed."
             }
         }
+        #else
+        status = "Voice preview not yet available on iOS."
+        #endif
     }
 
     private func handleInstallEvent(_ event: GenerationEvent) {
@@ -525,6 +553,7 @@ final class AppState: ObservableObject {
 
         Task {
             do {
+                #if os(macOS)
                 try await bridge.generate(
                     pdf: pdf,
                     outputDirectory: out,
@@ -536,6 +565,10 @@ final class AppState: ObservableObject {
                 ) { [weak self] event in
                     self?.handleGenerationEvent(event)
                 }
+                #else
+                throw NSError(domain: "TableRead", code: 1,
+                              userInfo: [NSLocalizedDescriptionKey: "Audio generation not yet available on iOS."])
+                #endif
             } catch {
                 if isGenerating {
                     appendLog(error.localizedDescription, .error)
@@ -551,9 +584,11 @@ final class AppState: ObservableObject {
 
     func cancelGeneration() {
         guard isGenerating else { return }
+        #if os(macOS)
         if isPaused { bridge.resumeGeneration() }  // must resume before terminating
-        appendLog("Cancel requested. Stopping the current render job.", .warning)
         bridge.cancelGeneration()
+        #endif
+        appendLog("Cancel requested. Stopping the current render job.", .warning)
         isGenerating = false
         isWorking = false
         isPaused = false
@@ -567,7 +602,9 @@ final class AppState: ObservableObject {
         guard isGenerating, !isPaused else { return }
         isPaused = true
         pauseStartTime = Date()
+        #if os(macOS)
         bridge.pauseGeneration()
+        #endif
         appendLog("Render paused.", .warning)
         status = "Render paused — click Resume to continue."
     }
@@ -579,7 +616,9 @@ final class AppState: ObservableObject {
         }
         pauseStartTime = nil
         isPaused = false
+        #if os(macOS)
         bridge.resumeGeneration()
+        #endif
         appendLog("Render resumed.", .info)
         status = "Rendering…"
     }
@@ -594,8 +633,12 @@ final class AppState: ObservableObject {
 
     func copyGenerationLogToClipboard() {
         let text = generationLog.map(\.text).joined(separator: "\n")
+        #if os(macOS)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
+        #else
+        UIPasteboard.general.string = text
+        #endif
         appendLog("Copied output log to clipboard.", .success)
     }
 
@@ -736,7 +779,11 @@ final class AppState: ObservableObject {
                     )
                 }
                 if autoOpenFinderAfterRender, let dir = lastOutputDirectory {
+                    #if os(macOS)
                     NSWorkspace.shared.open(dir)
+                    #else
+                    await UIApplication.shared.open(dir)
+                    #endif
                 }
             }
         default:

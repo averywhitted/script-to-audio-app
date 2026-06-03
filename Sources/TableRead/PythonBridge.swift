@@ -1,3 +1,4 @@
+#if os(macOS)
 import Foundation
 
 struct WorkerEnvelope<T: Decodable & Sendable>: Decodable, Sendable {
@@ -438,3 +439,4 @@ final class PythonBridge {
         }
     }
 }
+#endif
