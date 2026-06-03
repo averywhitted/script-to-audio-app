@@ -4,7 +4,7 @@ import Foundation
 // 1. Sign up free at resend.com
 // 2. API Keys → Create API Key → "Sending access" only
 // 3. Paste your key here (starts with "re_")
-private let resendAPIKey = ""
+private let resendAPIKey = "" " // paste your Resend API key here"
 
 // ──────────────────────────────────────────────────────────────────────────
 
