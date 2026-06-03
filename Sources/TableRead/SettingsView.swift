@@ -24,6 +24,9 @@ struct SettingsView: View {
 
 private struct GeneralSettingsTab: View {
     @EnvironmentObject private var state: AppState
+    @State private var contributionState: ContributionState = .idle
+
+    private enum ContributionState { case idle, sending, sent, failed }
 
     var body: some View {
         Form {
@@ -70,11 +73,28 @@ private struct GeneralSettingsTab: View {
 
             Section {
                 Toggle("Contribute corrections anonymously", isOn: $state.contributeCorrections)
-                HStack {
+                HStack(spacing: 8) {
                     let count = state.corrections.count
-                    Text("\(count) correction\(count == 1 ? "" : "s") stored locally")
-                        .foregroundStyle(.secondary)
+                    let unsent = state.corrections.values.filter { !$0.uploaded }.count
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(count) correction\(count == 1 ? "" : "s") stored locally")
+                            .foregroundStyle(.secondary)
+                        if state.contributeCorrections && unsent > 0 {
+                            Text("\(unsent) not yet contributed")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Spacer()
+                    if state.contributeCorrections {
+                        Button("Contribute…") { contributeCorrections() }
+                            .disabled(state.corrections.isEmpty || contributionState == .sending)
+                        if contributionState == .sent {
+                            Label("Sent", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .font(.caption)
+                        }
+                    }
                     Button("Export…") { exportCorrections() }
                         .disabled(state.corrections.isEmpty)
                     Button("Clear All") { state.corrections.removeAll() }
@@ -84,7 +104,7 @@ private struct GeneralSettingsTab: View {
             } header: {
                 Text("Parser Corrections")
             } footer: {
-                Text("When enabled, corrections you make in the Review step are flagged for contribution. Export saves them as JSON you can share to help improve the parser for everyone. Nothing is sent automatically — you stay in control.")
+                Text("Corrections you make in the Review step are stored locally. When you're ready, click Contribute to send them anonymously to the developer — they help improve the parser for everyone. Nothing is sent without your action.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -103,6 +123,39 @@ private struct GeneralSettingsTab: View {
         if panel.runModal() == .OK, let url = panel.url {
             state.setOutputDirectory(url)
         }
+    }
+
+    private func contributeCorrections() {
+        contributionState = .sending
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let payload  = state.corrections.values.map { $0.anonymized(appVersion: version) }
+        let encoder  = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let json = try? encoder.encode(payload),
+              let jsonString = String(data: json, encoding: .utf8),
+              let url = URL(string: "https://formsubmit.co/ajax/avery@averywhitted.com") else {
+            contributionState = .failed; return
+        }
+        let body: [String: String] = [
+            "subject": "Table Read Parser Corrections — v\(version)",
+            "message": jsonString,
+        ]
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        URLSession.shared.dataTask(with: req) { [self] _, response, error in
+            DispatchQueue.main.async {
+                guard error == nil,
+                      let code = (response as? HTTPURLResponse)?.statusCode,
+                      (200..<300).contains(code) else {
+                    contributionState = .failed; return
+                }
+                for key in state.corrections.keys { state.corrections[key]?.uploaded = true }
+                contributionState = .sent
+            }
+        }.resume()
     }
 
     private func exportCorrections() {
@@ -299,8 +352,7 @@ private struct AboutTab: View {
 
                 HStack(spacing: 12) {
                     Button("Donate on Buy Me a Coffee") {
-                        // placeholder — fill in real URL when ready
-                        if let url = URL(string: "https://buymeacoffee.com") {
+                        if let url = URL(string: "https://buymeacoffee.com/averywhitted") {
                             NSWorkspace.shared.open(url)
                         }
                     }
