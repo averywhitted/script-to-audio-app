@@ -524,11 +524,13 @@ struct BugReportSheet: View {
     private func submit() {
         submitState = .sending
         let body: [String: String] = [
-            "subject":     "Table Read Bug Report — \(appVersion)",
-            "App version": appVersion,
-            "macOS":       osVersion,
+            "name":          "Table Read User",
+            "email":         "noreply@tableread.app",
+            "_subject":      "Table Read Bug Report \(appVersion)",
+            "App version":   appVersion,
+            "macOS":         osVersion,
             "What happened": whatHappened,
-            "Steps":       steps.isEmpty ? "(not provided)" : steps,
+            "Steps":         steps.isEmpty ? "(not provided)" : steps,
         ]
         guard let url = URL(string: "https://formsubmit.co/ajax/avery@averywhitted.com") else { return }
         var req = URLRequest(url: url)
@@ -539,8 +541,8 @@ struct BugReportSheet: View {
 
         URLSession.shared.dataTask(with: req) { _, response, error in
             DispatchQueue.main.async {
-                if error != nil {
-                    submitState = .failed("Couldn't send. Check your internet connection.")
+                if let error {
+                    submitState = .failed("Couldn't send: \(error.localizedDescription)")
                     return
                 }
                 let code = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -550,7 +552,7 @@ struct BugReportSheet: View {
                         isPresented = false
                     }
                 } else {
-                    submitState = .failed("Something went wrong (code \(code)). Try again.")
+                    submitState = .failed("Server error (code \(code)). Try again.")
                 }
             }
         }.resume()

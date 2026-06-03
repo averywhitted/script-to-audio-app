@@ -137,8 +137,10 @@ private struct GeneralSettingsTab: View {
             contributionState = .failed; return
         }
         let body: [String: String] = [
-            "subject": "Table Read Parser Corrections — v\(version)",
-            "message": jsonString,
+            "name":     "Table Read User",
+            "email":    "noreply@tableread.app",
+            "_subject": "Table Read Parser Corrections v\(version)",
+            "message":  jsonString,
         ]
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
