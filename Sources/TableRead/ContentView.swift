@@ -2,7 +2,8 @@ import SwiftUI
 import AppKit
 
 extension Notification.Name {
-    static let showOnboarding = Notification.Name("TableRead.showOnboarding")
+    static let showOnboarding  = Notification.Name("TableRead.showOnboarding")
+    static let showBugReport   = Notification.Name("TableRead.showBugReport")
 }
 
 struct ContentView: View {
@@ -10,6 +11,7 @@ struct ContentView: View {
     @State private var isImporting = false
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @State private var showOnboarding = false
+    @State private var showBugReport  = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -79,6 +81,12 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showOnboarding)) { _ in
             showOnboarding = true
         }
+        .sheet(isPresented: $showBugReport) {
+            BugReportSheet(isPresented: $showBugReport)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showBugReport)) { _ in
+            showBugReport = true
+        }
     }
 
     private var stepTransition: AnyTransition {
@@ -145,17 +153,19 @@ private struct WorkflowStepBar: View {
                     .background(.secondary.opacity(0.12), in: Capsule())
 
                 Button {
-                    TableReadApp.openBugReport()
+                    NotificationCenter.default.post(name: .showBugReport, object: nil)
                 } label: {
-                    Label("Report a Bug", systemImage: "exclamationmark.circle.fill")
+                    Label("Report a Bug", systemImage: "exclamationmark.circle")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.red.opacity(0.8))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Color.red.opacity(0.85), in: Capsule())
+                        .background(
+                            Capsule().strokeBorder(Color.red.opacity(0.5), lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
-                .help("Report a bug — opens a pre-filled email (⌘⇧B)")
+                .help("Report a bug (⌘⇧B)")
 
                 Button { openSettings() } label: {
                     Image(systemName: "gear")
@@ -375,6 +385,178 @@ private struct OnboardingStep: View {
         }
     }
 }
+
+// MARK: - Bug report sheet
+
+struct BugReportSheet: View {
+    @Binding var isPresented: Bool
+    @State private var whatHappened = ""
+    @State private var steps = ""
+    @State private var submitState: SubmitState = .idle
+
+    private enum SubmitState: Equatable { case idle, sending, sent, failed(String) }
+
+    private var appVersion: String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        return "v\(v) (build \(b))"
+    }
+    private var osVersion: String { ProcessInfo.processInfo.operatingSystemVersionString }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 8) {
+                Image(systemName: "exclamationmark.circle")
+                    .font(.system(size: 36, weight: .light))
+                    .foregroundStyle(.red.opacity(0.7))
+                    .padding(.top, 32)
+                Text("Report a Bug")
+                    .font(.title2.weight(.semibold))
+                Text("Reports go directly to the developer. No account required.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 40)
+            .padding(.bottom, 24)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Auto-filled system info
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 6) {
+                            infoRow(label: "App version", value: appVersion)
+                            infoRow(label: "macOS",       value: osVersion)
+                        }
+                    } label: {
+                        Label("System Info", systemImage: "info.circle")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("What happened?")
+                            .font(.callout.weight(.semibold))
+                        TextEditor(text: $whatHappened)
+                            .font(.callout)
+                            .frame(minHeight: 80)
+                            .padding(6)
+                            .background(.background, in: RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(Color.primary.opacity(0.12))
+                            )
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Steps to reproduce")
+                            .font(.callout.weight(.semibold))
+                        Text("Optional — helps a lot if you can describe what you did before it happened.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextEditor(text: $steps)
+                            .font(.callout)
+                            .frame(minHeight: 60)
+                            .padding(6)
+                            .background(.background, in: RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(Color.primary.opacity(0.12))
+                            )
+                    }
+                }
+                .padding(24)
+            }
+
+            Divider()
+
+            // Footer
+            HStack {
+                if case .failed(let msg) = submitState {
+                    Text(msg)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+                if case .sent = submitState {
+                    Label("Sent! Thank you.", systemImage: "checkmark.circle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.green)
+                }
+                Spacer()
+                Button("Cancel") { isPresented = false }
+                    .buttonStyle(.borderless)
+
+                Button {
+                    submit()
+                } label: {
+                    if case .sending = submitState {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Send Report")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(whatHappened.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                          || submitState == .sending || submitState == .sent)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+        }
+        .frame(width: 480, height: 520)
+    }
+
+    private func infoRow(label: String, value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 90, alignment: .leading)
+            Text(value)
+                .font(.caption)
+                .foregroundStyle(.primary)
+        }
+    }
+
+    private func submit() {
+        submitState = .sending
+        let body: [String: String] = [
+            "subject":     "Table Read Bug Report — \(appVersion)",
+            "App version": appVersion,
+            "macOS":       osVersion,
+            "What happened": whatHappened,
+            "Steps":       steps.isEmpty ? "(not provided)" : steps,
+        ]
+        guard let url = URL(string: "https://formsubmit.co/ajax/avery@averywhitted.com") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: req) { _, response, error in
+            DispatchQueue.main.async {
+                if error != nil {
+                    submitState = .failed("Couldn't send. Check your internet connection.")
+                    return
+                }
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                if (200..<300).contains(code) {
+                    submitState = .sent
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        isPresented = false
+                    }
+                } else {
+                    submitState = .failed("Something went wrong (code \(code)). Try again.")
+                }
+            }
+        }.resume()
+    }
+}
+
 
 // MARK: - First-mouse fix
 // Makes buttons respond on the first click even when the window isn't the key window.

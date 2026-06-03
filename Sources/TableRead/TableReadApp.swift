@@ -38,34 +38,7 @@ struct TableReadApp: App {
 
 extension TableReadApp {
     static func openBugReport() {
-        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
-        let build      = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
-        let os         = ProcessInfo.processInfo.operatingSystemVersionString
-
-        let subject = "Table Read Bug Report — v\(appVersion)"
-        let body = """
-        App version: \(appVersion) (build \(build))
-        macOS: \(os)
-
-        What happened:
-
-
-        Steps to reproduce:
-        1.
-        2.
-
-        Expected behavior:
-
-        """
-
-        var comps = URLComponents(string: "mailto:avery@averywhitted.com")!
-        comps.queryItems = [
-            URLQueryItem(name: "subject", value: subject),
-            URLQueryItem(name: "body",    value: body),
-        ]
-        if let url = comps.url {
-            NSWorkspace.shared.open(url)
-        }
+        NotificationCenter.default.post(name: .showBugReport, object: nil)
     }
 }
 
