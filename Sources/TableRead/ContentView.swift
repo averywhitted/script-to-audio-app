@@ -533,7 +533,7 @@ struct BugReportSheet: View {
         Steps to reproduce:
         \(steps.isEmpty ? "(not provided)" : steps)
         """
-        EmailReporter.send(subject: "Table Read Bug Report \(appVersion)", text: text) { result in
+        EmailReporter.send(subject: "Bug report \(appVersion)", text: text, labels: ["bug", "user-report"]) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success:

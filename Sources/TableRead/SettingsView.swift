@@ -142,8 +142,9 @@ private struct GeneralSettingsTab: View {
             .joined(separator: "\n")
         }.joined(separator: "\n\n---\n\n")
         EmailReporter.send(
-            subject: "Table Read Parser Corrections v\(version) (\(payload.count) correction\(payload.count == 1 ? "" : "s"))",
-            text: text
+            subject: "Parser corrections v\(version) (\(payload.count) correction\(payload.count == 1 ? "" : "s"))",
+            text: text,
+            labels: ["correction", "user-report"]
         ) { [self] result in
             DispatchQueue.main.async {
                 switch result {

@@ -1,39 +1,46 @@
 import Foundation
 
-// ── Resend API key ─────────────────────────────────────────────────────────
-// 1. Sign up free at resend.com
-// 2. API Keys → Create API Key → "Sending access" only
-// 3. Paste your key here (starts with "re_")
-private let resendAPIKey = "" // paste your Resend API key here (starts with re_)
+// ── GitHub Personal Access Token ───────────────────────────────────────────
+// Fine-grained PAT with Issues: Read & Write on script-to-audio-app only.
+// github.com → Settings → Developer settings → Personal access tokens →
+//   Fine-grained tokens → Generate new token
+//   Repository access: Only script-to-audio-app
+//   Permissions: Issues → Read and write
+private let githubToken = "" // paste your token here
+
+private let repoOwner = "averywhitted"
+private let repoName  = "script-to-audio-app"
 
 // ──────────────────────────────────────────────────────────────────────────
 
 enum EmailReporter {
-    static var isConfigured: Bool { !resendAPIKey.isEmpty }
+    static var isConfigured: Bool { !githubToken.isEmpty }
 
-    /// Send a plain-text email via the Resend API.
+    /// Opens a GitHub issue on the app repo. Users never see GitHub.
     static func send(
         subject: String,
         text: String,
+        labels: [String] = [],
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
         guard isConfigured else {
             completion(.failure(ReporterError.notConfigured))
             return
         }
-        guard let url = URL(string: "https://api.resend.com/emails") else { return }
+        guard let url = URL(string: "https://api.github.com/repos/\(repoOwner)/\(repoName)/issues") else { return }
 
         let payload: [String: Any] = [
-            "from":    "Table Read <reports@averywhitted.com>",
-            "to":      ["avery@averywhitted.com"],
-            "subject": subject,
-            "text":    text,
+            "title":  subject,
+            "body":   text,
+            "labels": labels,
         ]
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.setValue("application/json",        forHTTPHeaderField: "Content-Type")
-        req.setValue("Bearer \(resendAPIKey)",   forHTTPHeaderField: "Authorization")
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        req.setValue("application/json",            forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(githubToken)",        forHTTPHeaderField: "Authorization")
+        req.setValue("2022-11-28",                   forHTTPHeaderField: "X-GitHub-Api-Version")
         req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
 
         URLSession.shared.dataTask(with: req) { _, response, error in
@@ -55,7 +62,7 @@ enum EmailReporter {
 
         var errorDescription: String? {
             switch self {
-            case .notConfigured: return "Email reporting is not configured."
+            case .notConfigured: return "Feedback reporting is not configured."
             case .httpError(let c): return "Server error (code \(c)). Try again."
             }
         }
