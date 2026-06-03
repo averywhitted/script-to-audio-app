@@ -135,14 +135,27 @@ private struct WorkflowStepBar: View {
 
             Spacer()
 
-            // Right anchor: beta badge + settings gear
-            HStack(spacing: 10) {
+            // Right anchor: beta badge + bug report button + settings gear
+            HStack(spacing: 8) {
                 Text("BETA")
                     .font(.system(size: 9, weight: .bold, design: .monospaced))
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 6)
+                    .padding(.horizontal, 7)
                     .padding(.vertical, 3)
                     .background(.secondary.opacity(0.12), in: Capsule())
+
+                Button {
+                    TableReadApp.openBugReport()
+                } label: {
+                    Label("Report a Bug", systemImage: "exclamationmark.circle.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.red.opacity(0.85), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .help("Report a bug — opens a pre-filled email (⌘⇧B)")
 
                 Button { openSettings() } label: {
                     Image(systemName: "gear")
