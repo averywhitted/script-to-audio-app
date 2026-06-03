@@ -132,32 +132,23 @@ private struct GeneralSettingsTab: View {
         let encoder  = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         guard let json = try? encoder.encode(payload),
-              let jsonString = String(data: json, encoding: .utf8),
-              let url = URL(string: "https://formsubmit.co/ajax/avery@averywhitted.com") else {
+              let jsonString = String(data: json, encoding: .utf8) else {
             contributionState = .failed; return
         }
-        let body: [String: String] = [
-            "name":     "Table Read User",
-            "email":    "noreply@tableread.app",
-            "_subject": "Table Read Parser Corrections v\(version)",
-            "message":  jsonString,
-        ]
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        URLSession.shared.dataTask(with: req) { [self] _, response, error in
+        EmailReporter.send(
+            subject: "Table Read Parser Corrections v\(version)",
+            text: jsonString
+        ) { [self] result in
             DispatchQueue.main.async {
-                guard error == nil,
-                      let code = (response as? HTTPURLResponse)?.statusCode,
-                      (200..<300).contains(code) else {
-                    contributionState = .failed; return
+                switch result {
+                case .success:
+                    for key in state.corrections.keys { state.corrections[key]?.uploaded = true }
+                    contributionState = .sent
+                case .failure:
+                    contributionState = .failed
                 }
-                for key in state.corrections.keys { state.corrections[key]?.uploaded = true }
-                contributionState = .sent
             }
-        }.resume()
+        }
     }
 
     private func exportCorrections() {

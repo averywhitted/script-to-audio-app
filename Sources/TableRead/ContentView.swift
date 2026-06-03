@@ -523,39 +523,27 @@ struct BugReportSheet: View {
 
     private func submit() {
         submitState = .sending
-        let body: [String: String] = [
-            "name":          "Table Read User",
-            "email":         "noreply@tableread.app",
-            "_subject":      "Table Read Bug Report \(appVersion)",
-            "App version":   appVersion,
-            "macOS":         osVersion,
-            "What happened": whatHappened,
-            "Steps":         steps.isEmpty ? "(not provided)" : steps,
-        ]
-        guard let url = URL(string: "https://formsubmit.co/ajax/avery@averywhitted.com") else { return }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        let text = """
+        App version: \(appVersion)
+        macOS: \(osVersion)
 
-        URLSession.shared.dataTask(with: req) { _, response, error in
+        What happened:
+        \(whatHappened)
+
+        Steps to reproduce:
+        \(steps.isEmpty ? "(not provided)" : steps)
+        """
+        EmailReporter.send(subject: "Table Read Bug Report \(appVersion)", text: text) { result in
             DispatchQueue.main.async {
-                if let error {
-                    submitState = .failed("Couldn't send: \(error.localizedDescription)")
-                    return
-                }
-                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-                if (200..<300).contains(code) {
+                switch result {
+                case .success:
                     submitState = .sent
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        isPresented = false
-                    }
-                } else {
-                    submitState = .failed("Server error (code \(code)). Try again.")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { isPresented = false }
+                case .failure(let error):
+                    submitState = .failed(error.localizedDescription)
                 }
             }
-        }.resume()
+        }
     }
 }
 

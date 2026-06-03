@@ -1,0 +1,63 @@
+import Foundation
+
+// ── Resend API key ─────────────────────────────────────────────────────────
+// 1. Sign up free at resend.com
+// 2. API Keys → Create API Key → "Sending access" only
+// 3. Paste your key here (starts with "re_")
+private let resendAPIKey = ""
+
+// ──────────────────────────────────────────────────────────────────────────
+
+enum EmailReporter {
+    static var isConfigured: Bool { !resendAPIKey.isEmpty }
+
+    /// Send a plain-text email via the Resend API.
+    static func send(
+        subject: String,
+        text: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        guard isConfigured else {
+            completion(.failure(ReporterError.notConfigured))
+            return
+        }
+        guard let url = URL(string: "https://api.resend.com/emails") else { return }
+
+        let payload: [String: Any] = [
+            "from":    "Table Read <reports@tableread.app>",
+            "to":      ["avery@averywhitted.com"],
+            "subject": subject,
+            "text":    text,
+        ]
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json",        forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(resendAPIKey)",   forHTTPHeaderField: "Authorization")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+
+        URLSession.shared.dataTask(with: req) { _, response, error in
+            if let error {
+                completion(.failure(error)); return
+            }
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if (200..<300).contains(code) {
+                completion(.success(()))
+            } else {
+                completion(.failure(ReporterError.httpError(code)))
+            }
+        }.resume()
+    }
+
+    enum ReporterError: LocalizedError {
+        case notConfigured
+        case httpError(Int)
+
+        var errorDescription: String? {
+            switch self {
+            case .notConfigured: return "Email reporting is not configured."
+            case .httpError(let c): return "Server error (code \(c)). Try again."
+            }
+        }
+    }
+}
