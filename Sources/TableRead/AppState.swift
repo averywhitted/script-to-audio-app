@@ -174,8 +174,13 @@ final class AppState: ObservableObject {
                 let suffix = correctionCount > 0 ? ", \(correctionCount) correction\(correctionCount == 1 ? "" : "s") applied" : ""
                 status = "\(parsed.sceneCount) scenes, \(parsed.characterCount) characters\(suffix)."
                 #else
-                throw NSError(domain: "TableRead", code: 1,
-                              userInfo: [NSLocalizedDescriptionKey: "PDF parsing not yet available on iOS."])
+                let parsed = try await parseScreenplay(at: url)
+                script = parsed
+                rememberRecentScript(url, title: parsed.title)
+                selectedScenes = Set(parsed.scenes.map(\.number))
+                navigatingForward = true
+                step = .review
+                status = "\(parsed.sceneCount) scenes, \(parsed.characterCount) characters."
                 #endif
             } catch {
                 errorMessage = error.localizedDescription

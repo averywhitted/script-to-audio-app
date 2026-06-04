@@ -24,6 +24,8 @@
 		E7A12300BCDE4567F890A2B6 /* TableReadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D155BFB318744F8BE58A6D2 /* TableReadApp.swift */; };
 		E7A12300BCDE4567F890A2B7 /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5495890743F443FA0E5EA21 /* Views.swift */; };
 		E7A12300BCDE4567F890A2B8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets */; };
+		F1A2B3C4D5E6F7A8B9C0D1E3 /* ScreenplayParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F7A8B9C0D1E2 /* ScreenplayParser.swift */; };
+		F1A2B3C4D5E6F7A8B9C0D1E4 /* ScreenplayParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F7A8B9C0D1E2 /* ScreenplayParser.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,6 +50,7 @@
 		36341DE898134A3FA1CB7889 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		7D155BFB318744F8BE58A6D2 /* TableReadApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableReadApp.swift; sourceTree = "<group>"; };
 		A5495890743F443FA0E5EA21 /* Views.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6F7A8B9C0D1E2 /* ScreenplayParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenplayParser.swift; sourceTree = "<group>"; };
 		F1E2D3C4B5A691827364A501 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E7A12300BCDE4567F890A1B2 /* TableRead (iOS).app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TableRead (iOS).app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -111,6 +114,7 @@
 				36341DE898134A3FA1CB7889 /* SettingsView.swift */,
 				7D155BFB318744F8BE58A6D2 /* TableReadApp.swift */,
 				A5495890743F443FA0E5EA21 /* Views.swift */,
+				F1A2B3C4D5E6F7A8B9C0D1E2 /* ScreenplayParser.swift */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets */,
 				C260B1B4B72E4FC79C5ADFAC /* Info.plist */,
 				C38C67F9E4D042C8BD2A2F2C /* TableRead.entitlements */,
@@ -283,6 +287,7 @@
 				99848C20CCC945CEAC78167B /* SettingsView.swift in Sources */,
 				B35C2323B3F6473D8E7416F6 /* TableReadApp.swift in Sources */,
 				C2F9AC94D2DB4A77913EB54F /* Views.swift in Sources */,
+				F1A2B3C4D5E6F7A8B9C0D1E3 /* ScreenplayParser.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -305,6 +310,7 @@
 				E7A12300BCDE4567F890A2B5 /* SettingsView.swift in Sources */,
 				E7A12300BCDE4567F890A2B6 /* TableReadApp.swift in Sources */,
 				E7A12300BCDE4567F890A2B7 /* Views.swift in Sources */,
+				F1A2B3C4D5E6F7A8B9C0D1E4 /* ScreenplayParser.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
