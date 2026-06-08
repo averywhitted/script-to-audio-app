@@ -1740,11 +1740,14 @@ def _collect_page_noise(plain_lines: List[str], page_sets: Optional[List[Set[str
     stripped = [l.strip() for l in plain_lines if l.strip()]
     noise: Set[str] = set()
 
-    # Always noise: bare numbers (page numbers), dates, single chars, revision marks
+    # Always noise: page-style numbers with period, dates, single chars, revision marks.
+    # Bare integers (e.g. "1234") are intentionally NOT always-noised here: they could
+    # be dialog numbers (a character saying a PIN, phone extension, etc.).  Far-right
+    # positional page numbers (e.g. "22" at x0 > 75 % of page width) are stripped at
+    # extraction time by _strip_page_number_words() before they ever reach this list.
+    # Page numbers that appear on most pages are caught by the frequency check below.
     for s in stripped:
-        if re.fullmatch(r"\d+", s):
-            noise.add(s)
-        elif re.fullmatch(r"\d+\.", s):  # "3.", "22.", "186." style page numbers
+        if re.fullmatch(r"\d+\.", s):  # "3.", "22.", "186." style page numbers
             noise.add(s)
         elif re.fullmatch(r"\d+/\d+/\d+", s):
             noise.add(s)
@@ -1912,9 +1915,15 @@ def _extract_scenes_play(
     # the flushed speaker here so that a subsequent lowercase continuation line
     # (not a cue, not a stage direction) can be re-attributed to them.
     _pending_continuation_speaker: Optional[str] = None
+    # The most recently seen cue, regardless of whether dialog has been emitted.
+    # Blank lines between a character name and their first content (common in
+    # PDF extraction) clear current_speaker; this lets parentheticals that arrive
+    # after such a blank still be attributed to the right character.
+    # Cleared when dialog is emitted (cue context consumed) or on scene boundary.
+    _last_cue_speaker: Optional[str] = None
 
     def flush_dialog() -> None:
-        nonlocal current_speaker, dialog_buf, pending_overlap_cue, pending_is_compound
+        nonlocal current_speaker, dialog_buf, pending_overlap_cue, pending_is_compound, _last_cue_speaker
         if current_speaker and dialog_buf:
             if pending_overlap_cue and pending_is_compound and any(_COL_SEP in ln for ln in dialog_buf):
                 # Column-aware path: we have exact per-voice text from pdfplumber coordinates.
@@ -1991,6 +2000,7 @@ def _extract_scenes_play(
             current_speaker = None  # Clear after emitting so flush_orphan_speaker doesn't double-emit
             pending_overlap_cue = None
             pending_is_compound = False
+            _last_cue_speaker = None  # dialog emitted → cue context consumed
         dialog_buf.clear()
 
     def flush_orphan_speaker() -> None:
@@ -2011,8 +2021,9 @@ def _extract_scenes_play(
         current_speaker = None
 
     def commit_scene(is_final: bool = False) -> None:
-        nonlocal scene_counter, scene_title, elements
+        nonlocal scene_counter, scene_title, elements, _last_cue_speaker
         flush_dialog()
+        _last_cue_speaker = None  # reset per-scene cue context
         # Discard pre-first-scene preamble (cover page / cast / title page).
         # At non-final commits, also skip scenes with no actual dialog (e.g.,
         # a TOC "Act 1" line fires a boundary before the real act header).
@@ -2202,6 +2213,7 @@ def _extract_scenes_play(
             flush_dialog()
             flush_orphan_speaker()
             current_speaker = normalized
+            _last_cue_speaker = normalized  # remember cue even if blank lines follow
             pending_overlap_cue = _joint
             pending_is_compound = _is_compound
             # Track the most recent non-narrator speaker so we can fall back to
@@ -2211,9 +2223,16 @@ def _extract_scenes_play(
             prev_nonempty = s
             continue
 
-        # Standalone parenthetical with pending speaker
+        # Standalone parenthetical with pending speaker.
+        # Also accept when current_speaker was cleared by a blank line but we
+        # have a recent cue with no dialog yet (_last_cue_speaker) — this handles
+        # the common PDF pattern where pdfplumber inserts a blank line between
+        # the character name row and the following parenthetical/dialog rows.
+        _paren_speaker_candidate = current_speaker or (
+            _last_cue_speaker if (not dialog_buf and _last_cue_speaker) else None
+        )
         if (
-            current_speaker
+            _paren_speaker_candidate
             and s.startswith("(")
             and s.endswith(")")
             and len(s) < 150
@@ -2228,7 +2247,7 @@ def _extract_scenes_play(
 
             # Save speaker NOW — flush_dialog() clears current_speaker when it
             # has queued dialog to emit, so we'd lose the attribution otherwise.
-            paren_speaker = current_speaker
+            paren_speaker = _paren_speaker_candidate
             # Preserve overlap context across the parenthetical flush.
             saved_overlap_cue = pending_overlap_cue
             saved_is_compound  = pending_is_compound

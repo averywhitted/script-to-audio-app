@@ -1065,3 +1065,87 @@ def test_page_number_not_read_by_narrator():
     assert not any("3." in t for t in narrator_texts), (
         f"Page number '3.' was voiced by narrator: {narrator_texts}"
     )
+
+
+def test_dialog_number_not_treated_as_noise():
+    """A bare integer in dialog (e.g. a PIN code '1234') must NOT be silenced."""
+    lines = [
+        "SCENE ONE",
+        "EDDIE",
+        "1234",
+        "That's the code.",
+    ]
+    noise = p._collect_page_noise(lines)
+    # "1234" must NOT be in noise — it's dialog, not a page number
+    assert "1234" not in noise, "'1234' was incorrectly marked as noise"
+    # And it must appear in Eddie's dialog
+    scenes = p._extract_scenes_play(lines, {"EDDIE"}, noise)
+    elements = [e for sc in scenes for e in sc.elements]
+    dialog_texts = " ".join(e.text for e in elements if e.kind == "dialog")
+    assert "1234" in dialog_texts, f"'1234' missing from dialog: {dialog_texts}"
+
+
+# ---------------------------------------------------------------------------
+# Parenthetical attribution after blank-line-separated cue
+# ---------------------------------------------------------------------------
+
+
+def test_parenthetical_after_blank_attributed_to_cue_speaker():
+    """A parenthetical following a blank line after a cue stays with that character.
+
+    pdfplumber often inserts a blank line between the character-name row and
+    the following content.  The blank line clears current_speaker, but the
+    parenthetical should still be treated as a character note, not narrator SD.
+    """
+    lines = [
+        "SCENE ONE",
+        "EDDIE",
+        "",            # blank — simulates pdfplumber gap between name and content
+        "(He pauses.)",
+        "I can't believe it.",
+    ]
+    noise: set = set()
+    scenes = p._extract_scenes_play(lines, {"EDDIE"}, noise)
+    elements = [e for sc in scenes for e in sc.elements]
+
+    # The parenthetical must not be emitted as narrator stage direction
+    paren = [e for e in elements if e.kind == "parenthetical"]
+    assert paren, "Parenthetical element not found"
+    assert paren[0].speaker == "EDDIE", (
+        f"Parenthetical attributed to '{paren[0].speaker}', expected 'EDDIE'"
+    )
+
+    # The following dialog must be attributed to EDDIE too
+    dialog = [e for e in elements if e.kind == "dialog"]
+    assert dialog, "Dialog element not found"
+    assert dialog[0].speaker == "EDDIE", (
+        f"Post-parenthetical dialog attributed to '{dialog[0].speaker}', expected 'EDDIE'"
+    )
+
+
+def test_dialog_after_paren_no_false_positive_between_chars():
+    """A stage-direction parenthetical between two characters stays with narrator."""
+    lines = [
+        "SCENE ONE",
+        "LEAH",
+        "Hi there.",
+        "",
+        "(The lights fade.)",
+        "",
+        "EDDIE",
+        "Hello.",
+    ]
+    noise: set = set()
+    scenes = p._extract_scenes_play(lines, {"LEAH", "EDDIE"}, noise)
+    elements = [e for sc in scenes for e in sc.elements]
+
+    # "(The lights fade.)" comes after LEAH has spoken, so _last_cue_speaker is cleared.
+    # It should be a stage direction with no speaker, not attributed to LEAH.
+    # Stage direction stores the raw text (with parens preserved by _normalize_text).
+    matching = [e for e in elements if "lights fade" in e.text]
+    assert matching, "Stage-direction parenthetical not found in output"
+    el = matching[0]
+    assert el.kind == "stage_direction", f"Expected stage_direction, got {el.kind!r}"
+    assert el.speaker != "LEAH", (
+        f"'The lights fade.' was incorrectly attributed to LEAH (speaker={el.speaker!r})"
+    )
