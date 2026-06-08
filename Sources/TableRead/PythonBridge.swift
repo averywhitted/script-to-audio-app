@@ -151,6 +151,7 @@ final class PythonBridge {
         assignment: [String: String] = [:],
         apiKey: String? = nil,
         userAddedElements: [String: [UserAddedElement]] = [:],
+        corrections: [ParserCorrection] = [],
         onEvent: @escaping @MainActor (GenerationEvent) -> Void
     ) async throws {
         var payload: [String: Any] = [
@@ -184,6 +185,24 @@ final class PythonBridge {
         }
         if !bySceneNumber.isEmpty {
             payload["userAddedElements"] = bySceneNumber
+        }
+        if !corrections.isEmpty {
+            // Serialize corrections for Python: keyed by sceneNumber + text prefix
+            var correctionList: [[String: Any]] = []
+            for c in corrections {
+                // textKey format: "pdfPath|sceneNumber|text[:60]"
+                let textPrefix = c.textKey.components(separatedBy: "|").last ?? ""
+                var dict: [String: Any] = [
+                    "sceneNumber": c.sceneNumber,
+                    "textPrefix": textPrefix,
+                    "markedAsNoise": c.markedAsNoise,
+                ]
+                if let kind = c.correctedKind { dict["correctedKind"] = kind }
+                if let speaker = c.correctedSpeaker { dict["correctedSpeaker"] = speaker }
+                if let text = c.correctedText, !text.isEmpty { dict["correctedText"] = text }
+                correctionList.append(dict)
+            }
+            payload["corrections"] = correctionList
         }
         try await streamRequest(payload, onEvent: onEvent)
     }

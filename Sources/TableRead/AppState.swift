@@ -577,6 +577,7 @@ final class AppState: ObservableObject {
         let apiKey = engine == .openAI ? openAIAPIKey : nil
 
         let addedElements = userAddedElements
+        let activeCorrections = corrections.values.filter { $0.pdfIdentifier == pdf.path }
 
         Task {
             do {
@@ -587,7 +588,8 @@ final class AppState: ObservableObject {
                     sceneNumbers: sceneNumbers,
                     assignment: assignment,
                     apiKey: apiKey,
-                    userAddedElements: addedElements
+                    userAddedElements: addedElements,
+                    corrections: Array(activeCorrections)
                 ) { [weak self] event in
                     self?.handleGenerationEvent(event)
                 }

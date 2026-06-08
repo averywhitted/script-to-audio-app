@@ -20,6 +20,7 @@ The pipeline emits progress callbacks so the GUI can update.
 
 from __future__ import annotations
 
+import array
 import os
 import re
 import shutil
@@ -76,6 +77,8 @@ class RenderChunk:
     speaker: Optional[str]
     voice_id: str
     text: str
+    overlap_voices: Optional[List[str]] = None  # when set, mix these voices simultaneously
+    overlap_texts: Optional[List[str]] = None   # per-voice texts (parallel with overlap_voices); None = all voices read .text
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +139,47 @@ def _afconvert_to_m4a(src_wav: str, dst_m4a: str, bitrate_kbps: int = 96) -> Non
 def _silence_frames(seconds: float) -> bytes:
     n = int(seconds * PCM_SAMPLE_RATE) * PCM_SAMPLE_WIDTH * PCM_CHANNELS
     return b"\x00" * n
+
+
+def _mix_wavs(sources: List[str], dest: str) -> None:
+    """Mix multiple uniform PCM WAV files into one output by summing samples.
+
+    All sources must already be in the pipeline's canonical format
+    (PCM_SAMPLE_RATE / PCM_SAMPLE_WIDTH / PCM_CHANNELS). Shorter files are
+    zero-padded to the length of the longest. Samples are summed and clamped
+    to the 16-bit signed range [-32768, 32767] to prevent wrap-around clipping.
+
+    Uses only stdlib (array module) — no numpy required.
+    """
+    if not sources:
+        raise ValueError("_mix_wavs requires at least one source")
+    if len(sources) == 1:
+        shutil.copy2(sources[0], dest)
+        return
+
+    all_samples: List[array.array] = []
+    max_n = 0
+    for src in sources:
+        with wave.open(src, "rb") as r:
+            assert r.getnchannels() == PCM_CHANNELS
+            assert r.getsampwidth() == PCM_SAMPLE_WIDTH
+            assert r.getframerate() == PCM_SAMPLE_RATE
+            raw = r.readframes(r.getnframes())
+        track: array.array = array.array("h")  # signed 16-bit
+        track.frombytes(raw)
+        all_samples.append(track)
+        max_n = max(max_n, len(track))
+
+    mixed: array.array = array.array("h", [0] * max_n)
+    for track in all_samples:
+        for i in range(len(track)):
+            mixed[i] = max(-32768, min(32767, mixed[i] + track[i]))
+
+    with wave.open(dest, "wb") as w:
+        w.setnchannels(PCM_CHANNELS)
+        w.setsampwidth(PCM_SAMPLE_WIDTH)
+        w.setframerate(PCM_SAMPLE_RATE)
+        w.writeframes(mixed.tobytes())
 
 
 def _open_writer(path: str) -> wave.Wave_write:
@@ -222,24 +266,68 @@ def generate_scene(
         writer.writeframes(_silence_frames(0.6))
 
         chunks = _build_render_chunks(elements, assignment)
+
+        # Pre-compute which narrator chunks fall *between* overlap chunks in the
+        # same simultaneous-speech sequence.  Those are suppressed: reading a
+        # stage-direction or parenthetical in the middle of overlapping voices
+        # is jarring and almost always a PDF merge artifact rather than
+        # intentional narration.
+        #
+        # A narrator chunk at index `ci` is "within overlap" when:
+        #   • At least one overlap chunk precedes it (prev_overlap_idx is set).
+        #   • A subsequent overlap chunk follows it before any non-narrator /
+        #     non-overlap chunk intervenes.
+        _skip_in_overlap: set[int] = set()
+        _prev_overlap_idx: Optional[int] = None
+        _pending_narrator_indices: List[int] = []
+        for _ci, _ch in enumerate(chunks):
+            if _ch.overlap_voices:
+                if _prev_overlap_idx is not None:
+                    _skip_in_overlap.update(_pending_narrator_indices)
+                _prev_overlap_idx = _ci
+                _pending_narrator_indices = []
+            elif _ch.speaker is None and _prev_overlap_idx is not None:
+                _pending_narrator_indices.append(_ci)
+            else:
+                # Non-narrator, non-overlap chunk — close the active overlap block.
+                _prev_overlap_idx = None
+                _pending_narrator_indices = []
+
         previous_speaker: Optional[str] = None
         previous_kind: Optional[str] = None
+        previous_was_overlap: bool = False
 
-        for chunk in chunks:
+        for ci, chunk in enumerate(chunks):
+            if ci in _skip_in_overlap:
+                continue  # narrator between overlaps — suppress
             if cancel_check and cancel_check():
                 writer.close()
                 return None
 
-            # Choose the pause to insert BEFORE this element based on transition
+            # Choose the pause to insert BEFORE this element based on transition.
+            # Consecutive overlap chunks (same simultaneous-speech block split
+            # across paragraph boundaries) get no inter-chunk gap — they should
+            # feel continuous, not like one speaker waiting for the other.
             first_el = elements[chunk.start_index]
-            pause = _transition_pause(previous_kind, previous_speaker, first_el)
+            current_is_overlap = bool(chunk.overlap_voices)
+            if previous_was_overlap and current_is_overlap:
+                pause = 0.0
+            else:
+                pause = _transition_pause(previous_kind, previous_speaker, first_el)
             writer.writeframes(_silence_frames(pause))
 
             try:
-                _synthesize_into(
-                    writer, chunk.text, chunk.voice_id, engine, work_dir,
-                    f"e{chunk.start_index}"
-                )
+                if chunk.overlap_voices and len(chunk.overlap_voices) >= 2:
+                    _synthesize_overlap_into(
+                        writer, chunk.text, chunk.overlap_voices, engine, work_dir,
+                        f"e{chunk.start_index}",
+                        texts=chunk.overlap_texts,
+                    )
+                else:
+                    _synthesize_into(
+                        writer, chunk.text, chunk.voice_id, engine, work_dir,
+                        f"e{chunk.start_index}"
+                    )
             except TTSFatalError:
                 raise
             except Exception as e:
@@ -253,6 +341,7 @@ def generate_scene(
 
             previous_speaker = first_el.speaker
             previous_kind = first_el.kind
+            previous_was_overlap = current_is_overlap
 
             if progress_cb:
                 progress_cb(GenerationProgress(
@@ -320,6 +409,14 @@ def _build_render_chunks(elements: List[Element], assignment: Assignment) -> Lis
         if not text:
             continue
         voice_id = _voice_for_element(el, assignment)
+
+        # Resolve overlap voices: each name in overlap_cue maps to a voice ID.
+        overlap_voices: Optional[List[str]] = None
+        overlap_texts: Optional[List[str]] = None
+        if el.overlap_cue and len(el.overlap_cue) >= 2:
+            overlap_voices = [assignment.voice_for(name) for name in el.overlap_cue]
+            overlap_texts = el.overlap_texts  # per-voice texts; None = chorus mode
+
         if chunks and _can_merge_chunk(chunks[-1], el, voice_id, text):
             chunks[-1].end_index = i
             chunks[-1].text = chunks[-1].text.rstrip() + "\n\n" + text
@@ -331,11 +428,16 @@ def _build_render_chunks(elements: List[Element], assignment: Assignment) -> Lis
                 speaker=el.speaker,
                 voice_id=voice_id,
                 text=text,
+                overlap_voices=overlap_voices,
+                overlap_texts=overlap_texts,
             ))
     return chunks
 
 
 def _can_merge_chunk(chunk: RenderChunk, el: Element, voice_id: str, text: str) -> bool:
+    # Never merge overlap chunks — each simultaneous-speech line is self-contained.
+    if chunk.overlap_voices is not None or el.overlap_cue:
+        return False
     if chunk.voice_id != voice_id:
         return False
     if chunk.kind != el.kind or chunk.speaker != el.speaker:
@@ -367,6 +469,60 @@ def _synthesize_into(
             os.remove(p)
         except OSError:
             pass
+
+
+def _synthesize_overlap_into(
+    writer: wave.Wave_write,
+    text: str,
+    voice_ids: List[str],
+    engine: TTSEngine,
+    work_dir: str,
+    tag: str,
+    texts: Optional[List[str]] = None,
+) -> None:
+    """Synthesize simultaneous dialog and mix the results into `writer`.
+
+    When `texts` is provided (per-voice texts from a two-column PDF overlap),
+    each voice renders its own text — e.g. LEAH reads "What do you mean?" while
+    CREDIT CARD COMPANY reads "I'm sorry, I don't recognize that number."
+    When `texts` is None (slash / ampersand chorus cues), every voice renders
+    the shared `text` simultaneously (unison / stacked effect).
+
+    Results are sample-summed (with clamping) to produce a simultaneous-speech
+    effect. Falls back to a solo render of the first voice if mixing fails.
+    """
+    per_voice_wavs: List[str] = []
+    per_voice_srcs: List[str] = []
+    try:
+        for idx, vid in enumerate(voice_ids):
+            # Per-voice text when available (two-column split); shared text otherwise.
+            voice_text = texts[idx] if (texts and idx < len(texts)) else text
+            src = os.path.join(work_dir, f"line_{tag}_v{idx}{engine.audio_extension}")
+            wav = os.path.join(work_dir, f"line_{tag}_v{idx}.wav")
+            engine.synthesize(voice_text, vid, src)
+            _afconvert_to_wav(src, wav)
+            per_voice_srcs.append(src)
+            per_voice_wavs.append(wav)
+
+        mixed_wav = os.path.join(work_dir, f"line_{tag}_mixed.wav")
+        _mix_wavs(per_voice_wavs, mixed_wav)
+        _append_wav(writer, mixed_wav)
+        try:
+            os.remove(mixed_wav)
+        except OSError:
+            pass
+    except Exception:
+        # If mixing fails for any reason, fall back to solo render of first voice
+        if per_voice_wavs:
+            _append_wav(writer, per_voice_wavs[0])
+        else:
+            _synthesize_into(writer, text, voice_ids[0], engine, work_dir, tag + "_fb")
+    finally:
+        for p in per_voice_srcs + per_voice_wavs:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
 
 
 # ---------------------------------------------------------------------------

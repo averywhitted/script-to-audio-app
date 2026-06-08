@@ -1354,11 +1354,25 @@ private struct SceneElementRow: View {
         let displayText: String = correction?.correctedText ?? element.text
 
         HStack(alignment: .top, spacing: 10) {
-            Circle()
-                .fill(speakerColor(displaySpeaker))
-                .frame(width: 8, height: 8)
+            // Color dot(s): one per speaker for overlap lines, one for solo lines
+            if element.isOverlap, let cue = element.overlapCue {
+                ZStack {
+                    ForEach(Array(cue.prefix(3).enumerated()), id: \.offset) { idx, name in
+                        Circle()
+                            .fill(speakerColor(name))
+                            .frame(width: 8, height: 8)
+                            .offset(x: CGFloat(idx) * 4, y: CGFloat(idx) * -2)
+                    }
+                }
+                .frame(width: 8 + CGFloat(min(cue.count, 3) - 1) * 4, height: 8)
                 .padding(.top, 5)
-            Image(systemName: element.kind == "dialog" ? "person.wave.2" : "text.quote")
+            } else {
+                Circle()
+                    .fill(speakerColor(displaySpeaker))
+                    .frame(width: 8, height: 8)
+                    .padding(.top, 5)
+            }
+            Image(systemName: element.isOverlap ? "person.2.wave.2" : (element.kind == "dialog" ? "person.wave.2" : "text.quote"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(width: 16)
@@ -1366,8 +1380,18 @@ private struct SceneElementRow: View {
                 HStack(spacing: 6) {
                     Text(displaySpeaker)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(speakerColor(displaySpeaker))
+                        .foregroundStyle(speakerColor(element.overlapCue?.first ?? displaySpeaker))
                         .strikethrough(isRemoved)
+                    // "Simultaneous" badge for overlap lines
+                    if element.isOverlap && !isRemoved {
+                        Text("Simultaneous")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.purple.opacity(0.75), in: Capsule())
+                            .help("These speakers deliver this line at the same time — both voices will be mixed together in the audio.")
+                    }
                     // Correction dot (non-noise corrections only)
                     if correction != nil && !isRemoved {
                         Circle()
@@ -1610,7 +1634,9 @@ private struct AddedElementEditPopover: View {
 
     private var speakerOptions: [String] {
         var opts = allSpeakers
-        if !speakerText.isEmpty && !opts.contains(speakerText) { opts.insert(speakerText, at: 0) }
+        if !speakerText.isEmpty && speakerText != "Narrator" && !opts.contains(speakerText) {
+            opts.insert(speakerText, at: 0)
+        }
         return opts
     }
 
@@ -1620,7 +1646,8 @@ private struct AddedElementEditPopover: View {
         self.sceneNumber = sceneNumber
         self.allSpeakers = allSpeakers
         _selectedKind = State(initialValue: element.kind)
-        _speakerText = State(initialValue: element.speaker)
+        // Treat empty speaker as "Narrator" so the Picker always has a valid selection.
+        _speakerText = State(initialValue: element.speaker.isEmpty ? "Narrator" : element.speaker)
         _editedText = State(initialValue: element.text)
     }
 
@@ -1648,6 +1675,10 @@ private struct AddedElementEditPopover: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Speaker").font(.caption).foregroundStyle(.secondary)
                     Picker("Speaker", selection: $speakerText) {
+                        // "Narrator" is always the first option and is the valid
+                        // tag for an empty-speaker line, ensuring SwiftUI never
+                        // lands in an unmatched-tag state.
+                        Text("Narrator").tag("Narrator")
                         ForEach(speakerOptions, id: \.self) { name in
                             Text(name).tag(name)
                         }
@@ -1674,7 +1705,14 @@ private struct AddedElementEditPopover: View {
                 Button("Cancel") { dismiss() }
                     .buttonStyle(.borderless)
                 Button("Save") {
-                    let speaker = selectedKind == "stage_direction" ? "" : speakerText
+                    // stage_direction → always narrator (empty); "Narrator" picker
+                    // option also maps to empty string so the backend treats it as narrator.
+                    let speaker: String
+                    if selectedKind == "stage_direction" || speakerText == "Narrator" {
+                        speaker = ""
+                    } else {
+                        speaker = speakerText
+                    }
                     state.updateAddedElement(
                         id: element.id,
                         speaker: speaker,

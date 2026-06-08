@@ -129,17 +129,26 @@ struct SceneElementSummary: Codable, Equatable, Identifiable, Sendable {
     var kind: String
     var speaker: String?
     var text: String
+    var overlapCue: [String]?    // set when multiple speakers deliver this line simultaneously
+    var overlapTexts: [String]?  // per-voice texts (parallel with overlapCue); nil = all voices read .text
 
     var id: String { "\(kind)-\(speaker ?? "narrator")-\(text.prefix(24))" }
 
+    /// True when this element carries a simultaneous-speech overlap annotation.
+    var isOverlap: Bool { (overlapCue?.count ?? 0) >= 2 }
+
+    /// True when each voice has its own distinct text (two-column PDF format).
+    var hasSplitText: Bool { (overlapTexts?.count ?? 0) >= 2 }
+
     var displaySpeaker: String {
         if kind == "stage_direction" || kind == "parenthetical" { return "Narrator" }
+        if isOverlap, let cue = overlapCue { return cue.joined(separator: " & ") }
         return speaker ?? "Narrator"
     }
 
     var kindLabel: String {
         switch kind {
-        case "dialog": "Dialog"
+        case "dialog": isOverlap ? "Overlap" : "Dialog"
         case "stage_direction": "Narration"
         case "parenthetical": "Aside"
         default: kind
