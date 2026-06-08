@@ -305,6 +305,7 @@ struct ParserCorrection: Codable, Equatable, Sendable {
     var correctedKind: String?        // nil = keep original
     var correctedSpeaker: String?     // nil = keep original; "" = narrator (no speaker)
     var correctedText: String?        // nil = keep original
+    var correctedOverlapTexts: [String]? // per-voice corrected texts for simultaneous elements
     var markedAsNoise: Bool           // true = exclude this element entirely
     var timestamp: Date
     var contributed: Bool             // user opted to share this correction
@@ -369,6 +370,7 @@ extension ScriptSummary {
                     updated.speaker = speaker.isEmpty ? nil : speaker
                 }
                 if let text = fix.correctedText, !text.isEmpty { updated.text = text }
+                if let ot = fix.correctedOverlapTexts { updated.overlapTexts = ot }
                 return updated
             }
             return sc

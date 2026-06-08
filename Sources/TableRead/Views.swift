@@ -1378,19 +1378,36 @@ private struct SceneElementRow: View {
                 .frame(width: 16)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(displaySpeaker)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(speakerColor(element.overlapCue?.first ?? displaySpeaker))
+                    // For overlap: each speaker name in their own color; for solo: single name
+                    if element.isOverlap, let cue = element.overlapCue, cue.count >= 2 {
+                        HStack(spacing: 3) {
+                            ForEach(Array(cue.prefix(3).enumerated()), id: \.offset) { idx, name in
+                                if idx > 0 {
+                                    Text("&").font(.caption).foregroundStyle(.secondary)
+                                }
+                                Text(name)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(speakerColor(name))
+                            }
+                        }
                         .strikethrough(isRemoved)
+                    } else {
+                        Text(displaySpeaker)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(speakerColor(displaySpeaker))
+                            .strikethrough(isRemoved)
+                    }
                     // "Simultaneous" badge for overlap lines
                     if element.isOverlap && !isRemoved {
-                        Text("Simultaneous")
+                        Text(element.hasSplitText ? "Simultaneous" : "Chorus")
                             .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(Color.purple.opacity(0.75), in: Capsule())
-                            .help("These speakers deliver this line at the same time — both voices will be mixed together in the audio.")
+                            .help(element.hasSplitText
+                                  ? "Each speaker has their own line — both will be mixed together in the audio."
+                                  : "All speakers deliver the same line simultaneously.")
                     }
                     // Correction dot (non-noise corrections only)
                     if correction != nil && !isRemoved {
@@ -1497,11 +1514,42 @@ private struct SceneElementRow: View {
                         .help("Insert a new line below this one")
                     }
                 }
-                Text(displayText)
-                    .font(.callout)
-                    .foregroundStyle(isRemoved ? .tertiary : .primary)
-                    .strikethrough(isRemoved, color: .secondary)
-                    .lineLimit(isRemoved ? 1 : 4)
+                // Two-column side-by-side display for split-text overlap elements
+                let overlapTexts = correction?.correctedOverlapTexts ?? element.overlapTexts
+                if element.hasSplitText,
+                   let cue = element.overlapCue, cue.count >= 2,
+                   let ot = overlapTexts, ot.count >= 2 {
+                    HStack(alignment: .top, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(ot[0])
+                                .font(.callout)
+                                .foregroundStyle(isRemoved ? .tertiary : .primary)
+                                .strikethrough(isRemoved, color: .secondary)
+                                .lineLimit(isRemoved ? 1 : nil)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Rectangle()
+                            .fill(Color(nsColor: .separatorColor))
+                            .frame(width: 1)
+                            .padding(.horizontal, 8)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(ot[1])
+                                .font(.callout)
+                                .foregroundStyle(isRemoved ? .tertiary : .primary)
+                                .strikethrough(isRemoved, color: .secondary)
+                                .lineLimit(isRemoved ? 1 : nil)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                } else {
+                    Text(displayText)
+                        .font(.callout)
+                        .foregroundStyle(isRemoved ? .tertiary : .primary)
+                        .strikethrough(isRemoved, color: .secondary)
+                        .lineLimit(isRemoved ? 1 : 4)
+                }
             }
             Spacer()
         }
@@ -1744,6 +1792,8 @@ private struct ElementCorrectionPopover: View {
     @State private var selectedKind: String
     @State private var speakerText: String
     @State private var editedText: String
+    @State private var editedOverlapText0: String  // first voice (hasSplitText only)
+    @State private var editedOverlapText1: String  // second voice (hasSplitText only)
     @State private var markAsNoise: Bool
 
     init(element: SceneElementSummary, pdfPath: String, sceneNumber: Int, allSpeakers: [String]) {
@@ -1754,6 +1804,9 @@ private struct ElementCorrectionPopover: View {
         _selectedKind = State(initialValue: element.kind)
         _speakerText = State(initialValue: element.speaker ?? "")
         _editedText = State(initialValue: element.text)
+        let ot = element.overlapTexts ?? []
+        _editedOverlapText0 = State(initialValue: ot.indices.contains(0) ? ot[0] : "")
+        _editedOverlapText1 = State(initialValue: ot.indices.contains(1) ? ot[1] : "")
         _markAsNoise = State(initialValue: false)   // populated from existing correction below
     }
 
@@ -1799,15 +1852,45 @@ private struct ElementCorrectionPopover: View {
                 }
             }
 
-            // Text content
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Text").font(.caption).foregroundStyle(.secondary)
-                TextEditor(text: $editedText)
-                    .font(.callout)
-                    .frame(minHeight: 64, maxHeight: 120)
-                    .padding(6)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
-                    .scrollContentBackground(.hidden)
+            // Text content — per-voice editors for split-text overlap, single editor otherwise
+            if element.hasSplitText, let cue = element.overlapCue, cue.count >= 2 {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Lines (simultaneous)").font(.caption).foregroundStyle(.secondary)
+                    HStack(alignment: .top, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(cue[0])
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(speakerColor(cue[0]))
+                            TextEditor(text: $editedOverlapText0)
+                                .font(.callout)
+                                .frame(minHeight: 56, maxHeight: 100)
+                                .padding(6)
+                                .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                                .scrollContentBackground(.hidden)
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(cue[1])
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(speakerColor(cue[1]))
+                            TextEditor(text: $editedOverlapText1)
+                                .font(.callout)
+                                .frame(minHeight: 56, maxHeight: 100)
+                                .padding(6)
+                                .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                                .scrollContentBackground(.hidden)
+                        }
+                    }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Text").font(.caption).foregroundStyle(.secondary)
+                    TextEditor(text: $editedText)
+                        .font(.callout)
+                        .frame(minHeight: 64, maxHeight: 120)
+                        .padding(6)
+                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                        .scrollContentBackground(.hidden)
+                }
             }
 
             // Remove line
@@ -1838,6 +1921,14 @@ private struct ElementCorrectionPopover: View {
                 Button("Cancel") { dismiss() }
                     .buttonStyle(.borderless)
                 Button("Save") {
+                    let origOT = element.overlapTexts ?? []
+                    let newOT: [String]? = element.hasSplitText
+                        ? [editedOverlapText0, editedOverlapText1]
+                        : nil
+                    let overlapChanged = element.hasSplitText && (
+                        editedOverlapText0 != (origOT.indices.contains(0) ? origOT[0] : "")
+                        || editedOverlapText1 != (origOT.indices.contains(1) ? origOT[1] : "")
+                    )
                     let correction = ParserCorrection(
                         textKey: element.text,
                         pdfIdentifier: pdfPath,
@@ -1847,7 +1938,8 @@ private struct ElementCorrectionPopover: View {
                         correctedKind: selectedKind != element.kind ? selectedKind : nil,
                         correctedSpeaker: selectedKind == "dialog" && speakerText != (element.speaker ?? "")
                             ? speakerText : nil,
-                        correctedText: editedText != element.text ? editedText : nil,
+                        correctedText: !element.hasSplitText && editedText != element.text ? editedText : nil,
+                        correctedOverlapTexts: overlapChanged ? newOT : nil,
                         markedAsNoise: markAsNoise,
                         timestamp: Date(),
                         contributed: state.contributeCorrections
@@ -1860,7 +1952,7 @@ private struct ElementCorrectionPopover: View {
             }
         }
         .padding(16)
-        .frame(width: 340)
+        .frame(width: element.hasSplitText ? 520 : 340)
         .onAppear {
             // Pre-populate from any existing correction for this element
             let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
@@ -1868,16 +1960,26 @@ private struct ElementCorrectionPopover: View {
                 if let kind = existing.correctedKind { selectedKind = kind }
                 if let speaker = existing.correctedSpeaker { speakerText = speaker }
                 if let text = existing.correctedText { editedText = text }
+                if let ot = existing.correctedOverlapTexts, ot.count >= 2 {
+                    editedOverlapText0 = ot[0]
+                    editedOverlapText1 = ot[1]
+                }
                 markAsNoise = existing.markedAsNoise
             }
         }
     }
 
     private var hasChanges: Bool {
-        markAsNoise
+        let origOT = element.overlapTexts ?? []
+        let overlapChanged = element.hasSplitText && (
+            editedOverlapText0 != (origOT.indices.contains(0) ? origOT[0] : "")
+            || editedOverlapText1 != (origOT.indices.contains(1) ? origOT[1] : "")
+        )
+        return markAsNoise
             || selectedKind != element.kind
             || (selectedKind == "dialog" && speakerText != (element.speaker ?? ""))
-            || editedText != element.text
+            || (!element.hasSplitText && editedText != element.text)
+            || overlapChanged
     }
 }
 

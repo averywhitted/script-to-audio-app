@@ -231,6 +231,8 @@ def _apply_corrections(script, corrections_list: List[Dict[str, Any]]):
                 el.speaker = None if raw == "" else raw
             if "correctedText" in c:
                 el.text = c["correctedText"]
+            if "correctedOverlapTexts" in c:
+                el.overlap_texts = c["correctedOverlapTexts"]
             filtered.append(el)
         scene.elements = filtered
 
