@@ -797,3 +797,271 @@ def test_bundled_corrections_config_loads():
     # Spot-check a few expected entries
     assert "VOICE" in cfg["non_cue_words"]
     assert "CROWD" in cfg["non_cue_words"]
+
+
+# ---------------------------------------------------------------------------
+# DR.-prefix speaker names (issue: period in name was blocking cue detection)
+# ---------------------------------------------------------------------------
+
+def test_dr_prefix_is_caps_cue_candidate():
+    """'DR. WOODLE' must pass _is_caps_cue_candidate despite the period."""
+    assert p._is_caps_cue_candidate("DR. WOODLE")
+
+
+def test_mr_prefix_is_caps_cue_candidate():
+    assert p._is_caps_cue_candidate("MR. SMITH")
+
+
+def test_mrs_prefix_is_caps_cue_candidate():
+    assert p._is_caps_cue_candidate("MRS. JONES")
+
+
+def test_sentence_period_still_blocked():
+    """A period that is NOT a title abbreviation must still be rejected."""
+    assert not p._is_caps_cue_candidate("WELL DONE.")
+    assert not p._is_caps_cue_candidate("OK.")
+
+
+def _play_lines_with_cast(**kwargs):
+    """Build minimal play lines: CHARACTERS section + SCENE ONE + dialog."""
+    cast_lines = ["Cast of Characters"]
+    for name, gender in kwargs.items():
+        cast_lines.append(f"{name} {gender}.")
+    scene_lines = ["SCENE ONE"] + cast_lines[1:]  # reuse cast text to avoid empty scene
+    return cast_lines
+
+
+def test_dr_speaker_gets_dialog():
+    """DR. WOODLE lines are attributed to her, not swallowed as stage directions."""
+    lines = [
+        "Cast of Characters",
+        "DR. WOODLE Female. Therapist.",
+        "LEAH Female. Patient.",
+        "SCENE ONE",
+        "LEAH",
+        "Hello, Doctor.",
+        "DR. WOODLE",
+        "Good morning.",
+        "LEAH",
+        "How are you?",
+        "DR. WOODLE",
+        "Fine, thank you.",
+    ]
+    script = p._parse_play(lines, title="Test")
+    woodle_lines = [e for sc in script.scenes for e in sc.elements
+                    if e.speaker == "DR. WOODLE"]
+    assert len(woodle_lines) >= 2, "DR. WOODLE should have at least 2 dialog lines"
+
+
+def test_dr_speaker_in_character_list():
+    """DR. WOODLE must appear in the parsed character list."""
+    lines = [
+        "Cast of Characters",
+        "DR. WOODLE Female. Therapist.",
+        "LEAH Female. Patient.",
+        "SCENE ONE",
+        "DR. WOODLE",
+        "Good morning.",
+        "LEAH",
+        "Hello.",
+    ]
+    script = p._parse_play(lines, title="Test")
+    names = {c.name for c in script.characters}
+    assert "DR. WOODLE" in names
+
+
+# ---------------------------------------------------------------------------
+# Cast row parser: "NAME Male/Female description" format
+# ---------------------------------------------------------------------------
+
+def test_parse_cast_row_gender_first_basic():
+    result = p._parse_cast_row_gender_first("CHARLIE Male, 40s-50s. Problem solver.")
+    assert result is not None
+    assert result.name == "CHARLIE"
+    assert result.gender_hint == "M"
+
+
+def test_parse_cast_row_gender_first_with_period_in_name():
+    result = p._parse_cast_row_gender_first(
+        "DR. WOODLE Female. 40s-50s. Psychologist in training."
+    )
+    assert result is not None
+    assert result.name == "DR. WOODLE"
+    assert result.gender_hint == "F"
+
+
+def test_parse_cast_row_gender_first_voice_only_prefix():
+    result = p._parse_cast_row_gender_first(
+        "**Voice Only** CREDIT CARD COMPANY AUTOMATED VOICE: Female. Siri."
+    )
+    assert result is not None
+    assert result.name == "CREDIT CARD COMPANY AUTOMATED VOICE"
+    assert result.gender_hint == "F"
+
+
+def test_parse_cast_row_gender_first_slash_name():
+    result = p._parse_cast_row_gender_first(
+        "SHELBY/TRINA Female. Late teens to early 20s. Computer genius."
+    )
+    assert result is not None
+    assert result.name == "SHELBY/TRINA"
+    assert result.gender_hint == "F"
+
+
+# ---------------------------------------------------------------------------
+# _split_compound_cue: prefix matching for abbreviated names
+# ---------------------------------------------------------------------------
+
+def test_split_compound_cue_prefix_match():
+    """Right side abbreviates a known speaker — should still split."""
+    known = {"LEAH", "CREDIT CARD COMPANY AUTOMATED VOICE"}
+    result = p._split_compound_cue("LEAH CREDIT CARD COMPANY", known)
+    assert result == ["LEAH", "CREDIT CARD COMPANY"]
+
+
+def test_split_compound_cue_exact_match_unaffected():
+    """Exact matches still work after the prefix-match addition."""
+    known = {"ALICE", "BOB"}
+    assert p._split_compound_cue("ALICE BOB", known) == ["ALICE", "BOB"]
+
+
+# ---------------------------------------------------------------------------
+# Ampersand overlap cues: "MARA & EDDIE"
+# ---------------------------------------------------------------------------
+
+def test_ampersand_cue_splits_correctly():
+    """'MARA & EDDIE' should produce an overlap with speaker=MARA, cue=['MARA','EDDIE']."""
+    lines = [
+        "SCENE ONE",
+        "MARA",
+        "Alone line.",
+        "EDDIE",
+        "Another line.",
+        "MARA & EDDIE",
+        "Together now.",
+        "MARA",
+        "Back to solo.",
+    ]
+    known = {"MARA", "EDDIE"}
+    noise: set = set()
+    scenes = p._extract_scenes_play(lines, known, noise)
+    assert scenes, "Should produce at least one scene"
+    overlap_els = [e for sc in scenes for e in sc.elements if e.overlap_cue]
+    assert len(overlap_els) >= 1, "Should find at least one overlap element"
+    el = overlap_els[0]
+    assert el.speaker == "MARA"
+    assert "EDDIE" in el.overlap_cue
+
+
+def test_looks_like_chorus_handles_ampersand():
+    assert p._looks_like_chorus("MARA & EDDIE")
+    assert p._looks_like_chorus("ALICE/BOB")
+    assert not p._looks_like_chorus("CHARLIE")
+
+
+# ---------------------------------------------------------------------------
+# Orphan speaker: known-name orphans must NOT become stage directions
+# ---------------------------------------------------------------------------
+
+def test_known_name_orphan_not_emitted_as_stage_direction():
+    """After a parenthetical restores current_speaker, the next different-character
+    cue must NOT emit the restored speaker as a stage direction."""
+    lines = [
+        "SCENE ONE",
+        "EDDIE",
+        "Don't worry—it's fake!",
+        "(They freeze.)",
+        "LEAH",          # ← different character; EDDIE should not become a stage dir
+        "What?",
+    ]
+    known = {"EDDIE", "LEAH"}
+    noise: set = set()
+    scenes = p._extract_scenes_play(lines, known, noise)
+    elements = [e for sc in scenes for e in sc.elements]
+    # Verify no stage direction whose text is a known character name
+    bad = [e for e in elements if e.kind == "stage_direction" and e.text in known]
+    assert not bad, f"Orphan character names emitted as stage directions: {[e.text for e in bad]}"
+
+
+def test_slash_name_parts_added_to_known_speakers():
+    """SHELBY/TRINA in cast → both 'SHELBY' and 'TRINA' treated as known speakers
+    so neither becomes an orphan stage direction."""
+    lines = [
+        "SCENE ONE",
+        "SHELBY",
+        "I'm Shelby.",
+        "(Pause.)",
+        "TRINA",          # ← previously would emit orphan "SHELBY"
+        "I'm Trina.",
+    ]
+    # Simulate what _parse_play would build: only the slash form in known_speakers
+    known = {"SHELBY/TRINA"}
+    noise: set = set()
+    scenes = p._extract_scenes_play(lines, known, noise)
+    elements = [e for sc in scenes for e in sc.elements]
+    bad = [e for e in elements
+           if e.kind == "stage_direction" and e.text in {"SHELBY", "TRINA", "SHELBY/TRINA"}]
+    assert not bad, f"Unexpected character-name stage directions: {[e.text for e in bad]}"
+
+
+# ---------------------------------------------------------------------------
+# Page number noise + row-stripping tests
+# ---------------------------------------------------------------------------
+
+
+def test_collect_page_noise_single_digit_period():
+    """'3.' (single-digit page number) must be recognised as noise."""
+    lines = ["3.", "LEAH", "Hello.", "EDDIE", "Hi."]
+    noise = p._collect_page_noise(lines)
+    assert "3." in noise, "Single-digit page number '3.' should be in noise set"
+
+
+def test_collect_page_noise_multi_digit_period():
+    """'22.' and '186.' must be recognised as noise (regression guard)."""
+    lines = ["22.", "186.", "LEAH", "Hello."]
+    noise = p._collect_page_noise(lines)
+    assert "22." in noise
+    assert "186." in noise
+
+
+def test_strip_page_number_words_removes_far_right_digits():
+    """Far-right digit-only words are stripped from a row."""
+    page_width = 612.0
+    row = [
+        {"text": "How", "x0": 72.0, "x1": 95.0, "top": 100.0},
+        {"text": "much", "x0": 100.0, "x1": 130.0, "top": 100.0},
+        {"text": "22", "x0": 560.0, "x1": 578.0, "top": 100.0},  # page number
+    ]
+    result = p._strip_page_number_words(row, page_width)
+    texts = [w["text"] for w in result]
+    assert "22" not in texts
+    assert "How" in texts and "much" in texts
+
+
+def test_strip_page_number_words_keeps_right_column_dialog():
+    """A right-column dialog word (not far-right, has letters) is NOT stripped."""
+    page_width = 612.0
+    row = [
+        {"text": "LEAH", "x0": 72.0, "x1": 110.0, "top": 100.0},
+        {"text": "EDDIE", "x0": 314.0, "x1": 360.0, "top": 100.0},  # right-col, letters
+    ]
+    result = p._strip_page_number_words(row, page_width)
+    assert len(result) == 2, "Right-column dialog word should NOT be stripped"
+
+
+def test_page_number_not_read_by_narrator():
+    """'3.' on its own line must not appear as narrator dialog."""
+    lines = [
+        "SCENE ONE",
+        "LEAH",
+        "Hello there.",
+        "3.",  # single-digit page number — must be noise, not narrator
+        "How are you?",
+    ]
+    noise = p._collect_page_noise(lines)
+    scenes = p._extract_scenes_play(lines, {"LEAH"}, noise)
+    elements = [e for sc in scenes for e in sc.elements]
+    narrator_texts = [e.text for e in elements if e.speaker == "NARRATOR"]
+    assert not any("3." in t for t in narrator_texts), (
+        f"Page number '3.' was voiced by narrator: {narrator_texts}"
+    )
