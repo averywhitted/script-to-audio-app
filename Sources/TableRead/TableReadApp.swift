@@ -15,6 +15,14 @@ struct TableReadApp: App {
         }
         .windowStyle(.titleBar)
         .commands {
+            CommandGroup(replacing: .undoRedo) {
+                Button("Undo") { state.undo() }
+                    .keyboardShortcut("z", modifiers: .command)
+                    .disabled(!state.canUndo)
+                Button("Redo") { state.redo() }
+                    .keyboardShortcut("z", modifiers: [.command, .shift])
+                    .disabled(!state.canRedo)
+            }
             CommandGroup(replacing: .help) {
                 Button("Table Read Help") {
                     UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")

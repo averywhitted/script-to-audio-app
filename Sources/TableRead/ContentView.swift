@@ -246,7 +246,7 @@ private struct ProcessingOverlay: View {
                 ProgressView().controlSize(.large)
                 Text(state.status)
                     .font(.headline)
-                Text("This can take a moment for large PDFs or voice downloads.")
+                Text("This can take a while for large PDFs.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -54,8 +54,15 @@ private struct RecentScriptsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Recent Scripts")
-                .font(.headline)
+            HStack {
+                Text("Recent Scripts")
+                    .font(.headline)
+                Spacer()
+                Button("Clear") { state.clearRecentScripts() }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+            }
             VStack(spacing: 0) {
                 ForEach(state.recentScripts) { script in
                     Button {
@@ -95,8 +102,44 @@ private struct RecentScriptsSection: View {
 
 // MARK: - Review
 
+/// Shared selection state for the review element list.
+/// Lives at ReviewView level so the floating toolbar can overlay the whole scroll area.
+final class ReviewSelectionState: ObservableObject {
+    @Published var sceneNumber: Int? = nil
+    @Published var pdfPath: String = ""
+    @Published var keys: Set<String> = []
+    @Published var addedKeys: Set<UUID> = []
+
+    var isEmpty: Bool { keys.isEmpty && addedKeys.isEmpty }
+
+    func toggle(key: String, sceneNumber: Int, pdfPath: String) {
+        if self.sceneNumber != sceneNumber || self.pdfPath != pdfPath {
+            keys = []
+            addedKeys = []
+            self.sceneNumber = sceneNumber
+            self.pdfPath = pdfPath
+        }
+        if keys.contains(key) { keys.remove(key) } else { keys.insert(key) }
+        if keys.isEmpty && addedKeys.isEmpty { self.sceneNumber = nil }
+    }
+
+    func toggleAdded(_ id: UUID, sceneNumber: Int, pdfPath: String) {
+        if self.sceneNumber != sceneNumber || self.pdfPath != pdfPath {
+            keys = []
+            addedKeys = []
+            self.sceneNumber = sceneNumber
+            self.pdfPath = pdfPath
+        }
+        if addedKeys.contains(id) { addedKeys.remove(id) } else { addedKeys.insert(id) }
+        if keys.isEmpty && addedKeys.isEmpty { self.sceneNumber = nil }
+    }
+
+    func clear() { keys = []; addedKeys = []; sceneNumber = nil; pdfPath = "" }
+}
+
 struct ReviewView: View {
     @EnvironmentObject private var state: AppState
+    @StateObject private var selection = ReviewSelectionState()
 
     var body: some View {
         if let script = state.script {
@@ -136,22 +179,54 @@ struct ReviewView: View {
                     .padding(.vertical, 10)
                     .animation(.easeInOut(duration: 0.2), value: state.isFetchingVoices)
                     Divider()
-                    // Scene list is the primary content
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 6) {
-                            ForEach(script.scenes) { scene in
-                                SceneReviewRow(
-                                    scene: scene,
-                                    pdfPath: state.selectedPDF?.path ?? "",
-                                    allSpeakers: script.characters.map(\.name),
-                                    isSelected: state.selectedScenes.contains(scene.number)
-                                ) {
-                                    state.toggleScene(scene)
+                    // Scene list — floating selection toolbar overlays the whole scroll area
+                    ZStack(alignment: .bottom) {
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 6) {
+                                ForEach(script.scenes) { scene in
+                                    SceneReviewRow(
+                                        scene: scene,
+                                        pdfPath: state.selectedPDF?.path ?? "",
+                                        allSpeakers: script.characters.map(\.name),
+                                        isSelected: state.selectedScenes.contains(scene.number)
+                                    ) {
+                                        state.toggleScene(scene)
+                                    }
                                 }
                             }
+                            .padding(16)
+                            // Extra bottom padding so last items clear the floating bar
+                            .padding(.bottom, selection.isEmpty ? 0 : 64)
                         }
-                        .padding(16)
+                        .environmentObject(selection)
+
+                        if !selection.isEmpty,
+                           let sceneNum = selection.sceneNumber,
+                           let scene = script.scenes.first(where: { $0.number == sceneNum }) {
+                            SelectionActionsBar(
+                                selectedKeys: selection.keys,
+                                selectedAddedIds: selection.addedKeys,
+                                scene: scene,
+                                pdfPath: selection.pdfPath,
+                                allSpeakers: script.characters.map(\.name),
+                                onClearSelection: { selection.clear() }
+                            )
+                            .environmentObject(state)
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 16)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
                     }
+                    .overlay(alignment: .top) {
+                        if state.canUndo || state.canRedo {
+                            UndoRedoBar()
+                                .environmentObject(state)
+                                .padding(.top, 12)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                    }
+                    .animation(.snappy(duration: 0.2), value: selection.isEmpty)
+                    .animation(.snappy(duration: 0.2), value: state.canUndo || state.canRedo)
                 }
             }
         } else {
@@ -167,11 +242,16 @@ private struct SceneReviewRow: View {
     var isSelected: Bool
     var toggle: () -> Void
     @EnvironmentObject private var state: AppState
+    @EnvironmentObject private var selection: ReviewSelectionState
     @State private var expanded = false
     @State private var showAllLines = false
     @State private var editingTitle = false
     @State private var titleDraft = ""
     @State private var isHoveringTitle = false
+
+    private var isMyScene: Bool { selection.sceneNumber == scene.number && selection.pdfPath == pdfPath }
+    private func isElementSelected(_ key: String) -> Bool { isMyScene && selection.keys.contains(key) }
+    private func toggleElement(_ key: String) { selection.toggle(key: key, sceneNumber: scene.number, pdfPath: pdfPath) }
 
     private static let initialLineLimit = 30
 
@@ -281,6 +361,7 @@ private struct SceneReviewRow: View {
 
             if expanded {
                 Divider().padding(.horizontal, 14)
+
                 let limit = showAllLines ? Int.max : Self.initialLineLimit
                 let merged = state.mergedElements(for: scene, pdfPath: pdfPath, limit: limit)
                 let hiddenCount = scene.elements.count - min(scene.elements.count, limit)
@@ -289,15 +370,37 @@ private struct SceneReviewRow: View {
                     ForEach(merged) { item in
                         switch item {
                         case .parsed(let element):
+                            let eKey = String(element.text.prefix(60))
                             SceneElementRow(
                                 element: element,
                                 pdfPath: pdfPath,
                                 sceneNumber: scene.number,
-                                allSpeakers: allSpeakers
+                                allSpeakers: allSpeakers,
+                                isSelected: isElementSelected(eKey),
+                                onToggleSelect: { toggleElement(eKey) }
                             ) {
                                 state.addElement(
-                                    afterTextKey: String(element.text.prefix(60)),
+                                    afterTextKey: eKey,
                                     speaker: element.kind == "dialog" ? (element.speaker ?? "") : "",
+                                    kind: "dialog",
+                                    sceneNumber: scene.number,
+                                    pdfPath: pdfPath
+                                )
+                            }
+                        case .manualOverlap(let primary, let secondary):
+                            let pKey = String(primary.text.prefix(60))
+                            ManualOverlapRow(
+                                primary: primary,
+                                secondary: secondary,
+                                pdfPath: pdfPath,
+                                sceneNumber: scene.number,
+                                allSpeakers: allSpeakers,
+                                isSelected: isElementSelected(pKey),
+                                onToggleSelect: { toggleElement(pKey) }
+                            ) {
+                                state.addElement(
+                                    afterTextKey: String(secondary.text.prefix(60)),
+                                    speaker: primary.kind == "dialog" ? (primary.speaker ?? "") : "",
                                     kind: "dialog",
                                     sceneNumber: scene.number,
                                     pdfPath: pdfPath
@@ -308,7 +411,9 @@ private struct SceneReviewRow: View {
                                 element: addedEl,
                                 sceneNumber: scene.number,
                                 pdfPath: pdfPath,
-                                allSpeakers: allSpeakers
+                                allSpeakers: allSpeakers,
+                                isSelected: selection.addedKeys.contains(addedEl.id),
+                                onToggleSelect: { selection.toggleAdded(addedEl.id, sceneNumber: scene.number, pdfPath: pdfPath) }
                             )
                         }
                     }
@@ -342,7 +447,10 @@ private struct SceneReviewRow: View {
                 .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color.clear, lineWidth: 1.5)
         }
         .onChange(of: expanded) { _, isExpanded in
-            if !isExpanded { showAllLines = false }
+            if !isExpanded {
+                showAllLines = false
+                if isMyScene { selection.clear() }
+            }
         }
     }
 
@@ -498,6 +606,11 @@ private struct CharacterVoiceRow: View {
     private var selectedVoice: VoiceSummary? { voices.first { $0.id == selectedVoiceId } }
     private var engineReady: Bool { state.installedEngines.contains(state.selectedEngine) }
 
+    /// Resolved gender: user override → parser hint → "N" (neutral)
+    private var effectiveGender: String {
+        state.characterGenderOverrides[characterKey] ?? genderHint ?? "N"
+    }
+
     private var maleVoices:   [VoiceSummary] { voices.filter { $0.gender == "M" } }
     private var femaleVoices: [VoiceSummary] { voices.filter { $0.gender == "F" } }
     private var otherVoices:  [VoiceSummary] { voices.filter { $0.gender != "M" && $0.gender != "F" } }
@@ -508,12 +621,9 @@ private struct CharacterVoiceRow: View {
                 .fill(speakerColor(name))
                 .frame(width: 9, height: 9)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(name).font(.headline).foregroundStyle(speakerColor(name))
-                if let hint = genderHint {
-                    Text(hint == "M" ? "Male" : hint == "F" ? "Female" : "Unknown")
-                        .font(.caption2).foregroundStyle(.secondary)
-                }
+                genderPicker
             }
 
             Spacer()
@@ -539,6 +649,37 @@ private struct CharacterVoiceRow: View {
         }
         .padding(.vertical, 9)
         .padding(.horizontal, 2)
+    }
+
+    private var genderPicker: some View {
+        HStack(spacing: 0) {
+            ForEach([("M", "Male"), ("F", "Female"), ("N", "Neutral")], id: \.0) { code, label in
+                Button {
+                    state.setCharacterGender(code, for: characterKey)
+                } label: {
+                    Text(label)
+                        .font(.system(size: 10, weight: effectiveGender == code ? .semibold : .regular))
+                        .foregroundStyle(effectiveGender == code ? speakerColor(name) : Color(nsColor: .secondaryLabelColor))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            effectiveGender == code
+                                ? speakerColor(name).opacity(0.15)
+                                : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 4)
+                        )
+                }
+                .buttonStyle(.plain)
+                .help(code == "N" ? "Neutral / unspecified — any voice" : (code == "M" ? "Male voice" : "Female voice"))
+            }
+        }
+        .padding(2)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+        )
+        .fixedSize()
     }
 
     private var voicePicker: some View {
@@ -1334,228 +1475,762 @@ private struct SceneElementRow: View {
     var pdfPath: String
     var sceneNumber: Int
     var allSpeakers: [String]
+    var isSelected: Bool = false
+    var onToggleSelect: (() -> Void)? = nil
     var onAddLineBelow: (() -> Void)? = nil
 
     @EnvironmentObject private var state: AppState
     @State private var isHovered = false
     @State private var showingEdit = false
+    @State private var showingEditLeft = false
+    @State private var showingEditRight = false
 
     var body: some View {
         let correctionKey = ParserCorrection.key(
             pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
         let correction = state.corrections[correctionKey]
         let isRemoved = correction?.markedAsNoise == true
+        let effectiveKind = correction?.correctedKind ?? element.kind
+        // For parser overlaps, the visible cue may have been edited down to 1 voice.
+        let rawOverlapCue: [String] = element.isOverlap ? (element.overlapCue ?? []) : []
+        let displayCueForOverlap: [String] = correction?.correctedOverlapSpeakers ?? rawOverlapCue
+        // Show two-panel layout only when ≥2 voices are still active.
+        // removedVoiceIndex: 0 = left only, 1 = right only, 2 = both
+        let isLeftVoiceRemoved  = correction?.removedVoiceIndex == 0 || correction?.removedVoiceIndex == 2
+        let isRightVoiceRemoved = correction?.removedVoiceIndex == 1 || correction?.removedVoiceIndex == 2
+        let showAsTwoPanel = rawOverlapCue.count >= 2
+                          && displayCueForOverlap.count >= 2
+                          && effectiveKind == "dialog"
         let displaySpeaker: String = {
-            if let s = correction?.correctedSpeaker {
-                return s.isEmpty ? "Narrator" : s
+            if let s = correction?.correctedSpeaker { return s.isEmpty ? "Narrator" : s }
+            // Collapsed single-voice overlap: use the surviving voice name.
+            if element.isOverlap, let os = correction?.correctedOverlapSpeakers, os.count == 1 {
+                return os[0].isEmpty ? "Narrator" : os[0]
             }
             return element.displaySpeaker
         }()
-        let displayText: String = correction?.correctedText ?? element.text
+        let displayText: String = {
+            if let t = correction?.correctedText, !t.isEmpty { return t }
+            // Collapsed single-voice overlap: use the surviving voice text.
+            if element.isOverlap,
+               let os = correction?.correctedOverlapSpeakers, os.count == 1,
+               let ot = correction?.correctedOverlapTexts, !ot.isEmpty { return ot[0] }
+            return element.text
+        }()
 
-        HStack(alignment: .top, spacing: 10) {
-            // Color dot(s): one per speaker for overlap lines, one for solo lines
-            if element.isOverlap, let cue = element.overlapCue {
-                ZStack {
-                    ForEach(Array(cue.prefix(3).enumerated()), id: \.offset) { idx, name in
-                        Circle()
-                            .fill(speakerColor(name))
-                            .frame(width: 8, height: 8)
-                            .offset(x: CGFloat(idx) * 4, y: CGFloat(idx) * -2)
+        HStack(alignment: .top, spacing: 8) {
+            // Checkbox
+            Button {
+                onToggleSelect?()
+            } label: {
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 11))
+                    .foregroundStyle(isSelected ? Color.accentColor : Color(nsColor: .tertiaryLabelColor))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 3)
+
+            if showAsTwoPanel {
+                // ── Two-panel layout for parser-detected overlap ──
+                let displayCue   = displayCueForOverlap          // already computed above
+                let rawCue       = rawOverlapCue                 // alias for clarity
+                let overlapTexts = correction?.correctedOverlapTexts ?? element.overlapTexts
+                let leftText  = overlapTexts?.indices.contains(0) == true ? overlapTexts![0] : displayText
+                let rightText = overlapTexts?.indices.contains(1) == true ? overlapTexts![1] : displayText
+
+                HStack(alignment: .top, spacing: 0) {
+                    // Left panel — speaker A
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 5) {
+                            let nameL = displayCue.indices.contains(0) ? displayCue[0] : rawCue[0]
+                            Circle().fill(speakerColor(nameL)).frame(width: 7, height: 7).padding(.top, 1)
+                            Text(nameL)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(speakerColor(nameL))
+                                .strikethrough(isRemoved || isLeftVoiceRemoved)
+                            if correction != nil && !isRemoved && !isLeftVoiceRemoved {
+                                Circle().fill(speakerColor(nameL)).frame(width: 4, height: 4)
+                                    .help("User correction applied")
+                            }
+                            if isHovered || showingEditLeft {
+                                if isRemoved && correction?.isSplit == true {
+                                    // Fully unlinked — offer Relink
+                                    Button {
+                                        state.relinkParserOverlap(element: element, sceneNumber: sceneNumber, pdfPath: pdfPath)
+                                    } label: {
+                                        Label("Relink", systemImage: "link")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                            .padding(.horizontal, 5).padding(.vertical, 2)
+                                            .background(.quaternary, in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Restore as simultaneous lines")
+                                } else if isLeftVoiceRemoved {
+                                    // This voice was soft-removed — show Restore
+                                    Button {
+                                        state.restoreOverlapVoice(element: element, voiceIndex: 0,
+                                                                   sceneNumber: sceneNumber, pdfPath: pdfPath)
+                                    } label: {
+                                        Label("Restore", systemImage: "arrow.uturn.backward")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                            .padding(.horizontal, 5).padding(.vertical, 2)
+                                            .background(.quaternary, in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Restore this voice")
+                                } else {
+                                    Button { showingEditLeft = true } label: {
+                                        Text("Edit")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(speakerColor(nameL))
+                                            .padding(.horizontal, 5).padding(.vertical, 2)
+                                            .background(speakerColor(nameL).opacity(0.15), in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .popover(isPresented: $showingEditLeft, arrowEdge: .top) {
+                                        OverlapVoiceEditPopover(element: element, voiceIndex: 0,
+                                            pdfPath: pdfPath, sceneNumber: sceneNumber, allSpeakers: allSpeakers)
+                                            .environmentObject(state)
+                                    }
+                                    Button {
+                                        state.markOverlapVoiceAsRemoved(element: element, voiceIndex: 0,
+                                                                         sceneNumber: sceneNumber, pdfPath: pdfPath)
+                                    } label: {
+                                        Label("Remove", systemImage: "minus.circle")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.red)
+                                            .padding(.horizontal, 5).padding(.vertical, 2)
+                                            .background(Color.red.opacity(0.1), in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Remove this voice")
+                                    Button {
+                                        state.splitParserOverlap(element: element, keepVoiceIndex: nil,
+                                                                 sceneNumber: sceneNumber, pdfPath: pdfPath)
+                                    } label: {
+                                        Label("Unlink", systemImage: "link.badge.minus")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                            .padding(.horizontal, 5).padding(.vertical, 2)
+                                            .background(.quaternary, in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Split into two separate solo lines")
+                                    if let addBelow = onAddLineBelow {
+                                        Button(action: addBelow) {
+                                            Label("Add line", systemImage: "plus.circle")
+                                                .font(.system(size: 10, weight: .medium))
+                                                .foregroundStyle(.secondary)
+                                                .padding(.horizontal, 5).padding(.vertical, 2)
+                                                .background(.quaternary, in: Capsule())
+                                        }
+                                        .buttonStyle(.plain)
+                                        .help("Insert a new line below this one")
+                                    }
+                                }
+                            }
+                        }
+                        Text(leftText)
+                            .font(.callout)
+                            .foregroundStyle((isRemoved || isLeftVoiceRemoved) ? .tertiary : .primary)
+                            .strikethrough(isRemoved || isLeftVoiceRemoved, color: .secondary)
+                            .lineLimit((isRemoved || isLeftVoiceRemoved) ? 1 : nil)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Rectangle()
+                        .fill(Color(nsColor: .separatorColor))
+                        .frame(width: 1)
+                        .padding(.horizontal, 8)
+
+                    // Right panel — speaker B
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 5) {
+                            let nameR = displayCue.indices.contains(1) ? displayCue[1] : rawCue[1]
+                            Circle().fill(speakerColor(nameR)).frame(width: 7, height: 7).padding(.top, 1)
+                            Text(nameR)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(speakerColor(nameR))
+                                .strikethrough(isRemoved || isRightVoiceRemoved)
+                            if (isHovered || showingEditRight) && !isRemoved {
+                                if isRightVoiceRemoved {
+                                    // This voice was soft-removed — show Restore
+                                    Button {
+                                        state.restoreOverlapVoice(element: element, voiceIndex: 1,
+                                                                   sceneNumber: sceneNumber, pdfPath: pdfPath)
+                                    } label: {
+                                        Label("Restore", systemImage: "arrow.uturn.backward")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                            .padding(.horizontal, 5).padding(.vertical, 2)
+                                            .background(.quaternary, in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Restore this voice")
+                                } else {
+                                    Button { showingEditRight = true } label: {
+                                        Text("Edit")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(speakerColor(nameR))
+                                            .padding(.horizontal, 5).padding(.vertical, 2)
+                                            .background(speakerColor(nameR).opacity(0.15), in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .popover(isPresented: $showingEditRight, arrowEdge: .top) {
+                                        OverlapVoiceEditPopover(element: element, voiceIndex: 1,
+                                            pdfPath: pdfPath, sceneNumber: sceneNumber, allSpeakers: allSpeakers)
+                                            .environmentObject(state)
+                                    }
+                                    Button {
+                                        state.markOverlapVoiceAsRemoved(element: element, voiceIndex: 1,
+                                                                         sceneNumber: sceneNumber, pdfPath: pdfPath)
+                                    } label: {
+                                        Label("Remove", systemImage: "minus.circle")
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.red)
+                                            .padding(.horizontal, 5).padding(.vertical, 2)
+                                            .background(Color.red.opacity(0.1), in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Remove this voice")
+                                }
+                            }
+                        }
+                        Text(rightText)
+                            .font(.callout)
+                            .foregroundStyle((isRemoved || isRightVoiceRemoved) ? .tertiary : .primary)
+                            .strikethrough(isRemoved || isRightVoiceRemoved, color: .secondary)
+                            .lineLimit((isRemoved || isRightVoiceRemoved) ? 1 : nil)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(width: 8 + CGFloat(min(cue.count, 3) - 1) * 4, height: 8)
-                .padding(.top, 5)
+
             } else {
+                // ── Solo element layout ──
                 Circle()
                     .fill(speakerColor(displaySpeaker))
                     .frame(width: 8, height: 8)
                     .padding(.top, 5)
-            }
-            Image(systemName: element.isOverlap ? "person.2.wave.2" : (element.kind == "dialog" ? "person.wave.2" : "text.quote"))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(width: 16)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    // For overlap: each speaker name in their own color; for solo: single name
-                    if element.isOverlap, let cue = element.overlapCue, cue.count >= 2 {
-                        HStack(spacing: 3) {
-                            ForEach(Array(cue.prefix(3).enumerated()), id: \.offset) { idx, name in
-                                if idx > 0 {
-                                    Text("&").font(.caption).foregroundStyle(.secondary)
-                                }
-                                Text(name)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(speakerColor(name))
-                            }
-                        }
-                        .strikethrough(isRemoved)
-                    } else {
+                Image(systemName: element.kind == "dialog" ? "person.wave.2" : "text.quote")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
                         Text(displaySpeaker)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(speakerColor(displaySpeaker))
                             .strikethrough(isRemoved)
-                    }
-                    // "Simultaneous" badge for overlap lines
-                    if element.isOverlap && !isRemoved {
-                        Text(element.hasSplitText ? "Simultaneous" : "Chorus")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.purple.opacity(0.75), in: Capsule())
-                            .help(element.hasSplitText
-                                  ? "Each speaker has their own line — both will be mixed together in the audio."
-                                  : "All speakers deliver the same line simultaneously.")
-                    }
-                    // Correction dot (non-noise corrections only)
-                    if correction != nil && !isRemoved {
-                        Circle()
-                            .fill(speakerColor(displaySpeaker))
-                            .frame(width: 5, height: 5)
-                            .help("User correction applied")
-                    }
-                    // "Edit" pill — fades in on hover
-                    Button { showingEdit = true } label: {
-                        Text("Edit")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(speakerColor(displaySpeaker))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(speakerColor(displaySpeaker).opacity(0.15),
-                                        in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .opacity(isHovered || showingEdit ? 1 : 0)
-                    .popover(isPresented: $showingEdit, arrowEdge: .top) {
-                        ElementCorrectionPopover(
-                            element: element,
-                            pdfPath: pdfPath,
-                            sceneNumber: sceneNumber,
-                            allSpeakers: allSpeakers
-                        )
-                        .environmentObject(state)
-                    }
-                    // Remove / restore pill — fades in on hover
-                    Button {
-                        let k = ParserCorrection.key(
-                            pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
-                        if isRemoved {
-                            // Already removed — restore by deleting the noise correction.
-                            // If there are other corrections on this element, keep them;
-                            // otherwise just remove the key entirely.
-                            if let existing = state.corrections[k],
-                               existing.correctedKind != nil
-                               || existing.correctedSpeaker != nil
-                               || existing.correctedText != nil {
-                                state.saveCorrection(ParserCorrection(
-                                    textKey: existing.textKey,
-                                    pdfIdentifier: existing.pdfIdentifier,
-                                    sceneNumber: existing.sceneNumber,
-                                    originalKind: existing.originalKind,
-                                    originalSpeaker: existing.originalSpeaker,
-                                    correctedKind: existing.correctedKind,
-                                    correctedSpeaker: existing.correctedSpeaker,
-                                    correctedText: existing.correctedText,
-                                    markedAsNoise: false,
-                                    timestamp: Date(),
-                                    contributed: state.contributeCorrections
-                                ))
-                            } else {
-                                state.deleteCorrection(
-                                    pdfPath: pdfPath, sceneNumber: sceneNumber,
-                                    textKey: element.text)
-                            }
-                        } else {
-                            // Mark as noise, preserving any other corrections already set.
-                            let existing = state.corrections[k]
-                            state.saveCorrection(ParserCorrection(
-                                textKey: element.text,
-                                pdfIdentifier: pdfPath,
-                                sceneNumber: sceneNumber,
-                                originalKind: element.kind,
-                                originalSpeaker: element.speaker,
-                                correctedKind: existing?.correctedKind,
-                                correctedSpeaker: existing?.correctedSpeaker,
-                                correctedText: existing?.correctedText,
-                                markedAsNoise: true,
-                                timestamp: Date(),
-                                contributed: state.contributeCorrections
-                            ))
+                        if correction != nil && !isRemoved {
+                            Circle()
+                                .fill(speakerColor(displaySpeaker))
+                                .frame(width: 5, height: 5)
+                                .help("User correction applied")
                         }
-                    } label: {
-                        Label(isRemoved ? "Restore" : "Remove",
-                              systemImage: isRemoved ? "arrow.uturn.backward" : "minus.circle")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(isRemoved ? Color.secondary : Color.red)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                (isRemoved ? Color.secondary : Color.red).opacity(0.1),
-                                in: Capsule()
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .opacity(isHovered ? 1 : 0)
-                    .help(isRemoved ? "Restore this line" : "Mark line as removed (won't be voiced)")
-                    // "Add line ↓" — fades in on hover
-                    if let addBelow = onAddLineBelow {
-                        Button(action: addBelow) {
-                            Label("Add line", systemImage: "plus.circle")
+                        Button { showingEdit = true } label: {
+                            Text("Edit")
                                 .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(.quaternary, in: Capsule())
+                                .foregroundStyle(speakerColor(displaySpeaker))
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(speakerColor(displaySpeaker).opacity(0.15), in: Capsule())
                         }
                         .buttonStyle(.plain)
-                        .opacity(isHovered ? 1 : 0)
-                        .help("Insert a new line below this one")
-                    }
-                }
-                // Two-column side-by-side display for split-text overlap elements
-                let overlapTexts = correction?.correctedOverlapTexts ?? element.overlapTexts
-                if element.hasSplitText,
-                   let cue = element.overlapCue, cue.count >= 2,
-                   let ot = overlapTexts, ot.count >= 2 {
-                    HStack(alignment: .top, spacing: 0) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(ot[0])
-                                .font(.callout)
-                                .foregroundStyle(isRemoved ? .tertiary : .primary)
-                                .strikethrough(isRemoved, color: .secondary)
-                                .lineLimit(isRemoved ? 1 : nil)
+                        .opacity(isHovered || showingEdit ? 1 : 0)
+                        .popover(isPresented: $showingEdit, arrowEdge: .top) {
+                            ElementCorrectionPopover(element: element, pdfPath: pdfPath,
+                                sceneNumber: sceneNumber, allSpeakers: allSpeakers)
+                                .environmentObject(state)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        Rectangle()
-                            .fill(Color(nsColor: .separatorColor))
-                            .frame(width: 1)
-                            .padding(.horizontal, 8)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(ot[1])
-                                .font(.callout)
-                                .foregroundStyle(isRemoved ? .tertiary : .primary)
-                                .strikethrough(isRemoved, color: .secondary)
-                                .lineLimit(isRemoved ? 1 : nil)
+                        ElementRemoveRestoreButton(element: element, pdfPath: pdfPath,
+                            sceneNumber: sceneNumber, isRemoved: isRemoved)
+                            .opacity(isHovered ? 1 : 0)
+                        if let addBelow = onAddLineBelow {
+                            Button(action: addBelow) {
+                                Label("Add line", systemImage: "plus.circle")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background(.quaternary, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .opacity(isHovered ? 1 : 0)
+                            .help("Insert a new line below this one")
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                } else {
                     Text(displayText)
                         .font(.callout)
                         .foregroundStyle(isRemoved ? .tertiary : .primary)
                         .strikethrough(isRemoved, color: .secondary)
                         .lineLimit(isRemoved ? 1 : 4)
                 }
+                Spacer()
             }
-            Spacer()
         }
         .opacity(isRemoved ? 0.45 : 1)
         .padding(.vertical, 3)
         .onHover { isHovered = $0 }
+    }
+}
+
+// MARK: - Shared remove/restore button for parsed elements
+
+private struct ElementRemoveRestoreButton: View {
+    var element: SceneElementSummary
+    var pdfPath: String
+    var sceneNumber: Int
+    var isRemoved: Bool
+
+    @EnvironmentObject private var state: AppState
+
+    var body: some View {
+        Button {
+            let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+            let existing = state.corrections[k]
+            if isRemoved {
+                if let e = existing, e.correctedKind != nil || e.correctedSpeaker != nil || e.correctedText != nil || e.manualOverlapPartnerKey != nil {
+                    state.saveCorrection(ParserCorrection(
+                        textKey: e.textKey, pdfIdentifier: e.pdfIdentifier, sceneNumber: e.sceneNumber,
+                        originalKind: e.originalKind, originalSpeaker: e.originalSpeaker,
+                        correctedKind: e.correctedKind, correctedSpeaker: e.correctedSpeaker,
+                        correctedText: e.correctedText, markedAsNoise: false,
+                        timestamp: Date(), contributed: state.contributeCorrections,
+                        manualOverlapPartnerKey: e.manualOverlapPartnerKey
+                    ))
+                } else {
+                    state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: element.text)
+                }
+            } else {
+                state.saveCorrection(ParserCorrection(
+                    textKey: element.text, pdfIdentifier: pdfPath, sceneNumber: sceneNumber,
+                    originalKind: element.kind, originalSpeaker: element.speaker,
+                    correctedKind: existing?.correctedKind, correctedSpeaker: existing?.correctedSpeaker,
+                    correctedText: existing?.correctedText, markedAsNoise: true,
+                    timestamp: Date(), contributed: state.contributeCorrections,
+                    manualOverlapPartnerKey: nil  // removing clears any manual overlap link
+                ))
+            }
+        } label: {
+            Label(isRemoved ? "Restore" : "Remove",
+                  systemImage: isRemoved ? "arrow.uturn.backward" : "minus.circle")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(isRemoved ? Color.secondary : Color.red)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background((isRemoved ? Color.secondary : Color.red).opacity(0.1), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(isRemoved ? "Restore this line" : "Mark line as removed (won't be voiced)")
+    }
+}
+
+// MARK: - Manual overlap row
+
+private struct ManualOverlapRow: View {
+    var primary: SceneElementSummary
+    var secondary: SceneElementSummary
+    var pdfPath: String
+    var sceneNumber: Int
+    var allSpeakers: [String]
+    var isSelected: Bool = false
+    var onToggleSelect: (() -> Void)? = nil
+    var onAddLineBelow: (() -> Void)? = nil
+
+    @EnvironmentObject private var state: AppState
+    @State private var isHovered = false
+    @State private var showingEditPrimary = false
+    @State private var showingEditSecondary = false
+
+    var body: some View {
+        let pk = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: primary.text)
+        let sk = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: secondary.text)
+        let pCorr = state.corrections[pk]
+        let sCorr = state.corrections[sk]
+        let pRemoved = pCorr?.markedAsNoise == true
+        let sRemoved = sCorr?.markedAsNoise == true
+
+        let pSpeaker = pCorr?.correctedSpeaker.map { $0.isEmpty ? "Narrator" : $0 } ?? primary.displaySpeaker
+        let sSpeaker = sCorr?.correctedSpeaker.map { $0.isEmpty ? "Narrator" : $0 } ?? secondary.displaySpeaker
+        let pText = pCorr?.correctedText ?? primary.text
+        let sText = sCorr?.correctedText ?? secondary.text
+
+        HStack(alignment: .top, spacing: 8) {
+            // Checkbox
+            Button { onToggleSelect?() } label: {
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 11))
+                    .foregroundStyle(isSelected ? Color.accentColor : Color(nsColor: .tertiaryLabelColor))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 3)
+
+            HStack(alignment: .top, spacing: 0) {
+                // Left panel — primary speaker
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 5) {
+                        Circle().fill(speakerColor(pSpeaker)).frame(width: 7, height: 7).padding(.top, 1)
+                        Text(pSpeaker)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(speakerColor(pSpeaker))
+                            .strikethrough(pRemoved)
+                        if pCorr != nil && !pRemoved {
+                            Circle().fill(speakerColor(pSpeaker)).frame(width: 4, height: 4)
+                                .help("User correction applied")
+                        }
+                        if isHovered || showingEditPrimary {
+                            Button { showingEditPrimary = true } label: {
+                                Text("Edit")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(speakerColor(pSpeaker))
+                                    .padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background(speakerColor(pSpeaker).opacity(0.15), in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .popover(isPresented: $showingEditPrimary, arrowEdge: .top) {
+                                ElementCorrectionPopover(element: primary, pdfPath: pdfPath,
+                                    sceneNumber: sceneNumber, allSpeakers: allSpeakers)
+                                    .environmentObject(state)
+                            }
+                            Button {
+                                removeSide(isPrimary: true, isCurrentlyRemoved: pRemoved, correction: pCorr)
+                            } label: {
+                                Label(pRemoved ? "Restore" : "Remove",
+                                      systemImage: pRemoved ? "arrow.uturn.backward" : "minus.circle")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(pRemoved ? Color.secondary : Color.red)
+                                    .padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background((pRemoved ? Color.secondary : Color.red).opacity(0.1), in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            Button {
+                                state.breakSimultaneous(primaryText: primary.text, sceneNumber: sceneNumber, pdfPath: pdfPath)
+                            } label: {
+                                Label("Unlink", systemImage: "link.badge.minus")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background(.quaternary, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .help("Split into two separate lines")
+                        }
+                    }
+                    Text(pText)
+                        .font(.callout)
+                        .foregroundStyle(pRemoved ? .tertiary : .primary)
+                        .strikethrough(pRemoved, color: .secondary)
+                        .lineLimit(pRemoved ? 1 : nil)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Rectangle()
+                    .fill(Color(nsColor: .separatorColor))
+                    .frame(width: 1)
+                    .padding(.horizontal, 8)
+
+                // Right panel — secondary speaker
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 5) {
+                        Circle().fill(speakerColor(sSpeaker)).frame(width: 7, height: 7).padding(.top, 1)
+                        Text(sSpeaker)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(speakerColor(sSpeaker))
+                            .strikethrough(sRemoved)
+                        if sCorr != nil && !sRemoved {
+                            Circle().fill(speakerColor(sSpeaker)).frame(width: 4, height: 4)
+                                .help("User correction applied")
+                        }
+                        if isHovered || showingEditSecondary {
+                            Button { showingEditSecondary = true } label: {
+                                Text("Edit")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(speakerColor(sSpeaker))
+                                    .padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background(speakerColor(sSpeaker).opacity(0.15), in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .popover(isPresented: $showingEditSecondary, arrowEdge: .top) {
+                                ElementCorrectionPopover(element: secondary, pdfPath: pdfPath,
+                                    sceneNumber: sceneNumber, allSpeakers: allSpeakers)
+                                    .environmentObject(state)
+                            }
+                            Button {
+                                removeSide(isPrimary: false, isCurrentlyRemoved: sRemoved, correction: sCorr)
+                            } label: {
+                                Label(sRemoved ? "Restore" : "Remove",
+                                      systemImage: sRemoved ? "arrow.uturn.backward" : "minus.circle")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(sRemoved ? Color.secondary : Color.red)
+                                    .padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background((sRemoved ? Color.secondary : Color.red).opacity(0.1), in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            if let addBelow = onAddLineBelow {
+                                Button(action: addBelow) {
+                                    Label("Add line", systemImage: "plus.circle")
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 5).padding(.vertical, 2)
+                                        .background(.quaternary, in: Capsule())
+                                }
+                                .buttonStyle(.plain)
+                                .help("Insert a new line below this pair")
+                            }
+                        }
+                    }
+                    Text(sText)
+                        .font(.callout)
+                        .foregroundStyle(sRemoved ? .tertiary : .primary)
+                        .strikethrough(sRemoved, color: .secondary)
+                        .lineLimit(sRemoved ? 1 : nil)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.vertical, 3)
+        .onHover { isHovered = $0 }
+    }
+
+    private func removeSide(isPrimary: Bool, isCurrentlyRemoved: Bool, correction: ParserCorrection?) {
+        let el = isPrimary ? primary : secondary
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: el.text)
+        if isCurrentlyRemoved {
+            // Restore
+            if let e = correction, e.correctedKind != nil || e.correctedSpeaker != nil || e.correctedText != nil {
+                state.saveCorrection(ParserCorrection(
+                    textKey: e.textKey, pdfIdentifier: e.pdfIdentifier, sceneNumber: e.sceneNumber,
+                    originalKind: e.originalKind, originalSpeaker: e.originalSpeaker,
+                    correctedKind: e.correctedKind, correctedSpeaker: e.correctedSpeaker,
+                    correctedText: e.correctedText, markedAsNoise: false,
+                    timestamp: Date(), contributed: state.contributeCorrections
+                ))
+            } else {
+                state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: el.text)
+            }
+        } else {
+            // Mark as noise
+            state.saveCorrection(ParserCorrection(
+                textKey: el.text, pdfIdentifier: pdfPath, sceneNumber: sceneNumber,
+                originalKind: el.kind, originalSpeaker: el.speaker,
+                correctedKind: correction?.correctedKind, correctedSpeaker: correction?.correctedSpeaker,
+                correctedText: correction?.correctedText, markedAsNoise: true,
+                timestamp: Date(), contributed: state.contributeCorrections
+            ))
+            // If removing primary, also clear the link so secondary becomes solo
+            if isPrimary {
+                state.breakSimultaneous(primaryText: primary.text, sceneNumber: sceneNumber, pdfPath: pdfPath)
+            }
+            // If removing secondary, primary keeps its link; secondary shows as removed-within-overlap
+        }
+    }
+}
+
+// MARK: - Selection actions toolbar
+
+private struct SelectionActionsBar: View {
+    var selectedKeys: Set<String>
+    var selectedAddedIds: Set<UUID>
+    var scene: SceneSummary
+    var pdfPath: String
+    var allSpeakers: [String]
+    var onClearSelection: () -> Void
+
+    @EnvironmentObject private var state: AppState
+    @State private var showingSpeakerPicker = false
+    @State private var pickerSpeaker: String = ""
+
+    private var selectedElements: [SceneElementSummary] {
+        scene.elements.filter { selectedKeys.contains(String($0.text.prefix(60))) }
+    }
+
+    private var selectedAddedElements: [UserAddedElement] {
+        let key = state.addedKey(pdfPath: pdfPath, sceneNumber: scene.number)
+        return (state.userAddedElements[key] ?? []).filter { selectedAddedIds.contains($0.id) }
+    }
+
+    private var totalCount: Int { selectedKeys.count + selectedAddedIds.count }
+
+    // Simultaneous only works for exactly 2 solo parsed dialog lines, no added elements mixed in.
+    private var canMakeSimultaneous: Bool {
+        guard selectedAddedIds.isEmpty, selectedKeys.count == 2 else { return false }
+        let els = selectedElements.filter { el in
+            let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+            let fix = state.corrections[k]
+            // Use corrected kind so lines edited to/from dialog are handled correctly.
+            let effectiveKind = fix?.correctedKind ?? el.kind
+            guard effectiveKind == "dialog" else { return false }
+            // Skip noise'd lines.
+            guard fix?.markedAsNoise != true else { return false }
+            // Skip active (2-voice) overlaps; collapsed single-voice overlaps are fine.
+            let displayCue = fix?.correctedOverlapSpeakers ?? el.overlapCue ?? []
+            return !(el.isOverlap && displayCue.count >= 2)
+        }
+        return els.count == 2
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("\(totalCount) selected")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+
+            Divider().frame(height: 14)
+
+            // Remove
+            Button {
+                for el in selectedElements {
+                    let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+                    let e = state.corrections[k]
+                    state.saveCorrection(ParserCorrection(
+                        textKey: el.text, pdfIdentifier: pdfPath, sceneNumber: scene.number,
+                        originalKind: el.kind, originalSpeaker: el.speaker,
+                        correctedKind: e?.correctedKind, correctedSpeaker: e?.correctedSpeaker,
+                        correctedText: e?.correctedText, markedAsNoise: true,
+                        timestamp: Date(), contributed: state.contributeCorrections
+                    ))
+                }
+                for el in selectedAddedElements {
+                    state.deleteAddedElement(id: el.id, sceneNumber: scene.number, pdfPath: pdfPath)
+                }
+                onClearSelection()
+            } label: {
+                Label("Remove", systemImage: "minus.circle")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.red.opacity(0.1), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .help("Mark selected lines as removed")
+
+            // Make Simultaneous
+            if canMakeSimultaneous {
+                Button {
+                    let pair = selectedElements.filter { $0.kind == "dialog" && !$0.isOverlap }
+                    guard pair.count == 2 else { return }
+                    // Document order: pair[0] comes first in scene.elements
+                    state.makeSimultaneous(primaryText: pair[0].text, secondaryText: pair[1].text,
+                                          sceneNumber: scene.number, pdfPath: pdfPath)
+                    onClearSelection()
+                } label: {
+                    Label("Simultaneous", systemImage: "person.2.wave.2")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.purple)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color.purple.opacity(0.1), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .help("Make selected lines play simultaneously")
+            }
+
+            // Change Speaker
+            let dialogSelected = selectedElements.filter { $0.kind == "dialog" }
+            let addedDialogSelected = selectedAddedElements.filter { $0.kind == "dialog" }
+            if !dialogSelected.isEmpty || !addedDialogSelected.isEmpty {
+                let totalDialogCount = dialogSelected.count + addedDialogSelected.count
+                Button { showingSpeakerPicker = true } label: {
+                    Label("Speaker", systemImage: "person.crop.circle")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(.quaternary, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .help("Reassign speaker for selected dialog lines")
+                .popover(isPresented: $showingSpeakerPicker, arrowEdge: .top) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Change speaker").font(.headline)
+                        Picker("Speaker", selection: $pickerSpeaker) {
+                            ForEach(allSpeakers, id: \.self) { Text($0).tag($0) }
+                        }
+                        .labelsHidden()
+                        .frame(minWidth: 160)
+                        Button("Apply to \(totalDialogCount) line\(totalDialogCount == 1 ? "" : "s")") {
+                            for el in dialogSelected {
+                                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+                                let e = state.corrections[k]
+                                state.saveCorrection(ParserCorrection(
+                                    textKey: el.text, pdfIdentifier: pdfPath, sceneNumber: scene.number,
+                                    originalKind: el.kind, originalSpeaker: el.speaker,
+                                    correctedKind: e?.correctedKind, correctedSpeaker: pickerSpeaker,
+                                    correctedText: e?.correctedText, markedAsNoise: e?.markedAsNoise ?? false,
+                                    timestamp: Date(), contributed: state.contributeCorrections,
+                                    manualOverlapPartnerKey: e?.manualOverlapPartnerKey
+                                ))
+                            }
+                            for el in addedDialogSelected {
+                                state.updateAddedElement(id: el.id, speaker: pickerSpeaker,
+                                    text: el.text, kind: el.kind,
+                                    sceneNumber: scene.number, pdfPath: pdfPath)
+                            }
+                            showingSpeakerPicker = false
+                            onClearSelection()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(pickerSpeaker.isEmpty)
+                    }
+                    .padding()
+                }
+                .onAppear {
+                    pickerSpeaker = allSpeakers.first ?? ""
+                }
+            }
+
+            Spacer()
+
+            Button(action: onClearSelection) {
+                Image(systemName: "xmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Clear selection")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(nsColor: .separatorColor), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
+    }
+}
+
+// MARK: - Undo / Redo bar
+
+private struct UndoRedoBar: View {
+    @EnvironmentObject private var state: AppState
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button {
+                state.undo()
+            } label: {
+                Label("Undo", systemImage: "arrow.uturn.backward")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.plain)
+            .disabled(!state.canUndo)
+
+            if state.undoStackCount > 0 {
+                Text("\(state.undoStackCount)")
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 14)
+            }
+
+            Button {
+                state.redo()
+            } label: {
+                Label("Redo", systemImage: "arrow.uturn.forward")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.plain)
+            .disabled(!state.canRedo)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color(nsColor: .windowBackgroundColor), in: Capsule())
+        .overlay(Capsule().stroke(Color(nsColor: .separatorColor), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -1566,6 +2241,8 @@ private struct AddedElementRow: View {
     var sceneNumber: Int
     var pdfPath: String
     var allSpeakers: [String]
+    var isSelected: Bool = false
+    var onToggleSelect: (() -> Void)? = nil
 
     @EnvironmentObject private var state: AppState
     @State private var isHovered = false
@@ -1576,7 +2253,15 @@ private struct AddedElementRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 8) {
+            Button { onToggleSelect?() } label: {
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 11))
+                    .foregroundStyle(isSelected ? Color.accentColor : Color(nsColor: .tertiaryLabelColor))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 3)
+
             // Dashed circle — visual cue that this line was user-added
             Circle()
                 .strokeBorder(
@@ -1677,7 +2362,7 @@ private struct AddedElementEditPopover: View {
     @State private var editedText: String
 
     private var kindOptions: [(String, String)] {
-        [("dialog", "Dialog"), ("stage_direction", "Narration"), ("parenthetical", "Aside")]
+        [("dialog", "Dialog"), ("stage_direction", "Narration")]
     }
 
     private var speakerOptions: [String] {
@@ -1780,6 +2465,103 @@ private struct AddedElementEditPopover: View {
     }
 }
 
+// MARK: - Per-voice edit popover (parser-detected overlaps)
+
+private struct OverlapVoiceEditPopover: View {
+    var element: SceneElementSummary
+    var voiceIndex: Int
+    var pdfPath: String
+    var sceneNumber: Int
+    var allSpeakers: [String]
+
+    @EnvironmentObject private var state: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var speakerText: String = ""
+    @State private var editedText: String = ""
+
+    private var correctionKey: String {
+        ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+    }
+
+    private var speakerOptions: [String] {
+        var opts = allSpeakers
+        if !speakerText.isEmpty && !opts.contains(speakerText) { opts.insert(speakerText, at: 0) }
+        return opts
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Edit line").font(.headline)
+            Divider()
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Speaker").font(.caption).foregroundStyle(.secondary)
+                Picker("Speaker", selection: $speakerText) {
+                    ForEach(speakerOptions, id: \.self) { Text($0).tag($0) }
+                }
+                .labelsHidden()
+                .frame(minWidth: 160)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Line").font(.caption).foregroundStyle(.secondary)
+                TextEditor(text: $editedText)
+                    .font(.callout)
+                    .frame(minHeight: 72, maxHeight: 140)
+                    .padding(6)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                    .scrollContentBackground(.hidden)
+            }
+
+            HStack {
+                Button("Cancel") { dismiss() }.buttonStyle(.borderless)
+                Spacer()
+                Button("Save") { save(); dismiss() }.buttonStyle(.borderedProminent)
+            }
+        }
+        .padding()
+        .frame(minWidth: 280)
+        .onAppear {
+            let existing = state.corrections[correctionKey]
+            let cue   = element.overlapCue ?? []
+            let texts = element.overlapTexts ?? []
+            speakerText = existing?.correctedOverlapSpeakers?.indices.contains(voiceIndex) == true
+                ? existing!.correctedOverlapSpeakers![voiceIndex]
+                : (cue.indices.contains(voiceIndex) ? cue[voiceIndex] : "")
+            editedText = existing?.correctedOverlapTexts?.indices.contains(voiceIndex) == true
+                ? existing!.correctedOverlapTexts![voiceIndex]
+                : (texts.indices.contains(voiceIndex) ? texts[voiceIndex] : element.text)
+        }
+    }
+
+    private func save() {
+        let existing = state.corrections[correctionKey]
+        let cue   = element.overlapCue ?? []
+        let texts = element.overlapTexts ?? Array(repeating: element.text, count: cue.count)
+
+        var newSpeakers = existing?.correctedOverlapSpeakers ?? cue
+        while newSpeakers.count <= voiceIndex { newSpeakers.append("") }
+        newSpeakers[voiceIndex] = speakerText
+
+        var newTexts = existing?.correctedOverlapTexts ?? texts
+        while newTexts.count <= voiceIndex { newTexts.append("") }
+        newTexts[voiceIndex] = editedText
+
+        state.saveCorrection(ParserCorrection(
+            textKey: element.text, pdfIdentifier: pdfPath, sceneNumber: sceneNumber,
+            originalKind: element.kind, originalSpeaker: element.speaker,
+            correctedKind: existing?.correctedKind, correctedSpeaker: existing?.correctedSpeaker,
+            correctedText: existing?.correctedText,
+            correctedOverlapTexts: newTexts,
+            correctedOverlapSpeakers: newSpeakers,
+            markedAsNoise: existing?.markedAsNoise ?? false,
+            timestamp: Date(), contributed: state.contributeCorrections,
+            manualOverlapPartnerKey: existing?.manualOverlapPartnerKey
+        ))
+    }
+}
+
 private struct ElementCorrectionPopover: View {
     var element: SceneElementSummary
     var pdfPath: String
@@ -1811,7 +2593,7 @@ private struct ElementCorrectionPopover: View {
     }
 
     private var kindOptions: [(String, String)] {
-        [("dialog", "Dialog"), ("stage_direction", "Narration"), ("parenthetical", "Aside")]
+        [("dialog", "Dialog"), ("stage_direction", "Narration")]
     }
 
     private var speakerOptions: [String] {

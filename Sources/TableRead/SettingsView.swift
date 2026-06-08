@@ -306,6 +306,27 @@ private struct AboutTab: View {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
     }
 
+    private let licenseText = """
+        Table Read — Personal Use License
+        Copyright © 2025 Avery Whitted. All rights reserved.
+
+        Permission is granted to any individual to use this software for personal, non-commercial purposes, subject to the following conditions:
+
+        1. NON-COMMERCIAL. You may not sell, license, sublicense, rent, or otherwise use this software or any portion of it for commercial gain or as part of a commercial product or service.
+
+        2. NO MODIFICATIONS WITHOUT PERMISSION. You may not modify, adapt, translate, or create derivative works based on this software without prior written permission from the copyright holder.
+
+        3. NO REDISTRIBUTION. You may not redistribute this software, in original or modified form, without prior written permission from the copyright holder.
+
+        4. ATTRIBUTION. Any permitted use or distribution must retain this notice and the copyright statement above.
+
+        5. SOURCE AVAILABLE. The source code is made available for inspection and personal study only. Viewing the source does not grant any rights beyond those stated here.
+
+        THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM USE OF THIS SOFTWARE.
+
+        To request permission for uses not covered here, contact: averywhitted.com
+        """
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
@@ -334,7 +355,7 @@ private struct AboutTab: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                Text("By Avery Whitted")
+                Text("© 2025 Avery Whitted. All rights reserved.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -343,14 +364,33 @@ private struct AboutTab: View {
 
             Divider()
 
-            VStack(spacing: 10) {
-                Text("Table Read is free for personal use. Not for resale or commercial redistribution.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 340)
+            VStack(alignment: .leading, spacing: 10) {
+                ScrollView {
+                    Text(licenseText)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                        .padding(10)
+                }
+                .frame(maxHeight: 130)
+                .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                )
 
                 HStack(spacing: 12) {
+                    Button("View License on GitHub") {
+                        if let url = URL(string: "https://github.com/averywhitted/table-read/blob/main/LICENSE") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+
+                    Spacer()
+
                     Button("Donate on Buy Me a Coffee") {
                         if let url = URL(string: "https://buymeacoffee.com/averywhitted") {
                             NSWorkspace.shared.open(url)
@@ -359,9 +399,10 @@ private struct AboutTab: View {
                     .buttonStyle(.borderedProminent)
                 }
             }
-            .padding(.vertical, 18)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 0)
     }
 }

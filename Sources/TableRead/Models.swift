@@ -273,6 +273,7 @@ struct UserAddedElement: Codable, Equatable, Identifiable, Sendable {
     var text: String
     var kind: String          // "dialog", "stage_direction", "parenthetical"
     var timestamp: Date
+    var isSplitFragment: Bool = false // true when created by splitParserOverlap
 }
 
 /// Unified element type used in the Review scene expansion —
@@ -280,11 +281,13 @@ struct UserAddedElement: Codable, Equatable, Identifiable, Sendable {
 enum MergedSceneElement: Identifiable {
     case parsed(SceneElementSummary)
     case added(UserAddedElement)
+    case manualOverlap(SceneElementSummary, SceneElementSummary) // primary, secondary
 
     var id: String {
         switch self {
         case .parsed(let e): "p-\(e.id)"
         case .added(let e):  "a-\(e.id.uuidString)"
+        case .manualOverlap(let a, let b): "mo-\(a.id)-\(b.id)"
         }
     }
 }
@@ -305,11 +308,15 @@ struct ParserCorrection: Codable, Equatable, Sendable {
     var correctedKind: String?        // nil = keep original
     var correctedSpeaker: String?     // nil = keep original; "" = narrator (no speaker)
     var correctedText: String?        // nil = keep original
-    var correctedOverlapTexts: [String]? // per-voice corrected texts for simultaneous elements
+    var correctedOverlapTexts: [String]?   // per-voice corrected texts for simultaneous elements
+    var correctedOverlapSpeakers: [String]? = nil // per-voice corrected speaker names for simultaneous elements
     var markedAsNoise: Bool           // true = exclude this element entirely
+    var isSplit: Bool = false         // true when markedAsNoise was set by splitParserOverlap
+    var removedVoiceIndex: Int? = nil // 0 or 1: one voice soft-removed from overlap (shows crossed-out)
     var timestamp: Date
     var contributed: Bool             // user opted to share this correction
     var uploaded: Bool = false        // true once successfully POSTed to the corrections endpoint
+    var manualOverlapPartnerKey: String? = nil // text.prefix(60) of element to pair as simultaneous
 }
 
 /// Privacy-safe version of ParserCorrection for upload — no file paths or personal identifiers.
@@ -356,26 +363,87 @@ extension ScriptSummary {
         var copy = self
         copy.scenes = scenes.map { scene in
             var sc = scene
+
+            // Collect secondary keys: elements absorbed by a manual overlap primary.
+            // Only suppress secondary when primary is not itself noise.
+            var secondaryKeys = Set<String>()
+            for el in scene.elements {
+                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+                let fix = corrections[k]
+                if fix?.markedAsNoise == true { continue }
+                if let partnerKey = fix?.manualOverlapPartnerKey {
+                    secondaryKeys.insert(partnerKey)
+                }
+            }
+            let elementByKey = Dictionary(
+                scene.elements.map { (String($0.text.prefix(60)), $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+
             sc.elements = scene.elements.compactMap { el in
-                let k = ParserCorrection.key(
-                    pdfIdentifier: pdfPath,
-                    sceneNumber: scene.number,
-                    text: el.text
-                )
-                guard let fix = corrections[k] else { return el }
-                if fix.markedAsNoise { return nil }
+                if secondaryKeys.contains(String(el.text.prefix(60))) { return nil }
+                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+                let fix = corrections[k]
+                if fix?.markedAsNoise == true { return nil }
                 var updated = el
-                if let kind = fix.correctedKind { updated.kind = kind }
-                if let speaker = fix.correctedSpeaker {
+                if let kind = fix?.correctedKind { updated.kind = kind }
+                if let speaker = fix?.correctedSpeaker {
                     updated.speaker = speaker.isEmpty ? nil : speaker
                 }
-                if let text = fix.correctedText, !text.isEmpty { updated.text = text }
-                if let ot = fix.correctedOverlapTexts { updated.overlapTexts = ot }
+                if let text = fix?.correctedText, !text.isEmpty { updated.text = text }
+                // If kind changed away from dialog, strip overlap data
+                if updated.kind != "dialog" {
+                    updated.overlapCue = nil
+                    updated.overlapTexts = nil
+                } else if let os = fix?.correctedOverlapSpeakers {
+                    if os.count >= 2 {
+                        // Multi-voice: update speakers (and texts if provided)
+                        updated.overlapCue = os
+                        if let ot = fix?.correctedOverlapTexts { updated.overlapTexts = ot }
+                    } else {
+                        // Single-voice: one voice was removed — collapse to solo dialog
+                        updated.overlapCue = nil
+                        updated.overlapTexts = nil
+                        let voice = os.first ?? ""
+                        updated.speaker = voice.isEmpty ? nil : voice
+                        if let ot = fix?.correctedOverlapTexts, !ot.isEmpty { updated.text = ot[0] }
+                    }
+                } else if let ot = fix?.correctedOverlapTexts {
+                    updated.overlapTexts = ot
+                }
+                // Soft-removed voices (removedVoiceIndex):
+                //   0 = left removed, keep right   1 = right removed, keep left
+                //   2 = both removed → treat as noise
+                if let removedIdx = fix?.removedVoiceIndex,
+                   let cue = updated.overlapCue, cue.count >= 2 {
+                    if removedIdx == 2 {
+                        // Both voices removed — suppress the element entirely
+                        return nil
+                    }
+                    let keepIdx = removedIdx == 0 ? 1 : 0
+                    let texts = updated.overlapTexts ?? Array(repeating: updated.text, count: cue.count)
+                    updated.overlapCue = nil
+                    updated.overlapTexts = nil
+                    let voice = cue.indices.contains(keepIdx) ? cue[keepIdx] : ""
+                    updated.speaker = voice.isEmpty ? nil : voice
+                    if texts.indices.contains(keepIdx) { updated.text = texts[keepIdx] }
+                }
+                // Merge with manual overlap partner
+                if let partnerKey = fix?.manualOverlapPartnerKey,
+                   let secondary = elementByKey[partnerKey] {
+                    let secK = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: secondary.text)
+                    let secFix = corrections[secK]
+                    let speakerA = fix?.correctedSpeaker.map { $0.isEmpty ? "Narrator" : $0 } ?? el.speaker ?? "Narrator"
+                    let speakerB = secFix?.correctedSpeaker.map { $0.isEmpty ? "Narrator" : $0 } ?? secondary.speaker ?? "Narrator"
+                    let textA = fix?.correctedText.flatMap { $0.isEmpty ? nil : $0 } ?? el.text
+                    let textB = secFix?.correctedText.flatMap { $0.isEmpty ? nil : $0 } ?? secondary.text
+                    updated.overlapCue = [speakerA, speakerB]
+                    updated.overlapTexts = [textA, textB]
+                }
                 return updated
             }
             return sc
         }
-        // Recount after filtering noise
         copy.lineCount = copy.scenes.reduce(0) { $0 + $1.elements.count }
         return copy
     }
