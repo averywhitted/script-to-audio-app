@@ -61,6 +61,12 @@ final class AppState: ObservableObject {
     private var pauseStartTime: Date?
     private var totalPausedSeconds: Double = 0
 
+    // In-app update
+    @Published var availableUpdate: UpdateInfo? = nil
+    @Published var updateDownloadState: UpdateDownloadState = .idle
+    /// Prevents showing the startup prompt sheet more than once per launch.
+    @Published var didPromptForUpdate = false
+
     // Settings — persisted via UserDefaults
     @Published var autoOpenFinderAfterRender: Bool = UserDefaults.standard.bool(forKey: "autoOpenFinderAfterRender") {
         didSet { UserDefaults.standard.set(autoOpenFinderAfterRender, forKey: "autoOpenFinderAfterRender") }
@@ -136,6 +142,11 @@ final class AppState: ObservableObject {
         Task.detached(priority: .background) { [weak self] in
             try? await Task.sleep(nanoseconds: 5_000_000_000)  // 5 s after launch
             await self?.uploadPendingCorrections()
+        }
+        // Check for a new release 6 s after launch (non-blocking, silently skips on error).
+        Task.detached(priority: .background) { [weak self] in
+            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            await self?.checkForUpdates()
         }
     }
 
@@ -1388,6 +1399,54 @@ extension AppState {
         encoder.dateEncodingStrategy = .iso8601
         if let data = try? encoder.encode(elements) {
             UserDefaults.standard.set(data, forKey: userAddedElementsKey)
+        }
+    }
+}
+
+// MARK: - In-app updates
+
+extension AppState {
+    /// Called once at launch (with a short delay) and whenever the user taps "Check for Updates".
+    func checkForUpdates() async {
+        let info = await AppUpdater.shared.checkForUpdates()
+        availableUpdate = info
+    }
+
+    /// Downloads and installs the update, driving `updateDownloadState` as it goes.
+    func downloadAndInstallUpdate() {
+        guard let info = availableUpdate else { return }
+
+        // If no zip asset yet, open the release page in the browser instead
+        guard info.hasZipAsset else {
+            NSWorkspace.shared.open(info.htmlURL)
+            return
+        }
+
+        // Don't start a second download if one is already in progress
+        switch updateDownloadState {
+        case .downloading, .extracting, .installing: return
+        default: break
+        }
+
+        updateDownloadState = .downloading(0)
+
+        Task {
+            do {
+                let appURL = try await AppUpdater.shared.downloadAndExtract(
+                    info: info,
+                    onProgress: { [weak self] fraction in
+                        Task { @MainActor [weak self] in
+                            self?.updateDownloadState = .downloading(fraction)
+                        }
+                    }
+                )
+                updateDownloadState = .installing
+                try await Task.sleep(nanoseconds: 200_000_000)   // brief pause so UI shows "Installing…"
+                try await AppUpdater.shared.installUpdate(from: appURL)
+                // App terminates inside installUpdate — we never reach here
+            } catch {
+                updateDownloadState = .failed(error.localizedDescription)
+            }
         }
     }
 }

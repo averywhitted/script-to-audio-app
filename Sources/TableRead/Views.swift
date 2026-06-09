@@ -1993,7 +1993,6 @@ private struct ManualOverlapRow: View {
 
     private func removeSide(isPrimary: Bool, isCurrentlyRemoved: Bool, correction: ParserCorrection?) {
         let el = isPrimary ? primary : secondary
-        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: el.text)
         if isCurrentlyRemoved {
             // Restore
             if let e = correction, e.correctedKind != nil || e.correctedSpeaker != nil || e.correctedText != nil {

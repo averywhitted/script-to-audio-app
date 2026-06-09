@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		BA5163ABC13B4CA2940F8B2D /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B84164F9A9824BCA8825C794 /* AppState.swift */; };
+		AA11BB22CC33DD44EE55FF67 /* AppUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppUpdater.swift */; };
 		E1F2A3B4C5D6E7F8A9B0C1D2 /* EmailReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D3 /* EmailReporter.swift */; };
 		9CA15D18819C49C0AC3E4ACE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4854471D56F84F88B788AAE0 /* ContentView.swift */; };
 		217332098B654AACA521A8C9 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 399145A8478F43268A04C862 /* Models.swift */; };
@@ -35,6 +36,7 @@
 		C260B1B4B72E4FC79C5ADFAC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C38C67F9E4D042C8BD2A2F2C /* TableRead.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TableRead.entitlements; sourceTree = "<group>"; };
 		B84164F9A9824BCA8825C794 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF66 /* AppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdater.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F8A9B0C1D3 /* EmailReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailReporter.swift; sourceTree = "<group>"; };
 		4854471D56F84F88B788AAE0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		399145A8478F43268A04C862 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -88,6 +90,7 @@
 			isa = PBXGroup;
 			children = (
 				B84164F9A9824BCA8825C794 /* AppState.swift */,
+				AA11BB22CC33DD44EE55FF66 /* AppUpdater.swift */,
 				4854471D56F84F88B788AAE0 /* ContentView.swift */,
 				E1F2A3B4C5D6E7F8A9B0C1D3 /* EmailReporter.swift */,
 				399145A8478F43268A04C862 /* Models.swift */,
@@ -222,6 +225,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BA5163ABC13B4CA2940F8B2D /* AppState.swift in Sources */,
+				AA11BB22CC33DD44EE55FF67 /* AppUpdater.swift in Sources */,
 				9CA15D18819C49C0AC3E4ACE /* ContentView.swift in Sources */,
 				E1F2A3B4C5D6E7F8A9B0C1D2 /* EmailReporter.swift in Sources */,
 				217332098B654AACA521A8C9 /* Models.swift in Sources */,
