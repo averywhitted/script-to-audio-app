@@ -92,6 +92,49 @@ class Script:
 
 
 @dataclass
+class StructuredLine:
+    """A single logical line with full spatial and typographic metadata.
+
+    Extracted from pdfplumber char-level data during Phase-2 parsing.
+    ``x`` and ``y`` are in PDF points (72 pt = 1 inch).  Both are ``None``
+    when spatial data is unavailable (e.g. the pypdfium2 fallback path).
+    ``page`` is 0-based.  ``is_page_break`` marks the sentinel blank line
+    inserted between pages so callers can detect page boundaries.
+    """
+
+    text: str
+    x: Optional[float]      # left edge x0 of the first word (PDF points)
+    y: Optional[float]      # top y-coordinate of the line (PDF points)
+    is_italic: bool = False
+    is_bold: bool = False
+    page: int = 0
+    is_page_break: bool = False
+
+
+@dataclass
+class ClassifiedLine:
+    """A :class:`StructuredLine` with a predicted structural role.
+
+    Roles mirror the :class:`Element` kinds plus two extras:
+
+    * ``'speaker_cue'``     – all-caps speaker attribution line
+    * ``'dialog'``          – spoken text following a speaker cue
+    * ``'stage_direction'`` – action / description (non-dialog, non-cue)
+    * ``'parenthetical'``   – ``(…)`` modifier inside a dialog block
+    * ``'scene_heading'``   – scene or act boundary header
+    * ``'noise'``           – decorative separator, page number, etc.
+    * ``'blank'``           – empty line (including page-break sentinels)
+
+    ``speaker`` is populated only for ``'speaker_cue'`` lines (the raw cue
+    text, not yet normalised / aliased).
+    """
+
+    line: StructuredLine
+    role: str               # one of the seven role strings above
+    speaker: Optional[str] = None
+
+
+@dataclass
 class ScriptSkeleton:
     """Pre-computed structural analysis of raw script lines.
 
@@ -169,8 +212,61 @@ _SD_IN_DIALOG_LINE_RE = re.compile(
     r"|^(?:Lights?|Music|Sound|Blackout|Crossfade)\s",    # technical/production direction
     re.IGNORECASE,
 )
+
+# Matches stage directions of the form "CHARACTER NAME verb..." where the subject
+# is one or more ALL-CAPS words (≥2 chars each) followed by a lowercase word.
+# Examples: "JOSH opens his eyes.", "MARCUS smiles at DENISE.", "TOM AND ALICE exit."
+# Does NOT match: plain dialog, short exclamations ("WHAT?"), lines with no
+# lowercase follow-on.  Case-sensitive by design — character-name subjects in
+# stage directions are always printed in ALL CAPS in play format.
+_SD_CAPS_SUBJECT_RE = re.compile(
+    r"^[A-Z]{2}[A-Z]*(?:\s+[A-Z]{2}[A-Z]*)*\s+[a-z]"
+)
+
 # Embedded parenthetical direction in the combined dialog text (≥8 chars inside parens).
 _EMBEDDED_PAREN_DIR_RE = re.compile(r"\([^)]{8,}\)")
+
+
+def _looks_like_stage_direction(text: str) -> bool:
+    """Return True when a line inside a dialog block is almost certainly a stage direction.
+
+    Used in both :func:`_extract_scenes_play` and :func:`_classify_lines` to
+    immediately flush dialog and emit a ``stage_direction`` element for lines
+    that sit at the same x-position as ordinary dialog text (left margin) and
+    therefore cannot be identified spatially.
+
+    **Deliberately conservative** — only patterns with a near-zero false
+    positive rate are included here.  The broader :data:`_SD_IN_DIALOG_LINE_RE`
+    (which includes He/She/They/We/It and technical-direction patterns) is
+    intentionally **excluded** because those patterns fire on common dialog
+    phrases ("We both say this.", "It continues…") and produce too many
+    false positives when used as hard routing triggers.
+
+    Patterns included:
+
+    * Whole-line parenthetical ``(…)`` — unambiguously a stage direction.
+    * Bare direction words on their own line: ``BEAT``, ``PAUSE``,
+      ``SILENCE`` (with or without trailing period).  These words never
+      appear alone as a character's spoken line.
+    * :data:`_SD_CAPS_SUBJECT_RE` — ALL-CAPS character name(s) as the
+      grammatical subject followed immediately by a lowercase verb ("JOSH
+      opens his eyes, looks at TOM.", "MARCUS smiles at DENISE lovingly.").
+      This is the dominant pattern for inline stage directions in published
+      American play scripts and has a very low false-positive rate because
+      a speaking character's own dialog almost never starts with another
+      character's ALL-CAPS name.
+    """
+    t = text.strip()
+    # Whole-line parenthetical
+    if t.startswith("(") and t.endswith(")"):
+        return True
+    # Bare direction words (BEAT / PAUSE / SILENCE alone on the line)
+    if re.match(r"^\s*(?:BEAT|PAUSE|SILENCE)\.?\s*$", t, re.IGNORECASE):
+        return True
+    # ALL-CAPS character name + lowercase action verb
+    if _SD_CAPS_SUBJECT_RE.match(t):
+        return True
+    return False
 
 # Dash-dialog format ("SPEAKER – text" inline on one line)
 _DASH_DIALOG_LINE_RE = re.compile(
@@ -760,6 +856,27 @@ def _is_italic_font(fontname: str) -> bool:
     )
 
 
+def _is_bold_font(fontname: str) -> bool:
+    """Return True if the font name indicates bold weight.
+
+    Covers the most common naming conventions used by PDF font subsetting:
+    ``ArialMT,Bold``, ``Arial-BoldMT``, ``Arial-Bold``, ``Arial-BoldOblique``,
+    ``TimesNewRomanPS-BoldMT``, ``Helvetica-Bold``, ``ABCDEF+Helvetica-Bold``,
+    ``NimbusSanL-Bold``, etc.  Does not false-positive on ``boldly``.
+    """
+    # Strip common PDF subset prefix (e.g. "ABCDEF+HelveticaNeue-Bold").
+    fn = re.sub(r"^[A-Z]{6}\+", "", fontname).lower()
+    # Match whole-word "bold" or canonical suffix/prefix forms.
+    return bool(
+        re.search(r"\bbold\b", fn)          # "bold" as its own token
+        or fn.endswith("-bd")               # some condensed naming
+        or fn.endswith("-b")                # rare but seen in PDFLib fonts
+        or "-bold" in fn                    # e.g. helvetica-boldoblique
+        or "bold-" in fn
+        or ",bold" in fn                    # e.g. arialmt,bold
+    )
+
+
 def _find_italic_lines(pdf_path: str) -> Set[str]:
     """Return stripped line-text strings that are predominantly italic in the PDF.
 
@@ -794,6 +911,671 @@ def _find_italic_lines(pdf_path: str) -> Set[str]:
     except Exception:
         pass
     return italic_texts
+
+
+def _extract_structured_lines(pdf_path: str) -> List[StructuredLine]:
+    """Extract lines with full spatial and typographic metadata.
+
+    Phase-2 parser foundation.  Uses pdfplumber char-level data to record
+    ``x`` (left edge), ``y`` (top), ``is_italic``, ``is_bold``, and ``page``
+    for every logical line.  Falls back gracefully when font or spatial data
+    is absent.
+
+    The function mirrors the blank-line insertion logic of
+    :func:`_extract_plain_lines_with_pages` so that downstream classifiers
+    can use the same vertical-gap heuristics.  Page boundaries are flagged
+    with ``is_page_break=True`` on an empty-text sentinel line so callers
+    can detect page transitions without relying on line-index arithmetic.
+
+    Algorithm
+    ---------
+    1. For each PDF page, group characters into y-buckets (2 pt tolerance).
+    2. Sort buckets by y (top → bottom).
+    3. Insert a blank-line sentinel when the vertical gap exceeds
+       ~1.6× estimated line height (same threshold as plain extraction).
+    4. For each bucket, compute:
+       * ``text``      — joined characters, whitespace-normalised
+       * ``x``         — minimum ``x0`` of non-whitespace chars
+       * ``y``         — the bucket's y value × 2 (un-bucketed)
+       * ``is_italic`` — majority of chars use an italic font
+       * ``is_bold``   — majority of chars use a bold font
+    5. Append a page-break sentinel between pages.
+    """
+    result: List[StructuredLine] = []
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page_idx, page in enumerate(pdf.pages):
+                chars = page.chars
+                if not chars:
+                    # Empty page — emit page-break sentinel and continue.
+                    result.append(StructuredLine(
+                        text="", x=None, y=None,
+                        page=page_idx, is_page_break=True,
+                    ))
+                    continue
+
+                # -----------------------------------------------------------------
+                # 1. Group non-whitespace chars into y-buckets (2 pt tolerance).
+                # -----------------------------------------------------------------
+                buckets: Dict[int, List[dict]] = {}
+                for ch in chars:
+                    if not ch.get("text", "").strip():
+                        continue
+                    y_key = round(float(ch.get("top", 0)) / 2)
+                    buckets.setdefault(y_key, []).append(ch)
+
+                if not buckets:
+                    result.append(StructuredLine(
+                        text="", x=None, y=None,
+                        page=page_idx, is_page_break=True,
+                    ))
+                    continue
+
+                # -----------------------------------------------------------------
+                # 2. Sort buckets top → bottom.
+                # -----------------------------------------------------------------
+                sorted_keys = sorted(buckets.keys())
+
+                # -----------------------------------------------------------------
+                # 3. Estimate line height for blank-gap detection.
+                #    Each bucket key is y/2, so actual y ≈ key*2.
+                # -----------------------------------------------------------------
+                if len(sorted_keys) >= 3:
+                    gaps = [
+                        (sorted_keys[i + 1] - sorted_keys[i]) * 2
+                        for i in range(len(sorted_keys) - 1)
+                        if sorted_keys[i + 1] > sorted_keys[i]
+                    ]
+                    avg_gap = sum(gaps) / len(gaps) if gaps else 14.0
+                else:
+                    avg_gap = 14.0
+                blank_threshold = max(avg_gap * 1.6, 18.0)
+
+                prev_y_key: Optional[int] = None
+
+                for y_key in sorted_keys:
+                    chars_in_line = buckets[y_key]
+
+                    # -----------------------------------------------------------------
+                    # 3 (cont). Insert blank sentinel for large vertical gaps.
+                    # -----------------------------------------------------------------
+                    if prev_y_key is not None:
+                        gap_pts = (y_key - prev_y_key) * 2
+                        if gap_pts >= blank_threshold:
+                            result.append(StructuredLine(
+                                text="", x=None, y=float(prev_y_key * 2 + avg_gap),
+                                page=page_idx,
+                            ))
+                    prev_y_key = y_key
+
+                    # -----------------------------------------------------------------
+                    # 4. Compute per-line text and metadata.
+                    # -----------------------------------------------------------------
+                    text = " ".join(
+                        "".join(c["text"] for c in chars_in_line).split()
+                    ).strip()
+                    if not text:
+                        continue
+
+                    # Left edge: minimum x0 of all chars in this line.
+                    x_vals = [float(c["x0"]) for c in chars_in_line if "x0" in c]
+                    x: Optional[float] = min(x_vals) if x_vals else None
+
+                    y_val: float = float(y_key) * 2  # un-bucket to PDF points
+
+                    italic_count = sum(
+                        1 for c in chars_in_line
+                        if _is_italic_font(c.get("fontname", ""))
+                    )
+                    bold_count = sum(
+                        1 for c in chars_in_line
+                        if _is_bold_font(c.get("fontname", ""))
+                    )
+                    n = len(chars_in_line)
+                    is_italic = italic_count / n > 0.5
+                    is_bold   = bold_count   / n > 0.5
+
+                    result.append(StructuredLine(
+                        text=text, x=x, y=y_val,
+                        is_italic=is_italic, is_bold=is_bold,
+                        page=page_idx,
+                    ))
+
+                # End-of-page sentinel.
+                result.append(StructuredLine(
+                    text="", x=None, y=None,
+                    page=page_idx, is_page_break=True,
+                ))
+
+    except Exception:
+        # On any failure return an empty list so callers can fall back safely.
+        return []
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Scene-heading patterns used by _classify_lines
+# ---------------------------------------------------------------------------
+
+_SCENE_HEADING_RE = re.compile(
+    r"""
+    ^(?:
+        (?:INT|EXT|INT\.\/EXT|EXT\.\/INT)[\.\s]  # screenplay INT./EXT.
+        | SCENE\s+\w+                             # SCENE 3 / SCENE IV / SCENE ONE
+        | ACT\s+\w+                               # ACT I / ACT 1 / ACT TWO
+        | PART\s+\w+                              # PART ONE / PART 2 / PART IV
+        | PROLOGUE\b | EPILOGUE\b                 # special sections
+    )
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+# A line is a speaker-cue candidate if it:
+#   • Is not empty
+#   • Is predominantly uppercase (≥ 85 % alpha chars are upper)
+#   • Is short (≤ 60 chars)
+#   • Does not look like a stage direction or scene heading
+_LOWER_RE = re.compile(r"[a-z]")
+_ALPHA_RE = re.compile(r"[A-Za-z]")
+
+
+def _caps_ratio(text: str) -> float:
+    """Fraction of alphabetic chars that are uppercase."""
+    alpha = _ALPHA_RE.findall(text)
+    if not alpha:
+        return 0.0
+    return sum(1 for c in alpha if c.isupper()) / len(alpha)
+
+
+def _classify_lines(
+    lines: List[StructuredLine],
+    *,
+    zones: Optional["LayoutZones"] = None,
+    speaker_x_min: Optional[float] = None,
+    speaker_x_max: Optional[float] = None,
+    dialog_x_min: Optional[float] = None,
+    dialog_x_max: Optional[float] = None,
+) -> List[ClassifiedLine]:
+    """Assign a structural role to every :class:`StructuredLine`.
+
+    This is the **Phase-2 classifier** — a single-pass heuristic that uses
+    x-position, capitalisation, punctuation, and typographic weight to label
+    each line.  It does *not* replace any existing parser; it is an additive
+    layer whose output will gradually inform format-specific parsers.
+
+    Spatial zones can be supplied either as a :class:`LayoutZones` object
+    (preferred — populated automatically by :func:`_infer_layout_zones`) or
+    as explicit ``speaker_x_min/max`` / ``dialog_x_min/max`` keyword args
+    (kept for backwards-compatibility with the existing test suite and the
+    Phase-1 play-parser integration).  When both are present, the explicit
+    kwargs take precedence over the derived zone bounds.
+
+    Role assignment rules (first match wins):
+
+    1. **blank / page_break** — empty text → ``'blank'``
+    2. **scene_heading** — matches :data:`_SCENE_HEADING_RE` *or* (when zones
+       are provided) bold + short + x within ±20 pt of
+       ``zones.scene_heading_x`` → ``'scene_heading'``
+    3. **parenthetical** — stripped text starts with ``(`` and ends with ``)``
+       → ``'parenthetical'``
+    4. **speaker_cue** — all of:
+       * caps_ratio ≥ 0.85
+       * len ≤ 60
+       * not a noise/separator line
+       * x within ``[speaker_x_min, speaker_x_max]`` (if provided)
+       → ``'speaker_cue'``, ``speaker`` set to the text
+    5. **dialog** — x within ``[dialog_x_min, dialog_x_max]`` (if provided),
+       or follows a speaker_cue with no intervening blank line → ``'dialog'``
+    6. **stage_direction** — default for anything not matched above.
+
+    When no zone bounds are provided the classifier falls back to
+    pure-text heuristics and works reasonably well for standard play formats.
+    """
+    # Derive zone bounds from the LayoutZones object when present.
+    if zones is not None:
+        if speaker_x_min is None:
+            speaker_x_min = zones.cue_range[0]
+        if speaker_x_max is None:
+            speaker_x_max = zones.cue_range[1]
+        if dialog_x_min is None:
+            dialog_x_min = zones.dialog_range[0]
+        if dialog_x_max is None:
+            dialog_x_max = zones.dialog_range[1]
+    classified: List[ClassifiedLine] = []
+    last_role: str = "stage_direction"  # tracks context for dialog inference
+    pending_speaker: Optional[str] = None  # set when we see a speaker_cue
+
+    for sl in lines:
+        text = sl.text.strip()
+
+        # ------------------------------------------------------------------
+        # Rule 1 — blank
+        # ------------------------------------------------------------------
+        if not text:
+            classified.append(ClassifiedLine(line=sl, role="blank"))
+            if sl.is_page_break:
+                # Page breaks reset dialog-following context.
+                pass
+            else:
+                # A blank line clears the "next line is dialog" context.
+                pending_speaker = None
+            last_role = "blank"
+            continue
+
+        # ------------------------------------------------------------------
+        # Rule 2 — scene heading
+        # Two detection paths (first match wins):
+        #   a) Keyword pattern (INT./EXT., ACT N, SCENE N, etc.)
+        #   b) Spatial+typographic: bold + short + near scene_heading_x zone
+        # ------------------------------------------------------------------
+        is_scene_heading = _SCENE_HEADING_RE.match(text) is not None
+        if (
+            not is_scene_heading
+            and zones is not None
+            and zones.scene_heading_x is not None
+            and sl.is_bold
+            and len(text) <= 60
+            and sl.x is not None
+            and abs(sl.x - zones.scene_heading_x) <= 30.0
+        ):
+            is_scene_heading = True
+        if is_scene_heading:
+            classified.append(ClassifiedLine(line=sl, role="scene_heading"))
+            pending_speaker = None
+            last_role = "scene_heading"
+            continue
+
+        # ------------------------------------------------------------------
+        # Rule 3 — parenthetical
+        # ------------------------------------------------------------------
+        if text.startswith("(") and text.endswith(")"):
+            classified.append(ClassifiedLine(
+                line=sl, role="parenthetical",
+                speaker=pending_speaker,
+            ))
+            last_role = "parenthetical"
+            continue
+
+        # ------------------------------------------------------------------
+        # Rule 4 — speaker cue
+        # ------------------------------------------------------------------
+        cr = _caps_ratio(text)
+        is_short = len(text) <= 60
+        in_speaker_zone = (
+            speaker_x_min is None
+            or speaker_x_max is None
+            or sl.x is None
+            or (speaker_x_min <= sl.x <= speaker_x_max)
+        )
+        if cr >= 0.85 and is_short and in_speaker_zone:
+            pending_speaker = text
+            classified.append(ClassifiedLine(
+                line=sl, role="speaker_cue", speaker=text,
+            ))
+            last_role = "speaker_cue"
+            continue
+
+        # ------------------------------------------------------------------
+        # Rule 4b — cue-zone stage direction (spatial override)
+        #
+        # When spatial zones are active (speaker_x_min is set), a line that:
+        #   • sits at x ≥ the cue-zone lower bound (speaker_x_min ≈ threshold)
+        #   • is NOT all-caps (already handled by Rule 4 above)
+        #   • is NOT a parenthetical (already handled by Rule 3 above)
+        # …is a stage direction masquerading in the cue column — the root
+        # cause of the TheHarvest bug where "MARCUS smiles at DENISE." gets
+        # appended to the preceding character's dialog.
+        #
+        # This check fires BEFORE Rule 5 (dialog) so that even when a
+        # pending_speaker is active, prose in the cue zone is correctly
+        # routed to stage_direction instead.
+        # ------------------------------------------------------------------
+        in_cue_zone = (
+            speaker_x_min is not None
+            and sl.x is not None
+            and sl.x >= speaker_x_min
+        )
+        if in_cue_zone and cr < 0.85:
+            # Mixed-case line in cue zone → stage direction.
+            # Clear pending_speaker so following dialog lines know the SD
+            # interrupted the dialog block (mirrors Phase-1 behavior).
+            classified.append(ClassifiedLine(line=sl, role="stage_direction"))
+            pending_speaker = None
+            last_role = "stage_direction"
+            continue
+
+        # ------------------------------------------------------------------
+        # Rule 4c — content-based stage direction (dialog-zone SDs)
+        #
+        # Catches stage directions that sit at the same x-position as dialog
+        # text (left margin) and cannot be identified spatially.  Fires even
+        # when a pending_speaker is active so lines like "Pause." and
+        # "JOSH opens his eyes, looks at TOM." are not absorbed into the
+        # preceding character's speech.
+        #
+        # Only active when a speaker/dialog context exists (pending_speaker
+        # or last_role in dialog family) — without that context the line
+        # would already fall through to stage_direction via Rule 6 anyway.
+        # ------------------------------------------------------------------
+        in_dialog_context = (
+            pending_speaker is not None
+            or last_role in ("dialog", "speaker_cue", "parenthetical")
+        )
+        if in_dialog_context and _looks_like_stage_direction(text):
+            classified.append(ClassifiedLine(line=sl, role="stage_direction"))
+            pending_speaker = None
+            last_role = "stage_direction"
+            continue
+
+        # ------------------------------------------------------------------
+        # Rule 5 — dialog
+        # ------------------------------------------------------------------
+        in_dialog_zone = (
+            dialog_x_min is None
+            or dialog_x_max is None
+            or sl.x is None
+            or (dialog_x_min <= sl.x <= dialog_x_max)
+        )
+        if pending_speaker is not None or (last_role in ("dialog", "speaker_cue", "parenthetical") and in_dialog_zone):
+            classified.append(ClassifiedLine(
+                line=sl, role="dialog",
+                speaker=pending_speaker,
+            ))
+            last_role = "dialog"
+            continue
+
+        # ------------------------------------------------------------------
+        # Rule 6 — stage direction (default)
+        # ------------------------------------------------------------------
+        classified.append(ClassifiedLine(line=sl, role="stage_direction"))
+        pending_speaker = None
+        last_role = "stage_direction"
+
+    return classified
+
+
+@dataclass
+class LayoutZones:
+    """Spatial layout zones inferred from a PDF's x-position distribution.
+
+    All values are in PDF points (72 pt = 1 inch).
+
+    ``dialog_x``  — median x of the low-x cluster (dialog text).
+    ``cue_x``     — median x of the high-x cluster (speaker cues / SD).
+    ``threshold`` — x value that splits the two clusters.
+
+    ``scene_heading_x`` is the median x of lines that are both bold and
+    short (≤ 40 chars), if a meaningful cluster was found; ``None`` otherwise.
+
+    ``is_bimodal`` is True when two distinct x-clusters were found.
+    Single-column documents (all text at the same indent) have
+    ``is_bimodal=False`` and no meaningful spatial classification is possible.
+    """
+
+    dialog_x: float
+    cue_x: float
+    threshold: float
+    is_bimodal: bool = True
+    scene_heading_x: Optional[float] = None
+
+    @property
+    def dialog_range(self) -> Tuple[float, float]:
+        """(min, max) x range for dialog lines (low cluster ± 15 pt tolerance)."""
+        return (max(0.0, self.dialog_x - 15.0), self.threshold)
+
+    @property
+    def cue_range(self) -> Tuple[float, float]:
+        """(min, max) x range for cue/SD lines (high cluster, lower-bounded)."""
+        return (self.threshold, self.cue_x + 60.0)
+
+
+def _infer_layout_zones(
+    lines: List[StructuredLine],
+    *,
+    min_samples: int = 20,
+    min_gap_pt: float = 30.0,
+) -> Optional[LayoutZones]:
+    """Infer spatial layout zones from a list of :class:`StructuredLine` objects.
+
+    Phase-2 companion to :func:`_infer_x_zones`.  Uses a bimodal-gap algorithm
+    that operates on :class:`StructuredLine` metadata directly, which lets it:
+
+    * Skip page-break sentinels and blank lines automatically.
+    * Optionally weight lines by typographic properties (future extension).
+    * Detect a ``scene_heading_x`` zone from bold+short lines.
+
+    Returns ``None`` when:
+
+    * Fewer than ``min_samples`` valid x-positions are available.
+    * The largest gap between *significant* x-buckets is < ``min_gap_pt``
+      (unimodal → single column → no spatial classification possible).
+    * Either the low or high cluster is empty after splitting.
+
+    Parameters
+    ----------
+    lines:
+        Output of :func:`_extract_structured_lines`.
+    min_samples:
+        Minimum number of non-blank lines with x data required to proceed.
+    min_gap_pt:
+        Minimum gap (PDF points) between x-buckets to consider the
+        distribution bimodal.
+    """
+    # -----------------------------------------------------------------
+    # 1. Collect valid x values from content lines.
+    # -----------------------------------------------------------------
+    x_vals: List[float] = [
+        sl.x
+        for sl in lines
+        if sl.x is not None and sl.x > 0 and not sl.is_page_break and sl.text
+    ]
+    if len(x_vals) < min_samples:
+        return None
+
+    # -----------------------------------------------------------------
+    # 2. Bucket into 5 pt bins.
+    #
+    #    Only consider buckets that are "significant" — meaning they hold
+    #    at least 1 % of total lines (floor of 5).  This filters out stray
+    #    clusters from page headers, right-margin page numbers, or a few
+    #    oddly-indented lines that would otherwise split the main dialog/cue
+    #    gap and mislead the threshold calculation.
+    # -----------------------------------------------------------------
+    bucket_counts: dict = {}
+    for v in x_vals:
+        b = round(v / 5.0) * 5.0
+        bucket_counts[b] = bucket_counts.get(b, 0) + 1
+
+    min_bucket_count = max(5, int(len(x_vals) * 0.01))
+    sig_buckets = sorted(b for b, c in bucket_counts.items() if c >= min_bucket_count)
+
+    if len(sig_buckets) < 2:
+        return None
+
+    # Find the largest gap between adjacent *significant* buckets.
+    max_gap = 0.0
+    threshold: Optional[float] = None
+    for i in range(len(sig_buckets) - 1):
+        gap = sig_buckets[i + 1] - sig_buckets[i]
+        if gap > max_gap:
+            max_gap = gap
+            threshold = (sig_buckets[i] + sig_buckets[i + 1]) / 2.0
+
+    if threshold is None or max_gap < min_gap_pt:
+        return None
+
+    low_vals  = sorted(v for v in x_vals if v <  threshold)
+    high_vals = sorted(v for v in x_vals if v >= threshold)
+    if not low_vals or not high_vals:
+        return None
+
+    dialog_x = low_vals[len(low_vals) // 2]
+    cue_x    = high_vals[len(high_vals) // 2]
+
+    # -----------------------------------------------------------------
+    # 3. Scene-heading x: median x of bold + short lines.
+    # -----------------------------------------------------------------
+    bold_short_x: List[float] = [
+        sl.x
+        for sl in lines
+        if sl.x is not None
+        and sl.is_bold
+        and len(sl.text.strip()) <= 40
+        and not sl.is_page_break
+    ]
+    scene_heading_x: Optional[float] = None
+    if len(bold_short_x) >= 3:
+        bold_short_x.sort()
+        scene_heading_x = bold_short_x[len(bold_short_x) // 2]
+
+    return LayoutZones(
+        dialog_x=dialog_x,
+        cue_x=cue_x,
+        threshold=threshold,
+        is_bimodal=True,
+        scene_heading_x=scene_heading_x,
+    )
+
+
+def _build_script_from_classified(
+    classified: List[ClassifiedLine],
+    title: str = "",
+    *,
+    default_scene_title: str = "Scene",
+) -> Script:
+    """Convert a list of :class:`ClassifiedLine` objects into a :class:`Script`.
+
+    Phase-2 counterpart to the format-specific ``_extract_scenes_*`` functions.
+    Produces a ``Script`` in the same shape as the existing parsers so
+    downstream code (``audio_pipeline.py``, Swift bridge) needs no changes.
+
+    Scene boundary detection
+    ------------------------
+    A new scene starts whenever a ``'scene_heading'`` line is encountered.
+    If the document has no scene headings at all, the entire content is
+    wrapped in a single scene (number 1).
+
+    Element production
+    ------------------
+    * ``'speaker_cue'``     — updates ``current_speaker``; no Element emitted.
+    * ``'dialog'``          — ``Element(kind='dialog', speaker=..., text=...)``
+    * ``'stage_direction'`` — ``Element(kind='stage_direction', text=...)``
+    * ``'parenthetical'``   — ``Element(kind='parenthetical', speaker=..., text=...)``
+    * ``'scene_heading'``   — starts a new :class:`Scene`; no Element emitted.
+    * ``'noise'`` / ``'blank'`` — skipped.
+
+    Consecutive same-kind same-speaker lines are folded together with a
+    space separator (mirrors the existing parser's dialog accumulation).
+
+    Parameters
+    ----------
+    classified:
+        Output of :func:`_classify_lines`.
+    title:
+        Script title (propagated from the caller, typically the PDF filename).
+    default_scene_title:
+        Title used for the synthetic Scene 1 when no headings are found.
+    """
+    scenes: List[Scene] = []
+    current_scene: Optional[Scene] = None
+    scene_counter = 0
+
+    # Pending accumulation buffers (fold consecutive same-speaker dialog).
+    acc_kind: Optional[str] = None
+    acc_speaker: Optional[str] = None
+    acc_texts: List[str] = []
+
+    def flush_acc() -> None:
+        nonlocal acc_kind, acc_speaker, acc_texts
+        if not acc_texts or not acc_kind or not current_scene:
+            acc_texts = []
+            acc_kind = None
+            acc_speaker = None
+            return
+        text = " ".join(acc_texts).strip()
+        if text:
+            current_scene.elements.append(Element(
+                kind=acc_kind,
+                text=text,
+                speaker=acc_speaker,
+            ))
+        acc_texts = []
+        acc_kind = None
+        acc_speaker = None
+
+    def ensure_scene(heading: str = "") -> None:
+        nonlocal current_scene, scene_counter
+        flush_acc()
+        scene_counter += 1
+        s = Scene(number=scene_counter, title=heading or f"{default_scene_title} {scene_counter}")
+        scenes.append(s)
+        current_scene = s
+
+    for cl in classified:
+        role = cl.role
+        text = cl.line.text.strip()
+
+        # ------------------------------------------------------------------
+        # Skip noise, blanks, and page-break sentinels.
+        # ------------------------------------------------------------------
+        if role in ("blank", "noise") or not text:
+            continue
+
+        # ------------------------------------------------------------------
+        # Scene headings open a new scene.
+        # ------------------------------------------------------------------
+        if role == "scene_heading":
+            ensure_scene(text)
+            continue
+
+        # ------------------------------------------------------------------
+        # Lazily create scene 1 if the document has no headings.
+        # ------------------------------------------------------------------
+        if current_scene is None:
+            ensure_scene(default_scene_title)
+
+        # ------------------------------------------------------------------
+        # Speaker cues update current speaker; nothing emitted.
+        # ------------------------------------------------------------------
+        if role == "speaker_cue":
+            # A new speaker cue flushes any accumulated dialog from the prior
+            # speaker before switching.
+            flush_acc()
+            # (speaker stored in cl.speaker; no Element)
+            continue
+
+        # ------------------------------------------------------------------
+        # Dialog, stage direction, parenthetical — accumulate or flush+start.
+        # ------------------------------------------------------------------
+        speaker = cl.speaker
+        if role == acc_kind and speaker == acc_speaker:
+            # Continue accumulating same-speaker same-kind run.
+            acc_texts.append(text)
+        else:
+            flush_acc()
+            acc_kind = role
+            acc_speaker = speaker
+            acc_texts = [text]
+
+    # Final flush.
+    flush_acc()
+
+    # ------------------------------------------------------------------
+    # Build character list from all dialog speaker names.
+    # ------------------------------------------------------------------
+    seen_speakers: Dict[str, int] = {}  # speaker → dialog count
+    for sc in scenes:
+        for el in sc.elements:
+            if el.kind == "dialog" and el.speaker:
+                seen_speakers[el.speaker] = seen_speakers.get(el.speaker, 0) + 1
+
+    characters = [
+        Character(name=name)
+        for name, _count in sorted(seen_speakers.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+
+    return Script(title=title, characters=characters, scenes=scenes)
 
 
 def _extract_plain_lines(pdf_path: str) -> List[str]:
@@ -1621,10 +2403,86 @@ def _apply_corrections_config(script: Script, config: Dict) -> Script:
     return script
 
 
+def _try_spatial_parse(
+    pdf_path: str,
+    title: str,
+    config: Dict,
+    *,
+    min_scenes: int = 1,
+    min_characters: int = 1,
+) -> Optional[Script]:
+    """Attempt Phase-2 spatial parse.  Returns None to signal "fall back".
+
+    Workflow
+    --------
+    1. Extract :class:`StructuredLine` objects (char-level pdfplumber data).
+    2. Infer :class:`LayoutZones` from the x-position distribution.
+    3. If not bimodal (single-column script), return ``None`` immediately so
+       the caller falls back to Phase-1 text-based parsing.
+    4. Classify lines with :func:`_classify_lines` using the inferred zones.
+    5. Build a :class:`Script` from the classified lines.
+    6. Sanity-check: must have ≥ ``min_scenes`` scenes and ≥ ``min_characters``
+       characters, otherwise return ``None`` (parse produced too little content).
+    7. Apply data-driven corrections and return.
+
+    This function is called opportunistically before the Phase-1 path in
+    :func:`parse_pdf`.  It is intentionally conservative — any hint of failure
+    causes a graceful fallback rather than a partial or empty script.
+
+    Parameters
+    ----------
+    pdf_path:
+        Path to the PDF file to parse.
+    title:
+        Script title (typically derived from the filename by the caller).
+    config:
+        Pre-loaded corrections config dict from :func:`_load_corrections_config`.
+    min_scenes:
+        Minimum number of scenes required for the result to be accepted.
+    min_characters:
+        Minimum number of characters required for the result to be accepted.
+    """
+    try:
+        structured = _extract_structured_lines(pdf_path)
+        if not structured:
+            return None
+
+        zones = _infer_layout_zones(structured)
+        if zones is None:
+            # Unimodal x-distribution — spatial classification won't help.
+            return None
+
+        classified = _classify_lines(structured, zones=zones)
+        script = _build_script_from_classified(classified, title=title)
+
+        if len(script.scenes) < min_scenes or len(script.characters) < min_characters:
+            logger.debug(
+                "_try_spatial_parse: insufficient output "
+                "(%d scenes, %d chars) — falling back",
+                len(script.scenes), len(script.characters),
+            )
+            return None
+
+        script = _finalise(script)
+        script = _apply_corrections_config(script, config)
+        logger.debug(
+            "_try_spatial_parse: accepted (%d scenes, %d chars)",
+            len(script.scenes), len(script.characters),
+        )
+        return script
+
+    except Exception as exc:  # never let experimental path crash the app
+        logger.warning("_try_spatial_parse failed (%s) — falling back", exc)
+        return None
+
+
 def parse_pdf(pdf_path: str) -> Script:
     """Parse a PDF script into a Script object.
 
     Detection priority:
+      0. Phase-2 spatial parse (experimental) — tried first for typeset play
+         PDFs that have a bimodal x-position distribution.  Falls back silently
+         when the PDF is single-column or produces insufficient output.
       1. heist (numbered scene headers, very distinctive) → layout-based
       2. colon_play / play (pattern-based, plain text)
       3. scene_n / dash_dialog (indent-based, layout text)
@@ -1662,6 +2520,12 @@ def parse_pdf(pdf_path: str) -> Script:
     # Those functions strip _COL_SEP internally before passing to cast/noise consumers.
     play_fmt = _detect_play_format(clean_lines, skeleton=skeleton)
     if play_fmt == "play":
+        # Phase-2 spatial parse: try first for typeset play PDFs.
+        # Falls back to Phase-1 (italic + x-zone aware play parser) on failure.
+        spatial = _try_spatial_parse(pdf_path, title, config)
+        if spatial is not None:
+            return spatial
+
         italic_lines = _find_italic_lines(pdf_path)
         script = _finalise(_parse_play(plain_lines_col, page_sets, title,
                                        skeleton=skeleton,
@@ -2507,6 +3371,20 @@ def _extract_scenes_play(
                     _append_stage_direction(elements, _normalize_text(s))
                     prev_nonempty = s
                     continue
+            # Content-based stage-direction guard: catches SDs at dialog-x
+            # (left margin) that cannot be separated spatially.  Typical
+            # examples: "Pause.", "JOSH opens his eyes, looks at TOM.",
+            # "She turns away." — these sit at the same indent as dialog but
+            # are semantically stage directions.  Skip during compound-overlap
+            # blocks where the narrator voice is handled separately.
+            if (
+                not (pending_is_compound and pending_overlap_cue)
+                and _looks_like_stage_direction(s)
+            ):
+                flush_dialog()
+                _append_stage_direction(elements, _normalize_text(s))
+                prev_nonempty = s
+                continue
             # Retroactive compound-cue reconstruction: if this is the first
             # dialog line for the current speaker, it has _COL_SEP content, and
             # a dangling left-column cue was remembered across a page-boundary

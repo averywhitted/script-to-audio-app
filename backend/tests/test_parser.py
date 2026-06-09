@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 # Make backend/ importable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -1579,3 +1581,821 @@ def test_x_zone_no_positions_no_change():
     elements = [e for sc in scenes for e in sc.elements]
     alice_dialog = [e for e in elements if e.kind == "dialog" and e.speaker == "ALICE"]
     assert alice_dialog, "Without positions, line stays as dialog (no spatial signal)"
+
+
+# ---------------------------------------------------------------------------
+# Phase-2 infrastructure: StructuredLine, ClassifiedLine, helpers
+# ---------------------------------------------------------------------------
+
+
+class TestIsBoldFont:
+    """_is_bold_font() should recognise bold naming conventions."""
+
+    def test_helvetica_bold(self):
+        assert p._is_bold_font("Helvetica-Bold")
+
+    def test_arial_bold_mt(self):
+        assert p._is_bold_font("Arial-BoldMT")
+
+    def test_subset_prefix(self):
+        # Common PDF subset prefix ABCDEF+ should be stripped before checking.
+        assert p._is_bold_font("ABCDEF+HelveticaNeue-Bold")
+
+    def test_comma_bold(self):
+        assert p._is_bold_font("ArialMT,Bold")
+
+    def test_bold_suffix_b(self):
+        assert p._is_bold_font("SomeFont-B")
+
+    def test_regular_not_bold(self):
+        assert not p._is_bold_font("Helvetica")
+
+    def test_italic_not_bold(self):
+        assert not p._is_bold_font("Helvetica-Oblique")
+
+    def test_word_boldly_not_bold(self):
+        # "boldly" should not match the whole-word rule
+        assert not p._is_bold_font("CrazyFontBoldly")
+
+    def test_bold_italic_is_bold(self):
+        assert p._is_bold_font("Times-BoldItalic")
+
+
+class TestIsItalicFont:
+    """Regression: _is_italic_font() should be unaffected by bold addition."""
+
+    def test_times_italic(self):
+        assert p._is_italic_font("Times-Italic")
+
+    def test_oblique(self):
+        assert p._is_italic_font("Helvetica-Oblique")
+
+    def test_it_suffix(self):
+        assert p._is_italic_font("Garamond-It")
+
+    def test_regular_not_italic(self):
+        assert not p._is_italic_font("Helvetica-Bold")
+
+
+class TestCapsRatio:
+    """_caps_ratio() helper."""
+
+    def test_all_caps(self):
+        assert p._caps_ratio("ALICE") == 1.0
+
+    def test_mixed(self):
+        ratio = p._caps_ratio("Hello World")
+        assert 0.0 < ratio < 1.0
+
+    def test_no_alpha(self):
+        assert p._caps_ratio("123 !@#") == 0.0
+
+    def test_empty(self):
+        assert p._caps_ratio("") == 0.0
+
+
+class TestStructuredLine:
+    """StructuredLine dataclass sanity checks."""
+
+    def test_defaults(self):
+        sl = p.StructuredLine(text="Hello", x=72.0, y=720.0)
+        assert not sl.is_italic
+        assert not sl.is_bold
+        assert sl.page == 0
+        assert not sl.is_page_break
+
+    def test_page_break_sentinel(self):
+        sl = p.StructuredLine(text="", x=None, y=None, is_page_break=True)
+        assert sl.is_page_break
+        assert sl.text == ""
+
+    def test_bold_italic(self):
+        sl = p.StructuredLine(text="ACT ONE", x=200.0, y=600.0,
+                               is_italic=True, is_bold=True, page=2)
+        assert sl.is_italic and sl.is_bold
+        assert sl.page == 2
+
+
+class TestClassifiedLine:
+    """ClassifiedLine dataclass sanity checks."""
+
+    def test_speaker_cue(self):
+        sl = p.StructuredLine(text="ALICE", x=250.0, y=500.0)
+        cl = p.ClassifiedLine(line=sl, role="speaker_cue", speaker="ALICE")
+        assert cl.role == "speaker_cue"
+        assert cl.speaker == "ALICE"
+
+    def test_dialog_no_speaker(self):
+        sl = p.StructuredLine(text="She walks in.", x=100.0, y=480.0)
+        cl = p.ClassifiedLine(line=sl, role="dialog")
+        assert cl.speaker is None
+
+
+class TestClassifyLines:
+    """_classify_lines() role-assignment logic."""
+
+    def _make(self, text: str, x: float = 100.0, y: float = 0.0,
+              is_bold: bool = False, is_italic: bool = False,
+              page: int = 0) -> p.StructuredLine:
+        return p.StructuredLine(text=text, x=x, y=y,
+                                is_bold=is_bold, is_italic=is_italic, page=page)
+
+    def test_blank_line(self):
+        sl = p.StructuredLine(text="", x=None, y=None)
+        result = p._classify_lines([sl])
+        assert result[0].role == "blank"
+
+    def test_page_break_blank(self):
+        sl = p.StructuredLine(text="", x=None, y=None, is_page_break=True)
+        result = p._classify_lines([sl])
+        assert result[0].role == "blank"
+
+    def test_scene_heading_int(self):
+        sl = self._make("INT. OFFICE - DAY")
+        result = p._classify_lines([sl])
+        assert result[0].role == "scene_heading"
+
+    def test_scene_heading_act(self):
+        sl = self._make("ACT TWO")
+        result = p._classify_lines([sl])
+        assert result[0].role == "scene_heading"
+
+    def test_scene_heading_scene_n(self):
+        sl = self._make("SCENE 3")
+        result = p._classify_lines([sl])
+        assert result[0].role == "scene_heading"
+
+    def test_parenthetical(self):
+        sl = self._make("(quietly)")
+        result = p._classify_lines([sl])
+        assert result[0].role == "parenthetical"
+
+    def test_speaker_cue_all_caps(self):
+        sl = self._make("ALICE")
+        result = p._classify_lines([sl])
+        assert result[0].role == "speaker_cue"
+        assert result[0].speaker == "ALICE"
+
+    def test_speaker_cue_sets_pending(self):
+        """Line after speaker cue should be classified as dialog."""
+        lines = [self._make("ALICE"), self._make("Hello there.")]
+        result = p._classify_lines(lines)
+        assert result[0].role == "speaker_cue"
+        assert result[1].role == "dialog"
+        assert result[1].speaker == "ALICE"
+
+    def test_blank_clears_dialog_context(self):
+        """A blank line between cue and text should reset pending speaker."""
+        lines = [
+            self._make("ALICE"),
+            p.StructuredLine(text="", x=None, y=None),
+            self._make("A stage direction follows."),
+        ]
+        result = p._classify_lines(lines)
+        # After the blank, no pending speaker → stage_direction
+        assert result[2].role == "stage_direction"
+
+    def test_stage_direction_default(self):
+        sl = self._make("The lights fade slowly.")
+        result = p._classify_lines([sl])
+        assert result[0].role == "stage_direction"
+
+    def test_speaker_zone_filter(self):
+        """Lines outside the speaker x-zone should not be tagged as speaker_cue."""
+        # All-caps but x is in dialog zone (50–150), speaker zone is 200–300.
+        sl = self._make("ALICE", x=80.0)
+        result = p._classify_lines(
+            [sl],
+            speaker_x_min=200.0, speaker_x_max=300.0,
+        )
+        assert result[0].role != "speaker_cue", (
+            f"Expected non-speaker_cue for x=80 with speaker zone 200-300, got {result[0].role}"
+        )
+
+    def test_dialog_zone_used(self):
+        """With explicit zones, a mixed-case line in dialog zone after cue → dialog."""
+        cue = self._make("BOB", x=250.0)
+        dialog = self._make("I told you already.", x=100.0)
+        result = p._classify_lines(
+            [cue, dialog],
+            speaker_x_min=200.0, speaker_x_max=300.0,
+            dialog_x_min=80.0,  dialog_x_max=180.0,
+        )
+        assert result[0].role == "speaker_cue"
+        assert result[1].role == "dialog"
+
+    def test_all_roles_returned_count(self):
+        """Output list length matches input length."""
+        lines = [
+            self._make("ACT I"),
+            self._make("ALICE"),
+            self._make("Hello."),
+            p.StructuredLine(text="", x=None, y=None),
+            self._make("(aside)"),
+            self._make("The stage is bare."),
+        ]
+        result = p._classify_lines(lines)
+        assert len(result) == len(lines)
+
+    def test_long_caps_line_not_speaker(self):
+        """Lines > 60 chars even if all-caps should not be tagged as speaker_cue."""
+        text = "A" * 61
+        sl = self._make(text)
+        result = p._classify_lines([sl])
+        assert result[0].role != "speaker_cue"
+
+    def test_parenthetical_inherits_speaker(self):
+        """Parenthetical inside a dialog block should carry the pending speaker."""
+        lines = [
+            self._make("CAROL"),
+            self._make("(whispers)"),
+        ]
+        result = p._classify_lines(lines)
+        assert result[1].role == "parenthetical"
+        assert result[1].speaker == "CAROL"
+
+
+class TestExtractStructuredLinesNoPDF:
+    """_extract_structured_lines() graceful failure without a real PDF."""
+
+    def test_nonexistent_path_returns_empty(self):
+        result = p._extract_structured_lines("/tmp/this_file_does_not_exist.pdf")
+        assert result == []
+
+    def test_returns_list(self):
+        result = p._extract_structured_lines("/tmp/not_a_real_file.pdf")
+        assert isinstance(result, list)
+
+
+# ---------------------------------------------------------------------------
+# LayoutZones dataclass + properties
+# ---------------------------------------------------------------------------
+
+
+class TestLayoutZones:
+    def test_dialog_range_lower_bound(self):
+        z = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        lo, hi = z.dialog_range
+        assert lo == pytest.approx(75.0)
+        assert hi == pytest.approx(180.0)
+
+    def test_dialog_range_clamps_at_zero(self):
+        # dialog_x near zero should not produce negative lower bound
+        z = p.LayoutZones(dialog_x=5.0, cue_x=200.0, threshold=100.0)
+        lo, _ = z.dialog_range
+        assert lo >= 0.0
+
+    def test_cue_range(self):
+        z = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        lo, hi = z.cue_range
+        assert lo == pytest.approx(180.0)
+        assert hi == pytest.approx(270.0 + 60.0)
+
+    def test_is_bimodal_default_true(self):
+        z = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        assert z.is_bimodal is True
+
+    def test_scene_heading_x_default_none(self):
+        z = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        assert z.scene_heading_x is None
+
+    def test_scene_heading_x_set(self):
+        z = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0,
+                          scene_heading_x=218.0)
+        assert z.scene_heading_x == pytest.approx(218.0)
+
+
+# ---------------------------------------------------------------------------
+# _infer_layout_zones
+# ---------------------------------------------------------------------------
+
+
+def _make_sl(text: str, x: float, bold: bool = False, page: int = 0) -> p.StructuredLine:
+    return p.StructuredLine(text=text, x=x, y=0.0, is_bold=bold, page=page)
+
+
+class TestInferLayoutZones:
+    def _bimodal_lines(self, n_dialog: int = 25, n_cue: int = 15,
+                       dialog_x: float = 90.0, cue_x: float = 270.0):
+        lines = []
+        for i in range(n_dialog):
+            lines.append(_make_sl(f"Dialog line {i}.", x=dialog_x + (i % 3)))
+        for i in range(n_cue):
+            lines.append(_make_sl(f"CUE {i}", x=cue_x + (i % 2)))
+        return lines
+
+    def test_bimodal_returns_zones(self):
+        lines = self._bimodal_lines()
+        zones = p._infer_layout_zones(lines)
+        assert zones is not None
+        assert zones.is_bimodal is True
+
+    def test_bimodal_dialog_x_in_low_cluster(self):
+        lines = self._bimodal_lines(dialog_x=90.0, cue_x=270.0)
+        zones = p._infer_layout_zones(lines)
+        assert zones is not None
+        assert zones.dialog_x < zones.threshold
+
+    def test_bimodal_cue_x_in_high_cluster(self):
+        lines = self._bimodal_lines(dialog_x=90.0, cue_x=270.0)
+        zones = p._infer_layout_zones(lines)
+        assert zones is not None
+        assert zones.cue_x > zones.threshold
+
+    def test_unimodal_returns_none(self):
+        """All lines at the same x → no spatial signal → None."""
+        lines = [_make_sl(f"Line {i}", x=72.0) for i in range(30)]
+        zones = p._infer_layout_zones(lines)
+        assert zones is None
+
+    def test_insufficient_samples_returns_none(self):
+        lines = [_make_sl(f"Line {i}", x=float(90 + i * 5)) for i in range(5)]
+        zones = p._infer_layout_zones(lines, min_samples=20)
+        assert zones is None
+
+    def test_small_gap_returns_none(self):
+        """Gap < min_gap_pt should not produce zones."""
+        # All lines spread 5 pt apart: max gap = 5, well below 30 pt default.
+        lines = [_make_sl(f"Line {i}", x=float(72 + i * 5)) for i in range(30)]
+        zones = p._infer_layout_zones(lines, min_gap_pt=30.0)
+        assert zones is None
+
+    def test_page_break_sentinels_ignored(self):
+        """Page-break sentinel lines (no text, is_page_break=True) should not
+        contribute x values and must not cause an error."""
+        lines = self._bimodal_lines()
+        # Insert some page-break sentinels with x=None.
+        for _ in range(5):
+            lines.append(p.StructuredLine(text="", x=None, y=None, is_page_break=True))
+        zones = p._infer_layout_zones(lines)
+        assert zones is not None  # sentinels didn't break things
+
+    def test_scene_heading_x_detected_from_bold_short_lines(self):
+        """Bold short lines should produce a scene_heading_x value."""
+        lines = self._bimodal_lines()
+        # Add 5 bold short lines at x=218 (typical centered scene heading).
+        for i in range(5):
+            lines.append(_make_sl(f"Scene {i}", x=218.0, bold=True))
+        zones = p._infer_layout_zones(lines)
+        assert zones is not None
+        assert zones.scene_heading_x is not None
+        assert abs(zones.scene_heading_x - 218.0) < 10.0
+
+    def test_scene_heading_x_none_without_bold_lines(self):
+        """Without bold short lines, scene_heading_x should be None."""
+        lines = self._bimodal_lines()
+        zones = p._infer_layout_zones(lines)
+        assert zones is not None
+        assert zones.scene_heading_x is None
+
+    def test_custom_min_gap(self):
+        """min_gap_pt kwarg overrides the default 30 pt threshold."""
+        # Gap of 20 pt would fail the default threshold but pass a 10 pt one.
+        lines = (
+            [_make_sl(f"D{i}", x=72.0) for i in range(20)]
+            + [_make_sl(f"C{i}", x=92.0) for i in range(10)]  # gap = 20 pt
+        )
+        # Default threshold (30 pt) → None
+        assert p._infer_layout_zones(lines, min_gap_pt=30.0) is None
+        # Relaxed threshold (10 pt) → zones
+        assert p._infer_layout_zones(lines, min_gap_pt=10.0) is not None
+
+    def test_outlier_buckets_do_not_steal_threshold(self):
+        """Sparse outlier x-buckets (e.g. right-margin page numbers) must not
+        shift the detected threshold away from the true dialog/cue gap.
+
+        Previously, 7 stray lines at x=415 created the largest adjacent gap in
+        the full bucket list (290→415 = 125 pt), making threshold≈342 instead
+        of ≈180.  The significant-bucket filter (≥1 % of lines) now excludes
+        these outliers before gap detection runs.
+        """
+        lines = []
+        # Main dialog column — 1700 lines at x=90
+        for i in range(1700):
+            lines.append(_make_sl(f"dialog {i}.", x=90.0))
+        # Cue / SD column — 1700 lines at x=270
+        for i in range(1700):
+            lines.append(_make_sl("SPEAKER" if i % 5 == 0 else f"Stage dir {i}.", x=270.0))
+        # 7 stray page-number lines far right — must be filtered out
+        for i in range(7):
+            lines.append(_make_sl(str(i + 1), x=415.0))
+
+        zones = p._infer_layout_zones(lines)
+        assert zones is not None
+        # Threshold must split dialog from cue, not be pulled out to ≈342
+        assert zones.threshold < 350.0, (
+            f"threshold {zones.threshold} too high — outlier buckets leaked"
+        )
+        assert zones.dialog_x < 100.0
+        assert 200.0 < zones.cue_x < 300.0
+
+
+# ---------------------------------------------------------------------------
+# _build_script_from_classified
+# ---------------------------------------------------------------------------
+
+
+def _cl(text: str, role: str, speaker: str | None = None,
+        x: float = 100.0) -> p.ClassifiedLine:
+    sl = p.StructuredLine(text=text, x=x, y=0.0)
+    return p.ClassifiedLine(line=sl, role=role, speaker=speaker)
+
+
+class TestBuildScriptFromClassified:
+    def test_empty_input(self):
+        script = p._build_script_from_classified([])
+        assert script.scenes == []
+        assert script.characters == []
+
+    def test_single_scene_with_heading(self):
+        lines = [
+            _cl("Scene One", "scene_heading"),
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("Hello there.", "dialog", speaker="ALICE"),
+        ]
+        script = p._build_script_from_classified(lines)
+        assert len(script.scenes) == 1
+        assert script.scenes[0].title == "Scene One"
+
+    def test_dialog_attributed_to_speaker(self):
+        lines = [
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("Hello there.", "dialog", speaker="ALICE"),
+        ]
+        script = p._build_script_from_classified(lines)
+        assert len(script.scenes) == 1
+        dialogs = [e for e in script.scenes[0].elements if e.kind == "dialog"]
+        assert len(dialogs) == 1
+        assert dialogs[0].speaker == "ALICE"
+        assert "Hello there." in dialogs[0].text
+
+    def test_stage_direction_kind(self):
+        lines = [
+            _cl("The lights fade.", "stage_direction"),
+        ]
+        script = p._build_script_from_classified(lines)
+        sds = [e for e in script.scenes[0].elements if e.kind == "stage_direction"]
+        assert sds
+
+    def test_consecutive_dialog_folded(self):
+        """Multiple consecutive dialog lines for the same speaker are merged."""
+        lines = [
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("Line one.", "dialog", speaker="ALICE"),
+            _cl("Line two.", "dialog", speaker="ALICE"),
+        ]
+        script = p._build_script_from_classified(lines)
+        dialogs = [e for e in script.scenes[0].elements if e.kind == "dialog"]
+        assert len(dialogs) == 1
+        assert "Line one." in dialogs[0].text
+        assert "Line two." in dialogs[0].text
+
+    def test_different_speakers_not_folded(self):
+        lines = [
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("Hi.", "dialog", speaker="ALICE"),
+            _cl("BOB", "speaker_cue", speaker="BOB"),
+            _cl("Hey.", "dialog", speaker="BOB"),
+        ]
+        script = p._build_script_from_classified(lines)
+        dialogs = [e for e in script.scenes[0].elements if e.kind == "dialog"]
+        assert len(dialogs) == 2
+
+    def test_multiple_scenes(self):
+        lines = [
+            _cl("ACT ONE", "scene_heading"),
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("Hello.", "dialog", speaker="ALICE"),
+            _cl("ACT TWO", "scene_heading"),
+            _cl("BOB", "speaker_cue", speaker="BOB"),
+            _cl("Goodbye.", "dialog", speaker="BOB"),
+        ]
+        script = p._build_script_from_classified(lines)
+        assert len(script.scenes) == 2
+        assert script.scenes[0].title == "ACT ONE"
+        assert script.scenes[1].title == "ACT TWO"
+
+    def test_no_heading_creates_single_scene(self):
+        """No scene_heading lines → single synthetic scene."""
+        lines = [
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("Hello.", "dialog", speaker="ALICE"),
+        ]
+        script = p._build_script_from_classified(lines)
+        assert len(script.scenes) == 1
+
+    def test_characters_extracted_from_dialog(self):
+        lines = [
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("Hi.", "dialog", speaker="ALICE"),
+            _cl("BOB", "speaker_cue", speaker="BOB"),
+            _cl("Hey.", "dialog", speaker="BOB"),
+        ]
+        script = p._build_script_from_classified(lines)
+        names = {c.name for c in script.characters}
+        assert "ALICE" in names
+        assert "BOB" in names
+
+    def test_characters_sorted_by_dialog_count(self):
+        """Character with more lines should appear first."""
+        lines = [
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("One.", "dialog", speaker="ALICE"),
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("Two.", "dialog", speaker="ALICE"),
+            _cl("BOB", "speaker_cue", speaker="BOB"),
+            _cl("Hey.", "dialog", speaker="BOB"),
+        ]
+        script = p._build_script_from_classified(lines)
+        assert script.characters[0].name == "ALICE"
+
+    def test_blanks_skipped(self):
+        blank_sl = p.StructuredLine(text="", x=None, y=None)
+        lines = [
+            p.ClassifiedLine(line=blank_sl, role="blank"),
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("Hello.", "dialog", speaker="ALICE"),
+        ]
+        script = p._build_script_from_classified(lines)
+        assert len(script.scenes) == 1  # blank didn't create a scene
+
+    def test_parenthetical_preserved(self):
+        lines = [
+            _cl("ALICE", "speaker_cue", speaker="ALICE"),
+            _cl("(quietly)", "parenthetical", speaker="ALICE"),
+            _cl("Shhh.", "dialog", speaker="ALICE"),
+        ]
+        script = p._build_script_from_classified(lines)
+        parens = [e for e in script.scenes[0].elements if e.kind == "parenthetical"]
+        assert parens
+        assert parens[0].speaker == "ALICE"
+
+    def test_title_propagated(self):
+        lines = [_cl("ALICE", "speaker_cue", speaker="ALICE"),
+                 _cl("Hello.", "dialog", speaker="ALICE")]
+        script = p._build_script_from_classified(lines, title="My Play")
+        assert script.title == "My Play"
+
+    def test_custom_default_scene_title(self):
+        lines = [_cl("ALICE", "speaker_cue", speaker="ALICE"),
+                 _cl("Hello.", "dialog", speaker="ALICE")]
+        script = p._build_script_from_classified(lines, default_scene_title="Chapter")
+        assert "Chapter" in script.scenes[0].title
+
+
+# ---------------------------------------------------------------------------
+# _classify_lines — zones kwarg wires into speaker/dialog bounds
+# ---------------------------------------------------------------------------
+
+
+class TestClassifyLinesWithZones:
+    def _make(self, text: str, x: float = 100.0,
+              bold: bool = False) -> p.StructuredLine:
+        return p.StructuredLine(text=text, x=x, y=0.0, is_bold=bold)
+
+    def test_zones_kwarg_populates_bounds(self):
+        """Passing zones= should filter cues to the high-x cluster."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        # ALICE at x=90 is in dialog zone → should not be speaker_cue
+        sl = self._make("ALICE", x=90.0)
+        result = p._classify_lines([sl], zones=zones)
+        assert result[0].role != "speaker_cue"
+
+    def test_zones_cue_in_high_cluster(self):
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        sl = self._make("ALICE", x=270.0)
+        result = p._classify_lines([sl], zones=zones)
+        assert result[0].role == "speaker_cue"
+
+    def test_zones_bold_heading_detected(self):
+        """Bold short line near scene_heading_x should be scene_heading."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0,
+                              scene_heading_x=218.0)
+        sl = self._make("INT. WAREHOUSE - NIGHT", x=218.0, bold=True)
+        result = p._classify_lines([sl], zones=zones)
+        assert result[0].role == "scene_heading"
+
+    def test_zones_non_bold_not_spatial_heading(self):
+        """Non-bold line at heading x should not be promoted to scene_heading
+        unless it matches the keyword pattern."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0,
+                              scene_heading_x=218.0)
+        sl = self._make("Some prose at heading position.", x=218.0, bold=False)
+        result = p._classify_lines([sl], zones=zones)
+        assert result[0].role != "scene_heading"
+
+    def test_explicit_kwargs_override_zones(self):
+        """When explicit bounds are provided alongside zones, explicit wins."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        # Override to put speaker zone at x=90.
+        sl = self._make("ALICE", x=90.0)
+        result = p._classify_lines(
+            [sl], zones=zones,
+            speaker_x_min=80.0, speaker_x_max=120.0,
+        )
+        assert result[0].role == "speaker_cue"
+
+    # ---- Rule 4b: cue-zone stage direction (TheHarvest bug fix) ----
+
+    def test_cue_zone_mixed_case_becomes_stage_direction(self):
+        """Mixed-case line at cue x-position should be stage_direction, not dialog.
+        This is the core TheHarvest fix: 'MARCUS smiles.' at x=270 after a
+        speaker cue should not be absorbed into the speaker's dialog."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        lines = [
+            self._make("ALICE", x=270.0),          # speaker cue at cue x
+            self._make("Hello there.", x=90.0),     # dialog at dialog x
+            self._make("She smiles warmly.", x=270.0),  # SD in cue zone
+        ]
+        result = p._classify_lines(lines, zones=zones)
+        assert result[0].role == "speaker_cue"
+        assert result[1].role == "dialog"
+        assert result[2].role == "stage_direction", (
+            f"Mixed-case line in cue zone should be stage_direction, got {result[2].role}"
+        )
+
+    def test_cue_zone_sd_clears_pending_speaker(self):
+        """After a cue-zone SD, the pending speaker is cleared so subsequent
+        dialog lines at dialog-x don't get attributed to the wrong speaker."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        lines = [
+            self._make("ALICE", x=270.0),            # speaker cue
+            self._make("She walks away.", x=270.0),  # SD in cue zone — clears pending
+            self._make("BOB", x=270.0),              # new speaker cue
+            self._make("Goodbye.", x=90.0),          # dialog → BOB, not ALICE
+        ]
+        result = p._classify_lines(lines, zones=zones)
+        assert result[0].role == "speaker_cue"
+        assert result[1].role == "stage_direction"
+        assert result[2].role == "speaker_cue"
+        assert result[3].role == "dialog"
+        assert result[3].speaker == "BOB"
+
+    def test_cue_zone_all_caps_still_speaker_cue(self):
+        """ALL CAPS short line in cue zone should still be speaker_cue (Rule 4
+        fires before Rule 4b)."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        sl = self._make("BOB", x=270.0)
+        result = p._classify_lines([sl], zones=zones)
+        assert result[0].role == "speaker_cue"
+
+    def test_no_zones_cue_zone_rule_inactive(self):
+        """Without zones, mixed-case line after a cue should still be dialog
+        (Rule 4b only activates when speaker_x_min is set)."""
+        lines = [
+            self._make("ALICE", x=270.0),
+            self._make("She smiles.", x=270.0),
+        ]
+        result = p._classify_lines(lines)  # no zones
+        assert result[1].role == "dialog", (
+            "Without zones, mixed-case at any x stays as dialog (existing behavior)"
+        )
+
+    # ---- Rule 4c: content-based SD detection (dialog-zone stage directions) ----
+
+    def test_pause_in_dialog_becomes_sd(self):
+        """'Pause.' inside a dialog block should become stage_direction."""
+        lines = [
+            self._make("ALICE"),
+            self._make("Hello."),
+            self._make("Pause."),
+        ]
+        result = p._classify_lines(lines)
+        assert result[2].role == "stage_direction", (
+            f"'Pause.' should be stage_direction, got {result[2].role}"
+        )
+
+    def test_caps_name_verb_becomes_sd(self):
+        """'JOSH opens his eyes, looks at TOM.' after a speaker cue should
+        be stage_direction — this is the core TheHarvest fix."""
+        lines = [
+            self._make("DENISE"),
+            self._make("Keso tatata elli."),
+            self._make("JOSH opens his eyes, looks at TOM."),
+        ]
+        result = p._classify_lines(lines)
+        assert result[0].role == "speaker_cue"
+        assert result[1].role == "dialog"
+        assert result[2].role == "stage_direction", (
+            f"'JOSH opens his eyes' should be stage_direction, got {result[2].role}"
+        )
+
+    def test_caps_name_sd_clears_pending_speaker(self):
+        """After a content-based SD, the pending_speaker is cleared."""
+        lines = [
+            self._make("DENISE"),
+            self._make("MARCUS smiles at DENISE lovingly."),
+            self._make("TOM"),
+            self._make("Hello."),
+        ]
+        result = p._classify_lines(lines)
+        assert result[1].role == "stage_direction"
+        assert result[2].role == "speaker_cue"
+        assert result[3].speaker == "TOM"
+
+    def test_plain_dialog_not_affected(self):
+        """Normal dialog after a speaker cue should NOT be mistaken for SD."""
+        lines = [self._make("ALICE"), self._make("I'll be right there.")]
+        result = p._classify_lines(lines)
+        assert result[1].role == "dialog"
+
+    def test_we_both_dialog_not_affected(self):
+        """'We both say this.' should stay dialog — 'We/He/She' is NOT in the
+        conservative SD pattern set to avoid false positives on dialog."""
+        lines = [self._make("ALICE"), self._make("We both say this.")]
+        result = p._classify_lines(lines)
+        assert result[1].role == "dialog"
+
+    def test_it_continues_dialog_not_affected(self):
+        """'It continues...' should stay dialog — 'It' is common in dialog."""
+        lines = [self._make("ALICE"), self._make("It continues on the next line.")]
+        result = p._classify_lines(lines)
+        assert result[1].role == "dialog"
+
+    def test_sd_not_fired_without_dialog_context(self):
+        """_looks_like_stage_direction lines outside dialog context should still
+        fall through to stage_direction via Rule 6, not Rule 4c — same result
+        but without context-clearing side effects."""
+        sl = self._make("JOSH opens his eyes.")
+        result = p._classify_lines([sl])  # no preceding speaker cue
+        assert result[0].role == "stage_direction"
+
+
+class TestLooksLikeStageDirection:
+    """Unit tests for the _looks_like_stage_direction() helper."""
+
+    def _check(self, text: str) -> bool:
+        return p._looks_like_stage_direction(text)
+
+    # Patterns that SHOULD match
+    def test_pause(self):
+        assert self._check("Pause.")
+
+    def test_pause_bare(self):
+        assert self._check("PAUSE")
+
+    def test_silence(self):
+        assert self._check("SILENCE")
+
+    def test_beat(self):
+        assert self._check("Beat.")
+
+    def test_he_verb_not_matched(self):
+        # He/She/They are deliberately excluded from _looks_like_stage_direction
+        # to avoid false positives on dialog like "He wants to go." or
+        # "They both agreed." — these pronoun patterns are left to the
+        # broader _SD_IN_DIALOG_LINE_RE which only marks as "uncertain".
+        assert not self._check("He walks to the door.")
+
+    def test_she_verb_not_matched(self):
+        assert not self._check("She looks away.")
+
+    def test_they_verb_not_matched(self):
+        assert not self._check("They embrace.")
+
+    def test_caps_name_verb(self):
+        assert self._check("JOSH opens his eyes, looks at TOM.")
+
+    def test_caps_name_verb_multi_word(self):
+        assert self._check("MARCUS smiles at DENISE lovingly.")
+
+    def test_caps_two_names(self):
+        assert self._check("TOM AND ALICE exit together.")
+
+    def test_parenthetical_whole_line(self):
+        assert self._check("(quietly)")
+
+    # Patterns that should NOT match
+    def test_normal_dialog(self):
+        assert not self._check("I'll be right there.")
+
+    def test_question_dialog(self):
+        assert not self._check("What do you want from me?")
+
+    def test_single_caps_word_exclamation(self):
+        assert not self._check("WHAT?")
+
+    def test_caps_name_no_lowercase(self):
+        # "ALICE" alone — no lowercase follow-on, not a stage direction
+        assert not self._check("ALICE")
+
+    def test_caps_name_with_comma_not_verb(self):
+        # "ALICE, I love you." — comma after name, not subject-verb
+        assert not self._check("ALICE, I love you.")
+
+
+# ---------------------------------------------------------------------------
+# _try_spatial_parse — graceful failure on missing/corrupt PDF
+# ---------------------------------------------------------------------------
+
+
+class TestTrySpatialParse:
+    def test_nonexistent_file_returns_none(self):
+        config = p._load_corrections_config()
+        result = p._try_spatial_parse("/tmp/does_not_exist.pdf", "Test", config)
+        assert result is None
+
+    def test_returns_script_or_none(self):
+        config = p._load_corrections_config()
+        result = p._try_spatial_parse("/tmp/fake.pdf", "Test", config)
+        assert result is None or isinstance(result, p.Script)
