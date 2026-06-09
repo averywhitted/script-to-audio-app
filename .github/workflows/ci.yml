@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Python backend tests ────────────────────────────────────────────────────
+  python-tests:
+    name: Python backend tests
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install test dependencies
+        run: pip install pdfplumber pytest
+
+      - name: Run pytest
+        run: python -m pytest backend/tests/ -v --tb=short
+
+  # ── Swift build & unit tests ────────────────────────────────────────────────
+  swift-tests:
+    name: Swift build & tests
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift build
+        run: |
+          xcodebuild \
+            -project TableRead.xcodeproj \
+            -scheme TableRead \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Swift unit tests
+        run: |
+          xcodebuild test \
+            -project TableRead.xcodeproj \
+            -scheme TableRead \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
