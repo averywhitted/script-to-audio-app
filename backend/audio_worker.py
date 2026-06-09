@@ -502,10 +502,31 @@ def _install_engine(payload: Dict[str, Any]) -> int:
             text=True,
             bufsize=1,
         )
+        # Track install milestones to emit rough progress fractions.
+        # Pip doesn't stream byte-level progress over a pipe, so we map
+        # recognisable output lines to representative 0–1 fractions.
+        _collect_count = 0
+        _download_seen = False
         for line in iter(process.stdout.readline, ""):
             line = line.rstrip()
-            if line:
-                _emit({"event": "log", "level": "info", "message": line})
+            if not line:
+                continue
+            _emit({"event": "log", "level": "info", "message": line})
+            ll = line.lower()
+            # Milestone detection (order matters — check most specific first)
+            if "successfully installed" in ll:
+                _emit({"event": "progress", "fraction": 0.93})
+            elif "installing collected packages" in ll:
+                _emit({"event": "progress", "fraction": 0.80})
+            elif ll.startswith("downloading ") or "downloading " in ll and ".whl" in ll:
+                _download_seen = True
+                _emit({"event": "progress", "fraction": 0.40})
+            elif ll.startswith("collecting "):
+                _collect_count += 1
+                # Each "Collecting" line nudges progress 0.05 → 0.30 over up to 5 deps
+                frac = min(0.05 + (_collect_count - 1) * 0.05, 0.30)
+                if not _download_seen:
+                    _emit({"event": "progress", "fraction": round(frac, 2)})
         process.wait()
     except Exception as exc:
         _emit({"event": "log", "level": "error", "message": str(exc)})
@@ -517,6 +538,7 @@ def _install_engine(payload: Dict[str, Any]) -> int:
         return 1
 
     # Verify the import works before declaring victory
+    _emit({"event": "progress", "fraction": 0.97})
     try:
         if engine_id == "kokoro":
             import importlib

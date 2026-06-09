@@ -318,9 +318,24 @@ private struct EngineManagementRow: View {
             Spacer()
 
             if isInstalling {
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.small)
-                    Text("Installing…").font(.caption).foregroundStyle(.secondary)
+                if let fraction = state.installProgress {
+                    VStack(alignment: .trailing, spacing: 3) {
+                        ProgressView(value: fraction)
+                            .progressViewStyle(.linear)
+                            .frame(width: 110)
+                            .animation(.easeInOut(duration: 0.3), value: fraction)
+                        Text(fraction >= 1.0
+                             ? "Verifying…"
+                             : "Installing… \(Int(fraction * 100))%")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text("Installing…").font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             } else if isUninstalling {
                 HStack(spacing: 6) {

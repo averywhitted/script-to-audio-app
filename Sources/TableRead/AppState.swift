@@ -45,6 +45,8 @@ final class AppState: ObservableObject {
     @Published var installLog: [GenerationLogLine] = []
     @Published var installingEngine: EngineKind? = nil
     @Published var uninstallingEngine: EngineKind? = nil
+    /// 0.0–1.0 while an engine is being installed; nil = no install in progress.
+    @Published var installProgress: Double? = nil
     @Published var previewingVoiceId: String?
     @Published var preparingPreviewVoiceId: String?
     @Published var renderStartTime: Date?
@@ -454,6 +456,7 @@ final class AppState: ObservableObject {
                 selectedEngine = .macOS
             }
             installingEngine = nil
+            installProgress = nil
         }
     }
 
@@ -555,10 +558,16 @@ final class AppState: ObservableObject {
     private func handleInstallEvent(_ event: GenerationEvent) {
         switch event.event {
         case "started":
+            installProgress = 0.0
             appendInstallLog(event.message ?? "Starting…", .info)
+        case "progress":
+            if let f = event.fraction {
+                installProgress = f
+            }
         case "log":
             appendInstallLog(event.message ?? "", style(from: event.level))
         case "done":
+            installProgress = 1.0
             appendInstallLog(event.message ?? "Done.", .success)
         default:
             if let msg = event.message, !msg.isEmpty {

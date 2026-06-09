@@ -247,6 +247,8 @@ struct GenerationEvent: Codable, Sendable {
     var errors: [String]?
     var skippedScenes: [String]?
     var seconds: Double?
+    /// 0.0–1.0 download/install progress fraction; nil = indeterminate.
+    var fraction: Double?
 }
 
 /// Matches NARRATOR_KEY in voice_assignment.py
