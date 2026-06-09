@@ -613,6 +613,37 @@ def estimate_tts_requests(
     return total
 
 
+def estimate_tts_chars(
+    script: Script,
+    assignment: Assignment,
+    scene_filter: Optional[List[int]] = None,
+    include_scene_titles: bool = True,
+) -> int:
+    """Count total characters that will be sent to TTS across all render chunks.
+
+    Used for OpenAI cost estimation: multiply by the per-character rate to get
+    the expected USD spend.
+    """
+    target_scenes = script.scenes
+    if scene_filter is not None:
+        target_scenes = [s for s in script.scenes if s.number in scene_filter]
+    total_chars = 0
+    for scene in target_scenes:
+        elements = [e for e in scene.elements if e.text.strip()]
+        if not elements:
+            continue
+        if include_scene_titles:
+            # Scene title is synthesized as "{title}." — add approx length
+            total_chars += len(scene.title) + 1
+        for chunk in _build_render_chunks(elements, assignment):
+            if chunk.overlap_texts:
+                # Each overlap voice gets its own text
+                total_chars += sum(len(t) for t in chunk.overlap_texts if t)
+            else:
+                total_chars += len(chunk.text)
+    return total_chars
+
+
 # ---------------------------------------------------------------------------
 # Self-check (only runs if afconvert is on this machine)
 # ---------------------------------------------------------------------------

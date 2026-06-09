@@ -35,7 +35,7 @@ if str(ROOT) not in sys.path:
 
 import parser as script_parser
 import tts_engines
-from audio_pipeline import GenerationProgress, estimate_tts_requests, generate_script
+from audio_pipeline import GenerationProgress, estimate_tts_chars, estimate_tts_requests, generate_script
 from voice_assignment import Assignment, auto_assign
 
 
@@ -150,15 +150,23 @@ def _voices_for_engine(engine_id: str) -> List[tts_engines.VoiceInfo]:
 
 def _estimate_openai(pdf_path: str, scene_numbers: List[int] | None) -> Dict[str, Any]:
     script = script_parser.parse_pdf(pdf_path)
-    voices = tts_engines.OpenAIEngine().list_voices()
+    engine = tts_engines.OpenAIEngine()
+    voices = engine.list_voices()
     assignment = auto_assign(script.characters, voices)
     request_count = estimate_tts_requests(script, assignment, scene_numbers)
+    total_chars = estimate_tts_chars(script, assignment, scene_numbers)
     rpm = tts_engines.OpenAIEngine.REQUESTS_PER_MINUTE
     minimum_seconds = int(((request_count + max(rpm, 1) - 1) // max(rpm, 1)) * 60)
+    # Cost estimate using tts-1 pricing (default model)
+    model = engine.DEFAULT_MODEL
+    rate = tts_engines.OpenAIEngine.COST_PER_1K_CHARS.get(model, 0.015)
+    estimated_cost_usd = (total_chars / 1000.0) * rate
     return {
         "requestCount": request_count,
         "requestsPerMinute": rpm,
         "minimumSeconds": minimum_seconds,
+        "totalChars": total_chars,
+        "estimatedCostUSD": round(estimated_cost_usd, 4),
     }
 
 

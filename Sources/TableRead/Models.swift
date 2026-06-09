@@ -161,11 +161,26 @@ struct OpenAIEstimate: Codable, Equatable, Sendable {
     var requestCount: Int
     var requestsPerMinute: Int
     var minimumSeconds: Int
+    var totalChars: Int = 0
+    var estimatedCostUSD: Double = 0
 
     var durationText: String {
         let minutes = max(1, minimumSeconds / 60)
         if minutes < 60 { return "\(minutes) min" }
         return "\(minutes / 60)h \(minutes % 60)m"
+    }
+
+    /// Human-readable cost string, e.g. "< $0.01" or "$1.23".
+    var costText: String {
+        if estimatedCostUSD < 0.01 { return "< $0.01" }
+        if estimatedCostUSD < 1.0  { return String(format: "$%.2f", estimatedCostUSD) }
+        return String(format: "$%.2f", estimatedCostUSD)
+    }
+
+    /// Character count formatted for display, e.g. "42.3k".
+    var charsText: String {
+        if totalChars < 1_000 { return "\(totalChars)" }
+        return String(format: "%.1fk", Double(totalChars) / 1_000)
     }
 }
 

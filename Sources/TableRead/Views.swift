@@ -2857,17 +2857,18 @@ private struct OpenAIEstimatePanel: View {
     var estimate: OpenAIEstimate
 
     var body: some View {
-        HStack(spacing: 14) {
-            MetricCard(value: estimate.requestCount, label: "Requests")
-            MetricCard(value: estimate.requestsPerMinute, label: "RPM Limit")
-            VStack(alignment: .leading, spacing: 4) {
-                Text(estimate.durationText)
-                    .font(.system(size: 30, weight: .semibold, design: .rounded))
-                Text("Minimum time").font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 14) {
+                MetricCard(value: estimate.requestCount, label: "Requests")
+                MetricCard(value: estimate.requestsPerMinute, label: "RPM Limit")
+                MetricStringCard(value: estimate.durationText, label: "Minimum time")
+                MetricStringCard(value: estimate.costText, label: "Est. cost (tts-1)")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            if estimate.totalChars > 0 {
+                Text("\(estimate.charsText) characters · pricing may change, check OpenAI dashboard")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
@@ -2877,8 +2878,17 @@ private struct MetricCard: View {
     var label: String
 
     var body: some View {
+        MetricStringCard(value: "\(value)", label: label)
+    }
+}
+
+private struct MetricStringCard: View {
+    var value: String
+    var label: String
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("\(value)").font(.system(size: 30, weight: .semibold, design: .rounded))
+            Text(value).font(.system(size: 30, weight: .semibold, design: .rounded))
             Text(label).font(.caption).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
