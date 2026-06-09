@@ -318,19 +318,6 @@ final class AppState: ObservableObject {
     /// Check which scenes have already been rendered to the output folder
     /// and populate sceneFileInfo for display in ReviewView.
     /// Runs silently in the background — no status message on success.
-    func checkRenderedScenes() {
-        guard let pdf = selectedPDF else { return }
-        let out = outputDirectory ?? defaultOutputDirectory(for: pdf)
-        Task {
-            do {
-                let info = try await bridge.checkOutputFiles(pdf: pdf, outputDir: out)
-                await MainActor.run { sceneFileInfo = info }
-            } catch {
-                // Silent — badges just won't appear if the check fails
-            }
-        }
-    }
-
     // MARK: - Engine selection
 
     /// Select an engine card without triggering install — used by card tap.
@@ -914,6 +901,41 @@ final class AppState: ObservableObject {
     private func defaultOutputDirectory(for pdf: URL) -> URL {
         pdf.deletingLastPathComponent()
             .appendingPathComponent(pdf.deletingPathExtension().lastPathComponent + " - table read")
+    }
+
+    /// Replicate Python's `scene_filename()` locally so we can check output files
+    /// without spawning a Python process.  Must stay in sync with audio_pipeline.py:
+    ///   `f"Scene_{number:02d}_{sanitize(title)}.m4a"`
+    private static func sceneFilename(number: Int, title: String) -> String {
+        var s = title.trimmingCharacters(in: .whitespaces)
+        // Remove anything that's not a word char, space, or hyphen
+        s = s.replacingOccurrences(of: "[^\\p{L}\\p{N}\\s\\-]", with: "",
+                                   options: .regularExpression)
+        // Collapse runs of spaces/hyphens to a single underscore
+        s = s.replacingOccurrences(of: "[\\s\\-]+", with: "_",
+                                   options: .regularExpression)
+        s = s.trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+        let part = s.prefix(60).isEmpty ? "Scene" : String(s.prefix(60))
+        return String(format: "Scene_%02d_%@.m4a", number, part)
+    }
+
+    /// Fast local variant of checkRenderedScenes — uses the in-memory scene list
+    /// and local filesystem checks instead of spawning a Python worker.
+    func checkRenderedScenes() {
+        guard let pdf = selectedPDF, let sceneList = script?.scenes else { return }
+        let outDir = outputDirectory ?? defaultOutputDirectory(for: pdf)
+        let fm = FileManager.default
+        var info: [Int: SceneOutputInfo] = [:]
+        for scene in sceneList {
+            let fname = Self.sceneFilename(number: scene.number, title: scene.title)
+            let path = outDir.appendingPathComponent(fname).path
+            info[scene.number] = SceneOutputInfo(
+                exists: fm.fileExists(atPath: path),
+                filename: fname,
+                title: scene.title
+            )
+        }
+        sceneFileInfo = info
     }
 
     private func format(seconds: Double) -> String {
