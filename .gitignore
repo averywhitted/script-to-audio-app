@@ -36,5 +36,8 @@ xcuserdata/
 DerivedData/
 .swiftpm/
 
+# Secrets — copy EmailReporter.swift.template → EmailReporter.swift and add your key
+Sources/TableRead/EmailReporter.swift
+
 # Claude Code internal state
 .claude/worktrees/

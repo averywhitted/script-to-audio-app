@@ -5,7 +5,7 @@ Table Read converts screenplay PDFs into per-scene `.m4a` audio dramas using TTS
 Swift/SwiftUI macOS app → Python backend (`backend/audio_worker.py`) via stdin/stdout JSON bridge.
 
 ## Branch
-Active development is on `native-macos-refresh`. PRs target `main`.
+Active development is on `parser-refactor`. PRs target `main`.
 
 ## Testing — run after every code change
 

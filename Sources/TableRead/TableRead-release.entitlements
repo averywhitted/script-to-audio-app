@@ -7,8 +7,17 @@
     <key>com.apple.security.app-sandbox</key>
     <false/>
 
+    <!-- Hardened runtime exceptions (release/notarization builds only).
+         These keys are invalid with ad-hoc signing used in Debug builds,
+         so they live in this separate file only referenced by build_release.sh. -->
+
     <!-- Python's dynamic code generation needs unsigned executable memory. -->
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- The embedded CPython loads unsigned .dylib/.so files at runtime.
+         Without this, dlopen() fails under the hardened runtime. -->
+    <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
 </dict>
 </plist>

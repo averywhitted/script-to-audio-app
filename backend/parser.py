@@ -41,12 +41,17 @@ are transparently normalized before parsing.
 
 from __future__ import annotations
 
+import json
+import logging
+import os
 import re
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
 import pdfplumber
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -67,6 +72,8 @@ class Element:
     kind: str  # 'dialog' | 'stage_direction' | 'parenthetical'
     text: str
     speaker: Optional[str] = None
+    overlap_cue: Optional[List[str]] = None   # set when multiple speakers share a line simultaneously
+    overlap_texts: Optional[List[str]] = None # per-voice texts (parallel with overlap_cue); None = all voices read .text
 
 
 @dataclass
@@ -81,6 +88,41 @@ class Script:
     title: str
     characters: List[Character] = field(default_factory=list)
     scenes: List[Scene] = field(default_factory=list)
+
+
+@dataclass
+class ScriptSkeleton:
+    """Pre-computed structural analysis of raw script lines.
+
+    Built once before format detection so every format parser shares the same
+    single pass over the text rather than each re-deriving the universal
+    invariants independently.
+
+    Universal invariants captured here:
+      1. Speaker identification — all-caps lines that pass _is_caps_cue_candidate
+      2. Scene delimiters — lines matching any known boundary pattern
+      3. Page-region classification — title/front-matter vs. script body
+    """
+
+    # --- Line-level sets (indices into the raw lines list) ---
+    cue_line_indices: Set[int]          # candidate speaker-cue lines
+    scene_delimiter_indices: Set[int]   # candidate scene/act boundary lines
+
+    # --- Page-level structure ---
+    page_sets: List[Set[str]]           # per-page content sets (from extraction)
+    first_page_only: Set[str]           # lines exclusive to page 0 (title page)
+    body_start_line: int                # first line of actual script content
+    cast_section_range: Optional[Tuple[int, int]]  # (start, end) if CAST found
+
+    # --- Format detection scores (pre-computed, avoid rescan) ---
+    heist_count: int        # numbered "N  SCENE TITLE" headers
+    int_ext_count: int      # INT./EXT. sluglines
+    scene_n_count: int      # SCENE N markers
+    dash_count: int         # SPEAKER – dialog inline lines
+    cue_score: int          # standalone ALL-CAPS → mixed-case next line
+    colon_score: int        # ALLCAPS: cue pattern count
+    non_empty_count: int    # total non-blank lines (denominator for ratios)
+    all_caps_count: int     # lines with no lowercase (for all-caps-doc filter)
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +170,11 @@ _INLINE_PAREN_RE = re.compile(r"^\(([^)]+)\)\s*(.*)$")
 # Play-format regex constants
 # ---------------------------------------------------------------------------
 
+# Narrator speaker names — used to detect when the "narrator" turn should yield
+# back to the last character speaker after a parenthetical.  Matches "NARRATOR",
+# "NARRATOR 1", "NARRATOR (V.O.)", etc.
+_NARRATOR_NAME_RE = re.compile(r"^NARRATOR\b", re.IGNORECASE)
+
 # All-caps tokens that are stage directions / structural markers, never speaker cues
 _NON_CUE_RE = re.compile(
     r"""^(
@@ -153,13 +200,16 @@ _NON_CUE_RE = re.compile(
 )
 
 # Scene boundary in play format
+# NOTE: bare "N." (e.g. "2.") is deliberately excluded — it matches page
+# numbers in virtually every modern script. Dash-dialog scripts have their own
+# _SCENE_NUM_DOT_RE. Add "N. TITLE" (with mandatory title text) if a specific
+# format requires it.
 _PLAY_SCENE_RE = re.compile(
     r"""^
     (?:
         (?:SCENE|Scene|SCENE)\s+(\d+)          # SCENE 1 / Scene 1
       | ACT\s+([IVXivx]+|\d+)                  # ACT I / ACT 1
       | -{1,3}\s*(\d+)\s*-{1,3}               # - 1 - / -- 2 --
-      | ([1-9]\d?)\.\s*$                       # 1. or 12.  (scene number+dot, NOT page numbers)
       | PART\s+([IVXivx]+|\d+)                 # PART 1 / PART I
     )
     [\s:—\-]*(.*)$                             # optional colon / dash / title text
@@ -176,6 +226,29 @@ _ORDINAL_ACT_RE = re.compile(
 _ORDINAL_TO_INT = {
     "FIRST": 1, "SECOND": 2, "THIRD": 3, "FOURTH": 4, "FIFTH": 5,
     "SIXTH": 6, "SEVENTH": 7, "EIGHTH": 8, "NINTH": 9, "TENTH": 10,
+}
+
+# "SCENE ONE" / "SCENE TWO" etc. — cardinal word-form scene numbers.
+# Many plays use this instead of "SCENE 1". Matched before _NON_CUE_RE's bare
+# "SCENE\b" guard so the boundary is recognised rather than filtered.
+_CARDINAL_WORDS = (
+    "ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|"
+    "ELEVEN|TWELVE|THIRTEEN|FOURTEEN|FIFTEEN|SIXTEEN|SEVENTEEN|EIGHTEEN|NINETEEN|"
+    "TWENTY(?:[-\\s](?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE))?"
+)
+_ORDINAL_SCENE_RE = re.compile(
+    rf"^SCENE\s+({_CARDINAL_WORDS})\s*$",
+    re.IGNORECASE,
+)
+_SCENE_CARDINAL_TO_INT: Dict[str, int] = {
+    "ONE": 1, "TWO": 2, "THREE": 3, "FOUR": 4, "FIVE": 5,
+    "SIX": 6, "SEVEN": 7, "EIGHT": 8, "NINE": 9, "TEN": 10,
+    "ELEVEN": 11, "TWELVE": 12, "THIRTEEN": 13, "FOURTEEN": 14, "FIFTEEN": 15,
+    "SIXTEEN": 16, "SEVENTEEN": 17, "EIGHTEEN": 18, "NINETEEN": 19, "TWENTY": 20,
+    **{f"TWENTY-{w}": 20 + i for i, w in enumerate(
+        ["ONE","TWO","THREE","FOUR","FIVE","SIX","SEVEN","EIGHT","NINE"], 1)},
+    **{f"TWENTY {w}": 20 + i for i, w in enumerate(
+        ["ONE","TWO","THREE","FOUR","FIVE","SIX","SEVEN","EIGHT","NINE"], 1)},
 }
 
 # Time-based section headers: "THREE DAYS TO DEPARTURE", "ONE DAY UNTIL X"
@@ -490,6 +563,176 @@ def _layout_page_noise(page_sets: List[Set[str]]) -> Set[str]:
     return noise
 
 
+def _group_words_into_rows(words: List[dict], y_tolerance: float = 3.0) -> List[List[dict]]:
+    """Group pdfplumber word dicts into horizontal rows by their top y-coordinate.
+
+    Words within *y_tolerance* PDF points of the first word in a row are
+    considered co-linear.  Rows are returned sorted top-to-bottom.
+    """
+    if not words:
+        return []
+    sorted_words = sorted(words, key=lambda w: (w["top"], w["x0"]))
+    rows: List[List[dict]] = [[sorted_words[0]]]
+    for word in sorted_words[1:]:
+        if abs(word["top"] - rows[-1][0]["top"]) <= y_tolerance:
+            rows[-1].append(word)
+        else:
+            rows.append([word])
+    return rows
+
+
+def _strip_page_number_words(row: List[dict], page_width: float) -> List[dict]:
+    """Remove far-right digit-only words (page number candidates) from a word row.
+
+    Page numbers appear at x0 > 75 % of page width and consist only of digits
+    with an optional trailing period (e.g. "3", "22", "3.", "186.").  Stripping
+    them before column detection prevents ``_detect_column_split_with_hint`` from
+    false-splitting a single-column dialog row whose last word happens to share a
+    y-coordinate with the far-right page number.
+    """
+    threshold = page_width * 0.75
+    return [
+        w for w in row
+        if not (w["x0"] >= threshold and re.fullmatch(r"\d+\.?", w["text"]))
+    ]
+
+
+def _detect_column_split(row_words: List[dict], page_width: float,
+                         min_gap_pct: float = 0.08) -> Optional[float]:
+    """Return the x midpoint of a two-column gap, or None for single-column rows.
+
+    A two-column gap must satisfy all of:
+      • Both left and right clusters have at least one word.
+      • The gap (empty horizontal space) is ≥ ``min_gap_pct`` × page width
+        (default 8 %; normal word spacing is ≤ 3 %, so 8 % is safe against
+        false positives while catching tightly-typeset column layouts).
+      • The midpoint of the gap falls in the 20 – 80 % horizontal zone
+        (rules out "body text + page number" layouts where the gap is far right).
+      • All word x-coordinates are plausibly within the page bounds (rejects
+        PDFs with broken coordinate data where x > page_width * 1.5).
+    """
+    if len(row_words) < 2:
+        return None
+
+    # Sanity-check: reject rows where any word is wildly outside page bounds.
+    if any(w["x0"] < -10 or w["x1"] > page_width * 1.5 for w in row_words):
+        return None
+
+    by_x = sorted(row_words, key=lambda w: w["x0"])
+    max_gap = 0.0
+    gap_mid: Optional[float] = None
+    for i in range(len(by_x) - 1):
+        gap = by_x[i + 1]["x0"] - by_x[i]["x1"]
+        if gap > max_gap:
+            max_gap = gap
+            gap_mid = (by_x[i]["x1"] + by_x[i + 1]["x0"]) / 2.0
+
+    if gap_mid is None:
+        return None
+    if max_gap < page_width * min_gap_pct:
+        return None
+    if not (page_width * 0.20 <= gap_mid <= page_width * 0.80):
+        return None
+    return gap_mid
+
+
+def _detect_column_split_with_hint(row_words: List[dict], page_width: float,
+                                    hint_col_x: float,
+                                    min_gap_pct: float = 0.05) -> Optional[float]:
+    """Split a row at *hint_col_x* if words appear on both sides with a visible gap.
+
+    Used for per-page column tracking: once we've established a column x-position
+    from a clearly-split row, we apply it to ambiguous rows (long left-column text
+    that narrows the physical gap below the primary threshold).  The secondary
+    threshold is 5 % of page width — far above normal inter-word spacing (< 1 %).
+
+    Words are assigned to left/right by their *centre* x-coordinate so that words
+    which straddle the column boundary are attributed to their dominant side rather
+    than excluded from both groups (which would create a spuriously large gap in
+    single-column lines).
+
+    Returns *hint_col_x* if the split is valid, else None.
+    """
+    if len(row_words) < 2:
+        return None
+    if any(w["x0"] < -10 or w["x1"] > page_width * 1.5 for w in row_words):
+        return None
+
+    # Assign each word to the side whose column centre it is closest to.
+    # Using word-centre avoids false splits when a word straddles hint_col_x.
+    left_words  = [w for w in row_words if (w["x0"] + w["x1"]) / 2 < hint_col_x]
+    right_words = [w for w in row_words if (w["x0"] + w["x1"]) / 2 >= hint_col_x]
+    if not left_words or not right_words:
+        return None
+
+    # Measure the actual physical gap between the rightmost left word and the
+    # leftmost right word (using x1 / x0, not centres).
+    left_max_x1  = max(w["x1"] for w in left_words)
+    right_min_x0 = min(w["x0"] for w in right_words)
+    gap = right_min_x0 - left_max_x1
+    if gap < page_width * min_gap_pct:
+        return None
+    return hint_col_x
+
+
+def _detect_column_split_at_boundary(
+    row_words: List[dict],
+    page_width: float,
+    right_col_start: float,
+    align_tolerance: float = 15.0,
+    left_margin_pct: float = 0.25,
+) -> Optional[float]:
+    """Split at *right_col_start* when the leftmost right-side word starts near that boundary.
+
+    Used as a last-resort detector for two-column rows where the left-column
+    text is so long that the gap between columns is nearly zero (< 1 % of
+    page width).  Two discriminators together reject single-column false positives:
+
+    1. **Right-side alignment** — the leftmost word with ``x0 >= right_col_start``
+       must start within *align_tolerance* (15 pt) of the known column edge.
+       Rejects mid-sentence words that happen to cross the threshold far from
+       the actual column start.
+
+    2. **Left-side margin check** — the leftmost left-side word must start in
+       the left *left_margin_pct* (25 %) of the page.  This rejects indented
+       single-column text (stage directions, parentheticals) whose words span
+       across *right_col_start* mid-sentence but don't start near the left margin
+       that genuine left-column dialog uses.
+
+    Returns *right_col_start* if both tests pass, else None.
+    """
+    if len(row_words) < 2:
+        return None
+    if any(w["x0"] < -10 or w["x1"] > page_width * 1.5 for w in row_words):
+        return None
+
+    right_words = [w for w in row_words if w["x0"] >= right_col_start]
+    left_words  = [w for w in row_words if w["x0"] <  right_col_start]
+
+    if not right_words or not left_words:
+        return None
+
+    # Discriminator 1: leftmost right-side word must start near the column edge.
+    right_min_x0 = min(w["x0"] for w in right_words)
+    if right_min_x0 > right_col_start + align_tolerance:
+        return None
+
+    # Discriminator 2: leftmost left-side word must start near the page's left
+    # margin.  Genuine dialog (left column) starts close to the left edge;
+    # indented stage directions start much further right and would otherwise
+    # produce false positives when their text happens to span right_col_start.
+    left_min_x0 = min(w["x0"] for w in left_words)
+    if left_min_x0 > page_width * left_margin_pct:
+        return None
+
+    return right_col_start
+
+
+# Sentinel character used to separate left- and right-column text on two-column rows.
+# Must be a character that never appears in normal script text.
+_COL_SEP = "\x01"
+
+
 def _extract_plain_lines(pdf_path: str) -> List[str]:
     """Return plain (non-layout) lines. Best for standard play format."""
     lines, _ = _extract_plain_lines_with_pages(pdf_path)
@@ -497,7 +740,18 @@ def _extract_plain_lines(pdf_path: str) -> List[str]:
 
 
 def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[str]]]:
-    """Return (all_lines, per_page_content_sets) for play parsing + noise detection."""
+    """Return (all_lines, per_page_content_sets) for play parsing + noise detection.
+
+    Two-column rows (simultaneous-speech overlap sections common in published
+    play PDFs) are emitted as a single line with ``_COL_SEP`` (``\\x01``)
+    separating the left- and right-column text::
+
+        "EDDIE\\x01LEAH"
+        "Hello there.\\x01I'm fine."
+
+    The play-format parser recognises these markers and reconstructs per-voice
+    dialog instead of falling back to the sentence-boundary heuristic.
+    """
     if _pdf_has_cid_artifacts(pdf_path):
         try:
             import pypdfium2 as pdfium
@@ -524,14 +778,149 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
     page_sets: List[Set[str]] = []
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            text = page.extract_text() or ""
+            page_width = float(page.width or 612)
+            words = page.extract_words(x_tolerance=3, y_tolerance=3) or []
             page_content: Set[str] = set()
-            for line in text.split("\n"):
-                normalized = _undouble(line)
-                all_lines.append(normalized)
-                s = normalized.strip()
-                if s:
-                    page_content.add(s)
+
+            if not words:
+                all_lines.append("")
+                page_sets.append(page_content)
+                continue
+
+            # Sanity-check word coordinates.  Some PDFs have malformed glyph
+            # positioning (x > 3000 on a 612pt page, negative y, etc.) that
+            # makes extract_words() useless.  Fall back to extract_text() for
+            # those pages so column detection doesn't fire on garbage data.
+            median_x = sorted(w["x0"] for w in words)[len(words) // 2]
+            if median_x > page_width * 1.2 or median_x < -10:
+                text = page.extract_text() or ""
+                for line in text.split("\n"):
+                    normalized = _undouble(line)
+                    all_lines.append(normalized)
+                    s = normalized.strip()
+                    if s:
+                        page_content.add(s)
+                all_lines.append("")
+                page_sets.append(page_content)
+                continue
+
+            rows = _group_words_into_rows(words)
+
+            # Estimate the dominant line height for this page so we can detect
+            # paragraph breaks (vertical gaps > 1.5× line height → blank line).
+            if len(rows) >= 3:
+                gaps = []
+                for ri in range(len(rows) - 1):
+                    this_bottom = max(w.get("bottom", w["top"]) for w in rows[ri])
+                    next_top    = rows[ri + 1][0]["top"]
+                    g = next_top - this_bottom
+                    if g > 0:
+                        gaps.append(g)
+                avg_gap = sum(gaps) / len(gaps) if gaps else 14.0
+            else:
+                avg_gap = 14.0
+            BLANK_GAP_THRESHOLD = max(avg_gap * 1.6, 18.0)
+
+            # Per-page column tracking: detect a consensus column x-position from
+            # clearly-split rows, then reuse it for rows where the left-column text
+            # is long enough to narrow the gap below the primary threshold.
+            # Also track right_col_start = minimum x0 of right-side words across
+            # detected rows — used by the last-resort boundary detector for rows
+            # where the gap is near zero but the right column starts at a fixed x.
+            col_x_values: List[float] = []
+            right_col_start_values: List[float] = []
+            for _row in rows:
+                _stripped = _strip_page_number_words(_row, page_width)
+                if not _stripped:
+                    continue
+                _cx = _detect_column_split(_stripped, page_width)
+                if _cx is not None:
+                    col_x_values.append(_cx)
+                    _rw = [w for w in _stripped if w["x0"] >= _cx]
+                    if _rw:
+                        right_col_start_values.append(min(w["x0"] for w in _rw))
+            consensus_col_x: Optional[float] = None
+            if col_x_values:
+                col_x_values.sort()
+                consensus_col_x = col_x_values[len(col_x_values) // 2]
+            right_col_start: Optional[float] = None
+            if right_col_start_values:
+                right_col_start = min(right_col_start_values)
+
+            prev_bottom: Optional[float] = None
+            for row in rows:
+                row_top    = row[0]["top"]
+                row_bottom = max(w.get("bottom", w["top"]) for w in row)
+
+                # Emit a blank line when the vertical gap signals a paragraph break.
+                if prev_bottom is not None and (row_top - prev_bottom) >= BLANK_GAP_THRESHOLD:
+                    all_lines.append("")
+                prev_bottom = row_bottom
+
+                # Strip far-right digit-only words (page numbers) before column
+                # detection so a page number sharing a y-coordinate with the
+                # first dialog line on the page doesn't trigger a false split.
+                content_row = _strip_page_number_words(row, page_width)
+                if not content_row:
+                    # Row was pure page number — skip text emission; prev_bottom
+                    # is already updated so blank-line logic stays correct.
+                    continue
+
+                col_x = _detect_column_split(content_row, page_width)
+                # If the primary detector didn't fire but we know the column x,
+                # try the secondary (lower-threshold) detector.
+                if col_x is None and consensus_col_x is not None:
+                    col_x = _detect_column_split_with_hint(content_row, page_width, consensus_col_x)
+                # Last resort: when the left-column text is so long that the gap
+                # between columns is near zero, use the known right-column start
+                # position directly (tolerance check filters single-column false positives).
+                if col_x is None and right_col_start is not None:
+                    col_x = _detect_column_split_at_boundary(content_row, page_width, right_col_start)
+                if col_x is not None:
+                    # Use x0 (not x1) for the left-side filter so words that
+                    # straddle the column boundary are attributed to their
+                    # dominant (left) side rather than dropped.
+                    left_words  = sorted((w for w in content_row if w["x0"] <  col_x), key=lambda w: w["x0"])
+                    right_words = sorted((w for w in content_row if w["x0"] >= col_x), key=lambda w: w["x0"])
+                    left_text  = _undouble(" ".join(w["text"] for w in left_words))
+                    right_text = _undouble(" ".join(w["text"] for w in right_words))
+                    if left_text and right_text:
+                        line = f"{left_text}{_COL_SEP}{right_text}"
+                        all_lines.append(line)
+                        page_content.add(left_text.strip())
+                        page_content.add(right_text.strip())
+                    else:
+                        # Only one side non-empty — treat as single column
+                        text = _undouble((left_text or right_text).strip())
+                        all_lines.append(text)
+                        if text.strip():
+                            page_content.add(text.strip())
+                else:
+                    by_x = sorted(content_row, key=lambda w: w["x0"])
+                    text = _undouble(" ".join(w["text"] for w in by_x))
+                    # If every word's centre is to the right of the consensus
+                    # column x, this row belongs to the right column only
+                    # (e.g. the right voice has more lines than the left in a
+                    # two-column overlap block).  Mark it "\x01text" so the
+                    # scene parser can route it to the right voice exclusively
+                    # rather than adding it to both L and R text.
+                    if (
+                        consensus_col_x is not None
+                        and text.strip()
+                        and all(
+                            (w["x0"] + w["x1"]) / 2 >= consensus_col_x
+                            for w in content_row
+                        )
+                    ):
+                        all_lines.append(f"{_COL_SEP}{text}")
+                        page_content.add(text.strip())
+                    else:
+                        all_lines.append(text)
+                        if text.strip():
+                            page_content.add(text.strip())
+
+            # Blank line between pages (mirrors extract_text() behaviour).
+            all_lines.append("")
             page_sets.append(page_content)
     return all_lines, page_sets
 
@@ -616,8 +1005,264 @@ def _make_zones(overrides: Dict[str, int]) -> Dict[str, int]:
 
 
 # ---------------------------------------------------------------------------
+# Auto-chunking for scene-less scripts
+# ---------------------------------------------------------------------------
+
+# Stage-direction text that strongly signals a scene/location transition.
+_SCENE_CHANGE_SD_RE = re.compile(
+    r"\b(exit|exits|exiting|enter|enters|entering|"
+    r"lights?\s+(?:up|down|out|fade|change|shift)|"
+    r"blackout|fade\s+(?:to|out|in)|"
+    r"(?:the\s+)?(?:next|following)\s+(?:day|morning|night|afternoon|evening)|"
+    r"(?:an?|one|two|several|many)\s+(?:hour|day|week|month|year)s?\s+later|"
+    r"later\b|meanwhile\b|elsewhere\b)\b",
+    re.IGNORECASE,
+)
+
+# Target and minimum dialog-line counts per auto-chunk.
+_CHUNK_TARGET_LINES = 75
+_CHUNK_MIN_LINES    = 20
+
+
+def _auto_chunk_scenes(
+    scenes: List[Scene],
+    target_lines: int = _CHUNK_TARGET_LINES,
+    min_lines: int    = _CHUNK_MIN_LINES,
+) -> List[Scene]:
+    """Split over-long scenes at logical break points.
+
+    Called when a script has no (or very few) explicit scene boundaries,
+    resulting in a single enormous scene.  Splits it into chunks of roughly
+    *target_lines* dialog lines, always breaking *between* elements so no
+    line is ever cut mid-speech.
+
+    Break-point priority:
+      1. Stage direction that mentions a location/time transition (strongest)
+      2. Any stage direction (natural pause in the action)
+      3. Speaker change when we are significantly over the target (last resort)
+
+    Chunks smaller than *min_lines* are merged into the previous chunk rather
+    than left as tiny orphans.
+    """
+    result: List[Scene] = []
+    for scene in scenes:
+        dialog_count = sum(1 for e in scene.elements if e.kind == "dialog")
+        # Only chunk scenes that are substantially over the target.
+        if dialog_count <= target_lines * 1.5:
+            result.append(scene)
+            continue
+
+        chunks = _split_elements(scene.elements, target_lines, min_lines)
+        base_title = scene.title
+        for idx, chunk_els in enumerate(chunks):
+            num   = len(result) + 1
+            title = base_title if idx == 0 else f"{base_title} (part {idx + 1})"
+            result.append(Scene(number=num, title=title, elements=chunk_els))
+
+    # Re-number sequentially so scene numbers stay contiguous.
+    for i, sc in enumerate(result):
+        sc.number = i + 1
+    return result
+
+
+def _split_elements(
+    elements: List[Element],
+    target: int,
+    min_lines: int,
+) -> List[List[Element]]:
+    """Core splitting logic — returns a list of element-lists (chunks)."""
+    chunks: List[List[Element]] = []
+    current: List[Element] = []
+    dialog_count = 0
+    n = len(elements)
+
+    for i, el in enumerate(elements):
+        current.append(el)
+        if el.kind == "dialog":
+            dialog_count += 1
+
+        if dialog_count < target:
+            continue
+
+        # We have reached the target.  Look for a break point.
+
+        # Priority 1 — stage direction with a transition signal.
+        if el.kind == "stage_direction" and _SCENE_CHANGE_SD_RE.search(el.text):
+            chunks.append(current[:])
+            current = []
+            dialog_count = 0
+            continue
+
+        # Priority 2 — any stage direction (weaker natural pause).
+        if el.kind == "stage_direction" and dialog_count >= target:
+            chunks.append(current[:])
+            current = []
+            dialog_count = 0
+            continue
+
+        # Priority 3 — speaker change when heavily over target.
+        if dialog_count >= target * 2 and el.kind == "dialog":
+            next_el = elements[i + 1] if i + 1 < n else None
+            # Break after this line if the next element is a different speaker
+            # or a stage direction — avoid splitting mid-exchange.
+            if next_el is None or next_el.kind == "stage_direction" or (
+                next_el.kind == "dialog" and next_el.speaker != el.speaker
+            ):
+                chunks.append(current[:])
+                current = []
+                dialog_count = 0
+
+    # Handle any remaining elements.
+    if current:
+        if chunks and dialog_count < min_lines:
+            # Merge tiny tail into the last chunk rather than making an orphan.
+            chunks[-1].extend(current)
+        else:
+            chunks.append(current)
+
+    return chunks or [elements]
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
+
+def _build_skeleton(
+    lines: List[str],
+    page_sets: Optional[List[Set[str]]] = None,
+) -> ScriptSkeleton:
+    """Single-pass structural analysis — the universal pre-pass.
+
+    Scans raw lines once and produces a ScriptSkeleton that all format parsers
+    and the format detector can consume without rescanning.  Covers the three
+    invariants every script format shares:
+
+      1. Speaker identification  — every all-caps, name-like line
+      2. Scene delimiters        — every line matching a known boundary pattern
+      3. Page-region structure   — title page, cast section, body start
+    """
+    if page_sets is None:
+        page_sets = []
+
+    # --- Page-region structure -------------------------------------------
+    first_page_only: Set[str] = set()
+    if len(page_sets) >= 2:
+        later: Set[str] = set().union(*page_sets[1:])
+        first_page_only = page_sets[0] - later
+    elif len(page_sets) == 1:
+        first_page_only = set(page_sets[0])
+
+    # --- Single line scan ------------------------------------------------
+    content: List[str] = [l.strip() for l in lines]
+    total = len(content)
+
+    cue_line_indices: Set[int] = set()
+    scene_delimiter_indices: Set[int] = set()
+    heist_count = 0
+    int_ext_count = 0
+    scene_n_count = 0
+    dash_count = 0
+    cue_score = 0
+    colon_score = 0
+    non_empty_count = 0
+    all_caps_count = 0
+
+    for i in range(total):
+        raw = lines[i]
+        s = content[i]
+        if not s:
+            continue
+        non_empty_count += 1
+        if not re.search(r"[a-z]", s):
+            all_caps_count += 1
+
+        # Scene delimiter patterns
+        if _is_heist_scene_header(raw):
+            heist_count += 1
+            scene_delimiter_indices.add(i)
+        if INT_EXT_RE.match(s):
+            int_ext_count += 1
+            scene_delimiter_indices.add(i)
+        if SCENE_NUM_RE.match(s):
+            scene_n_count += 1
+            scene_delimiter_indices.add(i)
+        if _match_play_scene(s) is not None:
+            scene_delimiter_indices.add(i)
+        if _SCENE_NUM_DOT_RE.match(s):
+            scene_delimiter_indices.add(i)
+
+        # Dash-dialog lines
+        if _is_dash_dialog_line(raw):
+            dash_count += 1
+
+        # Colon-cue score (all lines, not just cue candidates — same logic as
+        # original _detect_play_format to keep scores identical)
+        if re.search(r"(?:^|(?<=\s))([A-Z][A-Z\s\.\']{1,30}):\s*$", s):
+            colon_score += 1
+        elif re.match(r"^([A-Z][A-Z\s\.\']{1,30}):\s+\S", s):
+            colon_score += 1
+
+        # Speaker-cue candidates + play cue score
+        if _is_caps_cue_candidate(s):
+            cue_line_indices.add(i)
+            for j in range(i + 1, min(i + 4, total)):
+                nxt = content[j]
+                if nxt:
+                    if re.search(r"[a-z]", nxt) and len(nxt) >= 3:
+                        cue_score += 1
+                    break
+
+    # --- Cast section range ----------------------------------------------
+    _CAST_HEADERS: Set[str] = {
+        "CAST", "CHARACTERS", "CAST OF CHARACTERS", "DRAMATIS PERSONAE",
+        "CHARACTER LIST", "CHARACTER DESCRIPTIONS", "CHARACTERS:",
+    }
+    cast_section_range: Optional[Tuple[int, int]] = None
+    for i in range(total):
+        if content[i].upper() in _CAST_HEADERS:
+            end = i + 1
+            blanks = 0
+            while end < total:
+                ns = content[end]
+                if not ns:
+                    blanks += 1
+                    if blanks >= 3:
+                        break
+                else:
+                    blanks = 0
+                    if (SCENE_HEADER_RE.match(lines[end])
+                            or SCENE_NUM_RE.match(ns)
+                            or INT_EXT_RE.match(ns)):
+                        break
+                end += 1
+            cast_section_range = (i, end)
+            break
+
+    # --- Body start estimate ---------------------------------------------
+    body_start_line = 0
+    if cast_section_range:
+        body_start_line = cast_section_range[1]
+    if scene_delimiter_indices:
+        first_delim = min(scene_delimiter_indices)
+        body_start_line = max(body_start_line, first_delim)
+
+    return ScriptSkeleton(
+        cue_line_indices=cue_line_indices,
+        scene_delimiter_indices=scene_delimiter_indices,
+        page_sets=page_sets,
+        first_page_only=first_page_only,
+        body_start_line=body_start_line,
+        cast_section_range=cast_section_range,
+        heist_count=heist_count,
+        int_ext_count=int_ext_count,
+        scene_n_count=scene_n_count,
+        dash_count=dash_count,
+        cue_score=cue_score,
+        colon_score=colon_score,
+        non_empty_count=non_empty_count,
+        all_caps_count=all_caps_count,
+    )
 
 
 def _sanitize_characters(script: Script) -> Script:
@@ -661,6 +1306,176 @@ def _sanitize_characters(script: Script) -> Script:
     return script
 
 
+def _finalise(script: Script) -> Script:
+    """Apply post-parse finishing passes in order:
+      1. Auto-chunk over-long scenes that have no structural boundaries.
+      2. Sanitize the character list.
+    """
+    script.scenes = _auto_chunk_scenes(script.scenes)
+    return _sanitize_characters(script)
+
+
+# ---------------------------------------------------------------------------
+# Corrections config — data-driven rule extensions
+# ---------------------------------------------------------------------------
+
+# Default search path: corrections_config.json next to this file.
+_DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "corrections_config.json")
+
+# Module-level cache: (path, mtime) → parsed config dict.  Reloaded whenever
+# the file changes on disk so edits take effect without restarting the process.
+_config_cache: Dict[str, object] = {}
+
+
+def _load_corrections_config(path: str = _DEFAULT_CONFIG_PATH) -> Dict:
+    """Load and cache corrections_config.json.
+
+    Returns a dict with keys:
+      non_cue_words        — list[str]: extra words to block as speaker cues
+      speaker_aliases      — dict[str, str]: wrong → correct name mapping
+      noise_line_patterns  — list[str]: extra regex patterns for layout noise
+
+    Gracefully returns an empty config if the file is missing or malformed
+    so parsing never hard-fails due to a config problem.
+    """
+    global _config_cache
+
+    # Fast path: file unchanged since last load.
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        mtime = None
+
+    cache_key = path
+    cached = _config_cache.get(cache_key)
+    if cached and cached.get("_mtime") == mtime:
+        return cached
+
+    empty: Dict = {
+        "non_cue_words": [],
+        "speaker_aliases": {},
+        "noise_line_patterns": [],
+        "_mtime": mtime,
+    }
+
+    if mtime is None:
+        # File doesn't exist — not an error, just no config.
+        _config_cache[cache_key] = empty
+        return empty
+
+    try:
+        with open(path, encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("corrections_config: failed to load %s — %s", path, exc)
+        _config_cache[cache_key] = empty
+        return empty
+
+    config: Dict = {
+        "non_cue_words": [],
+        "speaker_aliases": {},
+        "noise_line_patterns": [],
+        "_mtime": mtime,
+    }
+
+    # non_cue_words: list of strings
+    words = raw.get("non_cue_words", [])
+    if isinstance(words, list):
+        config["non_cue_words"] = [
+            str(w).strip().upper()
+            for w in words
+            if isinstance(w, str) and w.strip()
+        ]
+
+    # speaker_aliases: dict mapping wrong → correct (both uppercased)
+    aliases = raw.get("speaker_aliases", {})
+    if isinstance(aliases, dict):
+        config["speaker_aliases"] = {
+            str(k).strip().upper(): str(v).strip().upper()
+            for k, v in aliases.items()
+            if isinstance(k, str) and isinstance(v, str) and k.strip()
+        }
+
+    # noise_line_patterns: list of regex strings
+    patterns = raw.get("noise_line_patterns", [])
+    if isinstance(patterns, list):
+        compiled = []
+        for p in patterns:
+            if not isinstance(p, str) or not p.strip():
+                continue
+            try:
+                compiled.append(re.compile(p, re.IGNORECASE))
+            except re.error as exc:
+                logger.warning("corrections_config: invalid pattern %r — %s", p, exc)
+        config["noise_line_patterns"] = compiled
+
+    _config_cache[cache_key] = config
+    return config
+
+
+def _apply_corrections_config(script: Script, config: Dict) -> Script:
+    """Apply data-driven corrections from corrections_config.json to a parsed script.
+
+    Runs as a post-parse pass so the format parsers stay unchanged.  Three
+    operations:
+
+      1. Speaker aliases — rename any speaker that appears in the alias map
+         (e.g. "EDDIE PHONE" → "EDDIE" for a discovered two-column artifact).
+
+      2. Non-cue word filter — remove characters whose names match any of the
+         extra words from the config (same logic as _sanitize_characters but
+         using the config-supplied word list rather than _NON_CUE_RE).
+
+      3. Noise line patterns — re-tag elements whose text matches a noise
+         pattern as stage_direction so they don't get voiced.
+    """
+    aliases: Dict[str, str] = config.get("speaker_aliases", {})
+    extra_words: List[str] = config.get("non_cue_words", [])
+    noise_patterns = config.get("noise_line_patterns", [])
+
+    # Build extra-words set for O(1) lookup (whole-word match via re)
+    extra_word_re: Optional[re.Pattern] = None
+    if extra_words:
+        pat = r"^(?:" + "|".join(re.escape(w) + r"\b" for w in extra_words) + r")"
+        extra_word_re = re.compile(pat, re.IGNORECASE)
+
+    # 1 + 3: walk every element, apply alias and noise-pattern fixes
+    for sc in script.scenes:
+        for el in sc.elements:
+            if el.speaker and el.speaker in aliases:
+                el.speaker = aliases[el.speaker]
+            if noise_patterns and el.kind == "dialog":
+                if any(p.search(el.text) for p in noise_patterns):
+                    el.kind = "stage_direction"
+                    el.speaker = None
+
+    # 2: remove config-flagged names from character list
+    if extra_word_re:
+        script.characters = [
+            c for c in script.characters
+            if not extra_word_re.match(c.name)
+        ]
+        # Also clear speaker on elements whose speaker was one of those names
+        flagged: Set[str] = {
+            c.name for c in script.characters
+            if extra_word_re.match(c.name)
+        }
+        # Re-collect the actually-removed names before filtering
+        all_names = {c.name for c in script.characters}
+        removed: Set[str] = set()
+        for sc in script.scenes:
+            for el in sc.elements:
+                if el.speaker and extra_word_re.match(el.speaker):
+                    removed.add(el.speaker)
+        for sc in script.scenes:
+            for el in sc.elements:
+                if el.speaker in removed:
+                    el.kind = "stage_direction"
+                    el.speaker = None
+
+    return script
+
+
 def parse_pdf(pdf_path: str) -> Script:
     """Parse a PDF script into a Script object.
 
@@ -668,38 +1483,75 @@ def parse_pdf(pdf_path: str) -> Script:
       1. heist (numbered scene headers, very distinctive) → layout-based
       2. colon_play / play (pattern-based, plain text)
       3. scene_n / dash_dialog (indent-based, layout text)
+
+    A ScriptSkeleton is built once from the plain-text extraction and passed
+    to both the format detector and the format-specific parser, so no step
+    needs to rescan the raw lines for universal structural features.
     """
     title = _derive_title(pdf_path)
-    plain_lines, page_sets = _extract_plain_lines_with_pages(pdf_path)
+    # plain_lines_col: column-annotated lines (_COL_SEP on two-column rows).
+    # clean_lines: _COL_SEP replaced by space — safe for all structural consumers.
+    plain_lines_col, page_sets = _extract_plain_lines_with_pages(pdf_path)
+    clean_lines = [l.replace(_COL_SEP, " ") for l in plain_lines_col]
 
-    # Check for heist format first — numbered "N  SCENE TITLE" headers are
-    # unambiguous and must win over the play detector (which also fires on
-    # screenplays with all-caps character cues).
-    heist_count = sum(1 for l in plain_lines if _is_heist_scene_header(l))
-    if heist_count >= 2:
+    # Load data-driven corrections (cached; reloaded only when file changes).
+    config = _load_corrections_config()
+
+    # Single structural scan — shared by format detection and all parsers.
+    # Use clean_lines so \x01 markers don't confuse cue-counting heuristics.
+    skeleton = _build_skeleton(clean_lines, page_sets)
+
+    # Heist format: numbered "N  SCENE TITLE" headers are unambiguous and must
+    # win over the play detector (which also fires on all-caps character cues).
+    if skeleton.heist_count >= 2:
         layout_lines = extract_layout_lines(pdf_path)
-        return _sanitize_characters(parse_lines(layout_lines, title=title))
+        layout_skeleton = _build_skeleton(layout_lines, page_sets)
+        script = _finalise(parse_lines(layout_lines, title=title,
+                                       skeleton=layout_skeleton))
+        return _apply_corrections_config(script, config)
 
-    # Play formats (pattern-based on plain text)
-    play_fmt = _detect_play_format(plain_lines)
+    # Play formats — skeleton replaces raw line rescanning in format detection.
+    # _parse_play / _parse_colon_play receive the column-annotated lines so
+    # _extract_scenes_play can reconstruct per-voice dialog for two-column overlaps.
+    # Those functions strip _COL_SEP internally before passing to cast/noise consumers.
+    play_fmt = _detect_play_format(clean_lines, skeleton=skeleton)
     if play_fmt == "play":
-        return _sanitize_characters(_parse_play(plain_lines, page_sets, title))
+        script = _finalise(_parse_play(plain_lines_col, page_sets, title,
+                                       skeleton=skeleton))
+        return _apply_corrections_config(script, config)
     if play_fmt == "colon_play":
-        return _sanitize_characters(_parse_colon_play(plain_lines, page_sets, title))
+        script = _finalise(_parse_colon_play(plain_lines_col, page_sets, title,
+                                             skeleton=skeleton))
+        return _apply_corrections_config(script, config)
 
-    # Fall back to indent-based parsing (scene_n, dash_dialog, heist fallback)
+    # Indent-based fallback (scene_n, dash_dialog, heist fallback).
     layout_lines = extract_layout_lines(pdf_path)
-    return _sanitize_characters(parse_lines(layout_lines, title=title))
+    layout_skeleton = _build_skeleton(layout_lines, page_sets)
+    script = _finalise(parse_lines(layout_lines, title=title,
+                                   skeleton=layout_skeleton))
+    return _apply_corrections_config(script, config)
 
 
-def parse_lines(lines: List[str], title: str = "Script") -> Script:
-    """Parse pre-extracted layout lines (heist / scene_n / dash_dialog formats)."""
+def parse_lines(
+    lines: List[str],
+    title: str = "Script",
+    skeleton: Optional["ScriptSkeleton"] = None,
+) -> Script:
+    """Parse pre-extracted layout lines (heist / scene_n / dash_dialog formats).
+
+    If a pre-built skeleton is provided (e.g. from parse_pdf), it is used for
+    format detection and any structural data the parsers can consume.  When
+    called directly (e.g. from tests), a skeleton is built on-demand.
+    """
     script = Script(title=title)
+
+    if skeleton is None:
+        skeleton = _build_skeleton(lines)
 
     overrides = _detect_indent_zones(lines)
     zones = _make_zones(overrides)
 
-    fmt = _detect_script_format(lines)
+    fmt = _detect_script_format(lines, skeleton=skeleton)
 
     script.characters = _extract_cast(lines)
     known_speaker_set = {c.name for c in script.characters}
@@ -763,7 +1615,7 @@ def parse_lines(lines: List[str], title: str = "Script") -> Script:
         if d not in known_speaker_set and not _looks_like_chorus(d):
             script.characters.append(Character(name=d))
 
-    return _sanitize_characters(script)
+    return _finalise(script)
 
 
 # ---------------------------------------------------------------------------
@@ -786,8 +1638,11 @@ def _is_caps_cue_candidate(s: str) -> bool:
     # Speaker names are 1–4 words max; longer = likely a stage direction fragment
     if len(base.split()) > 4:
         return False
-    # Sentence punctuation or header markers → not a speaker name
-    if re.search(r"[.!?]", base):
+    # Sentence punctuation or header markers → not a speaker name.
+    # Exception: title abbreviations like "DR.", "MR.", "MRS.", "MS.", "PROF."
+    # are valid name prefixes (e.g. "DR. WOODLE") — strip them before checking.
+    _base_no_titles = re.sub(r"\b(?:DR|MR|MRS|MS|PROF|REV|SR|JR)\.\s*", "", base)
+    if re.search(r"[.!?]", _base_no_titles):
         return False
     if base.endswith(":"):  # "AGENT CONTACT:" is a section header, not a cue
         return False
@@ -804,37 +1659,53 @@ def _is_caps_cue_candidate(s: str) -> bool:
     return True
 
 
-def _detect_play_format(plain_lines: List[str]) -> Optional[str]:
-    """Return 'play', 'colon_play', or None."""
+def _detect_play_format(
+    plain_lines: List[str],
+    skeleton: Optional["ScriptSkeleton"] = None,
+) -> Optional[str]:
+    """Return 'play', 'colon_play', or None.
+
+    When a skeleton is provided the pre-computed scores are used directly,
+    avoiding a second full scan of the lines.  When called without one (e.g.
+    from tests or legacy call sites) the scores are computed inline as before.
+    """
+    if skeleton is not None:
+        total = skeleton.non_empty_count
+        if total < 40:
+            return None
+        if skeleton.all_caps_count / total > 0.65:
+            return None
+        if skeleton.int_ext_count >= 2:
+            return None
+        cue_ratio   = skeleton.cue_score   / total
+        colon_ratio = skeleton.colon_score / total
+        if colon_ratio > 0.05 and skeleton.colon_score > skeleton.cue_score * 0.5:
+            return "colon_play"
+        if cue_ratio > 0.04:
+            return "play"
+        return None
+
+    # --- Legacy path: no skeleton provided — compute inline (unchanged) ---
     content_lines = [l.strip() for l in plain_lines if l.strip()]
     total = len(content_lines)
     if total < 40:
         return None
 
-    # If 65%+ of content lines have no lowercase, this is probably a notes/
-    # all-caps document, not a script (scripts need mixed-case dialog).
     all_caps_count = sum(1 for s in content_lines if not re.search(r"[a-z]", s))
     if all_caps_count / total > 0.65:
         return None
 
-    # Screenplays use INT./EXT. sluglines as scene boundaries — the layout-
-    # based scene_n parser handles these.  If we detect enough sluglines, skip
-    # the play detector so the script falls through to scene_n parsing.
     int_ext_count = sum(1 for s in content_lines if INT_EXT_RE.match(s))
     if int_ext_count >= 2:
         return None
 
-    # Score: standalone all-caps lines immediately followed by mixed-case text
     cue_score = 0
     colon_score = 0
     for i, s in enumerate(content_lines):
-        # Colon-cue detection: line ends with ALLCAPS: or starts with ALLCAPS:
         if re.search(r"(?:^|(?<=\s))([A-Z][A-Z\s\.\']{1,30}):\s*$", s):
             colon_score += 1
         elif re.match(r"^([A-Z][A-Z\s\.\']{1,30}):\s+\S", s):
             colon_score += 1
-
-        # Play cue detection: standalone all-caps line → mixed-case next line
         if _is_caps_cue_candidate(s):
             for j in range(i + 1, min(i + 4, total)):
                 nxt = content_lines[j]
@@ -843,10 +1714,9 @@ def _detect_play_format(plain_lines: List[str]) -> Optional[str]:
                         cue_score += 1
                     break
 
-    cue_ratio = cue_score / total
+    cue_ratio   = cue_score   / total
     colon_ratio = colon_score / total
 
-    # colon_play needs a clear colon-cue signal AND play cues must be weak
     if colon_ratio > 0.05 and colon_score > cue_score * 0.5:
         return "colon_play"
     if cue_ratio > 0.04:
@@ -870,11 +1740,14 @@ def _collect_page_noise(plain_lines: List[str], page_sets: Optional[List[Set[str
     stripped = [l.strip() for l in plain_lines if l.strip()]
     noise: Set[str] = set()
 
-    # Always noise: bare numbers (page numbers), dates, single chars, revision marks
+    # Always noise: page-style numbers with period, dates, single chars, revision marks.
+    # Bare integers (e.g. "1234") are intentionally NOT always-noised here: they could
+    # be dialog numbers (a character saying a PIN, phone extension, etc.).  Far-right
+    # positional page numbers (e.g. "22" at x0 > 75 % of page width) are stripped at
+    # extraction time by _strip_page_number_words() before they ever reach this list.
+    # Page numbers that appear on most pages are caught by the frequency check below.
     for s in stripped:
-        if re.fullmatch(r"\d+", s):
-            noise.add(s)
-        elif re.fullmatch(r"\d{2,}\.", s):  # "186." style page numbers
+        if re.fullmatch(r"\d+\.", s):  # "3.", "22.", "186." style page numbers
             noise.add(s)
         elif re.fullmatch(r"\d+/\d+/\d+", s):
             noise.add(s)
@@ -927,20 +1800,27 @@ def _match_play_scene(s: str) -> Optional[Tuple[int, str]]:
     """If s is a scene boundary, return (scene_number_increment, title). Else None."""
     m = _PLAY_SCENE_RE.match(s)
     if m:
-        groups = m.groups()  # (scene_N, act_N, dash_N, dot_N, part_N, title_text)
-        for g in groups[:5]:
+        groups = m.groups()  # (scene_N, act_N, dash_N, part_N, title_text)
+        for g in groups[:4]:
             if g is not None:
                 try:
-                    return (int(g), (groups[5] or "").strip())
+                    return (int(g), (groups[4] or "").strip())
                 except ValueError:
                     roman = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5,
                              "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10}
-                    return (roman.get(g.upper(), 1), (groups[5] or "").strip())
+                    return (roman.get(g.upper(), 1), (groups[4] or "").strip())
 
     # "The First Act" / "Second Act" ordinal format
     m2 = _ORDINAL_ACT_RE.match(s)
     if m2:
         n = _ORDINAL_TO_INT.get(m2.group(1).upper(), 1)
+        return (n, s.strip())
+
+    # "SCENE ONE" / "SCENE TWO" etc. — cardinal word-form scene numbers
+    m4 = _ORDINAL_SCENE_RE.match(s)
+    if m4:
+        word = m4.group(1).upper()
+        n = _SCENE_CARDINAL_TO_INT.get(word, 1)
         return (n, s.strip())
 
     # "THREE DAYS TO DEPARTURE" / "ONE DAY UNTIL X" time-section format
@@ -955,21 +1835,36 @@ def _parse_play(
     plain_lines: List[str],
     page_sets: Optional[List[Set[str]]] = None,
     title: str = "Script",
+    skeleton: Optional["ScriptSkeleton"] = None,
 ) -> Script:
-    """Parse a standard play (speaker name on own line, dialog below)."""
-    script = Script(title=title)
-    noise = _collect_page_noise(plain_lines, page_sets)
+    """Parse a standard play (speaker name on own line, dialog below).
 
-    script.characters = _extract_cast(plain_lines)
+    ``plain_lines`` may contain ``_COL_SEP`` (``\\x01``) markers on two-column
+    rows.  Those are intentionally passed through to ``_extract_scenes_play``
+    so it can reconstruct exact per-voice dialog text.  All other consumers
+    (cast extraction, noise detection, skeleton) receive clean lines with
+    ``_COL_SEP`` replaced by a space so they aren't confused by the marker.
+    """
+    script = Script(title=title)
+    # Clean lines: _COL_SEP replaced by space.  Used for cast, noise, skeleton.
+    clean_lines = [l.replace(_COL_SEP, " ") for l in plain_lines]
+
+    noise = _collect_page_noise(clean_lines, page_sets)
+
+    script.characters = _extract_cast(clean_lines)
     known_speakers = {c.name for c in script.characters}
 
-    # Lines that appear ONLY on the first page (title, author, production info).
-    # Used to block title-page content from being parsed as speaker cues.
-    first_page_only: Set[str] = set()
-    if page_sets and len(page_sets) >= 2:
-        later = set().union(*page_sets[1:])
-        first_page_only = page_sets[0] - later
+    # first_page_only: lines exclusive to page 0 (title/author/production).
+    # Use skeleton data when available; compute on the fly otherwise.
+    if skeleton is not None:
+        first_page_only = skeleton.first_page_only
+    else:
+        first_page_only = set()
+        if page_sets and len(page_sets) >= 2:
+            later = set().union(*page_sets[1:])
+            first_page_only = page_sets[0] - later
 
+    # Scene extraction uses the annotated lines so it can split two-column dialog.
     script.scenes = _extract_scenes_play(plain_lines, known_speakers, noise, first_page_only)
 
     _apply_speaker_normalization(script, known_speakers)
@@ -981,32 +1876,154 @@ def _extract_scenes_play(
     lines: List[str], known_speakers: Set[str], noise: Set[str],
     first_page_only: Optional[Set[str]] = None,
 ) -> List[Scene]:
+    # Work with a local mutable copy so we can register abbreviated names
+    # discovered during parsing (e.g. "CREDIT CARD COMPANY" from splitting
+    # "LEAH CREDIT CARD COMPANY AUTOMATED VOICE") without mutating the caller's set.
+    # Also expand slash- and ampersand-combined names (e.g. "SHELBY/TRINA" → "SHELBY",
+    # "TRINA") so individual parts are recognised as known speakers.
+    known_speakers = set(known_speakers)
+    for name in list(known_speakers):
+        if "/" in name:
+            for part in name.split("/"):
+                part = part.strip()
+                if part:
+                    known_speakers.add(part)
+        elif " & " in name:
+            for part in name.split(" & "):
+                part = part.strip()
+                if part:
+                    known_speakers.add(part)
+
     scenes: List[Scene] = []
     scene_counter = 0
     scene_title = ""
     elements: List[Element] = []
     current_speaker: Optional[str] = None
-    dialog_buf: List[str] = []
+    last_non_narrator_speaker: Optional[str] = None  # most recent non-NARRATOR speaker
+    dialog_buf: List[str] = []  # may contain _COL_SEP-annotated lines for compound overlaps
+    pending_overlap_cue: Optional[List[str]] = None  # set when cue is a joint/overlap line
+    pending_is_compound: bool = False  # True only for two-column PDF space-compound cues
+    # Tracks the most recent speaker cue that had NO dialog before a blank line.
+    # Used to reconstruct compound cues broken across page boundaries (e.g. an
+    # overlap_cue in a PDF whose auto-page-break fires inside the first cell,
+    # leaving the left-column speaker name on one page and the right-column name
+    # on the next, separated by a page-boundary blank line).
+    _prev_cue_no_dialog: Optional[str] = None
+    # When a dialog line wraps onto the next PDF page, the page-boundary blank
+    # line causes flush_dialog() to emit the partial dialog and clear
+    # current_speaker, leaving the wrapped continuation as an orphan.  We track
+    # the flushed speaker here so that a subsequent lowercase continuation line
+    # (not a cue, not a stage direction) can be re-attributed to them.
+    _pending_continuation_speaker: Optional[str] = None
+    # The most recently seen cue, regardless of whether dialog has been emitted.
+    # Blank lines between a character name and their first content (common in
+    # PDF extraction) clear current_speaker; this lets parentheticals that arrive
+    # after such a blank still be attributed to the right character.
+    # Cleared when dialog is emitted (cue context consumed) or on scene boundary.
+    _last_cue_speaker: Optional[str] = None
 
     def flush_dialog() -> None:
-        nonlocal current_speaker, dialog_buf
+        nonlocal current_speaker, dialog_buf, pending_overlap_cue, pending_is_compound, _last_cue_speaker
         if current_speaker and dialog_buf:
-            text = _normalize_text(" ".join(dialog_buf))
-            if text:
-                elements.append(Element(kind="dialog", speaker=current_speaker, text=text))
+            if pending_overlap_cue and pending_is_compound and any(_COL_SEP in ln for ln in dialog_buf):
+                # Column-aware path: we have exact per-voice text from pdfplumber coordinates.
+                # Split each buffered line at _COL_SEP to get left- and right-column fragments.
+                left_parts: List[str] = []
+                right_parts: List[str] = []
+                _in_left_sd = False  # True while inside a multi-line SD in the left column
+                for ln in dialog_buf:
+                    if _COL_SEP in ln:
+                        l_part, r_part = ln.split(_COL_SEP, 1)
+                        l_part = l_part.strip()
+                        r_part = r_part.strip()
+                        # Detect multi-line stage directions in the left column.
+                        # A left part that opens with "(" but doesn't close with ")"
+                        # starts a stage direction that spans several rows.  Suppress
+                        # all left-column content for those rows so the SD text doesn't
+                        # pollute the left voice's dialog (right column still goes through).
+                        if l_part.startswith("(") and not l_part.endswith(")"):
+                            _in_left_sd = True
+                        if _in_left_sd:
+                            if l_part.endswith(")"):
+                                _in_left_sd = False
+                            # Suppress left-column content (it's SD), right column is dialog.
+                        else:
+                            if l_part and not l_part.startswith("("):
+                                left_parts.append(l_part)
+                            elif l_part and l_part.startswith("(") and l_part.endswith(")"):
+                                # Single-line parenthetical in left column — suppress (SD noise)
+                                pass
+                        if r_part:
+                            right_parts.append(r_part)
+                    else:
+                        # Ambiguous (not a two-column row) — add to whichever side is active.
+                        stripped = ln.strip()
+                        if stripped:
+                            if _in_left_sd:
+                                # Continuation of a left-column stage direction.
+                                if stripped.endswith(")"):
+                                    _in_left_sd = False
+                                # Don't add to either side — it's SD text.
+                            else:
+                                left_parts.append(stripped)
+                                right_parts.append(stripped)
+                left_text  = _normalize_text(" ".join(left_parts))
+                right_text = _normalize_text(" ".join(right_parts))
+                # Use left column as the canonical text; right is the second voice.
+                canonical = left_text or right_text
+                ot: Optional[List[str]] = [left_text, right_text] if (left_text and right_text) else None
+                if canonical:
+                    elements.append(Element(
+                        kind="dialog",
+                        speaker=current_speaker,
+                        text=canonical,
+                        overlap_cue=pending_overlap_cue,
+                        overlap_texts=ot,
+                    ))
+            else:
+                text = _normalize_text(" ".join(
+                    ln.split(_COL_SEP)[0] if _COL_SEP in ln else ln
+                    for ln in dialog_buf
+                ))
+                if text:
+                    # Heuristic split fallback for compound cues without coord data.
+                    ot = None
+                    if pending_overlap_cue and pending_is_compound:
+                        ot = _split_overlap_text(text, len(pending_overlap_cue))
+                    elements.append(Element(
+                        kind="dialog",
+                        speaker=current_speaker,
+                        text=text,
+                        overlap_cue=pending_overlap_cue,
+                        overlap_texts=ot,
+                    ))
             current_speaker = None  # Clear after emitting so flush_orphan_speaker doesn't double-emit
+            pending_overlap_cue = None
+            pending_is_compound = False
+            _last_cue_speaker = None  # dialog emitted → cue context consumed
         dialog_buf.clear()
 
     def flush_orphan_speaker() -> None:
-        """Speaker set but no dialog arrived — emit as stage direction."""
+        """Speaker set but no dialog arrived.
+
+        Emits the speaker name as a stage direction ONLY when it does NOT
+        match a known character name.  Known-character orphans arise when a
+        standalone parenthetical restores ``current_speaker`` and the next
+        line is a different character's cue — emitting the character name as
+        a stage direction would cause the narrator to read it aloud (the
+        "narrator announces character names" bug).  Discarding known-name
+        orphans is safe: real stage-direction text never equals a cast name.
+        """
         nonlocal current_speaker
         if current_speaker and not dialog_buf:
-            elements.append(Element(kind="stage_direction", text=current_speaker))
+            if current_speaker not in known_speakers:
+                elements.append(Element(kind="stage_direction", text=current_speaker))
         current_speaker = None
 
     def commit_scene(is_final: bool = False) -> None:
-        nonlocal scene_counter, scene_title, elements
+        nonlocal scene_counter, scene_title, elements, _last_cue_speaker
         flush_dialog()
+        _last_cue_speaker = None  # reset per-scene cue context
         # Discard pre-first-scene preamble (cover page / cast / title page).
         # At non-final commits, also skip scenes with no actual dialog (e.g.,
         # a TOC "Act 1" line fires a boundary before the real act header).
@@ -1023,11 +2040,78 @@ def _extract_scenes_play(
     for raw in lines:
         s = raw.strip()
         if not s:
+            # Remember if a cue was set with no dialog yet — it may be the
+            # left-column speaker of a compound overlap broken across a page
+            # boundary.  We'll use this to reconstruct the compound cue if the
+            # very next block of dialog contains _COL_SEP markers.
+            _prev_cue_no_dialog = (
+                current_speaker if (current_speaker and not dialog_buf) else None
+            )
+            # Track page-boundary dialog continuation: if a dialog line wraps
+            # onto the next PDF page, the blank line here would flush the partial
+            # sentence and orphan the wrapped remainder.  Save the speaker so we
+            # can re-attribute a subsequent lowercase continuation line.
+            _SENTENCE_ENDERS = (".", "!", "?", "…", ")", '"', "'")
+            if (
+                dialog_buf
+                and current_speaker
+                and not dialog_buf[-1].rstrip().endswith(_SENTENCE_ENDERS)
+            ):
+                _pending_continuation_speaker = current_speaker
+            else:
+                _pending_continuation_speaker = None
             flush_dialog()
             current_speaker = None
             continue
 
         if s in noise:
+            continue
+
+        # ── Page-boundary continuation restoration ────────────────────────────
+        # If the previous blank line was a page boundary that split a dialog
+        # line mid-sentence, and this non-blank line starts with a lowercase
+        # letter (so it's almost certainly a continuation, not a new cue or
+        # stage direction), restore current_speaker so the line joins the
+        # same dialog block rather than falling through to stage_direction.
+        if (
+            _pending_continuation_speaker
+            and not current_speaker
+            and s and s[0].islower()
+            and not _is_caps_cue_candidate(s)
+            and _match_play_scene(s) is None
+        ):
+            current_speaker = _pending_continuation_speaker
+        _pending_continuation_speaker = None  # one-shot: consume regardless
+
+        # ── Column-separator pre-processing ──────────────────────────────────
+        # Lines from two-column pages are emitted as "left\x01right".
+        # Unpack them here so the rest of the loop sees a clean `s` (left column)
+        # and a `_col_right` (right column, or None for single-column lines).
+        _col_right: Optional[str] = None
+        if _COL_SEP in s:
+            _left, _right = s.split(_COL_SEP, 1)
+            s = _left.strip()
+            _col_right = _right.strip() or None
+            if not s and _col_right:
+                if pending_is_compound and pending_overlap_cue:
+                    # Inside a compound overlap block: a "\x01text" row means
+                    # only the right voice has content on this line.  Keep
+                    # s="" and _col_right so flush_dialog routes it to the
+                    # right voice exclusively, not both.
+                    pass
+                else:
+                    # Outside an overlap: treat right-only content as a normal
+                    # single-column line (e.g. a wrapped right-column cue name
+                    # that pdfplumber tagged as column-offset).
+                    s = _col_right
+                    _col_right = None
+
+        if not s and not _col_right:
+            # Completely empty after unpacking — skip.
+            # (When s="" but _col_right is set we have a right-column-only
+            # dialog row inside an overlap block; let it fall through to the
+            # dialog-buffer section below.)
+            prev_nonempty = raw.strip()
             continue
 
         # Scene / act boundary
@@ -1088,34 +2172,164 @@ def _extract_scenes_play(
                     prev_nonempty = s
                     continue
 
+            # Detect simultaneous/overlap cues before committing the speaker.
+            #
+            # (a) Column-separated — "EDDIE\x01LEAH": the PDF extraction gave us
+            #     explicit left/right column speaker names.  Highest confidence.
+            # (b) Slash cue  — "ALICE/BOB": chorus (all voices read same text).
+            # (c) Ampersand  — "MARA & EDDIE": chorus (all voices read same text).
+            # (d) Two-column compound — "LEAH CREDIT CARD COMPANY": old heuristic
+            #     fallback for PDFs without detected column gaps.
+            _joint: Optional[List[str]] = None
+            _is_compound = False
+            if _col_right and _is_caps_cue_candidate(_col_right):
+                # (a) Column-separated speaker names — most accurate.
+                right_norm = _normalize_play_speaker(_col_right)
+                if right_norm:
+                    _joint = [normalized, right_norm]
+                    _is_compound = True
+                    known_speakers.add(right_norm)
+            elif "/" in normalized:
+                parts = [p.strip() for p in normalized.split("/") if p.strip()]
+                if len(parts) >= 2:
+                    _joint = parts
+                    normalized = parts[0]
+            elif " & " in normalized:
+                parts = [p.strip() for p in normalized.split(" & ") if p.strip()]
+                if len(parts) >= 2:
+                    _joint = parts
+                    normalized = parts[0]
+            elif " " in normalized:
+                _compound = _split_compound_cue(normalized, known_speakers)
+                if _compound:
+                    _joint = _compound
+                    normalized = _compound[0]
+                    _is_compound = True  # two-column artifact → split dialog text later
+                    # Register the abbreviated right-side name (e.g. "CREDIT CARD
+                    # COMPANY" from "LEAH CREDIT CARD COMPANY AUTOMATED VOICE") so
+                    # subsequent standalone cues and orphan-speaker checks recognise it.
+                    known_speakers.add(_compound[1])
+
             flush_dialog()
             flush_orphan_speaker()
             current_speaker = normalized
+            _last_cue_speaker = normalized  # remember cue even if blank lines follow
+            pending_overlap_cue = _joint
+            pending_is_compound = _is_compound
+            # Track the most recent non-narrator speaker so we can fall back to
+            # them after a narrator parenthetical (see parenthetical handler below).
+            if not _NARRATOR_NAME_RE.match(normalized):
+                last_non_narrator_speaker = normalized
             prev_nonempty = s
             continue
 
-        # Standalone parenthetical with pending speaker
+        # Standalone parenthetical with pending speaker.
+        # Also accept when current_speaker was cleared by a blank line but we
+        # have a recent cue with no dialog yet (_last_cue_speaker) — this handles
+        # the common PDF pattern where pdfplumber inserts a blank line between
+        # the character name row and the following parenthetical/dialog rows.
+        _paren_speaker_candidate = current_speaker or (
+            _last_cue_speaker if (not dialog_buf and _last_cue_speaker) else None
+        )
         if (
-            current_speaker
+            _paren_speaker_candidate
             and s.startswith("(")
             and s.endswith(")")
             and len(s) < 150
         ):
+            # Within a two-column overlap block, parentheticals from either column
+            # are stage-direction noise inside the simultaneous-speech passage.
+            # They'd be read by the narrator mid-overlap, which sounds wrong.
+            # Suppress them and keep the overlap state intact.
+            if pending_is_compound and pending_overlap_cue:
+                prev_nonempty = s
+                continue
+
+            # Save speaker NOW — flush_dialog() clears current_speaker when it
+            # has queued dialog to emit, so we'd lose the attribution otherwise.
+            paren_speaker = _paren_speaker_candidate
+            # Preserve overlap context across the parenthetical flush.
+            saved_overlap_cue = pending_overlap_cue
+            saved_is_compound  = pending_is_compound
             flush_dialog()
             inner = s[1:-1].strip()
             elements.append(
-                Element(kind="parenthetical", speaker=current_speaker, text=inner)
+                Element(kind="parenthetical", speaker=paren_speaker, text=inner)
             )
+            # Restore speaker after the parenthetical so subsequent lines are
+            # still attributed correctly.  flush_dialog() clears current_speaker
+            # whenever it emits queued dialog, but a mid-speech parenthetical
+            # must not drop the speaker's attribution for what follows.
+            #
+            # Special case: after a NARRATOR parenthetical, yield back to the
+            # last non-narrator character — many scripts use narrator
+            # parentheticals as stage-direction interludes between character
+            # lines and don't re-announce the character afterward.
+            if _NARRATOR_NAME_RE.match(paren_speaker):
+                current_speaker = last_non_narrator_speaker
+            else:
+                current_speaker = paren_speaker
+            # Restore overlap context so dialog after the parenthetical is still
+            # attributed to the correct overlap voices.
+            pending_overlap_cue = saved_overlap_cue
+            pending_is_compound  = saved_is_compound
             prev_nonempty = s
             continue
+
+        # Multi-line stage direction: a line that opens with "(" but doesn't close
+        # with ")" is the start of a wrapped stage direction.  If a speaker is
+        # active and accumulating dialog, flush that dialog first, then let the
+        # stage-direction path below handle this line (and all following lines
+        # until the closing ")" arrives — those naturally fall through to
+        # stage_direction too because current_speaker will be None after the flush).
+        # Guard: skip during compound overlaps where left-column SD lines are
+        # handled differently (filtered in flush_dialog's column-aware path).
+        if (
+            current_speaker
+            and s.startswith("(")
+            and not s.endswith(")")
+            and not (pending_is_compound and pending_overlap_cue)
+        ):
+            flush_dialog()
+            # current_speaker is now None; fall through to stage_direction below.
 
         # Dialog content
         if current_speaker:
-            dialog_buf.append(s)
-            prev_nonempty = s
+            # Retroactive compound-cue reconstruction: if this is the first
+            # dialog line for the current speaker, it has _COL_SEP content, and
+            # a dangling left-column cue was remembered across a page-boundary
+            # blank line, form a compound cue now.  This recovers overlap blocks
+            # where the auto-page-break inside overlap_cue() left the two speaker
+            # names on separate rows instead of as a two-column row.
+            if (
+                _col_right is not None
+                and not dialog_buf
+                and not pending_overlap_cue
+                and _prev_cue_no_dialog
+                and _prev_cue_no_dialog != current_speaker
+            ):
+                pending_overlap_cue = [_prev_cue_no_dialog, current_speaker]
+                pending_is_compound = True
+            _prev_cue_no_dialog = None  # consumed or no longer applicable
+            # For two-column overlap blocks, keep the _COL_SEP marker so
+            # flush_dialog can reconstruct exact per-voice text.
+            if pending_is_compound and _col_right:
+                dialog_buf.append(f"{s}{_COL_SEP}{_col_right}")
+            else:
+                dialog_buf.append(s)
+            if s:  # don't overwrite prev_nonempty with an empty string
+                prev_nonempty = s
             continue
 
         # Stage direction (no speaker set)
+        # During a two-column overlap, pdfplumber merges column stage directions
+        # into the dialog stream. Suppress them so the narrator doesn't interrupt
+        # simultaneous speech. (The renderer has a second guard for narrator chunks
+        # that slip through; this parser-level guard handles the common case.)
+        if pending_is_compound and pending_overlap_cue and s.startswith("(") and s.endswith(")"):
+            prev_nonempty = s
+            continue
+        _prev_cue_no_dialog = None  # a stage direction between two cues means they aren't partners
         _append_stage_direction(elements, _normalize_text(s))
         prev_nonempty = s
 
@@ -1134,15 +2348,21 @@ def _parse_colon_play(
     plain_lines: List[str],
     page_sets: Optional[List[Set[str]]] = None,
     title: str = "Script",
+    skeleton: Optional["ScriptSkeleton"] = None,
 ) -> Script:
     """Parse a colon-cue format script (SPEAKER: dialog text)."""
     script = Script(title=title)
-    noise = _collect_page_noise(plain_lines, page_sets)
+    clean_lines = [l.replace(_COL_SEP, " ") for l in plain_lines]
+    noise = _collect_page_noise(clean_lines, page_sets)
 
-    script.characters = _extract_cast_colon(plain_lines)
+    script.characters = _extract_cast_colon(clean_lines)
     known_speakers = {c.name for c in script.characters}
 
-    script.scenes = _extract_scenes_colon(plain_lines, known_speakers, noise)
+    # Use skeleton's first_page_only if available (title-page cue guard).
+    first_page_only: Set[str] = skeleton.first_page_only if skeleton is not None else set()
+
+    script.scenes = _extract_scenes_colon(plain_lines, known_speakers, noise,
+                                          first_page_only=first_page_only)
 
     _apply_speaker_normalization(script, known_speakers)
     _discover_new_characters(script, known_speakers)
@@ -1155,13 +2375,15 @@ def _extract_cast_colon(lines: List[str]) -> List[Character]:
 
 
 def _extract_scenes_colon(
-    lines: List[str], known_speakers: Set[str], noise: Set[str]
+    lines: List[str], known_speakers: Set[str], noise: Set[str],
+    first_page_only: Optional[Set[str]] = None,
 ) -> List[Scene]:
     scenes: List[Scene] = []
     scene_counter = 0
     scene_title = ""
     elements: List[Element] = []
     current_speaker: Optional[str] = None
+    last_non_narrator_speaker: Optional[str] = None  # most recent non-NARRATOR speaker
     dialog_buf: List[str] = []
 
     def flush_dialog() -> None:
@@ -1298,8 +2520,19 @@ def _extract_scenes_colon(
         cue = _find_colon_cue(s)
         if cue is not None:
             speaker, remainder = cue
+            # Title-page guard: skip first-page-only cues before the first boundary
+            if (
+                scene_counter == 0
+                and speaker not in known_speakers
+                and first_page_only
+                and s in first_page_only
+            ):
+                _append_stage_direction(elements, _normalize_text(s))
+                continue
             flush_dialog()
             current_speaker = speaker
+            if not _NARRATOR_NAME_RE.match(speaker):
+                last_non_narrator_speaker = speaker
 
             # Handle inline parenthetical + dialog: "SPEAKER: (paren) text"
             if remainder.startswith("("):
@@ -1321,11 +2554,20 @@ def _extract_scenes_colon(
             and s.endswith(")")
             and len(s) < 150
         ):
+            paren_speaker = current_speaker
             flush_dialog()
             inner = s[1:-1].strip()
             elements.append(
-                Element(kind="parenthetical", speaker=current_speaker, text=inner)
+                Element(kind="parenthetical", speaker=paren_speaker, text=inner)
             )
+            # Restore speaker — flush_dialog() clears current_speaker when it
+            # emits queued dialog; a mid-speech parenthetical must not break
+            # the speaker's attribution for what follows.
+            # NARRATOR parentheticals yield to the last non-narrator character.
+            if _NARRATOR_NAME_RE.match(paren_speaker):
+                current_speaker = last_non_narrator_speaker
+            else:
+                current_speaker = paren_speaker
             continue
 
         # Dialog continuation
@@ -1417,13 +2659,27 @@ def _discover_new_characters(script: Script, known_speakers: Set[str]) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _detect_script_format(lines: List[str]) -> str:
-    """Return 'dash_dialog', 'heist', or 'scene_n'."""
-    heist_count = sum(1 for l in lines if _is_heist_scene_header(l))
-    scene_n_count = sum(1 for l in lines if SCENE_NUM_RE.match(l.strip()))
-    int_ext_count = sum(1 for l in lines if INT_EXT_RE.match(l.strip()))
-    dash_count = sum(1 for l in lines if _is_dash_dialog_line(l))
-    non_empty = sum(1 for l in lines if l.strip())
+def _detect_script_format(
+    lines: List[str],
+    skeleton: Optional["ScriptSkeleton"] = None,
+) -> str:
+    """Return 'dash_dialog', 'heist', or 'scene_n'.
+
+    Uses pre-computed skeleton counts when available; falls back to inline
+    scanning for backward compatibility.
+    """
+    if skeleton is not None:
+        heist_count  = skeleton.heist_count
+        scene_n_count = skeleton.scene_n_count
+        int_ext_count = skeleton.int_ext_count
+        dash_count   = skeleton.dash_count
+        non_empty    = skeleton.non_empty_count
+    else:
+        heist_count  = sum(1 for l in lines if _is_heist_scene_header(l))
+        scene_n_count = sum(1 for l in lines if SCENE_NUM_RE.match(l.strip()))
+        int_ext_count = sum(1 for l in lines if INT_EXT_RE.match(l.strip()))
+        dash_count   = sum(1 for l in lines if _is_dash_dialog_line(l))
+        non_empty    = sum(1 for l in lines if l.strip())
 
     if dash_count >= 15 and non_empty > 0 and dash_count / non_empty > 0.20:
         if dash_count > heist_count * 3:
@@ -1486,7 +2742,8 @@ def _extract_cast(lines: List[str]) -> List[Character]:
             break
 
         char = (_parse_cast_row(s) or _parse_cast_row_dotted(s)
-                or _parse_cast_row_v2(s) or _parse_cast_row_comma(s))
+                or _parse_cast_row_v2(s) or _parse_cast_row_comma(s)
+                or _parse_cast_row_gender_first(s))
         if char:
             cast.append(char)
 
@@ -1576,6 +2833,50 @@ def _parse_cast_row_dotted(s: str) -> Optional[Character]:
         elif part_clean.lower().startswith(("male", "female", "non-binary", "nonbinary", "nb")):
             t = part_clean.strip().lower()
             gender = "F" if t.startswith("female") else ("M" if t.startswith("male") else "X")
+    return Character(name=name_raw, gender_hint=gender, age_hint=age)
+
+
+def _parse_cast_row_gender_first(s: str) -> Optional[Character]:
+    """Inline gender word: 'CHARLIE Male, 40s-50s. Description.'
+                           'DR. WOODLE Female. 40s-50s. Description.'
+                           '**Voice Only** CREDIT CARD COMPANY AUTOMATED VOICE: Female.'
+
+    The ALL-CAPS name (which may include title abbreviations like DR., slashes
+    like SHELBY/TRINA, or hyphens) is followed immediately by 'Male' or 'Female'
+    (optionally preceded by a colon).  An optional prefix like '**Voice Only**'
+    is stripped first.
+    """
+    # Strip decorative prefixes like "**Voice Only**"
+    cleaned = re.sub(r"^\*\*[^*]+\*\*\s*", "", s).strip()
+
+    # Match: ALLCAPS_NAME (optional colon+spaces) gender_word
+    # Name characters: uppercase letters, digits, spaces, periods (DR.), slashes, hyphens
+    m = re.match(
+        r"^([A-Z][A-Z0-9\./ -]{0,39}?)\s*:?\s+(Male|Female|Non-binary|Nonbinary|Mx)\b",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if not m:
+        return None
+
+    name_raw = m.group(1).strip().rstrip(".")
+    if not name_raw or len(name_raw) > 40:
+        return None
+    if re.search(r"[a-z]", name_raw):
+        return None
+
+    gender_word = m.group(2).lower()
+    if "female" in gender_word:
+        gender = "F"
+    elif "male" in gender_word:
+        gender = "M"
+    else:
+        gender = "X"
+
+    rest = s[m.end():].strip()
+    age_m = re.search(r"(\d{1,3}(?:s|[-–]\d{1,3}s?)?)\b", rest)
+    age = age_m.group(1) if age_m else None
+
     return Character(name=name_raw, gender_hint=gender, age_hint=age)
 
 
@@ -2137,8 +3438,98 @@ def _normalize_text(s: str) -> str:
     return s
 
 
+def _split_overlap_text(text: str, n_voices: int = 2) -> Optional[List[str]]:
+    """Try to split concatenated two-column dialog text into per-voice portions.
+
+    Two-column PDF overlaps merge two independent text columns into one string,
+    e.g. "What do you mean? I'm sorry, I don't recognize that number."
+    This function finds a sentence-boundary closest to the midpoint and splits
+    there, returning [voice1_text, voice2_text].
+
+    Returns a list of *n_voices* strings if a plausible split is found, or None
+    when no good boundary exists (caller falls back to chorus mode — all voices
+    read the full text).
+    """
+    if n_voices < 2 or not text.strip():
+        return None
+
+    length = len(text)
+    midpoint = length / 2.0
+    # Only split when the boundary lands between 15 % and 85 % of the text.
+    lo, hi = length * 0.15, length * 0.85
+
+    candidates: List[Tuple[float, int]] = []
+
+    # Split just after sentence-ending punctuation, whitespace, then a new
+    # sentence start (uppercase letter or opening paren/quote).  The lookahead
+    # prevents splitting inside an ellipsis sequence like ". . ." — only the
+    # final period (before "So why..." / "I'm sorry...") will match.
+    for m in re.finditer(r'(?<=[.!?])\s+(?=[A-Z(\'\"])', text):
+        pos = m.end()
+        if lo <= pos <= hi:
+            candidates.append((abs(pos - midpoint), pos))
+
+    # Fallback: bare whitespace after a period even without the uppercase guard.
+    # Only used if no uppercase-anchored candidates exist.
+    if not candidates:
+        for m in re.finditer(r'(?<=[.!?])\s+', text):
+            pos = m.end()
+            if lo <= pos <= hi:
+                candidates.append((abs(pos - midpoint), pos))
+
+    if not candidates:
+        return None
+
+    candidates.sort()
+    split_pos = candidates[0][1]
+
+    part1 = text[:split_pos].strip()
+    part2 = text[split_pos:].strip()
+
+    if not part1 or not part2:
+        return None
+
+    if n_voices == 2:
+        return [part1, part2]
+
+    # 3+ voices: first voice gets part1, remaining get part2 (rare in practice)
+    return [part1] + [part2] * (n_voices - 1)
+
+
+def _split_compound_cue(name: str, known_speakers: Set[str]) -> Optional[List[str]]:
+    """Detect a two-column PDF artefact where two speaker names were concatenated
+    with a space (e.g. "LEAH CREDIT CARD COMPANY" when both "LEAH" and
+    "CREDIT CARD COMPANY" are known speakers).
+
+    Tries every binary word-split left-to-right; returns [left, right] for the
+    first split where left is a known speaker and right either:
+      (a) is also an exact known speaker, or
+      (b) is a leading prefix of a known speaker (handles abbreviations like
+          "CREDIT CARD COMPANY" vs. "CREDIT CARD COMPANY AUTOMATED VOICE").
+
+    Only called when the candidate contains at least one space.
+    """
+    words = name.split()
+    for i in range(1, len(words)):
+        left  = " ".join(words[:i])
+        right = " ".join(words[i:])
+        if left not in known_speakers:
+            continue
+        # Exact match
+        if right in known_speakers:
+            return [left, right]
+        # Prefix match: right is a leading prefix of some known speaker name.
+        # Use "right + ' '" to avoid partial-word matches (e.g. "CAR" should
+        # not match "CAROL").
+        right_prefix = right + " "
+        for known in known_speakers:
+            if known.startswith(right_prefix):
+                return [left, right]
+    return None
+
+
 def _looks_like_chorus(name: str) -> bool:
-    return "/" in name
+    return "/" in name or " & " in name
 
 
 def _levenshtein(a: str, b: str) -> int:

@@ -14,6 +14,28 @@ struct TableReadApp: App {
                 .frame(minWidth: 1040, minHeight: 680)
         }
         .windowStyle(.titleBar)
+        .commands {
+            CommandGroup(replacing: .undoRedo) {
+                Button("Undo") { state.undo() }
+                    .keyboardShortcut("z", modifiers: .command)
+                    .disabled(!state.canUndo)
+                Button("Redo") { state.redo() }
+                    .keyboardShortcut("z", modifiers: [.command, .shift])
+                    .disabled(!state.canRedo)
+            }
+            CommandGroup(replacing: .help) {
+                Button("Table Read Help") {
+                    UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")
+                    NotificationCenter.default.post(name: .showOnboarding, object: nil)
+                }
+                .keyboardShortcut("?", modifiers: .command)
+
+                Button("Report a Bug…") {
+                    Self.openBugReport()
+                }
+                .keyboardShortcut("b", modifiers: [.command, .shift])
+            }
+        }
 
         Settings {
             SettingsView()
@@ -21,6 +43,14 @@ struct TableReadApp: App {
         }
     }
 }
+
+extension TableReadApp {
+    static func openBugReport() {
+        NotificationCenter.default.post(name: .showBugReport, object: nil)
+    }
+}
+
+// MARK: - App Delegate
 
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {

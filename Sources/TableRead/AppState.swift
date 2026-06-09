@@ -34,7 +34,12 @@ final class AppState: ObservableObject {
     // Voice assignment
     @Published var voices: [VoiceSummary] = []
     @Published var voiceAssignment: [String: String] = [:]   // char name → voice id
+    @Published var characterGenderOverrides: [String: String] = [:]  // characterKey → "M"/"F"/"N"; loaded in init()
     @Published var isFetchingVoices = false
+
+    // OpenAI key validation state
+    enum OpenAIKeyStatus { case idle, checking, valid, invalid(String) }
+    @Published var openAIKeyStatus: OpenAIKeyStatus = .idle
 
     // Engine installation
     @Published var installLog: [GenerationLogLine] = []
@@ -92,6 +97,18 @@ final class AppState: ObservableObject {
     // Scene title overrides — pdfPath → sceneNumber → custom title
     @Published var sceneTitleOverrides: [String: [Int: String]] = [:]
 
+    // MARK: – Undo / Redo
+    @Published var canUndo = false
+    @Published var canRedo = false
+    @Published var undoStackCount = 0
+    private struct AppStateSnapshot {
+        let corrections: [String: ParserCorrection]
+        let userAddedElements: [String: [UserAddedElement]]
+    }
+    private var undoStack: [AppStateSnapshot] = []
+    private var redoStack: [AppStateSnapshot] = []
+    private var undoPushSuppressCount = 0
+
     let bridge = PythonBridge()
     private var previewSound: NSSound?
 
@@ -107,6 +124,7 @@ final class AppState: ObservableObject {
         corrections = Self.loadCorrections()
         sceneTitleOverrides = Self.loadSceneTitleOverrides()
         userAddedElements = Self.loadUserAddedElements()
+        characterGenderOverrides = Self.loadGenderOverrides()
         // Mark OpenAI as installed based on UserDefaults flag — no Keychain touch at launch
         if UserDefaults.standard.bool(forKey: "openAIKeyStored") {
             installedEngines.insert(.openAI)
@@ -312,6 +330,7 @@ final class AppState: ObservableObject {
         guard !trimmed.isEmpty else {
             installedEngines.remove(.openAI)
             hasStoredOpenAIKey = false
+            openAIKeyStatus = .idle
             UserDefaults.standard.removeObject(forKey: "openAIKeyStored")
             KeychainHelper.delete(key: "openai_api_key")
             openAIAPIKey = ""
@@ -323,9 +342,54 @@ final class AppState: ObservableObject {
         hasStoredOpenAIKey = true
         UserDefaults.standard.set(true, forKey: "openAIKeyStored")
         KeychainHelper.write(key: "openai_api_key", value: trimmed)
-        status = "OpenAI TTS is ready for estimates."
-        fetchVoices()
-        refreshOpenAIEstimate()
+        status = "Checking OpenAI API key…"
+        Task { await validateOpenAIKey(trimmed) }
+    }
+
+    /// Validate an OpenAI API key by calling the lightweight /v1/models endpoint.
+    /// Updates openAIKeyStatus on the main actor when done.
+    func validateOpenAIKey(_ key: String) async {
+        openAIKeyStatus = .checking
+        guard var request = makeOpenAIRequest(path: "/v1/models", key: key) else {
+            openAIKeyStatus = .invalid("Malformed key")
+            status = "OpenAI key looks malformed."
+            return
+        }
+        request.httpMethod = "GET"
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            switch code {
+            case 200:
+                openAIKeyStatus = .valid
+                status = "OpenAI API key verified ✓"
+                fetchVoices()
+                refreshOpenAIEstimate()
+            case 401:
+                openAIKeyStatus = .invalid("Invalid key (401 Unauthorized)")
+                status = "OpenAI key rejected — check for typos."
+            case 429:
+                // Rate-limited, but the key itself exists — treat as valid.
+                openAIKeyStatus = .valid
+                status = "OpenAI API key verified ✓ (rate-limited)"
+                fetchVoices()
+                refreshOpenAIEstimate()
+            default:
+                openAIKeyStatus = .invalid("Unexpected response (HTTP \(code))")
+                status = "OpenAI preflight returned HTTP \(code)."
+            }
+        } catch {
+            // Network error — don't mark key invalid, just note the failure.
+            openAIKeyStatus = .invalid("Network error: \(error.localizedDescription)")
+            status = "Could not reach OpenAI to validate key."
+        }
+    }
+
+    private func makeOpenAIRequest(path: String, key: String) -> URLRequest? {
+        guard let url = URL(string: "https://api.openai.com\(path)") else { return nil }
+        var req = URLRequest(url: url, timeoutInterval: 10)
+        req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        return req
     }
 
     // MARK: - Engine installation
@@ -495,6 +559,11 @@ final class AppState: ObservableObject {
             errorMessage = "\(selectedEngine.title) is not installed. Go back to Voices to download it."
             return
         }
+        // OpenAI preflight: block generation if the key was explicitly rejected.
+        if selectedEngine == .openAI, case .invalid(let reason) = openAIKeyStatus {
+            errorMessage = "OpenAI key is invalid: \(reason). Update it in Settings → Engines."
+            return
+        }
 
         let out = outputDirectory ?? defaultOutputDirectory(for: pdf)
         outputDirectory = out
@@ -522,6 +591,7 @@ final class AppState: ObservableObject {
         let apiKey = engine == .openAI ? openAIAPIKey : nil
 
         let addedElements = userAddedElements
+        let activeCorrections = corrections.values.filter { $0.pdfIdentifier == pdf.path }
 
         Task {
             do {
@@ -532,7 +602,8 @@ final class AppState: ObservableObject {
                     sceneNumbers: sceneNumbers,
                     assignment: assignment,
                     apiKey: apiKey,
-                    userAddedElements: addedElements
+                    userAddedElements: addedElements,
+                    corrections: Array(activeCorrections)
                 ) { [weak self] event in
                     self?.handleGenerationEvent(event)
                 }
@@ -600,12 +671,14 @@ final class AppState: ObservableObject {
     }
 
     func resetForNewProject() {
+        undoStack = []; redoStack = []; canUndo = false; canRedo = false; undoStackCount = 0
         navigatingForward = false
         step = .importScript
         script = nil
         selectedPDF = nil
         voices = []
         voiceAssignment = [:]
+        characterGenderOverrides = [:]
         selectedScenes = []
         generationLog = []
         generationProgress = 0
@@ -642,6 +715,11 @@ final class AppState: ObservableObject {
         recentScripts = recentScripts.filter {
             FileManager.default.fileExists(atPath: $0.path)
         }
+    }
+
+    func clearRecentScripts() {
+        recentScripts = []
+        UserDefaults.standard.removeObject(forKey: Self.recentScriptsKey)
     }
 
     private func rememberRecentScript(_ url: URL, title: String) {
@@ -775,6 +853,7 @@ final class AppState: ObservableObject {
 
 extension AppState {
     func saveCorrection(_ correction: ParserCorrection) {
+        pushUndoIfNeeded()
         let k = ParserCorrection.key(
             pdfIdentifier: correction.pdfIdentifier,
             sceneNumber: correction.sceneNumber,
@@ -789,6 +868,7 @@ extension AppState {
     }
 
     func deleteCorrection(pdfPath: String, sceneNumber: Int, textKey: String) {
+        pushUndoIfNeeded()
         let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: textKey)
         corrections.removeValue(forKey: k)
         Self.persistCorrections(corrections)
@@ -824,9 +904,60 @@ extension AppState {
         }
     }
 
+    // MARK: Character gender overrides
+
+    /// Sets the user-chosen gender for a character and auto-assigns a matching voice
+    /// when the current voice no longer fits (or when none is assigned yet).
+    func setCharacterGender(_ gender: String, for characterKey: String) {
+        characterGenderOverrides[characterKey] = gender
+        Self.persistGenderOverrides(characterGenderOverrides)
+
+        // Build the candidate pool for the selected gender.
+        // "N" (Neutral) shuffles all voices for a random pick.
+        let pool: [VoiceSummary]
+        switch gender {
+        case "M": pool = voices.filter { $0.gender == "M" }
+        case "F": pool = voices.filter { $0.gender == "F" }
+        default:  pool = voices.shuffled()   // Neutral — any gender, random order
+        }
+        guard !pool.isEmpty else { return }
+
+        // Keep the current voice if it already fits (avoids unnecessary reassignment).
+        let currentId    = voiceAssignment[characterKey] ?? ""
+        let currentVoice = voices.first { $0.id == currentId }
+        let alreadyFits: Bool
+        switch gender {
+        case "M": alreadyFits = currentVoice?.gender == "M"
+        case "F": alreadyFits = currentVoice?.gender == "F"
+        default:  alreadyFits = currentVoice != nil
+        }
+        if alreadyFits { return }
+
+        // Round-robin: collect voice IDs already assigned to *other* characters,
+        // then pick the first pool voice not yet claimed. Fall back to pool.first
+        // if every voice in the pool is already taken.
+        let takenIds = Set(voiceAssignment.compactMap { k, v in k == characterKey ? nil : v })
+        let chosen = pool.first { !takenIds.contains($0.id) } ?? pool[0]
+        voiceAssignment[characterKey] = chosen.id
+    }
+
+    private static func loadGenderOverrides() -> [String: String] {
+        guard let data = UserDefaults.standard.data(forKey: "characterGenderOverrides"),
+              let decoded = try? JSONDecoder().decode([String: String].self, from: data)
+        else { return [:] }
+        return decoded
+    }
+
+    private static func persistGenderOverrides(_ overrides: [String: String]) {
+        if let data = try? JSONEncoder().encode(overrides) {
+            UserDefaults.standard.set(data, forKey: "characterGenderOverrides")
+        }
+    }
+
     // MARK: Scene title overrides
 
     func setSceneTitle(_ title: String, pdfPath: String, sceneNumber: Int) {
+        pushUndoIfNeeded()
         var byPDF = sceneTitleOverrides[pdfPath] ?? [:]
         byPDF[sceneNumber] = title.isEmpty ? nil : title
         sceneTitleOverrides[pdfPath] = byPDF
@@ -916,12 +1047,55 @@ extension AppState {
     }
 }
 
+// MARK: - Undo / Redo
+
+extension AppState {
+    private func pushUndoSnapshot() {
+        let snap = AppStateSnapshot(corrections: corrections, userAddedElements: userAddedElements)
+        undoStack.append(snap)
+        if undoStack.count > 50 { undoStack.removeFirst() }
+        redoStack = []
+        undoStackCount = undoStack.count
+        canUndo = true
+        canRedo = false
+    }
+
+    func pushUndoIfNeeded() {
+        guard undoPushSuppressCount == 0 else { return }
+        pushUndoSnapshot()
+    }
+
+    func undo() {
+        guard let snap = undoStack.popLast() else { return }
+        redoStack.append(AppStateSnapshot(corrections: corrections, userAddedElements: userAddedElements))
+        corrections = snap.corrections
+        userAddedElements = snap.userAddedElements
+        Self.persistCorrections(corrections)
+        Self.persistUserAddedElements(userAddedElements)
+        undoStackCount = undoStack.count
+        canUndo = !undoStack.isEmpty
+        canRedo = true
+    }
+
+    func redo() {
+        guard let snap = redoStack.popLast() else { return }
+        undoStack.append(AppStateSnapshot(corrections: corrections, userAddedElements: userAddedElements))
+        corrections = snap.corrections
+        userAddedElements = snap.userAddedElements
+        Self.persistCorrections(corrections)
+        Self.persistUserAddedElements(userAddedElements)
+        undoStackCount = undoStack.count
+        canUndo = true
+        canRedo = !redoStack.isEmpty
+    }
+}
+
 // MARK: - User-added elements
 
 extension AppState {
     private static let userAddedElementsKey = "userAddedElements"
 
-    private func addedKey(pdfPath: String, sceneNumber: Int) -> String {
+    func addedKey(pdfPath: String, sceneNumber: Int) -> String {
         "\(pdfPath)|\(sceneNumber)"
     }
 
@@ -932,6 +1106,7 @@ extension AppState {
         sceneNumber: Int,
         pdfPath: String
     ) {
+        pushUndoIfNeeded()
         let el = UserAddedElement(
             pdfPath: pdfPath,
             sceneNumber: sceneNumber,
@@ -946,6 +1121,138 @@ extension AppState {
         Self.persistUserAddedElements(userAddedElements)
     }
 
+    func addElementWithContent(afterTextKey: String, speaker: String, text: String,
+                               kind: String = "dialog", sceneNumber: Int, pdfPath: String,
+                               isSplitFragment: Bool = false) {
+        pushUndoIfNeeded()
+        var el = UserAddedElement(
+            pdfPath: pdfPath, sceneNumber: sceneNumber,
+            afterElementTextKey: afterTextKey,
+            speaker: speaker, text: text, kind: kind, timestamp: Date()
+        )
+        el.isSplitFragment = isSplitFragment
+        let key = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
+        userAddedElements[key, default: []].append(el)
+        Self.persistUserAddedElements(userAddedElements)
+    }
+
+    /// Marks a parser-detected overlap element as noise and re-adds the surviving voice(s) as
+    /// user-added elements. Pass `keepVoiceIndex` to keep only one side; nil keeps both (Unlink).
+    func splitParserOverlap(element: SceneElementSummary, keepVoiceIndex: Int?,
+                            sceneNumber: Int, pdfPath: String) {
+        undoPushSuppressCount += 1
+        pushUndoSnapshot()
+        defer { undoPushSuppressCount -= 1 }
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        let existing = corrections[k]
+        saveCorrection(ParserCorrection(
+            textKey: element.text, pdfIdentifier: pdfPath, sceneNumber: sceneNumber,
+            originalKind: element.kind, originalSpeaker: element.speaker,
+            correctedKind: existing?.correctedKind, correctedSpeaker: existing?.correctedSpeaker,
+            correctedText: existing?.correctedText,
+            markedAsNoise: true, isSplit: true,
+            timestamp: Date(), contributed: contributeCorrections
+        ))
+        let cue   = existing?.correctedOverlapSpeakers ?? element.overlapCue ?? []
+        let texts = existing?.correctedOverlapTexts    ?? element.overlapTexts ?? Array(repeating: element.text, count: cue.count)
+        let afterKey = String(element.text.prefix(60))
+        for (i, speaker) in cue.enumerated() {
+            guard keepVoiceIndex == nil || i == keepVoiceIndex else { continue }
+            let text = texts.indices.contains(i) ? texts[i] : element.text
+            addElementWithContent(afterTextKey: afterKey, speaker: speaker, text: text,
+                                  kind: "dialog", sceneNumber: sceneNumber, pdfPath: pdfPath,
+                                  isSplitFragment: true)
+        }
+    }
+
+    /// Collapses a parser-detected overlap to a single voice by saving a single-element
+    /// `correctedOverlapSpeakers`. The element stays live (not noise'd); the view falls
+    /// through to the solo layout because `displayCue.count < 2`.
+    /// Soft-removes one voice from a parser overlap: keeps the two-panel display but crosses out
+    /// the removed voice and shows a Restore button. The pipeline renders only the surviving voice.
+    /// Soft-removes one voice from a parser-detected overlap.
+    /// removedVoiceIndex encoding: 0 = left only, 1 = right only, 2 = both removed.
+    func markOverlapVoiceAsRemoved(element: SceneElementSummary, voiceIndex: Int,
+                                    sceneNumber: Int, pdfPath: String) {
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        let existing = corrections[k]
+
+        // Compute new removedVoiceIndex — upgrade to 2 when the other side is already gone.
+        let newRemovedIdx: Int
+        if let prev = existing?.removedVoiceIndex {
+            // 0 + removing 1, or 1 + removing 0  →  both removed (2)
+            newRemovedIdx = (prev == 0 && voiceIndex == 1) || (prev == 1 && voiceIndex == 0) ? 2 : voiceIndex
+        } else {
+            newRemovedIdx = voiceIndex
+        }
+
+        saveCorrection(ParserCorrection(
+            textKey: element.text, pdfIdentifier: pdfPath, sceneNumber: sceneNumber,
+            originalKind: element.kind, originalSpeaker: element.speaker,
+            correctedKind: existing?.correctedKind, correctedSpeaker: existing?.correctedSpeaker,
+            correctedText: existing?.correctedText,
+            correctedOverlapTexts: existing?.correctedOverlapTexts,
+            correctedOverlapSpeakers: existing?.correctedOverlapSpeakers,
+            markedAsNoise: false, isSplit: false,
+            removedVoiceIndex: newRemovedIdx,
+            timestamp: Date(), contributed: contributeCorrections
+        ))
+    }
+
+    /// Restores one voice that was soft-removed via `markOverlapVoiceAsRemoved`.
+    /// Pass `voiceIndex` 0 (left) or 1 (right) to restore only that side.
+    func restoreOverlapVoice(element: SceneElementSummary, voiceIndex: Int,
+                             sceneNumber: Int, pdfPath: String) {
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        guard var existing = corrections[k], existing.removedVoiceIndex != nil else { return }
+        pushUndoSnapshot()
+
+        // Compute the new removedVoiceIndex after restoring voiceIndex:
+        //   2 (both) - restoring 0 → 1 still removed
+        //   2 (both) - restoring 1 → 0 still removed
+        //   0 - restoring 0 → nil (fully restored)
+        //   1 - restoring 1 → nil (fully restored)
+        let prev = existing.removedVoiceIndex!
+        let newIdx: Int?
+        switch (prev, voiceIndex) {
+        case (2, 0): newIdx = 1   // left restored, right still removed
+        case (2, 1): newIdx = 0   // right restored, left still removed
+        default:     newIdx = nil // single-voice restore → fully clear
+        }
+
+        existing.removedVoiceIndex = newIdx
+        existing.timestamp = Date()
+        let hasOtherData = existing.correctedKind != nil || existing.correctedSpeaker != nil
+            || existing.correctedText != nil || existing.correctedOverlapTexts != nil
+            || existing.correctedOverlapSpeakers != nil || existing.markedAsNoise
+            || existing.isSplit || existing.manualOverlapPartnerKey != nil
+        if hasOtherData || newIdx != nil {
+            corrections[k] = existing
+        } else {
+            corrections.removeValue(forKey: k)
+        }
+        Self.persistCorrections(corrections)
+    }
+
+    /// Restores a parser-detected overlap that was split via `splitParserOverlap`.
+    /// Clears the noise/split correction and removes the user-added fragments created by the split.
+    func relinkParserOverlap(element: SceneElementSummary, sceneNumber: Int, pdfPath: String) {
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        guard var existing = corrections[k], existing.isSplit else { return }
+        pushUndoSnapshot()
+        existing.markedAsNoise = false
+        existing.isSplit = false
+        existing.timestamp = Date()
+        corrections[k] = existing
+        Self.persistCorrections(corrections)
+
+        let afterKey = String(element.text.prefix(60))
+        let addKey = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
+        userAddedElements[addKey]?.removeAll { $0.isSplitFragment && $0.afterElementTextKey == afterKey }
+        if userAddedElements[addKey]?.isEmpty == true { userAddedElements.removeValue(forKey: addKey) }
+        Self.persistUserAddedElements(userAddedElements)
+    }
+
     func updateAddedElement(
         id: UUID,
         speaker: String,
@@ -954,6 +1261,7 @@ extension AppState {
         sceneNumber: Int,
         pdfPath: String
     ) {
+        pushUndoIfNeeded()
         let key = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
         guard let idx = userAddedElements[key]?.firstIndex(where: { $0.id == id }) else { return }
         userAddedElements[key]?[idx].speaker = speaker
@@ -963,6 +1271,7 @@ extension AppState {
     }
 
     func deleteAddedElement(id: UUID, sceneNumber: Int, pdfPath: String) {
+        pushUndoIfNeeded()
         let key = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
         userAddedElements[key]?.removeAll { $0.id == id }
         if userAddedElements[key]?.isEmpty == true { userAddedElements.removeValue(forKey: key) }
@@ -977,17 +1286,94 @@ extension AppState {
         for el in added {
             addedByKey[el.afterElementTextKey, default: []].append(el)
         }
+
+        // Build secondary key set (suppressed because absorbed by a manual overlap primary).
+        // Only suppress when primary is not noise.
+        var secondaryKeys = Set<String>()
+        for el in scene.elements {
+            let corrKey = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+            let fix = corrections[corrKey]
+            if fix?.markedAsNoise == true { continue }
+            if let partnerKey = fix?.manualOverlapPartnerKey {
+                secondaryKeys.insert(partnerKey)
+            }
+        }
+        let elementByKey = Dictionary(
+            scene.elements.map { (String($0.text.prefix(60)), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
         var result: [MergedSceneElement] = []
         for element in scene.elements.prefix(limit) {
-            result.append(.parsed(element))
             let textKey = String(element.text.prefix(60))
-            if let bucket = addedByKey[textKey] {
+            if secondaryKeys.contains(textKey) { continue }
+
+            let corrKey = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: element.text)
+            if let partnerKey = corrections[corrKey]?.manualOverlapPartnerKey,
+               let secondary = elementByKey[partnerKey] {
+                result.append(.manualOverlap(element, secondary))
+                // Emit user-added elements after the overlap (from both keys, merged and sorted)
+                let bucket = (addedByKey[textKey] ?? []) + (addedByKey[String(secondary.text.prefix(60))] ?? [])
                 for addedEl in bucket.sorted(by: { $0.timestamp < $1.timestamp }) {
                     result.append(.added(addedEl))
+                }
+            } else {
+                result.append(.parsed(element))
+                if let bucket = addedByKey[textKey] {
+                    for addedEl in bucket.sorted(by: { $0.timestamp < $1.timestamp }) {
+                        result.append(.added(addedEl))
+                    }
                 }
             }
         }
         return result
+    }
+
+    func makeSimultaneous(primaryText: String, secondaryText: String, sceneNumber: Int, pdfPath: String) {
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: primaryText)
+        let existing = corrections[k]
+        saveCorrection(ParserCorrection(
+            textKey: primaryText,
+            pdfIdentifier: pdfPath,
+            sceneNumber: sceneNumber,
+            originalKind: existing?.originalKind ?? "dialog",
+            originalSpeaker: existing?.originalSpeaker,
+            correctedKind: existing?.correctedKind,
+            correctedSpeaker: existing?.correctedSpeaker,
+            correctedText: existing?.correctedText,
+            correctedOverlapTexts: existing?.correctedOverlapTexts,
+            markedAsNoise: existing?.markedAsNoise ?? false,
+            timestamp: Date(),
+            contributed: contributeCorrections,
+            manualOverlapPartnerKey: String(secondaryText.prefix(60))
+        ))
+    }
+
+    func breakSimultaneous(primaryText: String, sceneNumber: Int, pdfPath: String) {
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: primaryText)
+        guard let existing = corrections[k] else { return }
+        let stillHasOtherData = existing.correctedKind != nil || existing.correctedSpeaker != nil
+            || existing.correctedText != nil || existing.correctedOverlapTexts != nil
+            || existing.markedAsNoise
+        if stillHasOtherData {
+            saveCorrection(ParserCorrection(
+                textKey: existing.textKey,
+                pdfIdentifier: existing.pdfIdentifier,
+                sceneNumber: existing.sceneNumber,
+                originalKind: existing.originalKind,
+                originalSpeaker: existing.originalSpeaker,
+                correctedKind: existing.correctedKind,
+                correctedSpeaker: existing.correctedSpeaker,
+                correctedText: existing.correctedText,
+                correctedOverlapTexts: existing.correctedOverlapTexts,
+                markedAsNoise: existing.markedAsNoise,
+                timestamp: Date(),
+                contributed: contributeCorrections,
+                manualOverlapPartnerKey: nil
+            ))
+        } else {
+            deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: primaryText)
+        }
     }
 
     static func loadUserAddedElements() -> [String: [UserAddedElement]] {

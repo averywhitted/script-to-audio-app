@@ -1,0 +1,70 @@
+import Foundation
+
+// ── GitHub Personal Access Token ───────────────────────────────────────────
+// Fine-grained PAT with Issues: Read & Write on script-to-audio-app only.
+// github.com → Settings → Developer settings → Personal access tokens →
+//   Fine-grained tokens → Generate new token
+//   Repository access: Only script-to-audio-app
+//   Permissions: Issues → Read and write
+private let githubToken = "" // paste your token here
+
+private let repoOwner = "averywhitted"
+private let repoName  = "script-to-audio-app"
+
+// ──────────────────────────────────────────────────────────────────────────
+
+enum EmailReporter {
+    static var isConfigured: Bool { !githubToken.isEmpty }
+
+    /// Opens a GitHub issue on the app repo. Users never see GitHub.
+    static func send(
+        subject: String,
+        text: String,
+        labels: [String] = [],
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        guard isConfigured else {
+            completion(.failure(ReporterError.notConfigured))
+            return
+        }
+        guard let url = URL(string: "https://api.github.com/repos/\(repoOwner)/\(repoName)/issues") else { return }
+
+        let payload: [String: Any] = [
+            "title":  subject,
+            "body":   text,
+            "labels": labels,
+        ]
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        req.setValue("application/json",            forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(githubToken)",        forHTTPHeaderField: "Authorization")
+        req.setValue("2022-11-28",                   forHTTPHeaderField: "X-GitHub-Api-Version")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+
+        URLSession.shared.dataTask(with: req) { _, response, error in
+            if let error {
+                completion(.failure(error)); return
+            }
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if (200..<300).contains(code) {
+                completion(.success(()))
+            } else {
+                completion(.failure(ReporterError.httpError(code)))
+            }
+        }.resume()
+    }
+
+    enum ReporterError: LocalizedError {
+        case notConfigured
+        case httpError(Int)
+
+        var errorDescription: String? {
+            switch self {
+            case .notConfigured: return "Feedback reporting is not configured."
+            case .httpError(let c): return "Server error (code \(c)). Try again."
+            }
+        }
+    }
+}

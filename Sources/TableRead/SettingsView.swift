@@ -24,6 +24,9 @@ struct SettingsView: View {
 
 private struct GeneralSettingsTab: View {
     @EnvironmentObject private var state: AppState
+    @State private var contributionState: ContributionState = .idle
+
+    private enum ContributionState { case idle, sending, sent, failed }
 
     var body: some View {
         Form {
@@ -70,11 +73,28 @@ private struct GeneralSettingsTab: View {
 
             Section {
                 Toggle("Contribute corrections anonymously", isOn: $state.contributeCorrections)
-                HStack {
+                HStack(spacing: 8) {
                     let count = state.corrections.count
-                    Text("\(count) correction\(count == 1 ? "" : "s") stored locally")
-                        .foregroundStyle(.secondary)
+                    let unsent = state.corrections.values.filter { !$0.uploaded }.count
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(count) correction\(count == 1 ? "" : "s") stored locally")
+                            .foregroundStyle(.secondary)
+                        if state.contributeCorrections && unsent > 0 {
+                            Text("\(unsent) not yet contributed")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Spacer()
+                    if state.contributeCorrections {
+                        Button("Contribute…") { contributeCorrections() }
+                            .disabled(state.corrections.isEmpty || contributionState == .sending)
+                        if contributionState == .sent {
+                            Label("Sent", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .font(.caption)
+                        }
+                    }
                     Button("Export…") { exportCorrections() }
                         .disabled(state.corrections.isEmpty)
                     Button("Clear All") { state.corrections.removeAll() }
@@ -84,7 +104,7 @@ private struct GeneralSettingsTab: View {
             } header: {
                 Text("Parser Corrections")
             } footer: {
-                Text("When enabled, corrections you make in the Review step are flagged for contribution. Export saves them as JSON you can share to help improve the parser for everyone. Nothing is sent automatically — you stay in control.")
+                Text("Corrections you make in the Review step are stored locally. When you're ready, click Contribute to send them anonymously to the developer — they help improve the parser for everyone. Nothing is sent without your action.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -102,6 +122,39 @@ private struct GeneralSettingsTab: View {
         panel.prompt = "Select"
         if panel.runModal() == .OK, let url = panel.url {
             state.setOutputDirectory(url)
+        }
+    }
+
+    private func contributeCorrections() {
+        contributionState = .sending
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let payload = state.corrections.values.map { $0.anonymized(appVersion: version) }
+        let text = payload.map { c in
+            """
+            Scene \(c.sceneNumber) · \(c.originalKind)\(c.originalSpeaker.map { " (\($0))" } ?? "")
+            Original:  \(c.originalText)
+            \(c.correctedText.map    { "Text fix:  \($0)" } ?? "")
+            \(c.correctedKind.map    { "Kind fix:  \($0)" } ?? "")
+            \(c.correctedSpeaker.map { "Speaker:   \($0.isEmpty ? "(narrator)" : $0)" } ?? "")
+            \(c.markedAsNoise        ? "Removed:   yes" : "")
+            """
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .joined(separator: "\n")
+        }.joined(separator: "\n\n---\n\n")
+        EmailReporter.send(
+            subject: "Parser corrections v\(version) (\(payload.count) correction\(payload.count == 1 ? "" : "s"))",
+            text: text,
+            labels: ["correction", "user-report"]
+        ) { [self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    for key in state.corrections.keys { state.corrections[key]?.uploaded = true }
+                    contributionState = .sent
+                case .failure:
+                    contributionState = .failed
+                }
+            }
         }
     }
 
@@ -124,10 +177,7 @@ private struct EnginesSettingsTab: View {
     var body: some View {
         Form {
             Section {
-                if state.hasStoredOpenAIKey {
-                    Label("API key saved in Keychain — OpenAI TTS is active.", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green).font(.callout)
-                }
+                OpenAIKeyStatusBadge()
                 HStack(alignment: .top, spacing: 12) {
                     SecureField(state.hasStoredOpenAIKey ? "Enter new key to replace…" : "Paste your key here…",
                                 text: $state.openAIAPIKey)
@@ -161,6 +211,35 @@ private struct EnginesSettingsTab: View {
         }
         .formStyle(.grouped)
         .padding()
+    }
+}
+
+// MARK: - OpenAI key status badge
+
+private struct OpenAIKeyStatusBadge: View {
+    @EnvironmentObject private var state: AppState
+
+    var body: some View {
+        switch state.openAIKeyStatus {
+        case .idle:
+            if state.hasStoredOpenAIKey {
+                Label("API key saved in Keychain", systemImage: "key.fill")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        case .checking:
+            Label("Checking key…", systemImage: "arrow.trianglehead.2.clockwise")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        case .valid:
+            Label("API key verified — OpenAI TTS is active", systemImage: "checkmark.circle.fill")
+                .font(.callout)
+                .foregroundStyle(.green)
+        case .invalid(let reason):
+            Label(reason, systemImage: "xmark.circle.fill")
+                .font(.callout)
+                .foregroundStyle(.red)
+        }
     }
 }
 
@@ -227,6 +306,27 @@ private struct AboutTab: View {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
     }
 
+    private let licenseText = """
+        Table Read — Personal Use License
+        Copyright © 2025 Avery Whitted. All rights reserved.
+
+        Permission is granted to any individual to use this software for personal, non-commercial purposes, subject to the following conditions:
+
+        1. NON-COMMERCIAL. You may not sell, license, sublicense, rent, or otherwise use this software or any portion of it for commercial gain or as part of a commercial product or service.
+
+        2. NO MODIFICATIONS WITHOUT PERMISSION. You may not modify, adapt, translate, or create derivative works based on this software without prior written permission from the copyright holder.
+
+        3. NO REDISTRIBUTION. You may not redistribute this software, in original or modified form, without prior written permission from the copyright holder.
+
+        4. ATTRIBUTION. Any permitted use or distribution must retain this notice and the copyright statement above.
+
+        5. SOURCE AVAILABLE. The source code is made available for inspection and personal study only. Viewing the source does not grant any rights beyond those stated here.
+
+        THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM USE OF THIS SOFTWARE.
+
+        To request permission for uses not covered here, contact: averywhitted.com
+        """
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
@@ -255,7 +355,7 @@ private struct AboutTab: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                Text("By Avery Whitted")
+                Text("© 2025 Avery Whitted. All rights reserved.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -264,26 +364,45 @@ private struct AboutTab: View {
 
             Divider()
 
-            VStack(spacing: 10) {
-                Text("Table Read is free for personal use. Not for resale or commercial redistribution.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 340)
+            VStack(alignment: .leading, spacing: 10) {
+                ScrollView {
+                    Text(licenseText)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                        .padding(10)
+                }
+                .frame(maxHeight: 130)
+                .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                )
 
                 HStack(spacing: 12) {
+                    Button("View License on GitHub") {
+                        if let url = URL(string: "https://github.com/averywhitted/table-read/blob/main/LICENSE") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+
+                    Spacer()
+
                     Button("Donate on Buy Me a Coffee") {
-                        // placeholder — fill in real URL when ready
-                        if let url = URL(string: "https://buymeacoffee.com") {
+                        if let url = URL(string: "https://buymeacoffee.com/averywhitted") {
                             NSWorkspace.shared.open(url)
                         }
                     }
                     .buttonStyle(.borderedProminent)
                 }
             }
-            .padding(.vertical, 18)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 0)
     }
 }

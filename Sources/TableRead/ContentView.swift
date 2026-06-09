@@ -1,9 +1,17 @@
 import SwiftUI
 import AppKit
 
+extension Notification.Name {
+    static let showOnboarding  = Notification.Name("TableRead.showOnboarding")
+    static let showBugReport   = Notification.Name("TableRead.showBugReport")
+}
+
 struct ContentView: View {
     @EnvironmentObject private var state: AppState
     @State private var isImporting = false
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @State private var showOnboarding = false
+    @State private var showBugReport  = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -58,6 +66,26 @@ struct ContentView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(state.errorMessage ?? "")
+        }
+        .sheet(isPresented: $showOnboarding) {
+            OnboardingView {
+                hasSeenOnboarding = true
+                showOnboarding = false
+            }
+        }
+        .onAppear {
+            if !hasSeenOnboarding {
+                showOnboarding = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showOnboarding)) { _ in
+            showOnboarding = true
+        }
+        .sheet(isPresented: $showBugReport) {
+            BugReportSheet(isPresented: $showBugReport)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showBugReport)) { _ in
+            showBugReport = true
         }
     }
 
@@ -115,8 +143,30 @@ private struct WorkflowStepBar: View {
 
             Spacer()
 
-            // Right anchor: settings gear
-            HStack(spacing: 10) {
+            // Right anchor: beta badge + bug report button + settings gear
+            HStack(spacing: 8) {
+                Text("BETA")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(.secondary.opacity(0.12), in: Capsule())
+
+                Button {
+                    NotificationCenter.default.post(name: .showBugReport, object: nil)
+                } label: {
+                    Label("Report a Bug", systemImage: "exclamationmark.circle")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.red.opacity(0.8))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule().strokeBorder(Color.red.opacity(0.5), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .help("Report a bug (⌘⇧B)")
+
                 Button { openSettings() } label: {
                     Image(systemName: "gear")
                         .font(.system(size: 13))
@@ -196,7 +246,7 @@ private struct ProcessingOverlay: View {
                 ProgressView().controlSize(.large)
                 Text(state.status)
                     .font(.headline)
-                Text("This can take a moment for large PDFs or voice downloads.")
+                Text("This can take a while for large PDFs.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -206,6 +256,297 @@ private struct ProcessingOverlay: View {
         }
     }
 }
+
+// MARK: - Onboarding sheet
+
+struct OnboardingView: View {
+    var onDismiss: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 16) {
+                Image(systemName: "waveform.and.magnifyingglass")
+                    .font(.system(size: 52, weight: .light))
+                    .foregroundStyle(.tint)
+                    .padding(.top, 40)
+
+                Text("Welcome to Table Read")
+                    .font(.largeTitle.weight(.bold))
+
+                Text("Turn any screenplay PDF into a full cast audio drama —\neach character voiced differently, scene by scene.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 48)
+            .padding(.bottom, 32)
+
+            Divider()
+
+            // Four-step explanation
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    OnboardingStep(
+                        number: 1,
+                        icon: "doc.badge.plus",
+                        title: "Import a Script PDF",
+                        description: "Click \"Choose PDF\" or drag a file in. Table Read parses the characters, dialog, and scene structure automatically."
+                    )
+                    OnboardingStep(
+                        number: 2,
+                        icon: "text.magnifyingglass",
+                        title: "Review the Parse",
+                        description: "Inspect every line. Fix any mis-attributed dialog, rename speakers, or mark lines as noise. Your corrections are saved and re-applied next time."
+                    )
+                    OnboardingStep(
+                        number: 3,
+                        icon: "person.wave.2",
+                        title: "Cast Your Voices",
+                        description: "Assign a macOS system voice to each character. Upgrade any role to Kokoro (local, free) or OpenAI (natural, API key required) in Settings."
+                    )
+                    OnboardingStep(
+                        number: 4,
+                        icon: "play.circle",
+                        title: "Generate Audio",
+                        description: "Select which scenes to render. Each scene becomes a standalone .m4a file ready for playback or editing. Pause and resume any time."
+                    )
+
+                    Divider().padding(.vertical, 4)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Tips", systemImage: "lightbulb")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                        Text("• Works best with standard US play and screenplay formats.")
+                        Text("• For higher-quality voices, install Kokoro from Settings → Engines.")
+                        Text("• Corrections you make are stored locally and re-applied whenever you re-import the same PDF.")
+                    }
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 8)
+                }
+                .padding(.horizontal, 48)
+                .padding(.vertical, 28)
+            }
+
+            Divider()
+
+            // Footer button
+            HStack {
+                Spacer()
+                Button {
+                    onDismiss()
+                } label: {
+                    Text("Get Started")
+                        .padding(.horizontal, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 48)
+            .padding(.vertical, 20)
+        }
+        .frame(width: 560, height: 620)
+    }
+}
+
+private struct OnboardingStep: View {
+    var number: Int
+    var icon: String
+    var title: String
+    var description: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: icon)
+                    .font(.system(size: 17))
+                    .foregroundStyle(.tint)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text("\(number).")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.tint)
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                }
+                Text(description)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+// MARK: - Bug report sheet
+
+struct BugReportSheet: View {
+    @Binding var isPresented: Bool
+    @State private var whatHappened = ""
+    @State private var steps = ""
+    @State private var submitState: SubmitState = .idle
+
+    private enum SubmitState: Equatable { case idle, sending, sent, failed(String) }
+
+    private var appVersion: String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        return "v\(v) (build \(b))"
+    }
+    private var osVersion: String { ProcessInfo.processInfo.operatingSystemVersionString }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 8) {
+                Image(systemName: "exclamationmark.circle")
+                    .font(.system(size: 36, weight: .light))
+                    .foregroundStyle(.red.opacity(0.7))
+                    .padding(.top, 32)
+                Text("Report a Bug")
+                    .font(.title2.weight(.semibold))
+                Text("Reports go directly to the developer. No account required.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 40)
+            .padding(.bottom, 24)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Auto-filled system info
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 6) {
+                            infoRow(label: "App version", value: appVersion)
+                            infoRow(label: "macOS",       value: osVersion)
+                        }
+                    } label: {
+                        Label("System Info", systemImage: "info.circle")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("What happened?")
+                            .font(.callout.weight(.semibold))
+                        TextEditor(text: $whatHappened)
+                            .font(.callout)
+                            .frame(minHeight: 80)
+                            .padding(6)
+                            .background(.background, in: RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(Color.primary.opacity(0.12))
+                            )
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Steps to reproduce")
+                            .font(.callout.weight(.semibold))
+                        Text("Optional — helps a lot if you can describe what you did before it happened.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextEditor(text: $steps)
+                            .font(.callout)
+                            .frame(minHeight: 60)
+                            .padding(6)
+                            .background(.background, in: RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(Color.primary.opacity(0.12))
+                            )
+                    }
+                }
+                .padding(24)
+            }
+
+            Divider()
+
+            // Footer
+            HStack {
+                if case .failed(let msg) = submitState {
+                    Text(msg)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+                if case .sent = submitState {
+                    Label("Sent! Thank you.", systemImage: "checkmark.circle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.green)
+                }
+                Spacer()
+                Button("Cancel") { isPresented = false }
+                    .buttonStyle(.borderless)
+
+                Button {
+                    submit()
+                } label: {
+                    if case .sending = submitState {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Send Report")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(whatHappened.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                          || submitState == .sending || submitState == .sent)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+        }
+        .frame(width: 480, height: 520)
+    }
+
+    private func infoRow(label: String, value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 90, alignment: .leading)
+            Text(value)
+                .font(.caption)
+                .foregroundStyle(.primary)
+        }
+    }
+
+    private func submit() {
+        submitState = .sending
+        let text = """
+        App version: \(appVersion)
+        macOS: \(osVersion)
+
+        What happened:
+        \(whatHappened)
+
+        Steps to reproduce:
+        \(steps.isEmpty ? "(not provided)" : steps)
+        """
+        EmailReporter.send(subject: "Bug report \(appVersion)", text: text, labels: ["bug", "user-report"]) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    submitState = .sent
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { isPresented = false }
+                case .failure(let error):
+                    submitState = .failed(error.localizedDescription)
+                }
+            }
+        }
+    }
+}
+
 
 // MARK: - First-mouse fix
 // Makes buttons respond on the first click even when the window isn't the key window.

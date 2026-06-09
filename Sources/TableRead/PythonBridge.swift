@@ -151,6 +151,7 @@ final class PythonBridge {
         assignment: [String: String] = [:],
         apiKey: String? = nil,
         userAddedElements: [String: [UserAddedElement]] = [:],
+        corrections: [ParserCorrection] = [],
         onEvent: @escaping @MainActor (GenerationEvent) -> Void
     ) async throws {
         var payload: [String: Any] = [
@@ -184,6 +185,29 @@ final class PythonBridge {
         }
         if !bySceneNumber.isEmpty {
             payload["userAddedElements"] = bySceneNumber
+        }
+        if !corrections.isEmpty {
+            // Serialize corrections for Python: keyed by sceneNumber + text prefix
+            var correctionList: [[String: Any]] = []
+            for c in corrections {
+                // c.textKey is the raw element text (not the full dict-key).
+                // Python matches on el.text[:60], so truncate to the same 60-char prefix.
+                let textPrefix = String(c.textKey.prefix(60))
+                var dict: [String: Any] = [
+                    "sceneNumber": c.sceneNumber,
+                    "textPrefix": textPrefix,
+                    "markedAsNoise": c.markedAsNoise,
+                ]
+                if let kind = c.correctedKind { dict["correctedKind"] = kind }
+                if let speaker = c.correctedSpeaker { dict["correctedSpeaker"] = speaker }
+                if let text = c.correctedText, !text.isEmpty { dict["correctedText"] = text }
+                if let os = c.correctedOverlapSpeakers, !os.isEmpty { dict["correctedOverlapSpeakers"] = os }
+                if let ot = c.correctedOverlapTexts, !ot.isEmpty { dict["correctedOverlapTexts"] = ot }
+                if let partnerKey = c.manualOverlapPartnerKey { dict["manualOverlapPartnerKey"] = partnerKey }
+                if let removedIdx = c.removedVoiceIndex { dict["removedVoiceIndex"] = removedIdx }
+                correctionList.append(dict)
+            }
+            payload["corrections"] = correctionList
         }
         try await streamRequest(payload, onEvent: onEvent)
     }
