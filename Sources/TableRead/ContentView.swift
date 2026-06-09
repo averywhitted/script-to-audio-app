@@ -173,11 +173,11 @@ private struct WorkflowStepBar: View {
                 } label: {
                     Label("Report a Bug", systemImage: "exclamationmark.circle")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.red.opacity(0.8))
+                        .foregroundStyle(AppColors.bugReport.opacity(0.8))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(
-                            Capsule().strokeBorder(Color.red.opacity(0.5), lineWidth: 1)
+                            Capsule().strokeBorder(AppColors.bugReport.opacity(0.5), lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
@@ -190,11 +190,11 @@ private struct WorkflowStepBar: View {
                     } label: {
                         Label("Update Available", systemImage: "arrow.down.circle.fill")
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(AppColors.updateAvailable)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(
-                                Capsule().strokeBorder(Color.orange.opacity(0.6), lineWidth: 1)
+                                Capsule().strokeBorder(AppColors.updateAvailable.opacity(0.6), lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)

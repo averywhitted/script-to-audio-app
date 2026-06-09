@@ -315,7 +315,7 @@ private struct SceneReviewRow: View {
                     // Rendered badge: green dot when the output .m4a exists on disk
                     if state.sceneFileInfo[scene.number]?.exists == true {
                         Circle()
-                            .fill(Color.green)
+                            .fill(AppColors.success)
                             .frame(width: 6, height: 6)
                             .offset(x: 4, y: -2)
                             .transition(.scale.combined(with: .opacity))
@@ -1065,8 +1065,8 @@ struct GenerateView: View {
             Label(state.selectedEngine.title, systemImage: state.selectedEngine.symbol)
                 .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 10).padding(.vertical, 5)
-                .background(engineReady ? Color.green.opacity(0.1) : Color.orange.opacity(0.1), in: Capsule())
-                .foregroundStyle(engineReady ? Color.green : Color.orange)
+                .background(AppColors.pillBackground(engineReady ? AppColors.engineReady : AppColors.engineNotReady), in: Capsule())
+                .foregroundStyle(engineReady ? AppColors.engineReady : AppColors.engineNotReady)
 
             Label("\(state.selectedScenes.count) scenes", systemImage: "film.stack")
                 .font(.subheadline)
@@ -1299,7 +1299,7 @@ private struct GenerationCompletePanel: View {
                 VStack(spacing: 14) {
                     ZStack {
                         Circle()
-                            .fill(Color.green.opacity(0.12))
+                            .fill(AppColors.subtleFill(AppColors.success))
                             .frame(width: 88, height: 88)
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 40, weight: .light))
@@ -1657,7 +1657,7 @@ private struct SceneElementRow: View {
                                             .font(.system(size: 10, weight: .medium))
                                             .foregroundStyle(.red)
                                             .padding(.horizontal, 5).padding(.vertical, 2)
-                                            .background(Color.red.opacity(0.1), in: Capsule())
+                                            .background(AppColors.pillBackground(AppColors.destructive), in: Capsule())
                                     }
                                     .buttonStyle(.plain)
                                     .help("Remove this voice")
@@ -1746,7 +1746,7 @@ private struct SceneElementRow: View {
                                             .font(.system(size: 10, weight: .medium))
                                             .foregroundStyle(.red)
                                             .padding(.horizontal, 5).padding(.vertical, 2)
-                                            .background(Color.red.opacity(0.1), in: Capsule())
+                                            .background(AppColors.pillBackground(AppColors.destructive), in: Capsule())
                                     }
                                     .buttonStyle(.plain)
                                     .help("Remove this voice")
@@ -1787,7 +1787,7 @@ private struct SceneElementRow: View {
                         if element.confidence < 0.7 && correction == nil && !isRemoved {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 9))
-                                .foregroundStyle(Color.orange.opacity(0.75))
+                                .foregroundStyle(AppColors.lowConfidence.opacity(0.75))
                                 .help("Parser is uncertain about this classification — check the speaker or type")
                         }
                         Button { showingEdit = true } label: {
@@ -1876,9 +1876,9 @@ private struct ElementRemoveRestoreButton: View {
             Label(isRemoved ? "Restore" : "Remove",
                   systemImage: isRemoved ? "arrow.uturn.backward" : "minus.circle")
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(isRemoved ? Color.secondary : Color.red)
+                .foregroundStyle(isRemoved ? Color.secondary : AppColors.destructive)
                 .padding(.horizontal, 6).padding(.vertical, 2)
-                .background((isRemoved ? Color.secondary : Color.red).opacity(0.1), in: Capsule())
+                .background(AppColors.pillBackground(isRemoved ? Color.secondary : AppColors.destructive), in: Capsule())
         }
         .buttonStyle(.plain)
         .help(isRemoved ? "Restore this line" : "Mark line as removed (won't be voiced)")
@@ -1958,9 +1958,9 @@ private struct ManualOverlapRow: View {
                                 Label(pRemoved ? "Restore" : "Remove",
                                       systemImage: pRemoved ? "arrow.uturn.backward" : "minus.circle")
                                     .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(pRemoved ? Color.secondary : Color.red)
+                                    .foregroundStyle(pRemoved ? Color.secondary : AppColors.destructive)
                                     .padding(.horizontal, 5).padding(.vertical, 2)
-                                    .background((pRemoved ? Color.secondary : Color.red).opacity(0.1), in: Capsule())
+                                    .background(AppColors.pillBackground(pRemoved ? Color.secondary : AppColors.destructive), in: Capsule())
                             }
                             .buttonStyle(.plain)
                             Button {
@@ -2021,9 +2021,9 @@ private struct ManualOverlapRow: View {
                                 Label(sRemoved ? "Restore" : "Remove",
                                       systemImage: sRemoved ? "arrow.uturn.backward" : "minus.circle")
                                     .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(sRemoved ? Color.secondary : Color.red)
+                                    .foregroundStyle(sRemoved ? Color.secondary : AppColors.destructive)
                                     .padding(.horizontal, 5).padding(.vertical, 2)
-                                    .background((sRemoved ? Color.secondary : Color.red).opacity(0.1), in: Capsule())
+                                    .background(AppColors.pillBackground(sRemoved ? Color.secondary : AppColors.destructive), in: Capsule())
                             }
                             .buttonStyle(.plain)
                             if let addBelow = onAddLineBelow {
@@ -2156,9 +2156,9 @@ private struct SelectionActionsBar: View {
             } label: {
                 Label("Remove", systemImage: "minus.circle")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.red)
+                    .foregroundStyle(AppColors.destructive)
                     .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(Color.red.opacity(0.1), in: Capsule())
+                    .background(AppColors.pillBackground(AppColors.destructive), in: Capsule())
             }
             .buttonStyle(.plain)
             .help("Mark selected lines as removed")
@@ -2175,9 +2175,9 @@ private struct SelectionActionsBar: View {
                 } label: {
                     Label("Simultaneous", systemImage: "person.2.wave.2")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.purple)
+                        .foregroundStyle(AppColors.simultaneous)
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.purple.opacity(0.1), in: Capsule())
+                        .background(AppColors.pillBackground(AppColors.simultaneous), in: Capsule())
                 }
                 .buttonStyle(.plain)
                 .help("Make selected lines play simultaneously")
@@ -2742,7 +2742,7 @@ private struct ElementCorrectionPopover: View {
                 Label(markAsNoise ? "Restore this line" : "Remove this line",
                       systemImage: markAsNoise ? "arrow.uturn.backward" : "minus.circle")
                     .font(.callout)
-                    .foregroundStyle(markAsNoise ? Color.secondary : Color.red)
+                    .foregroundStyle(markAsNoise ? Color.secondary : AppColors.destructive)
             }
             .buttonStyle(.plain)
 
