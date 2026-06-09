@@ -853,7 +853,7 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
 
             if not words:
                 all_lines.append("")
-                positions.append(None)
+                positions.append(-1.0)  # page-break sentinel (empty page)
                 page_sets.append(page_content)
                 continue
 
@@ -872,7 +872,7 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
                     if s:
                         page_content.add(s)
                 all_lines.append("")
-                positions.append(None)
+                positions.append(-1.0)  # page-break sentinel (malformed-coord fallback)
                 page_sets.append(page_content)
                 continue
 
@@ -1000,8 +1000,11 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
                             page_content.add(text.strip())
 
             # Blank line between pages (mirrors extract_text() behaviour).
+            # Use -1.0 as a sentinel so the play parser can distinguish page-break
+            # blanks (speaker context should be preserved) from intra-page paragraph
+            # gaps (speaker context should be cleared).
             all_lines.append("")
-            positions.append(None)
+            positions.append(-1.0)
             page_sets.append(page_content)
     return all_lines, page_sets, positions
 
@@ -2087,7 +2090,7 @@ def _extract_scenes_play(
     # Cleared when dialog is emitted (cue context consumed) or on scene boundary.
     _last_cue_speaker: Optional[str] = None
 
-    def flush_dialog() -> None:
+    def flush_dialog(keep_last_cue: bool = False) -> None:
         nonlocal current_speaker, dialog_buf, pending_overlap_cue, pending_is_compound, _last_cue_speaker, _dialog_buf_uncertain
         if current_speaker and dialog_buf:
             if pending_overlap_cue and pending_is_compound and any(_COL_SEP in ln for ln in dialog_buf):
@@ -2173,7 +2176,8 @@ def _extract_scenes_play(
             current_speaker = None  # Clear after emitting so flush_orphan_speaker doesn't double-emit
             pending_overlap_cue = None
             pending_is_compound = False
-            _last_cue_speaker = None  # dialog emitted → cue context consumed
+            if not keep_last_cue:
+                _last_cue_speaker = None  # dialog emitted → cue context consumed
         _dialog_buf_uncertain = False
         dialog_buf.clear()
 
@@ -2234,7 +2238,18 @@ def _extract_scenes_play(
                 _pending_continuation_speaker = current_speaker
             else:
                 _pending_continuation_speaker = None
-            flush_dialog()
+            # keep_last_cue across page breaks only: a blank line at a PDF page
+            # boundary is an artifact of extraction, not a real speaker transition.
+            # If a character's parenthetical or dialog continues onto the next page,
+            # the blank shouldn't clear the speaker context.
+            # Page-break blanks are marked with position -1.0; intra-page gap blanks
+            # have position None and use the old behavior (clear speaker context).
+            _is_page_break = (
+                line_positions is not None
+                and _line_idx < len(line_positions)
+                and line_positions[_line_idx] == -1.0
+            )
+            flush_dialog(keep_last_cue=_is_page_break)
             current_speaker = None
             continue
 
@@ -3334,7 +3349,7 @@ def _append_stage_direction(elements: List[Element], text: str) -> None:
         elements
         and elements[-1].kind == "stage_direction"
         and elements[-1].text
-        and elements[-1].text[-1] not in ".!?…\""
+        and elements[-1].text[-1] not in ".!?…\")"
     ):
         elements[-1].text = _normalize_text(elements[-1].text + " " + text)
     else:

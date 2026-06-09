@@ -1245,6 +1245,98 @@ def test_dialog_after_paren_no_false_positive_between_chars():
     )
 
 
+def test_page_break_preserves_speaker_for_following_parenthetical():
+    """A parenthetical on the next page is attributed to the character whose dialog
+    ended at the bottom of the previous page (page-break sentinel = -1.0 position)."""
+    # Simulate: JOEL says "Right. Sorry." on page 0, then page break, then his
+    # parenthetical and more dialog on page 1.  The blank at index 4 is a
+    # page-break blank (position -1.0); the parser should preserve JOEL's speaker
+    # context so the paren and dialog are correctly attributed.
+    lines = [
+        "SCENE ONE",
+        "JOEL",
+        "Right. Sorry.",
+        "",                                         # page-break blank (pos -1.0)
+        "(He pours himself a glass of water.)",
+        "Do you want anything while you wait?",
+        "",
+        "MARA",
+        "I want them to answer.",
+    ]
+    # Positions parallel to lines: real x0 for text lines, -1.0 for page-break blank.
+    positions = [
+        None,   # "SCENE ONE"
+        73.7,   # "JOEL"
+        73.7,   # "Right. Sorry."
+        -1.0,   # page-break blank  ← sentinel
+        130.4,  # "(He pours himself...)"  italic/indented
+        73.7,   # "Do you want anything..."
+        None,   # intra-page blank before MARA
+        73.7,   # "MARA"
+        73.7,   # "I want them to answer."
+    ]
+    noise: set = set()
+    scenes = p._extract_scenes_play(
+        lines, {"JOEL", "MARA"}, noise, line_positions=positions
+    )
+    elements = [e for sc in scenes for e in sc.elements]
+
+    paren_els = [e for e in elements if "pours himself" in e.text]
+    assert paren_els, "Parenthetical not found in output"
+    paren_el = paren_els[0]
+    assert paren_el.kind == "parenthetical", (
+        f"Expected parenthetical, got {paren_el.kind!r} — page-break blank incorrectly "
+        f"cleared speaker context"
+    )
+    assert paren_el.speaker == "JOEL", (
+        f"Expected speaker=JOEL, got {paren_el.speaker!r}"
+    )
+
+    dialog_els = [e for e in elements if "Do you want" in e.text]
+    assert dialog_els, "Post-parenthetical dialog not found"
+    dialog_el = dialog_els[0]
+    assert dialog_el.kind == "dialog", (
+        f"Expected dialog, got {dialog_el.kind!r} — post-parenthetical line lost attribution"
+    )
+    assert dialog_el.speaker == "JOEL", (
+        f"Expected speaker=JOEL, got {dialog_el.speaker!r}"
+    )
+
+
+def test_intra_page_blank_clears_speaker_for_stage_direction_paren():
+    """An intra-page blank (position=None) still clears speaker context so a
+    standalone stage-direction parenthetical between two characters stays as
+    stage_direction (no regression from page-break sentinel change)."""
+    lines = [
+        "SCENE ONE",
+        "LEAH",
+        "Hi there.",
+        "",           # intra-page blank: position=None → clear speaker context
+        "(The lights fade.)",
+        "",
+        "EDDIE",
+        "Hello.",
+    ]
+    # Positions: None for all non-PDF lines (intra-page blanks included)
+    positions = [None] * len(lines)
+    noise: set = set()
+    scenes = p._extract_scenes_play(
+        lines, {"LEAH", "EDDIE"}, noise, line_positions=positions
+    )
+    elements = [e for sc in scenes for e in sc.elements]
+
+    matching = [e for e in elements if "lights fade" in e.text]
+    assert matching, "Stage-direction parenthetical not found"
+    el = matching[0]
+    assert el.kind == "stage_direction", (
+        f"Expected stage_direction (intra-page blank should clear speaker), "
+        f"got {el.kind!r}"
+    )
+    assert el.speaker != "LEAH", (
+        f"'The lights fade.' was incorrectly attributed to LEAH"
+    )
+
+
 def test_is_italic_font_detects_italic():
     """_is_italic_font correctly identifies italic font names."""
     assert p._is_italic_font("TimesNewRomanPS-ItalicMT") is True
