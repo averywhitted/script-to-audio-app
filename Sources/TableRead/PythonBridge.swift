@@ -190,8 +190,9 @@ final class PythonBridge {
             // Serialize corrections for Python: keyed by sceneNumber + text prefix
             var correctionList: [[String: Any]] = []
             for c in corrections {
-                // textKey format: "pdfPath|sceneNumber|text[:60]"
-                let textPrefix = c.textKey.components(separatedBy: "|").last ?? ""
+                // c.textKey is the raw element text (not the full dict-key).
+                // Python matches on el.text[:60], so truncate to the same 60-char prefix.
+                let textPrefix = String(c.textKey.prefix(60))
                 var dict: [String: Any] = [
                     "sceneNumber": c.sceneNumber,
                     "textPrefix": textPrefix,
