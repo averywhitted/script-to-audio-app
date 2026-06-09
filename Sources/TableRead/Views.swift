@@ -1210,6 +1210,7 @@ struct GenerateView: View {
 
     private var renderCard: some View {
         VStack(alignment: .leading, spacing: 14) {
+            // Primary row: open folder + render all
             HStack(spacing: 10) {
                 Button {
                     if let dir = state.outputDirectory {
@@ -1232,6 +1233,19 @@ struct GenerateView: View {
                 .controlSize(.large)
                 .disabled(!canRender)
                 .help("Renders every selected scene in order to the output folder.")
+            }
+
+            // Secondary row: quick preview of the first selected scene
+            HStack {
+                Spacer()
+                Button { state.renderPreviewScene() } label: {
+                    Label("Preview First Scene", systemImage: "play.circle")
+                }
+                .buttonStyle(.borderless)
+                .font(.callout)
+                .foregroundStyle(.tint)
+                .disabled(!canRender)
+                .help("Render just the first selected scene to quickly check voice assignments.")
             }
         }
         .padding(18)

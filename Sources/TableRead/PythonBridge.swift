@@ -303,6 +303,14 @@ final class PythonBridge {
         generationProcess?.resume()
     }
 
+    /// Terminates an in-progress engine install (pip subprocess).
+    func cancelInstall() {
+        // installEngine uses streamRequest, which stores the active process in
+        // generationProcess (same slot, one stream at a time).
+        generationProcess?.terminate()
+        generationProcess = nil
+    }
+
     // MARK: - Process management
 
     private var generationProcess: Process?

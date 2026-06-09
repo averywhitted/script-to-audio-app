@@ -485,6 +485,14 @@ final class AppState: ObservableObject {
         }
     }
 
+    func cancelInstall() {
+        bridge.cancelInstall()
+        appendInstallLog("Installation cancelled.", .warning)
+        installProgress = nil
+        installingEngine = nil
+        status = "Installation cancelled."
+    }
+
     func uninstallEngine(_ engine: EngineKind) {
         guard engine != .macOS, engine != .openAI else { return }
         uninstallingEngine = engine

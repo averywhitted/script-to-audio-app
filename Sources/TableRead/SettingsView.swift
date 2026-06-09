@@ -318,24 +318,34 @@ private struct EngineManagementRow: View {
             Spacer()
 
             if isInstalling {
-                if let fraction = state.installProgress {
-                    VStack(alignment: .trailing, spacing: 3) {
-                        ProgressView(value: fraction)
-                            .progressViewStyle(.linear)
-                            .frame(width: 110)
-                            .animation(.easeInOut(duration: 0.3), value: fraction)
-                        Text(fraction >= 1.0
-                             ? "Verifying…"
-                             : "Installing… \(Int(fraction * 100))%")
-                            .font(.caption2)
+                HStack(spacing: 10) {
+                    if let fraction = state.installProgress {
+                        VStack(alignment: .trailing, spacing: 3) {
+                            ProgressView(value: fraction)
+                                .progressViewStyle(.linear)
+                                .frame(width: 110)
+                                .animation(.easeInOut(duration: 0.3), value: fraction)
+                            Text(fraction >= 1.0
+                                 ? "Verifying…"
+                                 : "Installing… \(Int(fraction * 100))%")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                    } else {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("Installing…").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    Button {
+                        state.cancelInstall()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
-                            .monospacedDigit()
                     }
-                } else {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.small)
-                        Text("Installing…").font(.caption).foregroundStyle(.secondary)
-                    }
+                    .buttonStyle(.plain)
+                    .help("Cancel installation")
                 }
             } else if isUninstalling {
                 HStack(spacing: 6) {
