@@ -251,11 +251,20 @@ if $NOTARIZE; then
     ok "DMG stapled"
 fi
 
+# ── ZIP (for in-app updater) ──────────────────────────────────────────────────
+# The in-app updater (AppUpdater.swift) looks for a release asset named
+# "TableRead.zip". This zip contains TableRead.app and is downloaded directly
+# by the app to perform a self-update.
+step "Creating zip for in-app updater"
+ZIP_PATH="$BUILD_DIR/TableRead.zip"
+ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+ok "Zip: $ZIP_PATH"
+
 # ── CHECKSUM ─────────────────────────────────────────────────────────────────
-step "Generating checksum"
+step "Generating checksums"
 CHECKSUM_FILE="$BUILD_DIR/TableRead.sha256"
-shasum -a 256 "$DMG_PATH" | tee "$CHECKSUM_FILE"
-ok "Checksum: $CHECKSUM_FILE"
+(cd "$BUILD_DIR" && shasum -a 256 TableRead.dmg TableRead.zip) | tee "$CHECKSUM_FILE"
+ok "Checksums: $CHECKSUM_FILE"
 
 # ── DONE ─────────────────────────────────────────────────────────────────────
 echo ""
@@ -263,8 +272,9 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  ✓ Table Read $VERSION ready to ship!${NC}"
 echo -e "${GREEN}════════════════════════════════════════════════════${NC}"
 echo ""
-echo "  DMG:      $DMG_PATH"
-echo "  Checksum: $CHECKSUM_FILE"
+echo "  DMG:       $DMG_PATH"
+echo "  Zip:       $ZIP_PATH"
+echo "  Checksums: $CHECKSUM_FILE"
 echo ""
 if ! $NOTARIZE; then
     echo -e "${YELLOW}  Ad-hoc build: users will see a one-time Gatekeeper${NC}"
@@ -272,5 +282,3 @@ if ! $NOTARIZE; then
     echo -e "${YELLOW}  for the installation instructions to show them.${NC}"
     echo ""
 fi
-echo "  Upload both files to your web server."
-echo ""

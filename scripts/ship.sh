@@ -61,10 +61,11 @@ ok "Tag v$VERSION pushed"
 # ── GitHub Release ────────────────────────────────────────────────────────────
 step "Creating GitHub Release v$VERSION"
 gh release create "v$VERSION" \
-    "build/TableRead.dmg#TableRead.dmg" \
-    "build/TableRead.sha256#TableRead.sha256" \
+    "$REPO_ROOT/build/TableRead.dmg#TableRead.dmg" \
+    "$REPO_ROOT/build/TableRead.zip#TableRead.zip" \
+    "$REPO_ROOT/build/TableRead.sha256#TableRead.sha256" \
     --title "Table Read Beta v$VERSION" \
-    --notes "See [installation instructions](https://averywhitted.com/table-read.html) for the one-time Gatekeeper bypass steps." \
+    --generate-notes \
     --latest
 
 echo ""
@@ -72,6 +73,6 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  ✓ Table Read $VERSION shipped!${NC}"
 echo -e "${GREEN}════════════════════════════════════════════${NC}"
 echo ""
-echo "  The download page will serve the new DMG automatically."
-echo "  No website changes needed."
+echo "  Download page: serves the new DMG automatically — no site changes needed."
+echo "  In-app updater: users on older versions will be prompted on next launch."
 echo ""
