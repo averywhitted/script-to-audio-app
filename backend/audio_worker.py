@@ -476,6 +476,23 @@ def _install_engine(payload: Dict[str, Any]) -> int:
                "message": f"No installable packages defined for engine '{engine_id}'."})
         return 1
 
+    # Guard: check available disk space before starting a download.
+    import shutil
+    _MIN_FREE_BYTES = 512 * 1024 * 1024   # 500 MiB minimum
+    try:
+        _check_dir = os.path.expanduser("~")
+        free_bytes = shutil.disk_usage(_check_dir).free
+        if free_bytes < _MIN_FREE_BYTES:
+            free_mb = free_bytes / (1024 * 1024)
+            _emit({"event": "log", "level": "error",
+                   "message": (
+                       f"Insufficient disk space: {free_mb:.0f} MB free. "
+                       f"At least 500 MB is needed to install {engine_id}."
+                   )})
+            return 1
+    except OSError:
+        pass  # If the check fails for any reason, let pip try anyway.
+
     _emit({"event": "started",
            "message": f"Installing {engine_id} packages: {', '.join(packages)}"})
     _emit({"event": "log", "level": "info",

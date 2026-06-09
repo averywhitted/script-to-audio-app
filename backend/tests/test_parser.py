@@ -778,6 +778,49 @@ def test_apply_corrections_config_non_cue_removes_character():
     assert "VOICE" not in names
 
 
+def test_apply_corrections_config_non_cue_retagged_as_stage_direction():
+    """Elements whose speaker is a removed non-cue name are re-tagged as stage_direction."""
+    script = p.Script(
+        title="Test",
+        characters=[p.Character(name="CROWD"), p.Character(name="ANNA")],
+        scenes=[p.Scene(number=1, title="S1", elements=[
+            p.Element(kind="dialog", speaker="CROWD", text="Roars of approval."),
+            p.Element(kind="dialog", speaker="ANNA", text="Thank you all!"),
+        ])]
+    )
+    config = {"speaker_aliases": {}, "non_cue_words": ["CROWD"],
+              "noise_line_patterns": []}
+    result = p._apply_corrections_config(script, config)
+    elements = result.scenes[0].elements
+    crowd_el = elements[0]
+    assert crowd_el.kind == "stage_direction"
+    assert crowd_el.speaker is None
+    # ANNA should be unaffected
+    anna_el = elements[1]
+    assert anna_el.kind == "dialog"
+    assert anna_el.speaker == "ANNA"
+
+
+def test_apply_corrections_config_noise_pattern_retagged():
+    """Elements matching a noise_line_pattern are re-tagged as stage_direction."""
+    import re
+    script = p.Script(
+        title="Test",
+        characters=[p.Character(name="BOB")],
+        scenes=[p.Scene(number=1, title="S1", elements=[
+            p.Element(kind="dialog", speaker="BOB", text="(laughs)"),
+            p.Element(kind="dialog", speaker="BOB", text="Not a noise line."),
+        ])]
+    )
+    config = {"speaker_aliases": {}, "non_cue_words": [],
+              "noise_line_patterns": [re.compile(r"^\(laughs\)$")]}
+    result = p._apply_corrections_config(script, config)
+    elements = result.scenes[0].elements
+    assert elements[0].kind == "stage_direction"
+    assert elements[0].speaker is None
+    assert elements[1].kind == "dialog"
+
+
 def test_load_corrections_config_cached(tmp_path):
     """Second call with same path and mtime returns cached result."""
     cfg_file = tmp_path / "cfg.json"
