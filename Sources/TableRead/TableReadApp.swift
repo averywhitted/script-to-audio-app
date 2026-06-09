@@ -35,6 +35,38 @@ struct TableReadApp: App {
                 }
                 .keyboardShortcut("b", modifiers: [.command, .shift])
             }
+
+            #if DEBUG
+            CommandMenu("Debug") {
+                Button("Simulate Update Available") {
+                    state.availableUpdate = UpdateInfo(
+                        version: "99.0.0",
+                        downloadURL: URL(string: "https://github.com/averywhitted/script-to-audio-app/releases")!,
+                        htmlURL: URL(string: "https://github.com/averywhitted/script-to-audio-app/releases")!,
+                        releaseNotes: "• Dark mode support\n• Kokoro download progress bar\n• Parser improvements for stage plays\n• Bug fixes and performance improvements",
+                        hasZipAsset: false
+                    )
+                }
+                Button("Simulate Update (with zip asset)") {
+                    state.availableUpdate = UpdateInfo(
+                        version: "99.0.0",
+                        downloadURL: URL(string: "https://github.com/averywhitted/script-to-audio-app/releases/download/v99.0.0/TableRead.zip")!,
+                        htmlURL: URL(string: "https://github.com/averywhitted/script-to-audio-app/releases")!,
+                        releaseNotes: "• Dark mode support\n• Kokoro download progress bar\n• Bug fixes",
+                        hasZipAsset: true
+                    )
+                }
+                Button("Clear Update State") {
+                    state.availableUpdate = nil
+                    state.updateDownloadState = .idle
+                    state.didPromptForUpdate = false
+                }
+                Divider()
+                Button("Reset Onboarding") {
+                    UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")
+                }
+            }
+            #endif
         }
 
         Settings {
