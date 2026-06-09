@@ -658,6 +658,21 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
             assignment = auto_assign(script.characters, voices)
             result["autoAssign"] = assignment.mapping
         return result
+    if command == "checkOutputFiles":
+        pdf_path = payload["pdfPath"]
+        output_dir = payload["outputDir"]
+        script = script_parser.parse_pdf(pdf_path)
+        from audio_pipeline import scene_filename
+        result: Dict[str, Any] = {}
+        for scene in script.scenes:
+            fname = scene_filename(scene)
+            exists = os.path.isfile(os.path.join(output_dir, fname))
+            result[str(scene.number)] = {
+                "exists": exists,
+                "filename": fname,
+                "title": scene.title,
+            }
+        return {"ok": True, "scenes": result}
     if command == "estimateOpenAI":
         return {
             "ok": True,

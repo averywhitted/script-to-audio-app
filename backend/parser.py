@@ -1600,24 +1600,18 @@ def _apply_corrections_config(script: Script, config: Dict) -> Script:
                     el.kind = "stage_direction"
                     el.speaker = None
 
-    # 2: remove config-flagged names from character list
+    # 2: remove config-flagged names from character list and re-tag their elements
     if extra_word_re:
-        script.characters = [
-            c for c in script.characters
-            if not extra_word_re.match(c.name)
-        ]
-        # Also clear speaker on elements whose speaker was one of those names
-        flagged: Set[str] = {
+        # Collect the names BEFORE filtering so we can re-tag elements below.
+        removed: Set[str] = {
             c.name for c in script.characters
             if extra_word_re.match(c.name)
         }
-        # Re-collect the actually-removed names before filtering
-        all_names = {c.name for c in script.characters}
-        removed: Set[str] = set()
-        for sc in script.scenes:
-            for el in sc.elements:
-                if el.speaker and extra_word_re.match(el.speaker):
-                    removed.add(el.speaker)
+        script.characters = [
+            c for c in script.characters
+            if c.name not in removed
+        ]
+        # Re-tag any element whose speaker is in the removed set.
         for sc in script.scenes:
             for el in sc.elements:
                 if el.speaker in removed:

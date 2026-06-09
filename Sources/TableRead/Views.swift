@@ -197,6 +197,9 @@ struct ReviewView: View {
                             .buttonStyle(.borderless)
                         Button("Select None") { state.clearSceneSelection() }
                             .buttonStyle(.borderless)
+                        Button("Skip Rendered") { state.selectMissingScenes() }
+                            .buttonStyle(.borderless)
+                            .help("Select only scenes that haven't been rendered to the output folder yet")
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)

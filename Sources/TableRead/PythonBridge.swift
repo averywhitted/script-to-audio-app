@@ -143,6 +143,33 @@ final class PythonBridge {
         return estimate
     }
 
+    /// Returns a mapping of scene number → SceneOutputInfo indicating whether
+    /// an output .m4a already exists for each scene.
+    func checkOutputFiles(pdf: URL, outputDir: URL) async throws -> [Int: SceneOutputInfo] {
+        let data = try await rawRequest([
+            "command": "checkOutputFiles",
+            "pdfPath": pdf.path,
+            "outputDir": outputDir.path,
+        ])
+
+        // Response is {"ok": true, "scenes": {"1": {...}, "2": {...}, ...}}
+        struct CheckResponse: Decodable {
+            var ok: Bool
+            var error: String?
+            var scenes: [String: SceneOutputInfo]?
+        }
+
+        let decoded = try JSONDecoder().decode(CheckResponse.self, from: data)
+        guard decoded.ok, let rawScenes = decoded.scenes else {
+            throw PythonBridgeError.failed(decoded.error ?? "checkOutputFiles failed")
+        }
+        // Convert string keys to Int
+        return Dictionary(uniqueKeysWithValues: rawScenes.compactMap { key, val in
+            guard let n = Int(key) else { return nil }
+            return (n, val)
+        })
+    }
+
     func generate(
         pdf: URL,
         outputDirectory: URL,

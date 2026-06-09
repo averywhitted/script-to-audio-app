@@ -184,6 +184,13 @@ struct OpenAIEstimate: Codable, Equatable, Sendable {
     }
 }
 
+/// Per-scene info returned by the `checkOutputFiles` worker command.
+struct SceneOutputInfo: Codable, Equatable, Sendable {
+    var exists: Bool
+    var filename: String
+    var title: String
+}
+
 struct VoiceLibraryItem: Identifiable {
     var id: EngineKind
     var installed: Bool

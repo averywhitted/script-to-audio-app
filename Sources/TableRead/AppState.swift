@@ -276,6 +276,34 @@ final class AppState: ObservableObject {
         refreshOpenAIEstimate()
     }
 
+    /// Checks the output directory and selects only scenes that haven't been
+    /// rendered yet (no .m4a found for that scene number).
+    func selectMissingScenes() {
+        guard let pdf = selectedPDF else { return }
+        let out = outputDirectory ?? defaultOutputDirectory(for: pdf)
+        Task {
+            do {
+                let info = try await bridge.checkOutputFiles(pdf: pdf, outputDir: out)
+                let missing = Set(info.compactMap { num, scene in scene.exists ? nil : num })
+                if missing.isEmpty {
+                    // All scenes rendered — nothing to do
+                    await MainActor.run { status = "All selected scenes already rendered." }
+                } else {
+                    await MainActor.run {
+                        selectedScenes = missing
+                        refreshOpenAIEstimate()
+                        let allCount = info.count
+                        let doneCount = allCount - missing.count
+                        status = "\(missing.count) unrendered scene\(missing.count == 1 ? "" : "s") selected (\(doneCount) already done)."
+                    }
+                }
+            } catch {
+                // Silently ignore — user can still select manually
+                await MainActor.run { status = "Could not check output files: \(error.localizedDescription)" }
+            }
+        }
+    }
+
     // MARK: - Engine selection
 
     /// Select an engine card without triggering install — used by card tap.
