@@ -23,6 +23,24 @@ struct TableReadApp: App {
                     .keyboardShortcut("z", modifiers: [.command, .shift])
                     .disabled(!state.canRedo)
             }
+            CommandGroup(after: .appSettings) {
+                Divider()
+                if let update = state.availableUpdate {
+                    Button("Update to \(update.version)…") {
+                        NotificationCenter.default.post(name: .showUpdateSheet, object: nil)
+                    }
+                } else {
+                    Button("Check for Updates") {
+                        Task {
+                            await state.checkForUpdates()
+                            if state.availableUpdate != nil {
+                                NotificationCenter.default.post(name: .showUpdateSheet, object: nil)
+                            }
+                        }
+                    }
+                }
+            }
+
             CommandGroup(replacing: .help) {
                 Button("Table Read Help") {
                     UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")

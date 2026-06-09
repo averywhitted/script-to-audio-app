@@ -25,11 +25,63 @@ struct SettingsView: View {
 private struct GeneralSettingsTab: View {
     @EnvironmentObject private var state: AppState
     @State private var contributionState: ContributionState = .idle
+    @State private var isCheckingForUpdates = false
 
     private enum ContributionState { case idle, sending, sent, failed }
 
     var body: some View {
         Form {
+            // Update banner — shown at the top when an update is available,
+            // or as a quiet status row when up to date.
+            Section {
+                if let update = state.availableUpdate {
+                    HStack(spacing: 12) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Table Read \(update.version) is available")
+                                .font(.callout.weight(.semibold))
+                            Text("You have version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?")")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Update Now") {
+                            NotificationCenter.default.post(name: .showUpdateSheet, object: nil)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.orange)
+                    }
+                    .padding(.vertical, 4)
+                } else {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Table Read is up to date")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        if isCheckingForUpdates {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Button("Check for Updates") {
+                                isCheckingForUpdates = true
+                                Task {
+                                    await state.checkForUpdates()
+                                    isCheckingForUpdates = false
+                                    if state.availableUpdate != nil {
+                                        NotificationCenter.default.post(name: .showUpdateSheet, object: nil)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                    }
+                }
+            } header: {
+                Text("Software Update")
+            }
+
             Section {
                 Toggle("Auto-open output folder in Finder after render", isOn: $state.autoOpenFinderAfterRender)
                     .help("When a render completes without errors, the output folder opens automatically in Finder.")
