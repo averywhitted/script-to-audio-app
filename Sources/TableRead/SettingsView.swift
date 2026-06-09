@@ -272,25 +272,37 @@ private struct OpenAIKeyStatusBadge: View {
     @EnvironmentObject private var state: AppState
 
     var body: some View {
-        switch state.openAIKeyStatus {
-        case .idle:
-            if state.hasStoredOpenAIKey {
-                Label("API key saved in Keychain", systemImage: "key.fill")
+        HStack(spacing: 10) {
+            switch state.openAIKeyStatus {
+            case .idle:
+                if state.hasStoredOpenAIKey {
+                    Label("API key saved in Keychain", systemImage: "key.fill")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Test Key") {
+                        Task { await state.validateOpenAIKey(
+                            KeychainHelper.read(key: "openai_api_key") ?? ""
+                        )}
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.callout)
+                    .foregroundStyle(.tint)
+                }
+            case .checking:
+                ProgressView().controlSize(.small)
+                Label("Checking key…", systemImage: "arrow.trianglehead.2.clockwise")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            case .valid:
+                Label("API key verified — OpenAI TTS is active", systemImage: "checkmark.circle.fill")
+                    .font(.callout)
+                    .foregroundStyle(.green)
+            case .invalid(let reason):
+                Label(reason, systemImage: "xmark.circle.fill")
+                    .font(.callout)
+                    .foregroundStyle(.red)
             }
-        case .checking:
-            Label("Checking key…", systemImage: "arrow.trianglehead.2.clockwise")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-        case .valid:
-            Label("API key verified — OpenAI TTS is active", systemImage: "checkmark.circle.fill")
-                .font(.callout)
-                .foregroundStyle(.green)
-        case .invalid(let reason):
-            Label(reason, systemImage: "xmark.circle.fill")
-                .font(.callout)
-                .foregroundStyle(.red)
         }
     }
 }
