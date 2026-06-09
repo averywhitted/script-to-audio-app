@@ -307,10 +307,21 @@ private struct SceneReviewRow: View {
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
 
-                Text(String(format: "%02d", scene.number))
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                    .frame(width: 26, alignment: .trailing)
+                ZStack(alignment: .topTrailing) {
+                    Text(String(format: "%02d", scene.number))
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 26, alignment: .trailing)
+                    // Rendered badge: green dot when the output .m4a exists on disk
+                    if state.sceneFileInfo[scene.number]?.exists == true {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 6, height: 6)
+                            .offset(x: 4, y: -2)
+                            .transition(.scale.combined(with: .opacity))
+                            .help("Already rendered — output file exists")
+                    }
+                }
 
                 Group {
                     if editingTitle {

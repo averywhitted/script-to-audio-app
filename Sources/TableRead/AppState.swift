@@ -55,6 +55,10 @@ final class AppState: ObservableObject {
     @Published var renderingSceneNumbers: [Int] = []          // ordered list of scene numbers being rendered
     @Published var sceneProgress: [Int: Double] = [:]         // scene number → 0.0–1.0
 
+    /// Output-file presence per scene, keyed by scene number.
+    /// Populated by checkRenderedScenes() and updated after each render.
+    @Published var sceneFileInfo: [Int: SceneOutputInfo] = [:]
+
     // Render completion
     @Published var generationComplete = false
 
@@ -177,6 +181,9 @@ final class AppState: ObservableObject {
         if target == .cast && voices.isEmpty {
             fetchVoices()
         }
+        if target == .review {
+            checkRenderedScenes()
+        }
     }
 
     // MARK: - Import
@@ -184,6 +191,7 @@ final class AppState: ObservableObject {
     func importPDF(_ url: URL) {
         selectedPDF = url
         outputDirectory = nil   // reset so the new script defaults to "next to the PDF"
+        sceneFileInfo = [:]     // clear stale file-existence badges
         isWorking = true
         status = "Parsing script..."
         errorMessage = nil
@@ -287,6 +295,7 @@ final class AppState: ObservableObject {
             do {
                 let info = try await bridge.checkOutputFiles(pdf: pdf, outputDir: out)
                 let missing = Set(info.compactMap { num, scene in scene.exists ? nil : num })
+                await MainActor.run { sceneFileInfo = info }
                 if missing.isEmpty {
                     // All scenes rendered — nothing to do
                     await MainActor.run { status = "All selected scenes already rendered." }
@@ -302,6 +311,22 @@ final class AppState: ObservableObject {
             } catch {
                 // Silently ignore — user can still select manually
                 await MainActor.run { status = "Could not check output files: \(error.localizedDescription)" }
+            }
+        }
+    }
+
+    /// Check which scenes have already been rendered to the output folder
+    /// and populate sceneFileInfo for display in ReviewView.
+    /// Runs silently in the background — no status message on success.
+    func checkRenderedScenes() {
+        guard let pdf = selectedPDF else { return }
+        let out = outputDirectory ?? defaultOutputDirectory(for: pdf)
+        Task {
+            do {
+                let info = try await bridge.checkOutputFiles(pdf: pdf, outputDir: out)
+                await MainActor.run { sceneFileInfo = info }
+            } catch {
+                // Silent — badges just won't appear if the check fails
             }
         }
     }
@@ -860,6 +885,7 @@ final class AppState: ObservableObject {
                 }
             } else {
                 generationComplete = true
+                checkRenderedScenes()   // refresh rendered badges in ReviewView
                 if notifyOnRenderComplete {
                     let fileCount = event.files?.count ?? 0
                     let folder = lastOutputDirectory?.lastPathComponent ?? "the output folder"
