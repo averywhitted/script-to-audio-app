@@ -302,6 +302,8 @@ private struct EngineManagementRow: View {
 // MARK: - About tab
 
 private struct AboutTab: View {
+    @EnvironmentObject private var state: AppState
+
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
     }
@@ -326,6 +328,29 @@ private struct AboutTab: View {
 
         To request permission for uses not covered here, contact: averywhitted.com
         """
+
+    @ViewBuilder
+    private var updateStatusView: some View {
+        if let update = state.availableUpdate {
+            Button {
+                NotificationCenter.default.post(name: .showUpdateSheet, object: nil)
+            } label: {
+                Label("Version \(update.version) available", systemImage: "arrow.down.circle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+            }
+            .buttonStyle(.borderless)
+        } else {
+            Button {
+                Task { await state.checkForUpdates() }
+            } label: {
+                Text("Check for Updates")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -354,6 +379,9 @@ private struct AboutTab: View {
                 Text("Version \(appVersion)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+
+                // Inline update row
+                updateStatusView
 
                 Text("© 2025 Avery Whitted. All rights reserved.")
                     .font(.caption)

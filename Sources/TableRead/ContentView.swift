@@ -4,14 +4,16 @@ import AppKit
 extension Notification.Name {
     static let showOnboarding  = Notification.Name("TableRead.showOnboarding")
     static let showBugReport   = Notification.Name("TableRead.showBugReport")
+    static let showUpdateSheet = Notification.Name("TableRead.showUpdateSheet")
 }
 
 struct ContentView: View {
     @EnvironmentObject private var state: AppState
     @State private var isImporting = false
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
-    @State private var showOnboarding = false
-    @State private var showBugReport  = false
+    @State private var showOnboarding  = false
+    @State private var showBugReport   = false
+    @State private var showUpdateSheet = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -86,6 +88,20 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .showBugReport)) { _ in
             showBugReport = true
+        }
+        .sheet(isPresented: $showUpdateSheet) {
+            UpdateSheet(isPresented: $showUpdateSheet)
+                .environmentObject(state)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showUpdateSheet)) { _ in
+            showUpdateSheet = true
+        }
+        // Auto-prompt once per launch when an update is detected
+        .onChange(of: state.availableUpdate) { update in
+            if update != nil && !state.didPromptForUpdate {
+                state.didPromptForUpdate = true
+                showUpdateSheet = true
+            }
         }
     }
 
@@ -166,6 +182,25 @@ private struct WorkflowStepBar: View {
                 }
                 .buttonStyle(.plain)
                 .help("Report a bug (⌘⇧B)")
+
+                // Update available badge — only shown when a newer version has been detected
+                if state.availableUpdate != nil {
+                    Button {
+                        NotificationCenter.default.post(name: .showUpdateSheet, object: nil)
+                    } label: {
+                        Label("Update Available", systemImage: "arrow.down.circle.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.orange)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule().strokeBorder(Color.orange.opacity(0.6), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help("A new version of Table Read is available")
+                    .transition(.scale.combined(with: .opacity))
+                }
 
                 Button { openSettings() } label: {
                     Image(systemName: "gear")
@@ -547,6 +582,154 @@ struct BugReportSheet: View {
     }
 }
 
+
+// MARK: - Update sheet
+
+struct UpdateSheet: View {
+    @EnvironmentObject private var state: AppState
+    @Binding var isPresented: Bool
+
+    private var info: UpdateInfo? { state.availableUpdate }
+    private var currentVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 10) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 44, weight: .light))
+                    .foregroundStyle(.orange)
+                    .padding(.top, 32)
+
+                Text("Update Available")
+                    .font(.title2.weight(.semibold))
+
+                if let info {
+                    Text("Table Read \(info.version) is ready to install.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Text("You have version \(currentVersion).")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.horizontal, 40)
+            .padding(.bottom, 20)
+
+            Divider()
+
+            // Release notes
+            if let notes = info?.releaseNotes, !notes.isEmpty {
+                ScrollView {
+                    Text(notes)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
+                }
+                .frame(maxHeight: 200)
+                Divider()
+            }
+
+            // Download progress
+            if case .downloading(let fraction) = state.updateDownloadState {
+                VStack(spacing: 8) {
+                    ProgressView(value: fraction > 0 ? fraction : nil)
+                        .progressViewStyle(.linear)
+                    Text(fraction > 0 ? "Downloading… \(Int(fraction * 100))%" : "Connecting…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                Divider()
+            } else if case .extracting = state.updateDownloadState {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Extracting…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                Divider()
+            } else if case .installing = state.updateDownloadState {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Installing — Table Read will relaunch shortly…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                Divider()
+            } else if case .failed(let msg) = state.updateDownloadState {
+                HStack(spacing: 8) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.red)
+                    Text(msg)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .lineLimit(3)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                Divider()
+            }
+
+            // Footer buttons
+            HStack(spacing: 12) {
+                // View on GitHub
+                if let htmlURL = info?.htmlURL {
+                    Button("Release Notes") {
+                        NSWorkspace.shared.open(htmlURL)
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button("Later") { isPresented = false }
+                    .buttonStyle(.borderless)
+                    .disabled(isInstalling)
+
+                Button {
+                    state.downloadAndInstallUpdate()
+                } label: {
+                    if isInstalling {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("Installing…")
+                        }
+                    } else if info?.hasZipAsset == false {
+                        Text("Download on GitHub")
+                    } else if case .failed = state.updateDownloadState {
+                        Text("Retry")
+                    } else {
+                        Text("Update Now")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .disabled(isInstalling)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+        }
+        .frame(width: 440)
+    }
+
+    private var isInstalling: Bool {
+        switch state.updateDownloadState {
+        case .downloading, .extracting, .installing: return true
+        default: return false
+        }
+    }
+}
 
 // MARK: - First-mouse fix
 // Makes buttons respond on the first click even when the window isn't the key window.
