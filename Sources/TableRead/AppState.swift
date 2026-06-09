@@ -767,6 +767,7 @@ final class AppState: ObservableObject {
         renderingSceneNumbers = []
         generationComplete = false
         renderStartTime = nil
+        sceneFileInfo = [:]
         status = "Choose a PDF script to begin."
     }
 

@@ -1,6 +1,6 @@
 {
   "_comment": "Data-driven parser corrections. Loaded at parse time — extend rules without code changes.",
-  "_version": 1,
+  "_version": 2,
 
   "non_cue_words": [
     "VOICE",
@@ -20,20 +20,33 @@
     "CHILD",
     "CHILDREN",
     "CROWD",
+    "CHORUS",
+    "ENSEMBLE",
+    "COMPANY",
+    "GROUP",
     "AUDIENCE",
     "FIGURE",
     "PERSON",
     "PEOPLE",
+    "STRANGER",
+    "PASSERBY",
     "SOLDIER",
     "SOLDIERS",
     "GUARD",
     "GUARDS",
     "OFFICER",
     "OFFICIALS",
+    "SERVANT",
+    "SERVANTS",
+    "ATTENDANT",
+    "ATTENDANTS",
+    "MESSENGER",
     "GHOST",
     "SPIRIT",
     "SHADOW",
+    "VOICE OF",
     "ANNOUNCER",
+    "NARRATOR",
     "INTERCOM",
     "PHONE",
     "RADIO",
@@ -48,12 +61,24 @@
     "PHONE RINGS",
     "DOORBELL",
     "KNOCK",
-    "KNOCKING"
+    "KNOCKING",
+    "SIREN",
+    "ALARM",
+    "BELL",
+    "OFFSTAGE VOICE",
+    "RECORDED VOICE",
+    "ANSWERING MACHINE"
   ],
 
   "speaker_aliases": {
   },
 
   "noise_line_patterns": [
+    "^(?:END OF (?:SCENE|ACT|PLAY|SCRIPT|PROLOGUE|EPILOGUE))\\b",
+    "^(?:INTERMISSION|INTERVAL)$",
+    "^(?:THE END|FINIS|CURTAIN FALLS|CURTAIN RISES?)$",
+    "^\\*(?:\\s*\\*){2,}\\s*$",
+    "^-{3,}\\s*$",
+    "^={3,}\\s*$"
   ]
 }

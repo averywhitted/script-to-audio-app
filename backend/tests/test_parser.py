@@ -840,6 +840,10 @@ def test_bundled_corrections_config_loads():
     # Spot-check a few expected entries
     assert "VOICE" in cfg["non_cue_words"]
     assert "CROWD" in cfg["non_cue_words"]
+    assert "CHORUS" in cfg["non_cue_words"]
+    assert "ENSEMBLE" in cfg["non_cue_words"]
+    # Noise patterns should be compiled regexes
+    assert all(hasattr(p_, "search") for p_ in cfg["noise_line_patterns"])
 
 
 # ---------------------------------------------------------------------------
