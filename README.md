@@ -60,9 +60,35 @@ It is a native macOS app (SwiftUI, macOS 13+) with an embedded Python backend fo
 
 ## Requirements
 
-- **macOS 13 Ventura** or later
-- **Xcode 15+** to build from source
+- **macOS 14 Sonoma** or later
+- Apple Silicon or Intel
 - An internet connection on first run when installing Kokoro or using OpenAI (optional)
+- **Xcode 15+** only needed if building from source
+
+---
+
+## Installation
+
+Download the latest `TableRead.dmg` from the [Releases page](https://github.com/averywhitted/script-to-audio-app/releases/latest).
+
+> **Why does macOS warn you about this app?**
+> Apple requires a $99/year Developer Program membership to have apps automatically trusted by macOS Gatekeeper. Table Read is in beta and hasn't gone through that program yet. The steps below walk you through the one-time bypass. Once done, it won't ask again. Future releases will be Apple-certified.
+
+### macOS 15 Sequoia
+
+1. Open the downloaded `TableRead.dmg`
+2. Drag **Table Read** into the **Applications** folder shortcut in the window
+3. Go to **Applications** and double-click **Table Read** — macOS will show a warning; click **Done** to dismiss it
+4. Open **System Settings → Privacy & Security** and scroll down — click **Open Anyway** next to the Table Read message
+5. Enter your password or use Touch ID to confirm. Table Read opens, and won't ask again.
+
+### macOS 14 Sonoma
+
+1. Open the downloaded `TableRead.dmg`
+2. Drag **Table Read** into the **Applications** folder
+3. Double-click **Table Read** in Applications — a warning dialog will appear; click **Done**
+4. Open **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to Table Read
+5. Click **Open Anyway** again in the confirmation dialog. Done.
 
 ---
 
