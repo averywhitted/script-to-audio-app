@@ -74,6 +74,7 @@ class Element:
     speaker: Optional[str] = None
     overlap_cue: Optional[List[str]] = None   # set when multiple speakers share a line simultaneously
     overlap_texts: Optional[List[str]] = None # per-voice texts (parallel with overlap_cue); None = all voices read .text
+    confidence: float = 1.0  # 1.0 = known speaker / strong evidence; 0.7 = unknown speaker; 0.4 = fallback
 
 
 @dataclass
@@ -158,6 +159,18 @@ _DRAFT_DATE_RE = re.compile(
 )
 PARENTHETICAL_RE = re.compile(r"^\s*\(.*\)\s*$")
 CONTD_RE = re.compile(r"\s*\([^)]*CONT['']?D[^)]*\)", re.I)
+
+# Heuristics for detecting a stage-direction line that has leaked into a dialog buffer.
+# Checked per-line (at buffer time) and on the combined text (at flush time).
+_SD_IN_DIALOG_LINE_RE = re.compile(
+    r"^\([^)]+\)$"                                        # whole line is a parenthetical
+    r"|^\s*(?:BEAT|PAUSE|SILENCE|ASIDE|BEAT\.|PAUSE\.)\s*$"  # common bare direction words
+    r"|^(?:He|She|They|We|It)\s+\w"                       # third-person action sentence
+    r"|^(?:Lights?|Music|Sound|Blackout|Crossfade)\s",    # technical/production direction
+    re.IGNORECASE,
+)
+# Embedded parenthetical direction in the combined dialog text (≥8 chars inside parens).
+_EMBEDDED_PAREN_DIR_RE = re.compile(r"\([^)]{8,}\)")
 
 # Dash-dialog format ("SPEAKER – text" inline on one line)
 _DASH_DIALOG_LINE_RE = re.compile(
@@ -733,6 +746,56 @@ def _detect_column_split_at_boundary(
 _COL_SEP = "\x01"
 
 
+def _is_italic_font(fontname: str) -> bool:
+    """Return True if the font name indicates italic or oblique style."""
+    fn = fontname.lower()
+    return (
+        "italic" in fn
+        or "oblique" in fn
+        or "slanted" in fn
+        or fn.endswith("-it")
+        or fn.endswith("-i")
+        or "-ital" in fn
+        or "ital-" in fn
+    )
+
+
+def _find_italic_lines(pdf_path: str) -> Set[str]:
+    """Return stripped line-text strings that are predominantly italic in the PDF.
+
+    Uses pdfplumber character-level font info.  A line is considered italic when
+    more than half of its printable characters are in an italic/oblique font.
+    Falls back to an empty set if the PDF has no font data or cannot be opened.
+    """
+    italic_texts: Set[str] = set()
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                chars = page.chars
+                if not chars:
+                    continue
+                # Group non-whitespace characters by y-position bucket (2 pt tolerance).
+                buckets: Dict[int, List[dict]] = {}
+                for ch in chars:
+                    if not ch.get("text", "").strip():
+                        continue
+                    y_key = round(float(ch.get("top", 0)) / 2)
+                    buckets.setdefault(y_key, []).append(ch)
+                for chars_in_line in buckets.values():
+                    text = " ".join("".join(c["text"] for c in chars_in_line).split()).strip()
+                    if not text:
+                        continue
+                    italic_count = sum(
+                        1 for c in chars_in_line
+                        if _is_italic_font(c.get("fontname", ""))
+                    )
+                    if italic_count / len(chars_in_line) > 0.5:
+                        italic_texts.add(text)
+    except Exception:
+        pass
+    return italic_texts
+
+
 def _extract_plain_lines(pdf_path: str) -> List[str]:
     """Return plain (non-layout) lines. Best for standard play format."""
     lines, _ = _extract_plain_lines_with_pages(pdf_path)
@@ -1306,13 +1369,32 @@ def _sanitize_characters(script: Script) -> Script:
     return script
 
 
+def _mark_single_occurrence_confidence(script: Script) -> None:
+    """Lower confidence on dialog/parenthetical elements whose speaker appears only once
+    and is not in the declared cast list. Single-occurrence unknowns are likely misattributions."""
+    known = {c.name for c in script.characters}
+    counts: Dict[str, int] = {}
+    for scene in script.scenes:
+        for el in scene.elements:
+            if el.kind in ("dialog", "parenthetical") and el.speaker:
+                counts[el.speaker] = counts.get(el.speaker, 0) + 1
+    for scene in script.scenes:
+        for el in scene.elements:
+            if el.kind in ("dialog", "parenthetical") and el.speaker:
+                if counts.get(el.speaker, 0) == 1 and el.speaker not in known:
+                    el.confidence = min(el.confidence, 0.7)
+
+
 def _finalise(script: Script) -> Script:
     """Apply post-parse finishing passes in order:
       1. Auto-chunk over-long scenes that have no structural boundaries.
       2. Sanitize the character list.
+      3. Flag single-occurrence unknown speakers as uncertain.
     """
     script.scenes = _auto_chunk_scenes(script.scenes)
-    return _sanitize_characters(script)
+    script = _sanitize_characters(script)
+    _mark_single_occurrence_confidence(script)
+    return script
 
 
 # ---------------------------------------------------------------------------
@@ -1516,8 +1598,10 @@ def parse_pdf(pdf_path: str) -> Script:
     # Those functions strip _COL_SEP internally before passing to cast/noise consumers.
     play_fmt = _detect_play_format(clean_lines, skeleton=skeleton)
     if play_fmt == "play":
+        italic_lines = _find_italic_lines(pdf_path)
         script = _finalise(_parse_play(plain_lines_col, page_sets, title,
-                                       skeleton=skeleton))
+                                       skeleton=skeleton,
+                                       italic_lines=italic_lines))
         return _apply_corrections_config(script, config)
     if play_fmt == "colon_play":
         script = _finalise(_parse_colon_play(plain_lines_col, page_sets, title,
@@ -1836,6 +1920,7 @@ def _parse_play(
     page_sets: Optional[List[Set[str]]] = None,
     title: str = "Script",
     skeleton: Optional["ScriptSkeleton"] = None,
+    italic_lines: Optional[Set[str]] = None,
 ) -> Script:
     """Parse a standard play (speaker name on own line, dialog below).
 
@@ -1865,7 +1950,10 @@ def _parse_play(
             first_page_only = page_sets[0] - later
 
     # Scene extraction uses the annotated lines so it can split two-column dialog.
-    script.scenes = _extract_scenes_play(plain_lines, known_speakers, noise, first_page_only)
+    script.scenes = _extract_scenes_play(
+        plain_lines, known_speakers, noise, first_page_only,
+        italic_lines=italic_lines,
+    )
 
     _apply_speaker_normalization(script, known_speakers)
     _discover_new_characters(script, known_speakers)
@@ -1875,6 +1963,7 @@ def _parse_play(
 def _extract_scenes_play(
     lines: List[str], known_speakers: Set[str], noise: Set[str],
     first_page_only: Optional[Set[str]] = None,
+    italic_lines: Optional[Set[str]] = None,
 ) -> List[Scene]:
     # Work with a local mutable copy so we can register abbreviated names
     # discovered during parsing (e.g. "CREDIT CARD COMPANY" from splitting
@@ -1903,6 +1992,7 @@ def _extract_scenes_play(
     dialog_buf: List[str] = []  # may contain _COL_SEP-annotated lines for compound overlaps
     pending_overlap_cue: Optional[List[str]] = None  # set when cue is a joint/overlap line
     pending_is_compound: bool = False  # True only for two-column PDF space-compound cues
+    _dialog_buf_uncertain: bool = False  # True when a suspicious line entered dialog_buf
     # Tracks the most recent speaker cue that had NO dialog before a blank line.
     # Used to reconstruct compound cues broken across page boundaries (e.g. an
     # overlap_cue in a PDF whose auto-page-break fires inside the first cell,
@@ -1923,7 +2013,7 @@ def _extract_scenes_play(
     _last_cue_speaker: Optional[str] = None
 
     def flush_dialog() -> None:
-        nonlocal current_speaker, dialog_buf, pending_overlap_cue, pending_is_compound, _last_cue_speaker
+        nonlocal current_speaker, dialog_buf, pending_overlap_cue, pending_is_compound, _last_cue_speaker, _dialog_buf_uncertain
         if current_speaker and dialog_buf:
             if pending_overlap_cue and pending_is_compound and any(_COL_SEP in ln for ln in dialog_buf):
                 # Column-aware path: we have exact per-voice text from pdfplumber coordinates.
@@ -1973,12 +2063,16 @@ def _extract_scenes_play(
                 canonical = left_text or right_text
                 ot: Optional[List[str]] = [left_text, right_text] if (left_text and right_text) else None
                 if canonical:
+                    conf = 1.0 if current_speaker in known_speakers else 0.7
+                    if _dialog_buf_uncertain or _EMBEDDED_PAREN_DIR_RE.search(canonical):
+                        conf = min(conf, 0.7)
                     elements.append(Element(
                         kind="dialog",
                         speaker=current_speaker,
                         text=canonical,
                         overlap_cue=pending_overlap_cue,
                         overlap_texts=ot,
+                        confidence=conf,
                     ))
             else:
                 text = _normalize_text(" ".join(
@@ -1990,17 +2084,22 @@ def _extract_scenes_play(
                     ot = None
                     if pending_overlap_cue and pending_is_compound:
                         ot = _split_overlap_text(text, len(pending_overlap_cue))
+                    conf = 1.0 if current_speaker in known_speakers else 0.7
+                    if _dialog_buf_uncertain or _EMBEDDED_PAREN_DIR_RE.search(text):
+                        conf = min(conf, 0.7)
                     elements.append(Element(
                         kind="dialog",
                         speaker=current_speaker,
                         text=text,
                         overlap_cue=pending_overlap_cue,
                         overlap_texts=ot,
+                        confidence=conf,
                     ))
             current_speaker = None  # Clear after emitting so flush_orphan_speaker doesn't double-emit
             pending_overlap_cue = None
             pending_is_compound = False
             _last_cue_speaker = None  # dialog emitted → cue context consumed
+        _dialog_buf_uncertain = False
         dialog_buf.clear()
 
     def flush_orphan_speaker() -> None:
@@ -2295,6 +2394,16 @@ def _extract_scenes_play(
 
         # Dialog content
         if current_speaker:
+            # If this line is predominantly italic in the source PDF it is almost
+            # certainly a stage direction that pdfplumber failed to separate from
+            # the surrounding dialog.  Flush any accumulated dialog first, then
+            # emit the line as a stage direction rather than attributing it to the
+            # current speaker.
+            if italic_lines and s.strip() in italic_lines:
+                flush_dialog()
+                _append_stage_direction(elements, _normalize_text(s))
+                prev_nonempty = s
+                continue
             # Retroactive compound-cue reconstruction: if this is the first
             # dialog line for the current speaker, it has _COL_SEP content, and
             # a dangling left-column cue was remembered across a page-boundary
@@ -2391,7 +2500,10 @@ def _extract_scenes_colon(
         if current_speaker and dialog_buf:
             text = _normalize_text(" ".join(dialog_buf))
             if text:
-                elements.append(Element(kind="dialog", speaker=current_speaker, text=text))
+                conf = 1.0 if current_speaker in known_speakers else 0.7
+                if _EMBEDDED_PAREN_DIR_RE.search(text):
+                    conf = min(conf, 0.7)
+                elements.append(Element(kind="dialog", speaker=current_speaker, text=text, confidence=conf))
             current_speaker = None
         dialog_buf.clear()
 
@@ -2572,6 +2684,18 @@ def _extract_scenes_colon(
 
         # Dialog continuation
         if current_speaker:
+            # If this line is predominantly italic in the source PDF it is almost
+            # certainly a stage direction that pdfplumber failed to separate from
+            # the surrounding dialog.  Flush any accumulated dialog first, then
+            # emit the line as a stage direction rather than attributing it to the
+            # current speaker.
+            if italic_lines and s.strip() in italic_lines:
+                flush_dialog()
+                _append_stage_direction(elements, _normalize_text(s))
+                continue
+            if _SD_IN_DIALOG_LINE_RE.search(s):
+                # Line looks like stage direction absorbed into the dialog buffer.
+                _dialog_buf_uncertain = True
             dialog_buf.append(s)
             continue
 
@@ -3203,6 +3327,7 @@ def _parse_scene_body(
     i = 0
     n = len(clean)
     pending_speaker: Optional[str] = None
+    pending_confidence: float = 1.0
     pending_parenthetical: Optional[str] = None
     sd_buf: List[str] = []
     dialog_buf: List[str] = []
@@ -3216,26 +3341,32 @@ def _parse_scene_body(
             sd_buf.clear()
 
     def flush_dialog(force: bool = False) -> None:
-        nonlocal dialog_buf, pending_speaker, pending_parenthetical
+        nonlocal dialog_buf, pending_speaker, pending_parenthetical, pending_confidence
         had_dialog = bool(dialog_buf)
         if pending_speaker and (had_dialog or pending_parenthetical):
             if pending_parenthetical:
                 elements.append(
                     Element(kind="parenthetical", speaker=pending_speaker,
-                            text=pending_parenthetical)
+                            text=pending_parenthetical, confidence=pending_confidence)
                 )
                 pending_parenthetical = None
             if had_dialog:
                 text = _normalize_text(" ".join(dialog_buf))
                 if text:
+                    conf = pending_confidence
+                    if _EMBEDDED_PAREN_DIR_RE.search(text):
+                        conf = min(conf, 0.7)
                     elements.append(
-                        Element(kind="dialog", speaker=pending_speaker, text=text)
+                        Element(kind="dialog", speaker=pending_speaker, text=text,
+                                confidence=conf)
                     )
                 dialog_buf.clear()
                 pending_speaker = None
+                pending_confidence = 1.0
         elif force:
             dialog_buf.clear()
             pending_speaker = None
+            pending_confidence = 1.0
             pending_parenthetical = None
 
     while i < n:
@@ -3259,11 +3390,13 @@ def _parse_scene_body(
                 text = _normalize_text(" ".join(dialog_buf))
                 if text:
                     elements.append(
-                        Element(kind="dialog", speaker=pending_speaker, text=text)
+                        Element(kind="dialog", speaker=pending_speaker, text=text,
+                                confidence=pending_confidence)
                     )
                 dialog_buf.clear()
                 elements.append(
-                    Element(kind="parenthetical", speaker=pending_speaker, text=inner)
+                    Element(kind="parenthetical", speaker=pending_speaker, text=inner,
+                            confidence=pending_confidence)
                 )
             else:
                 pending_parenthetical = inner
@@ -3292,11 +3425,13 @@ def _parse_scene_body(
                 text = _normalize_text(" ".join(dialog_buf))
                 if text:
                     elements.append(
-                        Element(kind="dialog", speaker=pending_speaker, text=text)
+                        Element(kind="dialog", speaker=pending_speaker, text=text,
+                                confidence=pending_confidence)
                     )
                 dialog_buf.clear()
                 elements.append(
-                    Element(kind="parenthetical", speaker=pending_speaker, text=inner)
+                    Element(kind="parenthetical", speaker=pending_speaker, text=inner,
+                            confidence=pending_confidence)
                 )
             else:
                 pending_parenthetical = inner
@@ -3304,6 +3439,9 @@ def _parse_scene_body(
             continue
 
         if pending_speaker and d_min <= indent <= d_max:
+            if _SD_IN_DIALOG_LINE_RE.search(s):
+                # Line looks like stage direction at dialog indent — classification uncertain.
+                pending_confidence = min(pending_confidence, 0.7)
             dialog_buf.append(s)
             i += 1
             continue
@@ -3328,6 +3466,10 @@ def _parse_scene_body(
                     ):
                         flush_stage_direction()
                         pending_speaker = _normalize_speaker(speaker_text)
+                        pending_confidence = 1.0 if pending_speaker in known_speakers else 0.7
+                        if indent - cue_min <= 3:
+                            # Cue barely above the indent threshold — classification is uncertain.
+                            pending_confidence = min(pending_confidence, 0.7)
                         pending_parenthetical = paren_text
                         i += advance
                         continue
@@ -3346,6 +3488,8 @@ def _parse_scene_body(
         ):
             prev = elements[-1]
             prev.text = _normalize_text(prev.text + " " + s)
+            # Speakerless continuation is a heuristic fallback — flag as uncertain.
+            prev.confidence = min(prev.confidence, 0.7)
             i += 1
             continue
 

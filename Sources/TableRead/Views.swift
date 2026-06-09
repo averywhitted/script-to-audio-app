@@ -1,11 +1,36 @@
 import SwiftUI
 import AppKit
 
-// Stable hue per speaker name — shared by Review and Cast tabs.
-private func speakerColor(_ speaker: String) -> Color {
-    let palette: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .indigo, .brown]
-    let index = abs(speaker.unicodeScalars.reduce(0) { $0 + Int($1.value) }) % palette.count
-    return palette[index]
+// Unique, stable color per speaker — shared by Review and Cast tabs.
+// When the full speaker list is provided, uses a golden-angle hue wheel so no
+// two speakers ever share a color regardless of cast size. Falls back to a
+// fixed-palette hash only when the list is unavailable.
+private func speakerColor(_ speaker: String, in allSpeakers: [String] = []) -> Color {
+    let sorted = allSpeakers.isEmpty ? [] : allSpeakers.sorted()
+
+    // Resolve the speaker's position in the sorted list.
+    // Priority: exact match → case-insensitive match → djb2 hash spread.
+    // Never fall back to 0 — that collides with whoever is at index 0.
+    let idx: Int
+    if !sorted.isEmpty {
+        if let exact = sorted.firstIndex(of: speaker) {
+            idx = exact
+        } else if let ci = sorted.firstIndex(where: { $0.lowercased() == speaker.lowercased() }) {
+            idx = ci
+        } else {
+            // Unknown speaker (corrected name, overlap cue, etc.) — spread via djb2 hash
+            // so it doesn't land on the same hue as the first sorted speaker.
+            let hash = speaker.unicodeScalars.reduce(5381) { (($0 << 5) &+ $0) &+ Int($1.value) }
+            idx = abs(hash) % sorted.count
+        }
+    } else {
+        // No list at all — use raw hash across a wide index range.
+        idx = abs(speaker.unicodeScalars.reduce(5381) { (($0 << 5) &+ $0) &+ Int($1.value) }) % 360
+    }
+
+    // 137.508° golden angle — guarantees maximally spread hues for any cast size.
+    let hue = (Double(idx) * 137.508 / 360.0).truncatingRemainder(dividingBy: 1.0)
+    return Color(hue: hue, saturation: 0.68, brightness: 0.88)
 }
 
 // MARK: - Import
@@ -187,7 +212,7 @@ struct ReviewView: View {
                                     SceneReviewRow(
                                         scene: scene,
                                         pdfPath: state.selectedPDF?.path ?? "",
-                                        allSpeakers: script.characters.map(\.name),
+                                        allSpeakers: ["Narrator"] + script.characters.map(\.name),
                                         isSelected: state.selectedScenes.contains(scene.number)
                                     ) {
                                         state.toggleScene(scene)
@@ -208,7 +233,7 @@ struct ReviewView: View {
                                 selectedAddedIds: selection.addedKeys,
                                 scene: scene,
                                 pdfPath: selection.pdfPath,
-                                allSpeakers: script.characters.map(\.name),
+                                allSpeakers: ["Narrator"] + script.characters.map(\.name),
                                 onClearSelection: { selection.clear() }
                             )
                             .environmentObject(state)
@@ -328,8 +353,8 @@ private struct SceneReviewRow: View {
                             .font(.system(size: 10, weight: .medium))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(speakerColor(speaker).opacity(0.15), in: Capsule())
-                            .foregroundStyle(speakerColor(speaker))
+                            .background(speakerColor(speaker, in: allSpeakers).opacity(0.15), in: Capsule())
+                            .foregroundStyle(speakerColor(speaker, in: allSpeakers))
                             .lineLimit(1)
                     }
                     if speakers.count > 5 {
@@ -599,6 +624,8 @@ private struct CharacterVoiceRow: View {
     var name: String
     var genderHint: String?
     var characterKey: String
+
+    private var allSpeakers: [String] { ["Narrator"] + (state.script?.characters.map(\.name) ?? []) }
     var voices: [VoiceSummary]
     @Binding var assignment: [String: String]
 
@@ -618,11 +645,11 @@ private struct CharacterVoiceRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(speakerColor(name))
+                .fill(speakerColor(name, in: allSpeakers))
                 .frame(width: 9, height: 9)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(name).font(.headline).foregroundStyle(speakerColor(name))
+                Text(name).font(.headline).foregroundStyle(speakerColor(name, in: allSpeakers))
                 genderPicker
             }
 
@@ -659,12 +686,12 @@ private struct CharacterVoiceRow: View {
                 } label: {
                     Text(label)
                         .font(.system(size: 10, weight: effectiveGender == code ? .semibold : .regular))
-                        .foregroundStyle(effectiveGender == code ? speakerColor(name) : Color(nsColor: .secondaryLabelColor))
+                        .foregroundStyle(effectiveGender == code ? speakerColor(name, in: allSpeakers) : Color(nsColor: .secondaryLabelColor))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(
                             effectiveGender == code
-                                ? speakerColor(name).opacity(0.15)
+                                ? speakerColor(name, in: allSpeakers).opacity(0.15)
                                 : Color.clear,
                             in: RoundedRectangle(cornerRadius: 4)
                         )
@@ -1543,13 +1570,13 @@ private struct SceneElementRow: View {
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 5) {
                             let nameL = displayCue.indices.contains(0) ? displayCue[0] : rawCue[0]
-                            Circle().fill(speakerColor(nameL)).frame(width: 7, height: 7).padding(.top, 1)
+                            Circle().fill(speakerColor(nameL, in: allSpeakers)).frame(width: 7, height: 7).padding(.top, 1)
                             Text(nameL)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(speakerColor(nameL))
+                                .foregroundStyle(speakerColor(nameL, in: allSpeakers))
                                 .strikethrough(isRemoved || isLeftVoiceRemoved)
                             if correction != nil && !isRemoved && !isLeftVoiceRemoved {
-                                Circle().fill(speakerColor(nameL)).frame(width: 4, height: 4)
+                                Circle().fill(speakerColor(nameL, in: allSpeakers)).frame(width: 4, height: 4)
                                     .help("User correction applied")
                             }
                             if isHovered || showingEditLeft {
@@ -1584,9 +1611,9 @@ private struct SceneElementRow: View {
                                     Button { showingEditLeft = true } label: {
                                         Text("Edit")
                                             .font(.system(size: 10, weight: .medium))
-                                            .foregroundStyle(speakerColor(nameL))
+                                            .foregroundStyle(speakerColor(nameL, in: allSpeakers))
                                             .padding(.horizontal, 5).padding(.vertical, 2)
-                                            .background(speakerColor(nameL).opacity(0.15), in: Capsule())
+                                            .background(speakerColor(nameL, in: allSpeakers).opacity(0.15), in: Capsule())
                                     }
                                     .buttonStyle(.plain)
                                     .popover(isPresented: $showingEditLeft, arrowEdge: .top) {
@@ -1649,10 +1676,10 @@ private struct SceneElementRow: View {
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 5) {
                             let nameR = displayCue.indices.contains(1) ? displayCue[1] : rawCue[1]
-                            Circle().fill(speakerColor(nameR)).frame(width: 7, height: 7).padding(.top, 1)
+                            Circle().fill(speakerColor(nameR, in: allSpeakers)).frame(width: 7, height: 7).padding(.top, 1)
                             Text(nameR)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(speakerColor(nameR))
+                                .foregroundStyle(speakerColor(nameR, in: allSpeakers))
                                 .strikethrough(isRemoved || isRightVoiceRemoved)
                             if (isHovered || showingEditRight) && !isRemoved {
                                 if isRightVoiceRemoved {
@@ -1673,9 +1700,9 @@ private struct SceneElementRow: View {
                                     Button { showingEditRight = true } label: {
                                         Text("Edit")
                                             .font(.system(size: 10, weight: .medium))
-                                            .foregroundStyle(speakerColor(nameR))
+                                            .foregroundStyle(speakerColor(nameR, in: allSpeakers))
                                             .padding(.horizontal, 5).padding(.vertical, 2)
-                                            .background(speakerColor(nameR).opacity(0.15), in: Capsule())
+                                            .background(speakerColor(nameR, in: allSpeakers).opacity(0.15), in: Capsule())
                                     }
                                     .buttonStyle(.plain)
                                     .popover(isPresented: $showingEditRight, arrowEdge: .top) {
@@ -1710,7 +1737,7 @@ private struct SceneElementRow: View {
             } else {
                 // ── Solo element layout ──
                 Circle()
-                    .fill(speakerColor(displaySpeaker))
+                    .fill(speakerColor(displaySpeaker, in: allSpeakers))
                     .frame(width: 8, height: 8)
                     .padding(.top, 5)
                 Image(systemName: element.kind == "dialog" ? "person.wave.2" : "text.quote")
@@ -1721,20 +1748,26 @@ private struct SceneElementRow: View {
                     HStack(spacing: 6) {
                         Text(displaySpeaker)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(speakerColor(displaySpeaker))
+                            .foregroundStyle(speakerColor(displaySpeaker, in: allSpeakers))
                             .strikethrough(isRemoved)
                         if correction != nil && !isRemoved {
                             Circle()
-                                .fill(speakerColor(displaySpeaker))
+                                .fill(speakerColor(displaySpeaker, in: allSpeakers))
                                 .frame(width: 5, height: 5)
                                 .help("User correction applied")
+                        }
+                        if element.confidence < 0.7 && correction == nil && !isRemoved {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.orange.opacity(0.75))
+                                .help("Parser is uncertain about this classification — check the speaker or type")
                         }
                         Button { showingEdit = true } label: {
                             Text("Edit")
                                 .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(speakerColor(displaySpeaker))
+                                .foregroundStyle(speakerColor(displaySpeaker, in: allSpeakers))
                                 .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(speakerColor(displaySpeaker).opacity(0.15), in: Capsule())
+                                .background(speakerColor(displaySpeaker, in: allSpeakers).opacity(0.15), in: Capsule())
                         }
                         .buttonStyle(.plain)
                         .opacity(isHovered || showingEdit ? 1 : 0)
@@ -1868,22 +1901,22 @@ private struct ManualOverlapRow: View {
                 // Left panel — primary speaker
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 5) {
-                        Circle().fill(speakerColor(pSpeaker)).frame(width: 7, height: 7).padding(.top, 1)
+                        Circle().fill(speakerColor(pSpeaker, in: allSpeakers)).frame(width: 7, height: 7).padding(.top, 1)
                         Text(pSpeaker)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(speakerColor(pSpeaker))
+                            .foregroundStyle(speakerColor(pSpeaker, in: allSpeakers))
                             .strikethrough(pRemoved)
                         if pCorr != nil && !pRemoved {
-                            Circle().fill(speakerColor(pSpeaker)).frame(width: 4, height: 4)
+                            Circle().fill(speakerColor(pSpeaker, in: allSpeakers)).frame(width: 4, height: 4)
                                 .help("User correction applied")
                         }
                         if isHovered || showingEditPrimary {
                             Button { showingEditPrimary = true } label: {
                                 Text("Edit")
                                     .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(speakerColor(pSpeaker))
+                                    .foregroundStyle(speakerColor(pSpeaker, in: allSpeakers))
                                     .padding(.horizontal, 5).padding(.vertical, 2)
-                                    .background(speakerColor(pSpeaker).opacity(0.15), in: Capsule())
+                                    .background(speakerColor(pSpeaker, in: allSpeakers).opacity(0.15), in: Capsule())
                             }
                             .buttonStyle(.plain)
                             .popover(isPresented: $showingEditPrimary, arrowEdge: .top) {
@@ -1931,22 +1964,22 @@ private struct ManualOverlapRow: View {
                 // Right panel — secondary speaker
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 5) {
-                        Circle().fill(speakerColor(sSpeaker)).frame(width: 7, height: 7).padding(.top, 1)
+                        Circle().fill(speakerColor(sSpeaker, in: allSpeakers)).frame(width: 7, height: 7).padding(.top, 1)
                         Text(sSpeaker)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(speakerColor(sSpeaker))
+                            .foregroundStyle(speakerColor(sSpeaker, in: allSpeakers))
                             .strikethrough(sRemoved)
                         if sCorr != nil && !sRemoved {
-                            Circle().fill(speakerColor(sSpeaker)).frame(width: 4, height: 4)
+                            Circle().fill(speakerColor(sSpeaker, in: allSpeakers)).frame(width: 4, height: 4)
                                 .help("User correction applied")
                         }
                         if isHovered || showingEditSecondary {
                             Button { showingEditSecondary = true } label: {
                                 Text("Edit")
                                     .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(speakerColor(sSpeaker))
+                                    .foregroundStyle(speakerColor(sSpeaker, in: allSpeakers))
                                     .padding(.horizontal, 5).padding(.vertical, 2)
-                                    .background(speakerColor(sSpeaker).opacity(0.15), in: Capsule())
+                                    .background(speakerColor(sSpeaker, in: allSpeakers).opacity(0.15), in: Capsule())
                             }
                             .buttonStyle(.plain)
                             .popover(isPresented: $showingEditSecondary, arrowEdge: .top) {
@@ -2264,7 +2297,7 @@ private struct AddedElementRow: View {
             // Dashed circle — visual cue that this line was user-added
             Circle()
                 .strokeBorder(
-                    speakerColor(displaySpeaker),
+                    speakerColor(displaySpeaker, in: allSpeakers),
                     style: StrokeStyle(lineWidth: 1.5, dash: [3, 2])
                 )
                 .frame(width: 8, height: 8)
@@ -2279,7 +2312,7 @@ private struct AddedElementRow: View {
                 HStack(spacing: 6) {
                     Text(displaySpeaker)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(speakerColor(displaySpeaker))
+                        .foregroundStyle(speakerColor(displaySpeaker, in: allSpeakers))
 
                     Text("Added")
                         .font(.system(size: 9, weight: .semibold))
@@ -2292,10 +2325,10 @@ private struct AddedElementRow: View {
                     Button { showingEdit = true } label: {
                         Text("Edit")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(speakerColor(displaySpeaker))
+                            .foregroundStyle(speakerColor(displaySpeaker, in: allSpeakers))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(speakerColor(displaySpeaker).opacity(0.15), in: Capsule())
+                            .background(speakerColor(displaySpeaker, in: allSpeakers).opacity(0.15), in: Capsule())
                     }
                     .buttonStyle(.plain)
                     .opacity(isHovered || showingEdit ? 1 : 0)
@@ -2341,7 +2374,7 @@ private struct AddedElementRow: View {
         .padding(.leading, 2)
         .background(
             RoundedRectangle(cornerRadius: 5)
-                .fill(speakerColor(displaySpeaker).opacity(0.04))
+                .fill(speakerColor(displaySpeaker, in: allSpeakers).opacity(0.04))
         )
         .onHover { isHovered = $0 }
     }
@@ -2641,7 +2674,7 @@ private struct ElementCorrectionPopover: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(cue[0])
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(speakerColor(cue[0]))
+                                .foregroundStyle(speakerColor(cue[0], in: allSpeakers))
                             TextEditor(text: $editedOverlapText0)
                                 .font(.callout)
                                 .frame(minHeight: 56, maxHeight: 100)
@@ -2652,7 +2685,7 @@ private struct ElementCorrectionPopover: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(cue[1])
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(speakerColor(cue[1]))
+                                .foregroundStyle(speakerColor(cue[1], in: allSpeakers))
                             TextEditor(text: $editedOverlapText1)
                                 .font(.callout)
                                 .frame(minHeight: 56, maxHeight: 100)

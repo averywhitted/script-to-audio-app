@@ -800,6 +800,100 @@ def test_bundled_corrections_config_loads():
 
 
 # ---------------------------------------------------------------------------
+# Element confidence scoring
+# ---------------------------------------------------------------------------
+
+def _make_play_script(lines: list[str], cast: list[str]) -> p.Script:
+    """Parse a minimal play-format block with a known cast list."""
+    cast_header = ["CHARACTERS"] + cast + [""]
+    return p.parse_lines(cast_header + lines)
+
+
+def test_known_speaker_dialog_has_full_confidence():
+    lines = [
+        "ALICE",
+        "          Hello there.",
+        "",
+        "BOB",
+        "          Hi.",
+    ]
+    script = p.parse_lines(["CHARACTERS", "ALICE", "BOB", ""] + lines)
+    dialogs = [e for sc in script.scenes for e in sc.elements if e.kind == "dialog"]
+    assert all(e.confidence == 1.0 for e in dialogs), [e.confidence for e in dialogs]
+
+
+def test_unknown_speaker_dialog_has_reduced_confidence():
+    """A speaker that passes cue checks but isn't in the cast list gets confidence 0.7."""
+    lines = [
+        "CHARACTERS",
+        "ALICE",
+        "",
+        "ALICE",
+        "          Hello.",
+        "",
+        "STRANGER",
+        "          Who are you?",
+    ]
+    script = p.parse_lines(lines)
+    alice_els = [e for sc in script.scenes for e in sc.elements
+                 if e.kind == "dialog" and e.speaker == "ALICE"]
+    stranger_els = [e for sc in script.scenes for e in sc.elements
+                    if e.kind == "dialog" and e.speaker == "STRANGER"]
+    assert all(e.confidence == 1.0 for e in alice_els), alice_els
+    assert all(e.confidence == 0.7 for e in stranger_els), stranger_els
+
+
+def test_element_confidence_defaults_to_one():
+    """Freshly constructed Element always starts at confidence 1.0."""
+    el = p.Element(kind="dialog", text="Hello", speaker="ALICE")
+    assert el.confidence == 1.0
+
+
+def test_stage_direction_confidence_is_one():
+    """Stage directions don't go through speaker detection — confidence stays at default."""
+    lines = [
+        "CHARACTERS", "ALICE", "",
+        "ALICE",
+        "          Hi.",
+        "",
+        "          The lights dim.",
+    ]
+    script = p.parse_lines(lines)
+    sds = [e for sc in script.scenes for e in sc.elements if e.kind == "stage_direction"]
+    assert all(e.confidence == 1.0 for e in sds)
+
+
+def test_single_occurrence_unknown_speaker_gets_reduced_confidence():
+    """A speaker who appears only once and isn't in the cast list should be flagged."""
+    script = p.Script(
+        title="Test",
+        characters=[p.Character(name="ALICE"), p.Character(name="BOB")],
+        scenes=[p.Scene(number=1, title="Scene 1", elements=[
+            p.Element(kind="dialog", speaker="ALICE", text="Hello.", confidence=1.0),
+            p.Element(kind="dialog", speaker="PHANTOM", text="Boo.", confidence=0.7),
+        ])]
+    )
+    p._mark_single_occurrence_confidence(script)
+    phantom_el = next(e for sc in script.scenes for e in sc.elements if e.speaker == "PHANTOM")
+    assert phantom_el.confidence <= 0.7
+
+
+def test_known_single_occurrence_speaker_keeps_full_confidence():
+    """A cast member who speaks only once should NOT be flagged — they're in the declared cast."""
+    script = p.Script(
+        title="Test",
+        characters=[p.Character(name="ALICE"), p.Character(name="BOB")],
+        scenes=[p.Scene(number=1, title="Scene 1", elements=[
+            p.Element(kind="dialog", speaker="ALICE", text="Hello.", confidence=1.0),
+            p.Element(kind="dialog", speaker="BOB", text="Hi.", confidence=1.0),
+        ])]
+    )
+    p._mark_single_occurrence_confidence(script)
+    bob_el = next(e for sc in script.scenes for e in sc.elements if e.speaker == "BOB")
+    assert bob_el.confidence == 1.0
+
+
+# ---------------------------------------------------------------------------
 # DR.-prefix speaker names (issue: period in name was blocking cue detection)
 # ---------------------------------------------------------------------------
 
@@ -1149,3 +1243,48 @@ def test_dialog_after_paren_no_false_positive_between_chars():
     assert el.speaker != "LEAH", (
         f"'The lights fade.' was incorrectly attributed to LEAH (speaker={el.speaker!r})"
     )
+
+
+def test_is_italic_font_detects_italic():
+    """_is_italic_font correctly identifies italic font names."""
+    assert p._is_italic_font("TimesNewRomanPS-ItalicMT") is True
+    assert p._is_italic_font("Arial-Italic") is True
+    assert p._is_italic_font("Helvetica-Oblique") is True
+    assert p._is_italic_font("Garamond-it") is True
+    assert p._is_italic_font("SomeFont-Slanted") is True
+    assert p._is_italic_font("-ItalBoldMT") is True
+
+
+def test_is_italic_font_non_italic():
+    """_is_italic_font does not flag regular or bold fonts."""
+    assert p._is_italic_font("TimesNewRomanPSMT") is False
+    assert p._is_italic_font("Arial-Bold") is False
+    assert p._is_italic_font("Helvetica") is False
+    assert p._is_italic_font("CourierNewPSMT") is False
+
+
+def test_italic_line_routed_to_stage_direction():
+    """Lines found in italic_lines set are routed to stage direction, not dialog."""
+    lines = [
+        "SCENE ONE",
+        "ALICE",
+        "Hello there.",
+        "She crosses to the window and stares out.",  # italic in PDF
+        "ALICE",
+        "Goodbye.",
+    ]
+    italic_set = {"She crosses to the window and stares out."}
+    noise: set = set()
+    scenes = p._extract_scenes_play(lines, {"ALICE"}, noise, italic_lines=italic_set)
+    elements = [e for sc in scenes for e in sc.elements]
+
+    stage_dirs = [e for e in elements if e.kind == "stage_direction"]
+    assert any("crosses" in e.text for e in stage_dirs), (
+        "Italic stage direction was not routed to stage_direction kind"
+    )
+    # Should NOT appear as ALICE's dialog
+    alice_dialog = [e for e in elements if e.kind == "dialog" and e.speaker == "ALICE"]
+    for el in alice_dialog:
+        assert "crosses" not in el.text, (
+            "Italic stage direction was incorrectly appended to ALICE's dialog"
+        )

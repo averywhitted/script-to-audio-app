@@ -131,6 +131,7 @@ struct SceneElementSummary: Codable, Equatable, Identifiable, Sendable {
     var text: String
     var overlapCue: [String]?    // set when multiple speakers deliver this line simultaneously
     var overlapTexts: [String]?  // per-voice texts (parallel with overlapCue); nil = all voices read .text
+    var confidence: Double = 1.0 // parser confidence: 1.0 = known speaker, 0.7 = unknown, 0.4 = fallback
 
     var id: String { "\(kind)-\(speaker ?? "narrator")-\(text.prefix(24))" }
 
