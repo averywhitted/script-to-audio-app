@@ -1288,3 +1288,155 @@ def test_italic_line_routed_to_stage_direction():
         assert "crosses" not in el.text, (
             "Italic stage direction was incorrectly appended to ALICE's dialog"
         )
+
+
+# ---------------------------------------------------------------------------
+# Spatial x-zone tests (Phase 1 parser spatial refactor)
+# ---------------------------------------------------------------------------
+
+
+def test_infer_x_zones_bimodal():
+    """Bimodal x-distribution produces (dialog_x, cue_x, threshold)."""
+    # Simulate a play with dialog at x≈90 and cue/SD zone at x≈270
+    positions = [90.0] * 60 + [270.0] * 40
+    result = p._infer_x_zones(positions)
+    assert result is not None, "_infer_x_zones should find two zones"
+    dialog_x, cue_x, threshold = result
+    assert dialog_x < threshold < cue_x, (
+        f"Expected dialog_x < threshold < cue_x; got {dialog_x}, {threshold}, {cue_x}"
+    )
+    assert 80 <= dialog_x <= 100, f"dialog_x should be near 90, got {dialog_x}"
+    assert 260 <= cue_x <= 280, f"cue_x should be near 270, got {cue_x}"
+
+
+def test_infer_x_zones_unimodal_returns_none():
+    """Single-cluster distribution returns None (gap too small)."""
+    positions = [90.0 + i % 10 for i in range(50)]
+    result = p._infer_x_zones(positions)
+    assert result is None, "Unimodal distribution should return None"
+
+
+def test_infer_x_zones_insufficient_data():
+    """Fewer than 20 valid positions returns None."""
+    positions = [90.0, 270.0, None, 90.0]
+    result = p._infer_x_zones(positions)
+    assert result is None, "Insufficient data should return None"
+
+
+def test_infer_x_zones_ignores_none():
+    """None entries in positions list are silently skipped."""
+    positions = [None, 90.0] * 30 + [None, 270.0] * 20
+    result = p._infer_x_zones(positions)
+    assert result is not None, "_infer_x_zones should work with None entries"
+
+
+def test_x_zone_stage_direction_not_absorbed_into_dialog():
+    """Mixed-case lines in cue/SD zone are routed to stage_direction, not dialog.
+
+    This is the TheHarvest bug: stage directions at x≈270 were absorbed into
+    the preceding speaker's dialog because the parser had no spatial signal.
+    """
+    # Build a lines list and a parallel positions list.
+    # Dialog zone: x≈90.  Cue/SD zone: x≈270.
+    lines = [
+        "SCENE ONE",          # scene boundary
+        "",                   # blank
+        "MARCUS",             # speaker cue at x≈270
+        "Hello, how are you.",  # dialog at x≈90
+        "MARCUS smiles at DENISE lovingly.",  # stage direction at x≈270 (mixed-case)
+        "Another long silence.",              # another SD at x≈270
+        "DENISE",             # next speaker cue at x≈270
+        "I'm fine.",          # dialog at x≈90
+    ]
+    # Build positions parallel to lines.
+    # Blank lines and scene boundaries get None.
+    x_dialog = 90.0
+    x_cue = 270.0
+    positions = [
+        None,      # "SCENE ONE" — treated as noise here; position doesn't matter
+        None,      # blank
+        x_cue,    # "MARCUS" — speaker cue
+        x_dialog, # "Hello, how are you." — dialog
+        x_cue,    # "MARCUS smiles at DENISE lovingly." — SD (mixed-case at cue x)
+        x_cue,    # "Another long silence." — SD
+        x_cue,    # "DENISE" — speaker cue
+        x_dialog, # "I'm fine." — dialog
+    ]
+    # Pad positions to 20+ values so _infer_x_zones has enough data.
+    # We'll add enough dialog/cue positions to the list without adding lines.
+    extra_pos = [x_dialog] * 30 + [x_cue] * 20
+    all_positions = positions + extra_pos
+    # Slice to match lines length for the guard (guard checks _line_idx < len(positions))
+    # We pass full all_positions; the guard only fires when _line_idx < len(line_positions)
+    # and the x value is above threshold.
+
+    noise: set = set()
+    scenes = p._extract_scenes_play(
+        lines, {"MARCUS", "DENISE"}, noise,
+        line_positions=all_positions,
+    )
+    elements = [e for sc in scenes for e in sc.elements]
+
+    # Stage directions must be separate elements
+    stage_dirs = [e for e in elements if e.kind == "stage_direction"]
+    assert any("smiles" in e.text for e in stage_dirs), (
+        "'MARCUS smiles at DENISE lovingly.' should be a stage_direction"
+    )
+    assert any("silence" in e.text for e in stage_dirs), (
+        "'Another long silence.' should be a stage_direction"
+    )
+
+    # MARCUS's dialog must NOT contain the stage direction text
+    marcus_dialog = [e for e in elements if e.kind == "dialog" and e.speaker == "MARCUS"]
+    assert marcus_dialog, "MARCUS should have dialog"
+    for el in marcus_dialog:
+        assert "smiles" not in el.text, (
+            "Stage direction was incorrectly appended to MARCUS's dialog"
+        )
+        assert "silence" not in el.text, (
+            "Stage direction was incorrectly appended to MARCUS's dialog"
+        )
+
+
+def test_x_zone_normal_dialog_not_affected():
+    """Lines in the dialog zone (low x) are NOT re-routed when x_zones is active."""
+    lines = [
+        "SCENE ONE",
+        "",
+        "ALICE",
+        "This is my speech.",
+        "It continues on the next line.",
+        "ALICE",
+        "More dialog.",
+    ]
+    x_dialog = 90.0
+    x_cue = 270.0
+    positions = [None, None, x_cue, x_dialog, x_dialog, x_cue, x_dialog]
+    extra_pos = [x_dialog] * 30 + [x_cue] * 20
+    all_positions = positions + extra_pos
+
+    noise: set = set()
+    scenes = p._extract_scenes_play(
+        lines, {"ALICE"}, noise,
+        line_positions=all_positions,
+    )
+    elements = [e for sc in scenes for e in sc.elements]
+
+    alice_dialog = [e for e in elements if e.kind == "dialog" and e.speaker == "ALICE"]
+    all_text = " ".join(e.text for e in alice_dialog)
+    assert "This is my speech" in all_text, "Normal dialog in dialog zone should be kept"
+    assert "It continues" in all_text, "Dialog continuation should not be split off"
+
+
+def test_x_zone_no_positions_no_change():
+    """Without line_positions, existing behavior is unchanged."""
+    lines = [
+        "SCENE ONE",
+        "ALICE",
+        "She stands and walks away.",  # looks like SD but no positions supplied
+    ]
+    noise: set = set()
+    scenes = p._extract_scenes_play(lines, {"ALICE"}, noise)
+    elements = [e for sc in scenes for e in sc.elements]
+    alice_dialog = [e for e in elements if e.kind == "dialog" and e.speaker == "ALICE"]
+    assert alice_dialog, "Without positions, line stays as dialog (no spatial signal)"

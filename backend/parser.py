@@ -798,12 +798,12 @@ def _find_italic_lines(pdf_path: str) -> Set[str]:
 
 def _extract_plain_lines(pdf_path: str) -> List[str]:
     """Return plain (non-layout) lines. Best for standard play format."""
-    lines, _ = _extract_plain_lines_with_pages(pdf_path)
+    lines, _, _ = _extract_plain_lines_with_pages(pdf_path)
     return lines
 
 
-def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[str]]]:
-    """Return (all_lines, per_page_content_sets) for play parsing + noise detection.
+def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[str]], List[Optional[float]]]:
+    """Return (all_lines, per_page_content_sets, line_x_positions) for play parsing.
 
     Two-column rows (simultaneous-speech overlap sections common in published
     play PDFs) are emitted as a single line with ``_COL_SEP`` (``\\x01``)
@@ -814,6 +814,10 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
 
     The play-format parser recognises these markers and reconstructs per-voice
     dialog instead of falling back to the sentence-boundary heuristic.
+
+    ``line_x_positions`` is parallel to ``all_lines``: each entry is the
+    minimum x0 (in PDF points) of the words on that row, or ``None`` for
+    blank/padding lines and pages where spatial data is unavailable.
     """
     if _pdf_has_cid_artifacts(pdf_path):
         try:
@@ -833,12 +837,14 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
                     if s:
                         pg_set.add(s)
                 pypdf_page_sets.append(pg_set)
-            return plain_lines, pypdf_page_sets
+            # pypdfium2 path: no per-line x0 available
+            return plain_lines, pypdf_page_sets, [None] * len(plain_lines)
         except Exception:
             pass  # fall through to pdfplumber
 
     all_lines: List[str] = []
     page_sets: List[Set[str]] = []
+    positions: List[Optional[float]] = []
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             page_width = float(page.width or 612)
@@ -847,6 +853,7 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
 
             if not words:
                 all_lines.append("")
+                positions.append(None)
                 page_sets.append(page_content)
                 continue
 
@@ -860,10 +867,12 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
                 for line in text.split("\n"):
                     normalized = _undouble(line)
                     all_lines.append(normalized)
+                    positions.append(None)  # no reliable x0 for malformed-coord pages
                     s = normalized.strip()
                     if s:
                         page_content.add(s)
                 all_lines.append("")
+                positions.append(None)
                 page_sets.append(page_content)
                 continue
 
@@ -918,6 +927,7 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
                 # Emit a blank line when the vertical gap signals a paragraph break.
                 if prev_bottom is not None and (row_top - prev_bottom) >= BLANK_GAP_THRESHOLD:
                     all_lines.append("")
+                    positions.append(None)
                 prev_bottom = row_bottom
 
                 # Strip far-right digit-only words (page numbers) before column
@@ -928,6 +938,9 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
                     # Row was pure page number — skip text emission; prev_bottom
                     # is already updated so blank-line logic stays correct.
                     continue
+
+                # x0 for this row: minimum left edge across all content words.
+                row_x0: float = min(w["x0"] for w in content_row)
 
                 col_x = _detect_column_split(content_row, page_width)
                 # If the primary detector didn't fire but we know the column x,
@@ -950,12 +963,14 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
                     if left_text and right_text:
                         line = f"{left_text}{_COL_SEP}{right_text}"
                         all_lines.append(line)
+                        positions.append(row_x0)
                         page_content.add(left_text.strip())
                         page_content.add(right_text.strip())
                     else:
                         # Only one side non-empty — treat as single column
                         text = _undouble((left_text or right_text).strip())
                         all_lines.append(text)
+                        positions.append(row_x0)
                         if text.strip():
                             page_content.add(text.strip())
                 else:
@@ -976,16 +991,67 @@ def _extract_plain_lines_with_pages(pdf_path: str) -> Tuple[List[str], List[Set[
                         )
                     ):
                         all_lines.append(f"{_COL_SEP}{text}")
+                        positions.append(row_x0)
                         page_content.add(text.strip())
                     else:
                         all_lines.append(text)
+                        positions.append(row_x0)
                         if text.strip():
                             page_content.add(text.strip())
 
             # Blank line between pages (mirrors extract_text() behaviour).
             all_lines.append("")
+            positions.append(None)
             page_sets.append(page_content)
-    return all_lines, page_sets
+    return all_lines, page_sets, positions
+
+
+def _infer_x_zones(
+    positions: List[Optional[float]],
+) -> Optional[Tuple[float, float, float]]:
+    """Return (dialog_x, cue_x, threshold) by finding the largest gap in x0 values.
+
+    Clusters line x-positions into a low group (dialog) and a high group
+    (speaker cues / stage directions) by locating the biggest gap in the
+    sorted distribution of unique 5-pt bucket positions.
+
+    Returns None when:
+      - fewer than 20 valid positions (not enough data)
+      - the largest gap is < 30 pt (distribution is unimodal — one zone only)
+      - either cluster is empty after splitting at the threshold
+    """
+    vals: List[float] = [p for p in positions if p is not None and p > 0]
+    if len(vals) < 20:
+        return None
+
+    # Bucket into 5 pt bins to cluster nearby positions
+    buckets = sorted(set(round(v / 5.0) * 5.0 for v in vals))
+    if len(buckets) < 2:
+        return None
+
+    # Find the largest gap between consecutive bucket values
+    max_gap = 0.0
+    threshold: Optional[float] = None
+    for i in range(len(buckets) - 1):
+        gap = buckets[i + 1] - buckets[i]
+        if gap > max_gap:
+            max_gap = gap
+            threshold = (buckets[i] + buckets[i + 1]) / 2.0
+
+    # Gap must be meaningful (> 30 pt ≈ 0.4 inch) to indicate two distinct zones
+    if threshold is None or max_gap < 30.0:
+        return None
+
+    low_vals = [v for v in vals if v < threshold]
+    high_vals = [v for v in vals if v >= threshold]
+    if not low_vals or not high_vals:
+        return None
+
+    low_vals.sort()
+    high_vals.sort()
+    dialog_x = low_vals[len(low_vals) // 2]
+    cue_x = high_vals[len(high_vals) // 2]
+    return (dialog_x, cue_x, threshold)
 
 
 # ---------------------------------------------------------------------------
@@ -1573,7 +1639,8 @@ def parse_pdf(pdf_path: str) -> Script:
     title = _derive_title(pdf_path)
     # plain_lines_col: column-annotated lines (_COL_SEP on two-column rows).
     # clean_lines: _COL_SEP replaced by space — safe for all structural consumers.
-    plain_lines_col, page_sets = _extract_plain_lines_with_pages(pdf_path)
+    # line_positions: per-line x0 (PDF points), parallel to plain_lines_col; None for blank/padding rows.
+    plain_lines_col, page_sets, line_positions = _extract_plain_lines_with_pages(pdf_path)
     clean_lines = [l.replace(_COL_SEP, " ") for l in plain_lines_col]
 
     # Load data-driven corrections (cached; reloaded only when file changes).
@@ -1601,7 +1668,8 @@ def parse_pdf(pdf_path: str) -> Script:
         italic_lines = _find_italic_lines(pdf_path)
         script = _finalise(_parse_play(plain_lines_col, page_sets, title,
                                        skeleton=skeleton,
-                                       italic_lines=italic_lines))
+                                       italic_lines=italic_lines,
+                                       line_positions=line_positions))
         return _apply_corrections_config(script, config)
     if play_fmt == "colon_play":
         script = _finalise(_parse_colon_play(plain_lines_col, page_sets, title,
@@ -1921,6 +1989,7 @@ def _parse_play(
     title: str = "Script",
     skeleton: Optional["ScriptSkeleton"] = None,
     italic_lines: Optional[Set[str]] = None,
+    line_positions: Optional[List[Optional[float]]] = None,
 ) -> Script:
     """Parse a standard play (speaker name on own line, dialog below).
 
@@ -1953,6 +2022,7 @@ def _parse_play(
     script.scenes = _extract_scenes_play(
         plain_lines, known_speakers, noise, first_page_only,
         italic_lines=italic_lines,
+        line_positions=line_positions,
     )
 
     _apply_speaker_normalization(script, known_speakers)
@@ -1964,6 +2034,7 @@ def _extract_scenes_play(
     lines: List[str], known_speakers: Set[str], noise: Set[str],
     first_page_only: Optional[Set[str]] = None,
     italic_lines: Optional[Set[str]] = None,
+    line_positions: Optional[List[Optional[float]]] = None,
 ) -> List[Scene]:
     # Work with a local mutable copy so we can register abbreviated names
     # discovered during parsing (e.g. "CREDIT CARD COMPANY" from splitting
@@ -1982,6 +2053,10 @@ def _extract_scenes_play(
                 part = part.strip()
                 if part:
                     known_speakers.add(part)
+
+    # Infer spatial zones from x0 distribution (dialog vs cue/SD zone).
+    # x_zones = (dialog_x, cue_x, threshold) or None if no bimodal structure found.
+    x_zones = _infer_x_zones(line_positions) if line_positions else None
 
     scenes: List[Scene] = []
     scene_counter = 0
@@ -2136,7 +2211,7 @@ def _extract_scenes_play(
 
     prev_nonempty = ""  # last non-empty, non-noise stripped line
 
-    for raw in lines:
+    for _line_idx, raw in enumerate(lines):
         s = raw.strip()
         if not s:
             # Remember if a cue was set with no dialog yet — it may be the
@@ -2404,6 +2479,25 @@ def _extract_scenes_play(
                 _append_stage_direction(elements, _normalize_text(s))
                 prev_nonempty = s
                 continue
+            # Spatial x-zone guard: if the line's x0 is in the cue/SD zone
+            # (high x) and the text is mixed-case prose (not a speaker cue),
+            # it is a stage direction that shares the right-margin column with
+            # speaker cues.  This is the pattern seen in plays like TheHarvest
+            # where stage directions and speaker names both sit at x≈270.
+            # Only fire when we have reliable zone data AND we are NOT inside a
+            # two-column overlap block (where both columns carry dialog).
+            if (
+                x_zones is not None
+                and not (pending_is_compound and pending_overlap_cue)
+                and line_positions is not None
+                and _line_idx < len(line_positions)
+            ):
+                _lpos = line_positions[_line_idx]
+                if _lpos is not None and _lpos >= x_zones[2]:
+                    flush_dialog()
+                    _append_stage_direction(elements, _normalize_text(s))
+                    prev_nonempty = s
+                    continue
             # Retroactive compound-cue reconstruction: if this is the first
             # dialog line for the current speaker, it has _COL_SEP content, and
             # a dangling left-column cue was remembered across a page-boundary
