@@ -41,6 +41,44 @@ struct TableReadApp: App {
                 }
             }
 
+            CommandMenu("Script") {
+                Button("Render Selected Scenes") {
+                    state.renderSelectedScenes()
+                }
+                .keyboardShortcut("r", modifiers: .command)
+                .disabled(state.isGenerating || state.selectedScenes.isEmpty
+                          || !state.installedEngines.contains(state.selectedEngine))
+
+                Button("Preview First Scene") {
+                    state.renderPreviewScene()
+                }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
+                .disabled(state.isGenerating || state.selectedScenes.isEmpty
+                          || !state.installedEngines.contains(state.selectedEngine))
+
+                Divider()
+
+                Button(state.isPaused ? "Resume Render" : "Pause Render") {
+                    if state.isPaused { state.resumeGeneration() }
+                    else { state.pauseGeneration() }
+                }
+                .keyboardShortcut("j", modifiers: [.command, .shift])
+                .disabled(!state.isGenerating)
+
+                Button("Cancel Render") {
+                    state.cancelGeneration()
+                }
+                .keyboardShortcut(".", modifiers: .command)
+                .disabled(!state.isGenerating)
+
+                Divider()
+
+                Button("Skip Already-Rendered Scenes") {
+                    Task { await state.selectMissingScenes() }
+                }
+                .disabled(state.selectedPDF == nil || state.isGenerating)
+            }
+
             CommandGroup(replacing: .help) {
                 Button("Table Read Help") {
                     UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")
