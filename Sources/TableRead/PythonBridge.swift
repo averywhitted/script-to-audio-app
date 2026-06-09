@@ -200,6 +200,10 @@ final class PythonBridge {
                 if let kind = c.correctedKind { dict["correctedKind"] = kind }
                 if let speaker = c.correctedSpeaker { dict["correctedSpeaker"] = speaker }
                 if let text = c.correctedText, !text.isEmpty { dict["correctedText"] = text }
+                if let os = c.correctedOverlapSpeakers, !os.isEmpty { dict["correctedOverlapSpeakers"] = os }
+                if let ot = c.correctedOverlapTexts, !ot.isEmpty { dict["correctedOverlapTexts"] = ot }
+                if let partnerKey = c.manualOverlapPartnerKey { dict["manualOverlapPartnerKey"] = partnerKey }
+                if let removedIdx = c.removedVoiceIndex { dict["removedVoiceIndex"] = removedIdx }
                 correctionList.append(dict)
             }
             payload["corrections"] = correctionList

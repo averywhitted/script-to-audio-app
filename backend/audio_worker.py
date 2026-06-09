@@ -202,8 +202,16 @@ def _build_assignment(payload: Dict[str, Any], script, voices) -> Assignment:
 def _apply_corrections(script, corrections_list: List[Dict[str, Any]]):
     """Apply user corrections from the Review step to the parsed script in-place.
 
-    Each entry in corrections_list is keyed by (sceneNumber, textPrefix) and may
-    carry: correctedKind, correctedSpeaker, correctedText, or markedAsNoise.
+    Handles the following correction types:
+    - markedAsNoise: exclude element entirely
+    - correctedKind / correctedSpeaker / correctedText: basic field overrides
+    - correctedOverlapSpeakers / correctedOverlapTexts: override speaker names or
+      per-voice texts on parser-detected simultaneous lines
+    - manualOverlapPartnerKey: merge two solo elements into a simultaneous pair;
+      the secondary element is absorbed (removed) from the scene
+    - removedVoiceIndex: soft-remove one (0=left, 1=right) or both (2) voices
+      from a simultaneous element; both-removed suppresses the element entirely
+
     Returns the (mutated) script so callers can chain.
     """
     if not corrections_list:
@@ -215,15 +223,33 @@ def _apply_corrections(script, corrections_list: List[Dict[str, Any]]):
         corrections_by_key[key] = c
 
     for scene in script.scenes:
+        # Build a text-prefix → element lookup for manual overlap partner resolution.
+        el_by_prefix: Dict[str, Any] = {el.text[:60]: el for el in scene.elements}
+
+        # Collect text prefixes that will be absorbed as secondaries in a manual overlap.
+        # Only suppress a secondary when its primary is not itself noise.
+        absorbed_prefixes: set = set()
+        for el in scene.elements:
+            c = corrections_by_key.get((scene.number, el.text[:60]))
+            if c and "manualOverlapPartnerKey" in c and not c.get("markedAsNoise"):
+                absorbed_prefixes.add(c["manualOverlapPartnerKey"])
+
         filtered = []
         for el in scene.elements:
             text_prefix = el.text[:60]
+
+            # Skip elements absorbed as the secondary half of a manual overlap pair.
+            if text_prefix in absorbed_prefixes:
+                continue
+
             c = corrections_by_key.get((scene.number, text_prefix))
             if c is None:
                 filtered.append(el)
                 continue
             if c.get("markedAsNoise"):
                 continue  # exclude this element
+
+            # ── Basic field overrides ──────────────────────────────────────────
             if "correctedKind" in c:
                 el.kind = c["correctedKind"]
             if "correctedSpeaker" in c:
@@ -231,8 +257,52 @@ def _apply_corrections(script, corrections_list: List[Dict[str, Any]]):
                 el.speaker = None if raw == "" else raw
             if "correctedText" in c:
                 el.text = c["correctedText"]
+
+            # ── Parser-detected overlap: speaker / text overrides ─────────────
+            if "correctedOverlapSpeakers" in c:
+                el.overlap_cue = c["correctedOverlapSpeakers"]
             if "correctedOverlapTexts" in c:
                 el.overlap_texts = c["correctedOverlapTexts"]
+
+            # ── Soft-removed voice(s) ─────────────────────────────────────────
+            # removedVoiceIndex: 0 = left removed, 1 = right removed, 2 = both
+            removed_idx = c.get("removedVoiceIndex")
+            if removed_idx is not None and el.overlap_cue and len(el.overlap_cue) >= 2:
+                if removed_idx == 2:
+                    continue  # both voices removed — suppress entirely
+                keep_idx = 1 if removed_idx == 0 else 0
+                texts = el.overlap_texts or ([el.text] * len(el.overlap_cue))
+                el.speaker = el.overlap_cue[keep_idx] if keep_idx < len(el.overlap_cue) else None
+                el.text = texts[keep_idx] if keep_idx < len(texts) else el.text
+                el.overlap_cue = None
+                el.overlap_texts = None
+
+            # ── Manual overlap: merge primary + secondary into a simultaneous pair ──
+            if "manualOverlapPartnerKey" in c:
+                partner_key = c["manualOverlapPartnerKey"]
+                partner = el_by_prefix.get(partner_key)
+                if partner:
+                    # Resolve speaker A (the primary element)
+                    if "correctedSpeaker" in c:
+                        raw = c["correctedSpeaker"]
+                        speaker_a = "Narrator" if raw == "" else raw
+                    else:
+                        speaker_a = el.speaker or "Narrator"
+
+                    # Resolve speaker B (the secondary element, may have its own correction)
+                    partner_c = corrections_by_key.get((scene.number, partner_key))
+                    if partner_c and "correctedSpeaker" in partner_c:
+                        raw = partner_c["correctedSpeaker"]
+                        speaker_b = "Narrator" if raw == "" else raw
+                    else:
+                        speaker_b = partner.speaker or "Narrator"
+
+                    text_a = c.get("correctedText") or el.text
+                    text_b = (partner_c.get("correctedText") if partner_c else None) or partner.text
+
+                    el.overlap_cue = [speaker_a, speaker_b]
+                    el.overlap_texts = [text_a, text_b]
+
             filtered.append(el)
         scene.elements = filtered
 
