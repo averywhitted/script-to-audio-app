@@ -1187,6 +1187,7 @@ def _classify_lines(
     last_role: str = "stage_direction"  # tracks context for dialog inference
     pending_speaker: Optional[str] = None  # set when we see a speaker_cue
     in_paren_block: bool = False  # True while inside a multi-line (stage direction)
+    crossed_page_break: bool = False  # True through blanks that follow a page break
 
     for sl in lines:
         text = sl.text.strip()
@@ -1209,15 +1210,23 @@ def _classify_lines(
         if not text:
             classified.append(ClassifiedLine(line=sl, role="blank"))
             if sl.is_page_break:
-                # Page breaks reset dialog-following context.
+                # Mark that any following blanks belong to a page-break gap
+                # so pending_speaker is preserved across the full gap.
+                crossed_page_break = True
+            elif crossed_page_break:
+                # Blank padding after a page break — keep speaker context alive
+                # so dialog that resumes without a fresh attribution line still
+                # gets the right speaker.
                 pass
             else:
-                # A blank line clears the "next line is dialog" context and
-                # ends any open multi-line parenthetical block.
+                # An ordinary blank line ends the current speaker context.
                 pending_speaker = None
                 in_paren_block = False
             last_role = "blank"
             continue
+
+        # Any non-blank content ends the page-break grace window.
+        crossed_page_break = False
 
         # ------------------------------------------------------------------
         # Rule 2 — scene heading
