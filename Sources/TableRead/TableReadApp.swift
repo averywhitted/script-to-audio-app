@@ -172,8 +172,8 @@ extension TableReadApp {
         let venv = rootURL.appendingPathComponent(".venv/bin/python3")
         let python = fm.fileExists(atPath: venv.path) ? venv.path : "python3"
 
-        let outFile = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("table_read_diagnosis.txt")
+        let desktop = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
+        let outFile = desktop.appendingPathComponent("table_read_diagnosis.txt")
 
         DispatchQueue.global(qos: .userInitiated).async {
             let proc = Process()
