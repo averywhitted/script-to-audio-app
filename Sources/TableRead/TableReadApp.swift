@@ -121,6 +121,21 @@ struct TableReadApp: App {
                 Button("Reset Onboarding") {
                     UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")
                 }
+                Divider()
+                Button("Diagnose Current Script") {
+                    if let pdf = state.selectedPDF {
+                        Self.runParserDiagnostic(pdf: pdf)
+                    }
+                }
+                .disabled(state.selectedPDF == nil)
+                Button("Diagnose PDF…") {
+                    let panel = NSOpenPanel()
+                    panel.allowedContentTypes = [.pdf]
+                    panel.allowsMultipleSelection = false
+                    if panel.runModal() == .OK, let url = panel.url {
+                        Self.runParserDiagnostic(pdf: url)
+                    }
+                }
             }
             #endif
         }
@@ -136,6 +151,63 @@ extension TableReadApp {
     static func openBugReport() {
         NotificationCenter.default.post(name: .showBugReport, object: nil)
     }
+
+    #if DEBUG
+    static func runParserDiagnostic(pdf: URL) {
+        let fm = FileManager.default
+
+        // Locate repo root via the same baked Info.plist key PythonBridge uses.
+        guard let repoRoot = Bundle.main.infoDictionary?["TRRepoRoot"] as? String else {
+            showDiagnosticError("TRRepoRoot not set in Info.plist")
+            return
+        }
+        let rootURL = URL(fileURLWithPath: repoRoot)
+        let script = rootURL.appendingPathComponent("scripts/diagnose_parse.py")
+        guard fm.fileExists(atPath: script.path) else {
+            showDiagnosticError("diagnose_parse.py not found at \(script.path)")
+            return
+        }
+
+        // Pick Python interpreter — prefer .venv, fall back to python3 on PATH.
+        let venv = rootURL.appendingPathComponent(".venv/bin/python3")
+        let python = fm.fileExists(atPath: venv.path) ? venv.path : "python3"
+
+        let outFile = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("table_read_diagnosis.txt")
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            proc.arguments = [python, script.path, pdf.path]
+            proc.currentDirectoryURL = rootURL
+
+            let pipe = Pipe()
+            proc.standardOutput = pipe
+            proc.standardError = pipe
+
+            do {
+                try proc.run()
+                proc.waitUntilExit()
+                let output = pipe.fileHandleForReading.readDataToEndOfFile()
+                try output.write(to: outFile)
+                DispatchQueue.main.async {
+                    NSWorkspace.shared.open(outFile)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    showDiagnosticError(error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private static func showDiagnosticError(_ message: String) {
+        let alert = NSAlert()
+        alert.messageText = "Parser Diagnostic Failed"
+        alert.informativeText = message
+        alert.runModal()
+    }
+    #endif
 }
 
 // MARK: - App Delegate
