@@ -1186,6 +1186,7 @@ def _classify_lines(
     classified: List[ClassifiedLine] = []
     last_role: str = "stage_direction"  # tracks context for dialog inference
     pending_speaker: Optional[str] = None  # set when we see a speaker_cue
+    in_paren_block: bool = False  # True while inside a multi-line (stage direction)
 
     for sl in lines:
         text = sl.text.strip()
@@ -1211,8 +1212,10 @@ def _classify_lines(
                 # Page breaks reset dialog-following context.
                 pass
             else:
-                # A blank line clears the "next line is dialog" context.
+                # A blank line clears the "next line is dialog" context and
+                # ends any open multi-line parenthetical block.
                 pending_speaker = None
+                in_paren_block = False
             last_role = "blank"
             continue
 
@@ -1240,14 +1243,45 @@ def _classify_lines(
             continue
 
         # ------------------------------------------------------------------
-        # Rule 3 — parenthetical
+        # Rule 3 — parenthetical (single-line)
         # ------------------------------------------------------------------
         if text.startswith("(") and text.endswith(")"):
+            in_paren_block = False  # clean up any stale open block
             classified.append(ClassifiedLine(
                 line=sl, role="parenthetical",
                 speaker=pending_speaker,
             ))
             last_role = "parenthetical"
+            continue
+
+        # ------------------------------------------------------------------
+        # Rule 3b — multi-line parenthetical block: continuation
+        #
+        # If we are already inside an open "(" block, every line until the
+        # closing ")" is a stage direction embedded in the character's speech.
+        # We do NOT clear pending_speaker so the line after ")" is still
+        # attributed to the same character.
+        # ------------------------------------------------------------------
+        if in_paren_block:
+            if text.endswith(")"):
+                in_paren_block = False
+            classified.append(ClassifiedLine(line=sl, role="stage_direction"))
+            last_role = "stage_direction"
+            # pending_speaker intentionally preserved
+            continue
+
+        # ------------------------------------------------------------------
+        # Rule 3c — multi-line parenthetical block: opening
+        #
+        # A line that starts with "(" but does NOT close on the same line
+        # opens a multi-line stage direction block.  All subsequent lines are
+        # handled by Rule 3b until a ")" closes it.
+        # ------------------------------------------------------------------
+        if text.startswith("("):
+            in_paren_block = True
+            classified.append(ClassifiedLine(line=sl, role="stage_direction"))
+            last_role = "stage_direction"
+            # pending_speaker intentionally preserved
             continue
 
         # ------------------------------------------------------------------
