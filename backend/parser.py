@@ -1187,8 +1187,6 @@ def _classify_lines(
     last_role: str = "stage_direction"  # tracks context for dialog inference
     pending_speaker: Optional[str] = None  # set when we see a speaker_cue
     in_paren_block: bool = False  # True while inside a multi-line (stage direction)
-    last_known_speaker: Optional[str] = None  # last speaker seen; survives blanks
-    just_after_page_break: bool = False  # True after a page-break sentinel, until first real content
 
     for sl in lines:
         text = sl.text.strip()
@@ -1199,8 +1197,7 @@ def _classify_lines(
         # Page-number watermarks appear on every page of a draft script
         # (e.g. "[Draft 3.0] 4") and must be dropped regardless of x-zone
         # or speaker context — they would otherwise be absorbed into the
-        # preceding character's dialog.  Noise does NOT close the page-break
-        # continuation window.
+        # preceding character's dialog.
         # ------------------------------------------------------------------
         if text and _PAGE_MARKER_RE.match(text):
             classified.append(ClassifiedLine(line=sl, role="noise"))
@@ -1211,25 +1208,14 @@ def _classify_lines(
         # ------------------------------------------------------------------
         if not text:
             classified.append(ClassifiedLine(line=sl, role="blank"))
-            if sl.is_page_break:
-                # Open the continuation window so that dialog which resumes
-                # on the next page without a fresh speaker cue can still be
-                # attributed to the last known speaker.
-                just_after_page_break = True
-            else:
-                # Ordinary blank ends the current speaker context.
+            if not sl.is_page_break:
+                # Only ordinary (non-page-break) blanks clear speaker context.
+                # Page-break sentinels preserve pending_speaker so that dialog
+                # can continue across the break without a fresh attribution line.
                 pending_speaker = None
                 in_paren_block = False
-                # just_after_page_break intentionally kept — the padding blank
-                # between a page-break sentinel and the first real content on
-                # the new page must not close the window.
             last_role = "blank"
             continue
-
-        # First real content line: snapshot and clear the page-break window so
-        # subsequent lines are not inadvertently affected.
-        in_page_break_window = just_after_page_break
-        just_after_page_break = False
 
         # ------------------------------------------------------------------
         # Rule 2 — scene heading
@@ -1251,7 +1237,6 @@ def _classify_lines(
         if is_scene_heading:
             classified.append(ClassifiedLine(line=sl, role="scene_heading"))
             pending_speaker = None
-            last_known_speaker = None  # new scene — don't carry attribution across
             last_role = "scene_heading"
             continue
 
@@ -1319,7 +1304,6 @@ def _classify_lines(
         if cr >= 0.85 and is_short and in_speaker_zone:
             speaker_name = cue_text if cue_text else text
             pending_speaker = speaker_name
-            last_known_speaker = speaker_name
             classified.append(ClassifiedLine(
                 line=sl, role="speaker_cue", speaker=speaker_name,
             ))
@@ -1387,30 +1371,11 @@ def _classify_lines(
             or sl.x is None
             or (dialog_x_min <= sl.x <= dialog_x_max)
         )
-        # Page-break continuation: a line in the dialog zone that immediately
-        # follows a page break (with no intervening speaker cue) and doesn't
-        # look like a stage direction is attributed to the last known speaker.
-        # pending_speaker is None here (cleared by the padding blank), so
-        # Rule 4c's in_dialog_context is False — speaker cues on the new page
-        # are never mis-classified.  After this fires, last_role becomes
-        # "dialog" and subsequent continuation lines are handled by the normal
-        # second condition below.
-        is_page_break_continuation = (
-            in_page_break_window
-            and in_dialog_zone
-            and last_known_speaker is not None
-            and not _looks_like_stage_direction(text)
-        )
-        if (
-            pending_speaker is not None
-            or (last_role in ("dialog", "speaker_cue", "parenthetical") and in_dialog_zone)
-            or is_page_break_continuation
-        ):
-            if is_page_break_continuation and pending_speaker is None:
-                # Restore the speaker so subsequent lines in this block
-                # are attributed correctly by Rule 5's normal condition.
-                pending_speaker = last_known_speaker
-            classified.append(ClassifiedLine(line=sl, role="dialog", speaker=pending_speaker))
+        if pending_speaker is not None or (last_role in ("dialog", "speaker_cue", "parenthetical") and in_dialog_zone):
+            classified.append(ClassifiedLine(
+                line=sl, role="dialog",
+                speaker=pending_speaker,
+            ))
             last_role = "dialog"
             continue
 
