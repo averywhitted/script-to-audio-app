@@ -194,14 +194,15 @@ actor AppUpdater {
 
     /// Replaces the current running bundle with `newAppURL` via a detached helper script,
     /// then terminates this instance.
-    func installUpdate(from newAppURL: URL) throws {
+    func installUpdate(from newAppURL: URL) async throws {
         let currentApp = Bundle.main.bundleURL
         let safeNew     = shell(newAppURL.path)
         let safeCurrent = shell(currentApp.path)
 
         let script = """
         #!/bin/bash
-        sleep 1.5
+        # Wait for the app to fully quit before replacing it.
+        sleep 2
         rm -rf \(safeCurrent)
         cp -R \(safeNew) \(safeCurrent)
         xattr -cr \(safeCurrent)
@@ -215,12 +216,18 @@ actor AppUpdater {
             ofItemAtPath: scriptURL.path
         )
         let p = Process()
-        p.launchPath  = "/bin/bash"
-        p.arguments   = [scriptURL.path]
-        p.launch()
+        p.executableURL = URL(fileURLWithPath: "/bin/bash")
+        p.arguments     = [scriptURL.path]
+        try p.run()   // throws if /bin/bash is unavailable — caught by caller
 
-        // Quit this instance — the script will reopen us after the copy completes
-        DispatchQueue.main.async { NSApplication.shared.terminate(nil) }
+        // Give the process a moment to actually start before we exit.
+        try await Task.sleep(nanoseconds: 100_000_000)  // 100 ms
+
+        // Terminate on the main actor so AppKit can do clean window teardown.
+        // exit(0) follows immediately as a guaranteed killswitch — the script
+        // is already running detached at this point.
+        await MainActor.run { NSApplication.shared.terminate(nil) }
+        exit(0)
     }
 
     // MARK: — Helpers
