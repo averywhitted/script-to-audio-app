@@ -2396,6 +2396,51 @@ class TestPageBreakAttribution:
         assert all(cl.speaker == "ALICE" for cl in dialog)
 
 
+    def test_dialog_continues_after_page_break_with_padding_blank(self):
+        """The padding blank between the page-break sentinel and the first
+        content line must not kill attribution — this is the core EDDIE case."""
+        lines = [
+            self._make("ALICE", x=270.0),
+            self._make("First line."),
+            self._page_break(),
+            self._blank(),             # padding blank — the gap that was breaking things
+            self._make("Continued line."),
+        ]
+        result = p._classify_lines(lines)
+        dialog = [cl for cl in result if cl.role == "dialog"]
+        assert len(dialog) == 2, f"Expected 2 dialog: {[cl.line.text for cl in dialog]}"
+        assert all(cl.speaker == "ALICE" for cl in dialog)
+
+    def test_multiple_continuation_lines_after_page_break(self):
+        """Several dialog lines after a page break all stay with the same speaker."""
+        lines = [
+            self._make("ALICE", x=270.0),
+            self._make("First line."),
+            self._page_break(),
+            self._blank(),
+            self._make("Second line."),
+            self._make("Third line."),
+        ]
+        result = p._classify_lines(lines)
+        dialog = [cl for cl in result if cl.role == "dialog"]
+        assert len(dialog) == 3
+        assert all(cl.speaker == "ALICE" for cl in dialog)
+
+    def test_new_speaker_cue_does_not_get_misclassified_as_sd(self):
+        """Critical regression: a new speaker name after a page break must become
+        a speaker_cue, NOT a stage_direction — this was the crossed_page_break bug."""
+        lines = [
+            self._make("ALICE", x=270.0),
+            self._make("Her line."),
+            self._page_break(),
+            self._blank(),
+            self._make("BOB", x=270.0),  # new speaker — must be speaker_cue
+            self._make("His line."),
+        ]
+        result = p._classify_lines(lines)
+        bob_cue = [cl for cl in result if cl.line.text == "BOB"]
+        assert bob_cue[0].role == "speaker_cue", f"BOB was {bob_cue[0].role}"
+
     def test_fresh_speaker_cue_after_page_break_takes_over(self):
         """A speaker cue on the new page correctly replaces the stale pending_speaker."""
         lines = [
