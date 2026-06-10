@@ -405,7 +405,7 @@ private struct SceneReviewRow: View {
                 let merged = state.mergedElements(for: scene, pdfPath: pdfPath, limit: limit)
                 let hiddenCount = scene.elements.count - min(scene.elements.count, limit)
 
-                LazyVStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(merged) { item in
                         switch item {
                         case .parsed(let element):
