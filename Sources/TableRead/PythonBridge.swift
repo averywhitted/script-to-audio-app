@@ -83,9 +83,10 @@ final class PythonBridge {
 
         // 1. Path baked into Info.plist at build time via $(SRCROOT)/..
         //    Covers Xcode Debug/Release builds where the executable is in DerivedData.
+        //    Trust it unconditionally — calling valid() would touch ~/Documents and
+        //    trigger a TCC prompt on first launch.
         if let baked = Bundle.main.infoDictionary?["TRRepoRoot"] as? String {
-            let url = URL(fileURLWithPath: baked).standardizedFileURL
-            if valid(url) { return url }
+            return URL(fileURLWithPath: baked).standardizedFileURL
         }
 
         // 2. Bundled inside a .app (packaged distribution)
