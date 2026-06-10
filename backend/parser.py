@@ -1252,9 +1252,17 @@ def _classify_lines(
 
         # ------------------------------------------------------------------
         # Rule 4 — speaker cue
+        #
+        # Standard scripts annotate character names with short parenthetical
+        # suffixes: "ALICE (cont.)", "TOM (V.O.)", "JOSH (CONT'D)",
+        # "DENISE (on phone)".  These fail the bare caps-ratio test because
+        # of the lowercase suffix, so we strip any trailing parenthetical of
+        # ≤ 20 chars before testing — then use the stripped name as the
+        # canonical speaker.
         # ------------------------------------------------------------------
-        cr = _caps_ratio(text)
-        is_short = len(text) <= 60
+        cue_text = re.sub(r"\s*\([^)]{1,20}\)\s*$", "", text).strip()
+        cr = _caps_ratio(cue_text or text)
+        is_short = len(cue_text or text) <= 60
         in_speaker_zone = (
             speaker_x_min is None
             or speaker_x_max is None
@@ -1262,9 +1270,10 @@ def _classify_lines(
             or (speaker_x_min <= sl.x <= speaker_x_max)
         )
         if cr >= 0.85 and is_short and in_speaker_zone:
-            pending_speaker = text
+            speaker_name = cue_text if cue_text else text
+            pending_speaker = speaker_name
             classified.append(ClassifiedLine(
-                line=sl, role="speaker_cue", speaker=text,
+                line=sl, role="speaker_cue", speaker=speaker_name,
             ))
             last_role = "speaker_cue"
             continue

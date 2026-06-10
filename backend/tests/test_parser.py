@@ -2239,6 +2239,55 @@ class TestClassifyLinesWithZones:
         result = p._classify_lines([sl], zones=zones)
         assert result[0].role == "speaker_cue"
 
+    # ---- Rule 4: cont. / V.O. suffix stripping ----
+
+    def test_cont_suffix_becomes_speaker_cue(self):
+        """'MICHAELA (cont.)' must be recognised as a speaker cue for MICHAELA.
+        This is the page-break continuation bug: without this fix the line was
+        classified as stage_direction (cr < 0.85), clearing pending_speaker and
+        causing all following dialog to be attributed to the narrator."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        sl = self._make("MICHAELA (cont.)", x=270.0)
+        result = p._classify_lines([sl], zones=zones)
+        assert result[0].role == "speaker_cue", (
+            f"'MICHAELA (cont.)' should be speaker_cue, got {result[0].role}"
+        )
+        assert result[0].speaker == "MICHAELA"
+
+    def test_contd_suffix_becomes_speaker_cue(self):
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        sl = self._make("JOSH (CONT'D)", x=270.0)
+        result = p._classify_lines([sl], zones=zones)
+        assert result[0].role == "speaker_cue"
+        assert result[0].speaker == "JOSH"
+
+    def test_vo_suffix_becomes_speaker_cue(self):
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        sl = self._make("TOM (V.O.)", x=270.0)
+        result = p._classify_lines([sl], zones=zones)
+        assert result[0].role == "speaker_cue"
+        assert result[0].speaker == "TOM"
+
+    def test_cont_suffix_restores_speaker_after_page_break(self):
+        """Full page-break scenario: dialog → page break (clears pending_speaker)
+        → CHAR (cont.) → dialog should be attributed to CHAR, not narrator."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        lines = [
+            self._make("ADA", x=270.0),
+            self._make("First line of her speech.", x=90.0),
+            # page break clears pending_speaker (blank line, not page-break sentinel)
+            p.StructuredLine(text="", x=None, y=None),
+            self._make("ADA (cont.)", x=270.0),          # must restore pending_speaker
+            self._make("Continues after the page break.", x=90.0),
+        ]
+        result = p._classify_lines(lines, zones=zones)
+        dialog_after = [cl for cl in result if cl.role == "dialog"]
+        assert len(dialog_after) == 2
+        assert all(cl.speaker == "ADA" for cl in dialog_after), (
+            f"Dialog after (cont.) must be attributed to ADA: "
+            f"{[cl.speaker for cl in dialog_after]}"
+        )
+
     def test_no_zones_cue_zone_rule_inactive(self):
         """Without zones, mixed-case line after a cue should still be dialog
         (Rule 4b only activates when speaker_x_min is set)."""
