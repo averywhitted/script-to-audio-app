@@ -2439,6 +2439,28 @@ class TestPageBreakAttribution:
         assert len(alice_dialog) == 1
         assert len(bob_dialog) == 1
 
+    def test_page_number_with_period_does_not_break_attribution(self):
+        """'8.' on the new page (right-margin page number) is noise and must not
+        clear pending_speaker or reset the page-break grace window.
+        This was the exact pattern from TheHarvest that caused EDDIE's continued
+        dialog to be attributed to NARRATOR."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=180.0)
+        lines = [
+            self._make("EDDIE", x=270.0),
+            self._make("No. Just this installment?"),
+            self._page_break(),
+            self._blank(),
+            self._make("8.", x=450.0),   # right-margin page number
+            self._blank(),
+            self._make("Or, you know, you could just give me more time."),
+        ]
+        result = p._classify_lines(lines, zones=zones)
+        page_num = [cl for cl in result if cl.line.text == "8."]
+        assert page_num[0].role == "noise"
+        dialog = [cl for cl in result if cl.role == "dialog"]
+        assert len(dialog) == 2, f"Expected 2 dialog lines: {[cl.line.text for cl in dialog]}"
+        assert all(cl.speaker == "EDDIE" for cl in dialog)
+
 
 class TestMultiLineParenBlock:
     """Multi-line stage directions wrapped in parentheses must be treated as
