@@ -92,8 +92,9 @@ struct TableReadApp: App {
                 .keyboardShortcut("b", modifiers: [.command, .shift])
             }
 
-            #if DEBUG
+            #if DEBUG || DIAGNOSTIC_MENU
             CommandMenu("Debug") {
+                #if DEBUG
                 Button("Simulate Update Available") {
                     state.availableUpdate = UpdateInfo(
                         version: "99.0.0",
@@ -137,6 +138,7 @@ struct TableReadApp: App {
                     }
                 }
                 Divider()
+                #endif
                 Button("Test Update Install…") {
                     let alert = NSAlert()
                     alert.messageText = "Test Update Install"
