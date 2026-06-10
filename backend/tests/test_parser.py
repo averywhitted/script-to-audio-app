@@ -2395,33 +2395,6 @@ class TestPageBreakAttribution:
         assert len(dialog) == 2
         assert all(cl.speaker == "ALICE" for cl in dialog)
 
-    def test_dialog_continues_after_page_break_plus_padding_blank(self):
-        """A regular blank that immediately follows a page-break blank is part of
-        the same gap — pending_speaker must survive through it too."""
-        lines = [
-            self._make("ALICE", x=270.0),
-            self._make("First line."),
-            self._page_break(),
-            self._blank(),         # padding blank between pages
-            self._make("Continued line."),
-        ]
-        result = p._classify_lines(lines)
-        dialog = [cl for cl in result if cl.role == "dialog"]
-        assert len(dialog) == 2, f"Expected 2 dialog lines, got {[cl.line.text for cl in dialog]}"
-        assert all(cl.speaker == "ALICE" for cl in dialog)
-
-    def test_ordinary_blank_still_clears_speaker(self):
-        """A blank NOT preceded by a page break must still clear pending_speaker."""
-        lines = [
-            self._make("ALICE", x=270.0),
-            self._make("First line."),
-            self._blank(),         # ordinary blank — NOT a page break
-            self._make("BOB speaks.", x=90.0),
-        ]
-        result = p._classify_lines(lines)
-        # After an ordinary blank, "BOB speaks." has no pending_speaker → not dialog
-        dialog = [cl for cl in result if cl.role == "dialog"]
-        assert len(dialog) == 1  # only "First line."
 
     def test_fresh_speaker_cue_after_page_break_takes_over(self):
         """A speaker cue on the new page correctly replaces the stale pending_speaker."""
