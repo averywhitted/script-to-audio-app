@@ -83,6 +83,20 @@ private struct GeneralSettingsTab: View {
             }
 
             Section {
+                Picker("Update Channel", selection: $state.updateChannel) {
+                    ForEach(UpdateChannel.allCases, id: \.self) { channel in
+                        Text(channel.displayName).tag(channel)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text(state.updateChannel.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Update Channel")
+            }
+
+            Section {
                 Toggle("Auto-open output folder in Finder after render", isOn: $state.autoOpenFinderAfterRender)
                     .help("When a render completes without errors, the output folder opens automatically in Finder.")
             } header: {

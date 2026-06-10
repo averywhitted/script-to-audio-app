@@ -3,6 +3,25 @@ import AppKit
 
 // MARK: - Data types
 
+enum UpdateChannel: String, CaseIterable, Sendable {
+    case stable = "stable"
+    case beta   = "beta"
+
+    var displayName: String {
+        switch self {
+        case .stable: return "Stable"
+        case .beta:   return "Beta"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .stable: return "Tested, production-ready releases only."
+        case .beta:   return "Includes pre-releases with new features that may have rough edges."
+        }
+    }
+}
+
 struct UpdateInfo: Sendable, Equatable {
     /// Clean version string, e.g. "0.1.5"
     let version: String
@@ -54,11 +73,23 @@ actor AppUpdater {
 
     // MARK: — Check for updates
 
-    /// Fetches the latest GitHub release and returns an `UpdateInfo` if a newer version exists.
-    /// Returns `nil` when already up-to-date, when there are no releases yet, or on network error.
-    func checkForUpdates() async -> UpdateInfo? {
-        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/releases/latest")
-        else { return nil }
+    /// Fetches the appropriate GitHub release for the given channel and returns an
+    /// `UpdateInfo` if a newer version exists.  Returns `nil` when already
+    /// up-to-date, when there are no releases yet, or on network error.
+    ///
+    /// - **stable**: queries `/releases/latest` — GitHub returns the most recent
+    ///   non-prerelease, non-draft release.
+    /// - **beta**: queries `/releases?per_page=1` — returns the most recently
+    ///   published release regardless of prerelease status.
+    func checkForUpdates(channel: UpdateChannel = .beta) async -> UpdateInfo? {
+        let endpoint: String
+        switch channel {
+        case .stable:
+            endpoint = "https://api.github.com/repos/\(owner)/\(repo)/releases/latest"
+        case .beta:
+            endpoint = "https://api.github.com/repos/\(owner)/\(repo)/releases?per_page=1"
+        }
+        guard let url = URL(string: endpoint) else { return nil }
 
         var req = URLRequest(url: url, timeoutInterval: 12)
         req.setValue("application/vnd.github+json",   forHTTPHeaderField: "Accept")
@@ -70,16 +101,26 @@ actor AppUpdater {
               http.statusCode == 200
         else { return nil }
 
-        guard let json      = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let tag       = json["tag_name"]  as? String,
-              let htmlStr   = json["html_url"]  as? String,
-              let htmlURL   = URL(string: htmlStr)
+        // Beta uses the list endpoint (returns a JSON array); stable uses the
+        // single-object endpoint.  Normalise both to a single release dict.
+        let json: [String: Any]?
+        if channel == .beta {
+            let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+            json = arr?.first
+        } else {
+            json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        }
+
+        guard let release  = json,
+              let tag      = release["tag_name"] as? String,
+              let htmlStr  = release["html_url"]  as? String,
+              let htmlURL  = URL(string: htmlStr)
         else { return nil }
 
         guard AppUpdater.isNewer(tag, than: currentVersion) else { return nil }
 
-        let notes  = (json["body"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let assets = json["assets"] as? [[String: Any]] ?? []
+        let notes  = (release["body"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let assets = release["assets"] as? [[String: Any]] ?? []
         let asset  = assets.first { ($0["name"] as? String) == assetName }
 
         if let downloadStr = asset?["browser_download_url"] as? String,
@@ -92,7 +133,6 @@ actor AppUpdater {
                 hasZipAsset:  true
             )
         } else {
-            // Release exists but zip hasn't been uploaded yet — direct user to the page
             return UpdateInfo(
                 version:      tag.trimmingCharacters(in: CharacterSet(charactersIn: "vV")),
                 downloadURL:  htmlURL,

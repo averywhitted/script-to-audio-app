@@ -72,6 +72,12 @@ final class AppState: ObservableObject {
     @Published var updateDownloadState: UpdateDownloadState = .idle
     /// Prevents showing the startup prompt sheet more than once per launch.
     @Published var didPromptForUpdate = false
+    @Published var updateChannel: UpdateChannel = {
+        let raw = UserDefaults.standard.string(forKey: "updateChannel") ?? ""
+        return UpdateChannel(rawValue: raw) ?? .beta
+    }() {
+        didSet { UserDefaults.standard.set(updateChannel.rawValue, forKey: "updateChannel") }
+    }
 
     // Settings — persisted via UserDefaults
     @Published var autoOpenFinderAfterRender: Bool = UserDefaults.standard.bool(forKey: "autoOpenFinderAfterRender") {
@@ -1502,7 +1508,7 @@ extension AppState {
 extension AppState {
     /// Called once at launch (with a short delay) and whenever the user taps "Check for Updates".
     func checkForUpdates() async {
-        let info = await AppUpdater.shared.checkForUpdates()
+        let info = await AppUpdater.shared.checkForUpdates(channel: updateChannel)
         availableUpdate = info
     }
 
