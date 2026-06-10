@@ -1010,10 +1010,40 @@ def _extract_structured_lines(pdf_path: str) -> List[StructuredLine]:
 
                     # -----------------------------------------------------------------
                     # 4. Compute per-line text and metadata.
+                    #
+                    # PDF files do NOT encode word spaces as whitespace characters —
+                    # they represent spaces by leaving a horizontal gap between the
+                    # last character of one word and the first character of the next.
+                    # Simply concatenating chars produces "InJesusnamewepray." instead
+                    # of "In Jesus name we pray."
+                    #
+                    # Fix: sort chars left-to-right by x0 and insert a space whenever
+                    # the gap between consecutive chars exceeds 40 % of the average
+                    # character width.  This matches what pdfplumber's extract_words()
+                    # does internally.
                     # -----------------------------------------------------------------
-                    text = " ".join(
-                        "".join(c["text"] for c in chars_in_line).split()
-                    ).strip()
+                    chars_sorted = sorted(
+                        chars_in_line, key=lambda c: float(c.get("x0", 0))
+                    )
+                    if chars_sorted:
+                        avg_w = sum(
+                            float(c.get("width", 6)) for c in chars_sorted
+                        ) / len(chars_sorted)
+                        word_gap = max(avg_w * 0.4, 1.5)  # floor at 1.5 pt
+                        parts: List[str] = [chars_sorted[0].get("text", "")]
+                        for i in range(1, len(chars_sorted)):
+                            prev_c = chars_sorted[i - 1]
+                            curr_c = chars_sorted[i]
+                            prev_x1 = float(prev_c.get("x0", 0)) + float(
+                                prev_c.get("width", 0)
+                            )
+                            curr_x0 = float(curr_c.get("x0", 0))
+                            if curr_x0 - prev_x1 > word_gap:
+                                parts.append(" ")
+                            parts.append(curr_c.get("text", ""))
+                        text = "".join(parts).strip()
+                    else:
+                        text = ""
                     if not text:
                         continue
 
