@@ -226,6 +226,16 @@ _SD_CAPS_SUBJECT_RE = re.compile(
 # Embedded parenthetical direction in the combined dialog text (≥8 chars inside parens).
 _EMBEDDED_PAREN_DIR_RE = re.compile(r"\([^)]{8,}\)")
 
+# Page-marker / draft-watermark lines that appear on every page of a script draft.
+# These should be silently dropped rather than attributed to a character as dialog.
+# Matches patterns like:
+#   "[Draft 3.0] 4"   "[DRAFT] 12"   "[v2.1] 100"   "[Final] 3"
+# Also matches bare page numbers (1–4 digits) that appear alone on a line.
+_PAGE_MARKER_RE = re.compile(
+    r"^\[.{1,40}\]\s*\d{1,4}\s*$"   # bracket-enclosed metadata + page number
+    r"|^\d{1,4}$",                    # bare page number alone on a line
+)
+
 
 def _looks_like_stage_direction(text: str) -> bool:
     """Return True when a line inside a dialog block is almost certainly a stage direction.
@@ -1143,6 +1153,7 @@ def _classify_lines(
 
     Role assignment rules (first match wins):
 
+    0. **noise** — page-marker / draft watermark (``[Draft 3.0] 4``) → ``'noise'``
     1. **blank / page_break** — empty text → ``'blank'``
     2. **scene_heading** — matches :data:`_SCENE_HEADING_RE` *or* (when zones
        are provided) bold + short + x within ±20 pt of
@@ -1178,6 +1189,18 @@ def _classify_lines(
 
     for sl in lines:
         text = sl.text.strip()
+
+        # ------------------------------------------------------------------
+        # Rule 0 — noise / page marker
+        #
+        # Page-number watermarks appear on every page of a draft script
+        # (e.g. "[Draft 3.0] 4") and must be dropped regardless of x-zone
+        # or speaker context — they would otherwise be absorbed into the
+        # preceding character's dialog.
+        # ------------------------------------------------------------------
+        if text and _PAGE_MARKER_RE.match(text):
+            classified.append(ClassifiedLine(line=sl, role="noise"))
+            continue
 
         # ------------------------------------------------------------------
         # Rule 1 — blank

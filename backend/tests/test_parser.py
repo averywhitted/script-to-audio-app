@@ -2389,6 +2389,111 @@ class TestLooksLikeStageDirection:
 # ---------------------------------------------------------------------------
 
 
+class TestPageMarkerNoise:
+    """Page-number watermarks must be silently dropped and never bleed into dialog."""
+
+    def _bimodal_scene(self, page_marker: str) -> list:
+        """Build a minimal list of StructuredLines that simulates a page boundary
+        mid-dialog: ALICE speaks, then a page-marker line appears (same x=90 as
+        dialog), then she continues on the next page."""
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=145.0)
+        return [
+            _make_sl("ALICE", x=270.0),       # speaker cue
+            _make_sl("First line.", x=90.0),   # dialog
+            _make_sl(page_marker, x=90.0),     # page marker — MUST NOT become dialog
+            _make_sl("Second line.", x=90.0),  # dialog continues
+        ]
+
+    def _classify(self, lines):
+        zones = p.LayoutZones(dialog_x=90.0, cue_x=270.0, threshold=145.0)
+        return p._classify_lines(lines, zones=zones)
+
+    # -----------------------------------------------------------------
+    # _PAGE_MARKER_RE matching
+    # -----------------------------------------------------------------
+
+    def test_draft_marker_matched(self):
+        assert p._PAGE_MARKER_RE.match("[Draft 3.0] 4")
+
+    def test_draft_marker_no_space_matched(self):
+        assert p._PAGE_MARKER_RE.match("[Draft3.0]12")
+
+    def test_bracket_version_matched(self):
+        assert p._PAGE_MARKER_RE.match("[DRAFT] 42")
+
+    def test_version_number_matched(self):
+        assert p._PAGE_MARKER_RE.match("[v2.1] 100")
+
+    def test_bare_page_number_matched(self):
+        assert p._PAGE_MARKER_RE.match("14")
+
+    def test_single_digit_matched(self):
+        assert p._PAGE_MARKER_RE.match("7")
+
+    def test_normal_dialog_not_matched(self):
+        assert not p._PAGE_MARKER_RE.match("In Jesus name we pray.")
+
+    def test_character_name_not_matched(self):
+        assert not p._PAGE_MARKER_RE.match("ALICE")
+
+    def test_long_bracket_not_matched(self):
+        # Content inside brackets too long (>40 chars) — not a page marker
+        long = "[This is not a page marker at all because it is too long] 1"
+        assert not p._PAGE_MARKER_RE.match(long)
+
+    # -----------------------------------------------------------------
+    # _classify_lines Rule 0 behaviour
+    # -----------------------------------------------------------------
+
+    def test_draft_marker_classified_as_noise(self):
+        lines = [_make_sl("[Draft 3.0] 4", x=90.0)]
+        classified = self._classify(lines)
+        assert classified[0].role == "noise"
+
+    def test_bare_page_number_classified_as_noise(self):
+        lines = [_make_sl("14", x=90.0)]
+        classified = self._classify(lines)
+        assert classified[0].role == "noise"
+
+    def test_page_marker_does_not_contaminate_dialog(self):
+        """The classic bug: [Draft 3.0] 4 appearing between two dialog lines
+        must NOT be merged into the character's speech."""
+        classified = self._classify(self._bimodal_scene("[Draft 3.0] 4"))
+        dialog_texts = [
+            cl.line.text for cl in classified if cl.role == "dialog"
+        ]
+        # Only the two real dialog lines should be dialog; the marker must not appear
+        assert all("[Draft" not in t for t in dialog_texts), (
+            f"Page marker leaked into dialog: {dialog_texts}"
+        )
+        assert any("First line." in t for t in dialog_texts)
+        assert any("Second line." in t for t in dialog_texts)
+
+    def test_page_marker_does_not_break_speaker_attribution(self):
+        """A noise line between two dialog lines must not clear pending_speaker,
+        so the line after the marker still gets attributed to ALICE."""
+        classified = self._classify(self._bimodal_scene("[Draft 3.0] 7"))
+        dialog = [cl for cl in classified if cl.role == "dialog"]
+        assert len(dialog) == 2
+        assert all(cl.speaker == "ALICE" for cl in dialog), (
+            f"Speaker attribution broken after page marker: {[cl.speaker for cl in dialog]}"
+        )
+
+    def test_noise_lines_absent_from_build_script(self):
+        """Noise lines must be silently skipped by _build_script_from_classified —
+        they must not appear in any Element text."""
+        classified = self._classify(self._bimodal_scene("[Draft 3.0] 99"))
+        # Add a scene heading so _build_script_from_classified creates a scene
+        heading = p.StructuredLine(text="ACT ONE", x=270.0, y=0.0)
+        lines_with_heading = [
+            p.ClassifiedLine(line=heading, role="scene_heading"),
+        ] + classified
+        script = p._build_script_from_classified(lines_with_heading)
+        all_text = " ".join(el.text for scene in script.scenes for el in scene.elements)
+        assert "[Draft" not in all_text, f"Page marker found in script elements: {all_text!r}"
+        assert "99" not in all_text or "Second line." in all_text  # "99" only from marker
+
+
 class TestTrySpatialParse:
     def test_nonexistent_file_returns_none(self):
         config = p._load_corrections_config()
