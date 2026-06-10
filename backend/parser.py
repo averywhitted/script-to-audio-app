@@ -232,8 +232,8 @@ _EMBEDDED_PAREN_DIR_RE = re.compile(r"\([^)]{8,}\)")
 #   "[Draft 3.0] 4"   "[DRAFT] 12"   "[v2.1] 100"   "[Final] 3"
 # Also matches bare page numbers (1–4 digits) that appear alone on a line.
 _PAGE_MARKER_RE = re.compile(
-    r"^\[.{1,40}\]\s*\d{1,4}\s*$"   # bracket-enclosed metadata + page number
-    r"|^\d{1,4}$",                    # bare page number alone on a line
+    r"^\[.{1,40}\]\s*\d{1,4}\.?\s*$"  # bracket-enclosed metadata + page number
+    r"|^\d{1,4}\.?\s*$",               # bare page number, with or without trailing dot
 )
 
 
