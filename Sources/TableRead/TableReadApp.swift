@@ -136,6 +136,23 @@ struct TableReadApp: App {
                         Self.runParserDiagnostic(pdf: url)
                     }
                 }
+                Divider()
+                Button("Test Update Install…") {
+                    let alert = NSAlert()
+                    alert.messageText = "Test Update Install"
+                    alert.informativeText = "Copies the running app to a temp directory and runs the full install flow — the app will quit and relaunch automatically.\n\nOnly meaningful from a release build (not inside Xcode). Proceed?"
+                    alert.addButton(withTitle: "Run Test")
+                    alert.addButton(withTitle: "Cancel")
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        Task { await AppUpdater.shared.testInstall() }
+                    }
+                }
+                Button("Show Update Log") {
+                    NSWorkspace.shared.open(UpdateLogger.logURL)
+                }
+                Button("Clear Update Log") {
+                    UpdateLogger.clear()
+                }
             }
             #endif
         }

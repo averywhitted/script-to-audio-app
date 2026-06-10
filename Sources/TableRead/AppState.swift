@@ -1529,6 +1529,7 @@ extension AppState {
         }
 
         updateDownloadState = .downloading(0)
+        UpdateLogger.log("downloadAndInstallUpdate: starting download of \(info.version)")
 
         Task {
             do {
@@ -1540,11 +1541,15 @@ extension AppState {
                         }
                     }
                 )
+                UpdateLogger.log("downloadAndInstallUpdate: download+extract complete — \(appURL.path)")
                 updateDownloadState = .installing
-                try await Task.sleep(nanoseconds: 200_000_000)   // brief pause so UI shows "Installing…"
+                try await Task.sleep(nanoseconds: 200_000_000)
+                UpdateLogger.log("downloadAndInstallUpdate: calling installUpdate")
                 try await AppUpdater.shared.installUpdate(from: appURL)
                 // App terminates inside installUpdate — we never reach here
+                UpdateLogger.log("downloadAndInstallUpdate: WARNING — reached after installUpdate")
             } catch {
+                UpdateLogger.log("downloadAndInstallUpdate: FAILED — \(error)")
                 updateDownloadState = .failed(error.localizedDescription)
             }
         }

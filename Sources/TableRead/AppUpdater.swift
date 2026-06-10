@@ -1,6 +1,39 @@
 import Foundation
 import AppKit
 
+// MARK: - Update logger
+
+/// Appends timestamped entries to a persistent log file in Application Support.
+/// The file survives app restarts so post-mortem analysis is possible even
+/// after the install script relaunches a new version.
+enum UpdateLogger {
+    static var logURL: URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("TableRead")
+        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
+        return support.appendingPathComponent("update_log.txt")
+    }
+
+    static func log(_ message: String) {
+        let ts = ISO8601DateFormatter().string(from: Date())
+        let line = "[\(ts)] \(message)\n"
+        if let data = line.data(using: .utf8) {
+            if FileManager.default.fileExists(atPath: logURL.path),
+               let handle = try? FileHandle(forWritingTo: logURL) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                try? handle.close()
+            } else {
+                try? data.write(to: logURL)
+            }
+        }
+    }
+
+    static func clear() {
+        try? FileManager.default.removeItem(at: logURL)
+    }
+}
+
 // MARK: - Data types
 
 enum UpdateChannel: String, CaseIterable, Sendable {
@@ -196,18 +229,29 @@ actor AppUpdater {
     /// then terminates this instance.
     func installUpdate(from newAppURL: URL) async throws {
         let currentApp = Bundle.main.bundleURL
+        UpdateLogger.log("installUpdate: begin")
+        UpdateLogger.log("  currentApp = \(currentApp.path)")
+        UpdateLogger.log("  newAppURL  = \(newAppURL.path)")
+
         let safeNew     = shell(newAppURL.path)
         let safeCurrent = shell(currentApp.path)
 
+        let logPath = UpdateLogger.logURL.path
         let script = """
         #!/bin/bash
-        # Wait for the app to fully quit before replacing it.
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: started, pid=$$" >> \(shell(logPath))
         sleep 2
-        rm -rf \(safeCurrent)
-        cp -R \(safeNew) \(safeCurrent)
-        xattr -cr \(safeCurrent)
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: removing old app" >> \(shell(logPath))
+        rm -rf \(safeCurrent) 2>>/tmp/tableread_update_err.txt
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: copying new app (exit $?)" >> \(shell(logPath))
+        cp -R \(safeNew) \(safeCurrent) 2>>/tmp/tableread_update_err.txt
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: xattr (exit $?)" >> \(shell(logPath))
+        xattr -cr \(safeCurrent) 2>>/tmp/tableread_update_err.txt
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: opening new app (exit $?)" >> \(shell(logPath))
         open \(safeCurrent)
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: done (exit $?)" >> \(shell(logPath))
         """
+
         let scriptURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("tableread_update_\(UUID().uuidString).sh")
         try script.write(to: scriptURL, atomically: true, encoding: .utf8)
@@ -215,19 +259,46 @@ actor AppUpdater {
             [.posixPermissions: NSNumber(value: 0o755)],
             ofItemAtPath: scriptURL.path
         )
+        UpdateLogger.log("  scriptURL  = \(scriptURL.path)")
+
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/bash")
         p.arguments     = [scriptURL.path]
-        try p.run()   // throws if /bin/bash is unavailable — caught by caller
+        try p.run()
+        UpdateLogger.log("  bash script launched (pid \(p.processIdentifier))")
 
-        // Give the process a moment to actually start before we exit.
-        try await Task.sleep(nanoseconds: 100_000_000)  // 100 ms
+        // Brief pause so the script process is definitely running before we exit.
+        try await Task.sleep(nanoseconds: 200_000_000)  // 200 ms
 
-        // Terminate on the main actor so AppKit can do clean window teardown.
-        // exit(0) follows immediately as a guaranteed killswitch — the script
-        // is already running detached at this point.
+        UpdateLogger.log("  calling NSApplication.terminate")
         await MainActor.run { NSApplication.shared.terminate(nil) }
+
+        // Hard fallback — exit(0) is synchronous and cannot be blocked.
+        UpdateLogger.log("  terminate returned — calling exit(0)")
         exit(0)
+    }
+
+    // MARK: — Dry-run test
+
+    /// Exercises the full install flow using a copy of the running app as the
+    /// "new" version.  Intended for use from the Debug menu only.
+    /// The app will quit and relaunch — test in a regular build, not Xcode.
+    func testInstall() async {
+        UpdateLogger.clear()
+        UpdateLogger.log("testInstall: begin — version \(currentVersion)")
+        do {
+            let src = Bundle.main.bundleURL
+            let tmp = FileManager.default.temporaryDirectory
+                .appendingPathComponent("TableReadTestUpdate_\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+            let copy = tmp.appendingPathComponent("TableRead.app")
+            UpdateLogger.log("testInstall: copying bundle to \(copy.path)")
+            try FileManager.default.copyItem(at: src, to: copy)
+            UpdateLogger.log("testInstall: copy done, calling installUpdate")
+            try await installUpdate(from: copy)
+        } catch {
+            UpdateLogger.log("testInstall: FAILED — \(error)")
+        }
     }
 
     // MARK: — Helpers
