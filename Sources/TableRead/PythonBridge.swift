@@ -410,6 +410,10 @@ final class PythonBridge {
 
             let response = output.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
+            // Forward Python stderr to the Xcode console so parser diagnostics are visible.
+            if let errText = String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) {
+                errText.components(separatedBy: "\n").filter { !$0.isEmpty }.forEach { print("[py] \($0)") }
+            }
             // Kokoro (and other engines) may print non-JSON download progress to stdout.
             // Scan from the end for the last line that looks like a JSON object.
             return Self.extractLastJSONLine(from: response) ?? response
@@ -484,6 +488,8 @@ final class PythonBridge {
                         parser.consume("", flush: true, onEvent: onEvent)
                     }
                     let stderr = String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                    // Forward Python stderr to the Xcode console.
+                    stderr.components(separatedBy: "\n").filter { !$0.isEmpty }.forEach { print("[py] \($0)") }
 
                     if process.terminationStatus == 0 {
                         continuation.resume()
