@@ -6,6 +6,7 @@
   },
   "title": "E M M A",
   "characters": [
+    "SPECIAL NOTE ON SONGS AND RECORDINGS",
     "KNIGHTLEY",
     "EMMA",
     "MISS BATES",
@@ -18,8 +19,7 @@
     "MRS. BATES",
     "JANE",
     "FRANK",
-    "MRS. ELTON",
-    "AN UNPLEASANT"
+    "MRS. ELTON"
   ],
   "scenes": [
     {
@@ -34,12 +34,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(tavfLagmIpftvﬁtMaMW"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TcTnMWsaghakbsjhgiiajaiahtwcitIiatcwTesafjasosatbbttuSs"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -59,7 +69,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—dy"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -74,7 +94,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Lag(heMGKonBMKhkmsIwac"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -84,7 +114,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(Ybyseiys"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -94,7 +134,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SMKia(tsooofwthhtrtimBtimdamsTpnc“"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -104,7 +154,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(mh“hioaHybrMT(sgbn"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -117,8 +177,8 @@
           "sig": "(mhslchtEHaimatsfah"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "SPECIAL NOTE ON SONGS AND RECORDINGS",
           "sig": "TSHCmhtlm"
         },
         {
@@ -179,7 +239,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—MBastyayapthawactwc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -189,12 +259,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Piatw"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "GG"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -209,12 +294,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SahotiIomncjut"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Eidha"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -227,19 +322,34 @@
           "sig": "Ms"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
+        },
+        {
           "kind": "parenthetical",
-          "speaker": "MISS BATES",
+          "speaker": "KNIGHTLEY",
           "sig": "(acglhass"
         },
         {
           "kind": "dialog",
-          "speaker": "MISS BATES",
+          "speaker": "KNIGHTLEY",
           "sig": "JdlacSaJWaatapJisaJiseJisc/JilacJ"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MBastd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -250,6 +360,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SbtpHa"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -339,7 +454,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MEDyhabtdwyt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -354,12 +479,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(taAsyhjpdmtfmtpmpa"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YcceE"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -374,12 +514,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ctdatcdwaom"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SjcTjtdpfEtlaus"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -437,8 +587,8 @@
           "sig": "HidhaswaymihciRM"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "ShauwRMmgLlpilwnEtmtmWstd"
         },
         {
@@ -472,9 +622,14 @@
           "sig": "Scotacwictd"
         },
         {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "Sass"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "Sass"
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -484,7 +639,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(Giefo(ehasctdWaysrtmd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -494,7 +659,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wdtm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -504,7 +679,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—Eydmma"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW("
         },
         {
           "kind": "stage_direction",
@@ -529,7 +714,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—liipMT"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -539,7 +734,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OliipMW(hothhmHycbbyamiysayaforfhau"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -620,7 +825,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "/"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -630,7 +845,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "H(hIawtbiycbtIptpMKwoafa"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -645,7 +870,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AMSihM"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -655,7 +890,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MWhafbIistt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -670,7 +915,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "DdMSYawtH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -770,7 +1025,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AlomscwIwstc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -785,7 +1050,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(hN"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -795,7 +1070,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IsjnnbsanpbAtIchaaIbjIgs(ﬂad"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -810,7 +1095,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "/yaslalaIhhsmaykIsbcaramagiyIafbuOIrsg"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -900,6 +1195,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(Twaoaa"
         },
         {
@@ -910,7 +1210,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AwaeaiiHAabtoopDya"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -920,7 +1230,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "G(ghacIiattcoe"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -930,12 +1250,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "G(gacIiapopfof"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "FOc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -950,12 +1285,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MHStoIdgaa(rwtc"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "ShohhftgmEhibingtgi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -973,8 +1318,13 @@
           "sig": "Hslhhith"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
+        },
+        {
           "kind": "dialog",
-          "speaker": "HARRIET",
+          "speaker": "EMMA",
           "sig": "MSSsHsMS"
         },
         {
@@ -1050,7 +1400,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "W"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1060,7 +1420,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wii"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1070,12 +1440,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WaIal"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(tabtaiafsNnIsni"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1090,7 +1475,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HiamiashmasoAidnthaTWMtds"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1100,12 +1495,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "ToatgrRaJAaCTaIDtﬂameadnfwawODTLIDH"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Batcwwhkefyb"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1195,7 +1605,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AtLHL"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1210,6 +1630,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TYMWY(tcacihmYISD"
         },
         {
@@ -1220,7 +1645,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "O"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1230,7 +1665,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—focHslsanm(seasHwtmrodjtbmsw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1240,12 +1685,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WysiEcabi"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TbtHagwyaILptsod(uttsmawgoapAtmwmfopeacttoamoolituwWmamfouFouSiwmH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "EAH"
         },
         {
           "kind": "stage_direction",
@@ -1320,7 +1780,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": ".n"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1330,7 +1800,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "ME(TrA"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1345,12 +1825,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OU(ttc"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "EAH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Fou"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1450,12 +1945,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "DnsdItwwlsIhtchlhfasﬂ"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OnIrt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1470,7 +1980,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MWinwMSaissyaaubtymc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1480,7 +2000,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "ByyaoMWIhnssalTm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1495,12 +2025,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—ieosOMWoooctmea"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "EjH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1561,7 +2101,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—HYgwyQtcthaMBs"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ME"
         },
         {
           "kind": "stage_direction",
@@ -1586,6 +2136,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(HWalihswmhiﬁ"
         },
         {
@@ -1596,7 +2151,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "“ﬁwdtpokLoteOtlae"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1606,7 +2171,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(EH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ME"
         },
         {
           "kind": "stage_direction",
@@ -1616,7 +2191,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(triO"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1704,14 +2289,19 @@
           "sig": "Sahptadb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "“owagN"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "“liaaflsFtwlntd(“s"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -1726,12 +2316,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MWlmttthieaia"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ME"
         },
         {
           "kind": "stage_direction",
@@ -1756,6 +2361,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HTmh"
         },
         {
@@ -1766,12 +2376,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "LIhtsmhobtktcs"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "/"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ME"
         },
         {
           "kind": "stage_direction",
@@ -1856,12 +2481,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "“ocAt“vommswbBhttmots"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1876,7 +2516,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "STaiS"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1886,12 +2536,32 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NpttC"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SSC—iacotN"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1906,7 +2576,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "CHCDYAHC"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1916,7 +2596,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NntmlIhafya"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1924,13 +2614,18 @@
           "sig": "O"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. ELTON",
           "sig": "DihtIptWsagIwt"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ME"
+        },
+        {
           "kind": "dialog",
-          "speaker": "MR. ELTON",
+          "speaker": "EMMA",
           "sig": "FtwmoLar"
         },
         {
@@ -1939,8 +2634,8 @@
           "sig": "Aftwaw"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "AIwcamLTYME"
         },
         {
@@ -2006,7 +2701,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(aEdpdhAIatcoot"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2016,12 +2721,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wmdwhts"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(ts“hoﬁbaOoibooisoamhaaao(ﬂd&“"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -2036,12 +2756,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IntHIok"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—m"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
         },
         {
           "kind": "stage_direction",
@@ -2056,7 +2791,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "EscabOAMSOc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2099,8 +2844,8 @@
           "sig": "(httg"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "WdemIrsbg"
         },
         {
@@ -2136,7 +2881,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "M(sahA"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -2146,7 +2901,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": ".fab"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -2156,7 +2921,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(WTs"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -2166,7 +2941,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(sawhhoicSWsIumethaf"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -2176,7 +2961,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WsssftﬁdwmeahIasMMiatymbIcahtbhe"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -2191,7 +2986,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(gdW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -2252,6 +3057,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(aftf.ay"
         },
         {
@@ -2262,7 +3072,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HSmmmtywaMK"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -2282,6 +3102,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "H"
         },
         {
@@ -2297,7 +3122,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "DbrA(aakhh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -2307,7 +3142,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NbacdwaooOf(shaihAvtd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -2322,7 +3167,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WagtﬁytIcbiWathap(EFCiﬁtpuav"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2392,7 +3247,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -2402,7 +3267,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Nr(taTinbotaptaasrrBocwsntpc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -2412,12 +3287,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(taDssaHhadasasasaonr"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(bfWeayp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2517,12 +3407,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TiavdeH"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(Wnpromay"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2537,7 +3442,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "FCthmns"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -2547,12 +3462,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "BahdMWfhutcfFFwabhromgitAsianaob"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(bfasma"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2562,7 +3492,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(bfasma"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2577,12 +3517,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "EyE"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "W"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -2659,7 +3614,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—itmdpi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2669,7 +3634,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Atetsaaotb"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2679,7 +3654,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "atbae"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2689,12 +3674,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—hMCchvatlm"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(ys"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -2782,8 +3782,8 @@
           "sig": "(hHalm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "—lhmamt"
         },
         {
@@ -2804,12 +3804,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "P"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TcefdMEhbWttsheaEhlioohm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2824,7 +3834,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SIcttasd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2834,17 +3854,42 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Tamlamt"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
           "kind": "dialog",
-          "speaker": "EMMA",
+          "speaker": "HARRIET",
           "sig": "—tiabctfsm/WIt"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "/wdstdboMAslhatsad"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ME"
         },
         {
           "kind": "stage_direction",
@@ -2954,7 +3999,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YcemntsiﬁtMWwmhAa(dsvoEoamhib"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2964,7 +4019,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2974,7 +4039,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WSMS"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -2984,12 +4059,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WcetoMSwMWinOmjskMcgvDyftmgmhstlhmflm"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ME"
         },
         {
           "kind": "stage_direction",
@@ -3090,6 +4180,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "BOatltftsttFIaropw(hﬁotyoyftsitdanwmoMEicsMbtteoyftymhptpsBIwnbtbms"
         },
         {
@@ -3100,12 +4195,32 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "E"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Ismfemdteba"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -3121,6 +4236,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hdnm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -3168,8 +4288,8 @@
           "sig": "(kasic"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. ELTON",
           "sig": "Nynttmotmi"
         },
         {
@@ -3210,7 +4330,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YmhthiabsinsetbtooiSiootwobsebilalftcoaototmvohm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -3225,7 +4355,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YcceE"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -3310,7 +4450,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Iasswbb/(ptwmwa/(MpmHwapasdItiItﬂP(acviyc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -3320,7 +4470,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NPIboy"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -3335,12 +4495,32 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "DddRfEoFu"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WcebaffhptMEENnIgteuaomwnfanf"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -3351,6 +4531,16 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "(Ada"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -3398,8 +4588,8 @@
           "sig": "Hw"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "S"
         },
         {
@@ -3423,8 +4613,8 @@
           "sig": "Hw"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. WOODHOUSE",
           "sig": "Psshal"
         },
         {
@@ -3433,8 +4623,8 @@
           "sig": "HwMMLitotgE"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. WOODHOUSE",
           "sig": "/Pty"
         },
         {
@@ -3463,8 +4653,8 @@
           "sig": "JF"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. WOODHOUSE",
           "sig": "itﬂoBwEwsbnmtalm"
         },
         {
@@ -3565,7 +4755,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(isaiOyMWHdyd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -3575,7 +4775,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IhtinadMWDsbtﬁ"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -3585,12 +4795,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OnpyothtsMWymotshtiarodJisd"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NnqrwsJagtboef"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -3634,14 +4859,19 @@
           "sig": "TiiJFllaafPP"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "NahoopnatoolnadobihvTaiFithoMFBIhnytytwVWtahTwtaJFitswabloacafastahbttahuaeosgeAtwmbtbofAtcafofaIhtaT"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Asal"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -3656,12 +4886,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "/JJJJJJJ"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(iCWNasahsttrabchn"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "J"
         },
         {
           "kind": "stage_direction",
@@ -3676,7 +4921,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IsyavstﬁJbitcMW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "J"
         },
         {
           "kind": "stage_direction",
@@ -3686,12 +4941,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wasthhbo"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "A"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -3776,6 +5046,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YtMWJay"
         },
         {
@@ -3786,7 +5061,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(Beatojaiotitedi(mwcaAtDliogfnJsbattcaols"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -3796,12 +5081,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NaouclicpMWsoumhap"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "“hIwltbatha"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "J"
         },
         {
           "kind": "stage_direction",
@@ -3816,6 +5116,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(uRMWoseﬁabmofptdJ"
         },
         {
@@ -3826,7 +5131,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Nnnnn/nN"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -3836,11 +5151,16 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "(igtkhImttMFhIehsataywImha"
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "(igtkhImttMFhIehsataywImha"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JANE",
           "sig": "AJswJJwayJJJJJJJJ"
         },
         {
@@ -3894,13 +5214,13 @@
           "sig": "Jhcbiwt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "MTWEMMW"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "SDISWMFJFSDTOIMMMDSSM"
         },
         {
@@ -3916,7 +5236,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HAldPIdneaotgaasaoivpAhimh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -3931,12 +5261,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "O(grOsMWBHSM"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TpobsuF"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -3951,7 +5291,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "FaitctmMwshtvawhhwlhhiobiao"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
         },
         {
           "kind": "stage_direction",
@@ -3961,12 +5311,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(Wnbpots"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(boMBhsiobgMfhtmsmMaaeooyllIflabca(boMBhtpobiobsg"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -4056,7 +5421,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "EF"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -4066,7 +5441,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Isttaapc(lataBFdyswalith"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -4081,12 +5466,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MnJF"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "JludtbFCsahEbtivp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
         },
         {
           "kind": "stage_direction",
@@ -4101,12 +5496,32 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ghytkeo"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "N"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "J"
         },
         {
           "kind": "stage_direction",
@@ -4121,7 +5536,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IdtsWiyMFwwretDoW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -4211,12 +5636,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SaaborF"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "FctrtEwisoalbssamrTrotciasnJatp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -4231,7 +5666,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SMCdytoHtf"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
         },
         {
           "kind": "stage_direction",
@@ -4241,7 +5686,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NssYsfma"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
         },
         {
           "kind": "stage_direction",
@@ -4251,7 +5706,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Lubgcasiacf"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
         },
         {
           "kind": "stage_direction",
@@ -4266,12 +5731,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WdytoMFpAyMBpr"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "FlaJsdnlah"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
         },
         {
           "kind": "stage_direction",
@@ -4361,7 +5836,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WFmaIhttyafalna—"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
         },
         {
           "kind": "stage_direction",
@@ -4371,12 +5856,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wmtyotr"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(tEMWdhwciimis"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -4391,6 +5891,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "EEAattpe"
         },
         {
@@ -4401,12 +5906,32 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OwotsomIatdltwseanoitrcvs"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "W"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -4416,7 +5941,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "W"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -4512,7 +6047,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TtHbftwtdddepitcwbsttvMEftutdtmdduesfbtbsebriwahco(daioMEc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -4522,12 +6067,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YP(dMEc"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TotbWiichy"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -4542,11 +6102,16 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "B"
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "B"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FRANK",
           "sig": "taia"
         },
         {
@@ -4612,7 +6177,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Eeybp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -4622,7 +6197,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ah"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -4642,7 +6232,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—bmbp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -4657,7 +6257,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AwmIhbplfttyEwhntyhsraguom"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -4667,7 +6277,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Guom"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -4677,7 +6297,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "N"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -4772,12 +6402,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SI"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "YSISISISISISISIS"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -4792,7 +6437,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "EAK"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—ISISISI/ISI"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -4807,12 +6462,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(ttocYtYT(KMKoty(EAysitcaytcayatMRM"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "/"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -4833,6 +6503,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "MWthttETabscAbosst"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -4905,8 +6580,8 @@
           "sig": "Sdsﬁittash"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "—dybutg"
         },
         {
@@ -4986,9 +6661,19 @@
           "sig": "ThcAwetgoMKhDAiiqgabnnbdbmtcoﬂagobotshatKiesawTdbohahbMEoifdrf"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ME"
+        },
+        {
           "kind": "dialog",
-          "speaker": "MR. ELTON",
+          "speaker": "KNIGHTLEY",
           "sig": "B(bSaaTwiipatscal(iiqho/Atsbtsoet"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ME"
         },
         {
           "kind": "stage_direction",
@@ -4998,12 +6683,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NetigIavs"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "S(c"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ME"
         },
         {
           "kind": "stage_direction",
@@ -5018,6 +6718,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "P(ctlOMEhSya(catemof"
         },
         {
@@ -5028,7 +6733,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "ShhaDntmsmfoMK"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -5048,7 +6763,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ayar"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -5058,7 +6783,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(hH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -5073,6 +6808,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Jat.MWyctsitsTssmmi"
         },
         {
@@ -5083,12 +6823,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "DkwDPdgfycMW"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Opsi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -5168,12 +6923,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OcIdMCIrytw"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HWdtm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "J"
         },
         {
           "kind": "stage_direction",
@@ -5188,12 +6958,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—byp"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YbbSmyﬁfImaaw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -5208,7 +6993,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WMWAal"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -5218,12 +7013,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "S(WdytMFwoa"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(hefJaKOJFJFFWgatahH(Sswthmodtwcd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
         },
         {
           "kind": "stage_direction",
@@ -5311,8 +7121,8 @@
           "sig": "SnsHbs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "FRANK",
           "sig": "FCaysMOcyrmtt"
         },
         {
@@ -5323,7 +7133,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "EAyar"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -5333,12 +7153,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "W"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(thaNNNmHayfH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -5353,7 +7188,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OMEcatemom"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -5368,12 +7213,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MKMKWybskatgHatatgTiiycyafMFf"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "KmafJwttfFi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -5396,8 +7251,8 @@
           "sig": "B"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "S(chtUS"
         },
         {
@@ -5468,7 +7323,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OcPwIijhi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -5483,7 +7348,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ysyar"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "J"
         },
         {
           "kind": "stage_direction",
@@ -5498,6 +7373,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(cSMFyﬁcdfW"
         },
         {
@@ -5508,7 +7388,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WWmyaaW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -5518,7 +7408,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WWwWhybst"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -5533,7 +7433,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(stfMWtmatIaghti"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -5543,11 +7453,16 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "NIitr"
+          "sig": "J"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "NIitr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "PmMSsylat"
         },
         {
@@ -5586,8 +7501,8 @@
           "sig": "B"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "—miIhptwIo"
         },
         {
@@ -5633,12 +7548,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "B"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IttIsummtappAbptgalccimcc(tHaDdadsdMSP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -5649,6 +7579,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Ewtidssmofbh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -5673,7 +7608,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WdycsmfJF"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -5683,7 +7628,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ycsh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -5693,7 +7648,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Idkwym"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -5711,8 +7676,8 @@
           "sig": "KatohasgKh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "DMKmgymr"
         },
         {
@@ -5798,12 +7763,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "ECHtma"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HsfaEgalatavagrbpi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "I"
         },
         {
           "kind": "dialog",
@@ -5841,8 +7816,8 @@
           "sig": "ATMFCbiiCHPcHeacF"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "KTagnowwaoMSafygm"
         },
         {
@@ -5889,6 +7864,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HaHA"
         },
         {
@@ -5925,6 +7905,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "AasbsYdntalauyamaS"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "R"
         },
         {
           "kind": "stage_direction",
@@ -5974,7 +7959,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hayfd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -5984,7 +7979,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wysd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -5994,7 +7999,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "O"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6004,7 +8019,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TnlyH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6014,7 +8039,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Tiac"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6029,7 +8064,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ybopt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6037,8 +8082,8 @@
           "sig": "—mkwtm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "OticWamNIohtlmptlhaIwfaeahatcbaitsoa"
         },
         {
@@ -6114,7 +8159,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Uy"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6124,7 +8179,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "“gaantrolwHiIdkbwgyhsngim"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6139,7 +8204,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MShCmsantsngEiwih"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6149,7 +8224,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NThmy"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -6159,7 +8244,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Antc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6169,7 +8264,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Pl"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6232,8 +8337,8 @@
           "sig": "Sdi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Hdyet"
         },
         {
@@ -6254,12 +8359,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WfipEkttptgitchbsctyaitiao"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—IstmiqinmtmtafatIshdaywtuch"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6274,6 +8394,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "DHIdaasvp(tYdnentb"
         },
         {
@@ -6284,12 +8409,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MGHd"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TstbEawgitWdEcasstrotcabhctsTmawh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -6379,7 +8514,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(hcy"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -6394,7 +8539,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "LWtmlsDylr"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -6404,7 +8559,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IhyrsdfmFgwntnfaa"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -6414,7 +8579,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HwnruIieewitc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -6424,7 +8599,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MhFsIowtywitmfaw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -6434,7 +8619,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YsmtlwomF"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -6444,7 +8639,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YssMWIstwoMFesiqf"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "J"
         },
         {
           "kind": "stage_direction",
@@ -6498,8 +8703,8 @@
           "sig": "MBmaahg"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "EcWylvsawMIELM"
         },
         {
@@ -6520,7 +8725,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OADfIpIavsfhfaohc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -6530,7 +8745,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wdym"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -6545,6 +8770,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MKcmhlls"
         },
         {
@@ -6555,12 +8785,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Twywi“Vh"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TyEYl"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -6575,6 +8820,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(NWiJwtP"
         },
         {
@@ -6585,12 +8835,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WEbCtdwaom"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OaatIapaTFC"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -6663,8 +8928,8 @@
           "sig": "Tms"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "FRANK",
           "sig": "OTtcmis"
         },
         {
@@ -6680,7 +8945,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OMN(hfamcym(hM(ghaptPaty"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -6695,12 +8970,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(tchiwﬂMCImnmmc"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "KhbwHJidfF"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "J"
         },
         {
           "kind": "stage_direction",
@@ -6715,7 +9000,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HisuwMKsymdwham"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
         },
         {
           "kind": "stage_direction",
@@ -6725,12 +9020,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YhnotmsAaIfItIsdwKn"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "MK"
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -6740,7 +9040,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MK"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "J"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MK"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -6840,7 +9160,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YNmfhit—Iwsdhmeos"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -6850,7 +9180,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IkIsoar"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -6860,7 +9200,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "BIwltbtIhbYaanmMWDybtliqmtwms"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -6875,12 +9225,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "DMWIysimbs"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HkhhsGljaHaMKrKcta"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -6895,6 +9255,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MF"
         },
         {
@@ -6905,7 +9270,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MChptsuwHn"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6985,6 +9360,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(rtposbH"
         },
         {
@@ -6995,7 +9375,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WiwwMF(isaiwrIhhp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7005,7 +9395,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "W"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7015,7 +9415,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Yawafmn"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7025,7 +9435,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MaJFTiynP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7035,7 +9455,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—iIaIdswnc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7045,12 +9475,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Dywmt"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Dywmtwyt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -7135,12 +9580,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "F"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "ISH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -7160,6 +9620,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YstIshIijWTmmiewSIwIdiYMAm(aAIc"
         },
         {
@@ -7170,7 +9635,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OMWtysbd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7180,12 +9655,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(Tomiit"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(M("
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -7263,8 +9753,8 @@
           "sig": "Htahsotddio"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "PIs"
         },
         {
@@ -7285,12 +9775,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ibyp"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "ObstHcystasacwyllsvviHcyawshwnechoalstdtmoaehtbttool"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -7305,12 +9810,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WdyoyywwtinutbmouWhIbgamotwiwamtiunWitpoealtmwcatimfaodHdysiMBTmbIahsocmfmjbIchijImImhstdoIsrm"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Sssrtwrhgsaisah"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -7328,8 +9843,8 @@
           "sig": "MBdaeljEswJaKMBnEqhtusw"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Tdmahcdt"
         },
         {
@@ -7338,8 +9853,8 @@
           "sig": "Ednr"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "MaIhbpykMKaJsoruiyantomitcWwystucpCMW"
         },
         {
@@ -7348,8 +9863,8 @@
           "sig": "Ednr"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Opyfwsnmioa"
         },
         {
@@ -7358,8 +9873,8 @@
           "sig": "Ednr"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "OJdsmtbhaMKtIrfnosni—Istthmt(hhtYkrrart"
         },
         {
@@ -7368,8 +9883,8 @@
           "sig": "B"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "—sttssadMW"
         },
         {
@@ -7378,8 +9893,8 @@
           "sig": "Bb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "—sttsc/o"
         },
         {
@@ -7415,7 +9930,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—MBpIcataBswnbipaywSipshsftcswbtaincswsmHsssycnyc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7425,12 +9950,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "/Shkysywacshgyatashﬂyfbymwiht"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -7445,7 +9985,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "W"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -7458,6 +10008,11 @@
       "number": 13,
       "title": "SCENE 3: RATHER MORE THAN",
       "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "LB"
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -7536,6 +10091,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "H"
         },
         {
@@ -7546,16 +10106,21 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "ME"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": ".stoIdgaa(OoihdanvohcSdcirTtbmofoME(sobch"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "dawbha"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "PmwETmtosttIhsiu"
         },
         {
@@ -7584,8 +10149,8 @@
           "sig": "Hlahm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "EwvwtthaouMBIwctthsBtdnmyaitr"
         },
         {
@@ -7616,12 +10181,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "JF"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(tdhtiJF"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -7632,6 +10212,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "(kosdbtpbEassaotaawsoJﬂtttoabtolttbtJbhothwtbHghhlaeofamt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7665,8 +10250,13 @@
       "title": "SCENE 4: HARRIET REVEALS",
       "elements": [
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AU"
+        },
+        {
           "kind": "dialog",
-          "speaker": "AN UNPLEASANT",
+          "speaker": "MRS. WESTON",
           "sig": "M"
         },
         {
@@ -7727,7 +10317,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IhneebilwMFC"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7737,7 +10342,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "N(iP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7747,7 +10362,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Itysbb"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7757,7 +10382,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7767,7 +10402,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wdym"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7780,13 +10425,18 @@
           "sig": "AitwaaduoatwIhdyHarIsﬁ"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
+        },
+        {
           "kind": "dialog",
-          "speaker": "HARRIET",
+          "speaker": "EMMA",
           "sig": "HIas"
         },
         {
           "kind": "dialog",
-          "speaker": "HARRIET",
+          "speaker": "EMMA",
           "sig": "EIasss"
         },
         {
@@ -7795,8 +10445,8 @@
           "sig": "ss"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Ways"
         },
         {
@@ -7805,8 +10455,8 @@
           "sig": "Ways"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "BFCBFCitmJFitmJF"
         },
         {
@@ -7877,7 +10527,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "/"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -7887,7 +10547,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "/wiynfMC"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -7897,7 +10567,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Twtgywsw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -7907,12 +10587,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "ItymCsyftw"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NRsmftEvdthdwmwIwaatbabsagrIcdamh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -7927,7 +10622,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(vBAEhJ"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8012,12 +10717,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Oln"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "(tbAtc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "R"
         },
         {
           "kind": "stage_direction",
@@ -8032,7 +10752,32 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "PSY"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "CAM"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wn"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8042,7 +10787,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Yygmya"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8057,12 +10812,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(vBSWetd"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "B"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8077,12 +10842,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—syEtmogdhtpAIdtMKhapfmhalamscatmsk"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—dm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -8167,7 +10947,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YsjiIestyH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -8177,7 +10977,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YsfelIegy"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -8187,7 +10997,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ysnltmcea"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -8207,7 +11027,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YarEtInstywthEaISmumomacWIWfwRIL"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -8218,6 +11053,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "ImbgnbyttﬁmuwytfﬂosboyHG"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8352,12 +11192,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AnIaaiIeagimaatIetwpapmeitve"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ik"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8367,7 +11222,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ik"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8377,7 +11242,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Mmoo"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8387,7 +11262,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "N"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8397,7 +11282,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Byhtotbt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8407,7 +11302,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YacEis"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8417,7 +11322,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ayabwbtm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8430,6 +11345,11 @@
       "number": 15,
       "title": "SCENE 5: MRS. WESTON AND THE",
       "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "C"
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -8478,7 +11398,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ydmym"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -8488,7 +11418,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OAyhhyts"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -8498,7 +11438,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(dO/asstsdya/"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -8513,12 +11463,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wyw"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "(ii"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -8533,7 +11493,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TFCFms"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -8548,7 +11518,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MKhpmtyncowat"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -8576,8 +11556,8 @@
           "sig": "VsMKe"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "YwntooEwcimhrwr"
         },
         {
@@ -8586,8 +11566,8 @@
           "sig": "KaEsrsaeo"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "—ioc"
         },
         {
@@ -8611,8 +11591,13 @@
           "sig": "HchtaScht"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
+        },
+        {
           "kind": "dialog",
-          "speaker": "KNIGHTLEY",
+          "speaker": "EMMA",
           "sig": "AsMWs"
         },
         {
@@ -8643,6 +11628,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HIUNTCSBB"
         },
         {
@@ -8658,7 +11648,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WwyatrJFMK"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -8668,7 +11668,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Yﬁ"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "K"
         },
         {
           "kind": "stage_direction",
@@ -8688,6 +11698,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "No"
         },
         {
@@ -8698,7 +11713,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YtELuldoa"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8708,7 +11733,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ticnt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8804,6 +11839,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WIsyaptwgthahbtelsahaamotafypOpyhrtn"
         },
         {
@@ -8819,7 +11859,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YE"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8829,7 +11879,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Cyat"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8899,7 +11959,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "—tIsaytamamowvs"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8914,6 +11984,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OLEwhtuME"
         },
         {
@@ -8924,7 +11999,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SbEIcoc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -8939,7 +12024,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Idwtkot"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -8954,12 +12049,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SLugtbp"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MW"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "PPsmhbSstabowtm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MW"
         },
         {
           "kind": "stage_direction",
@@ -9049,7 +12159,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "M("
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -9059,12 +12179,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hsn"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MBYamtr"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MB"
         },
         {
           "kind": "stage_direction",
@@ -9079,6 +12214,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "MB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "M("
         },
         {
@@ -9089,7 +12229,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "(EMasdaw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -9104,7 +12254,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Aywb"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -9119,12 +12279,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Istalhaosc"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "—ttbfh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -9209,7 +12379,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "K"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YcceE"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "E"
         },
         {
           "kind": "stage_direction",
@@ -9220,6 +12400,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Skhatsadtwedato"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "TE"
         },
         {
           "kind": "dialog",
@@ -9257,8 +12442,8 @@
           "sig": "KhotbtMW"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "AplK"
         },
         {
@@ -9282,8 +12467,8 @@
           "sig": "Sp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Bcalgﬁabmofp"
         },
         {
@@ -9297,8 +12482,8 @@
           "sig": "Shhwhb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "CtdMKwaooof"
         },
         {
@@ -9314,12 +12499,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "E"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "bKH"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "C"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "5W3M(an"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
         },
         {
           "kind": "stage_direction",
@@ -9355,6 +12555,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "ww"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "I9"
         }
       ]
     }

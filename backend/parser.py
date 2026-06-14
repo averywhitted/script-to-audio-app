@@ -1911,7 +1911,6 @@ def _classify_blocks(
             after_colon = text[colon_pos + 1:].strip() if colon_pos != -1 else ""
             if colon_pos == -1 or len(after_colon) <= 30:
                 result.append(ClassifiedBlock(block=block, role="scene_heading"))
-                pending_speaker = None
                 continue
             # Long colon suffix → likely a TOC entry; fall through to scorer.
 
@@ -1924,7 +1923,6 @@ def _classify_blocks(
             # Reached here only for TOC-rejected blocks whose scorer still
             # voted scene_heading — treat as stage_direction.
             result.append(ClassifiedBlock(block=block, role="stage_direction"))
-            pending_speaker = None
 
         elif role == "parenthetical":
             at_dlg = abs(block.x0 - profile.dialog_x) <= _X_TOLERANCE
@@ -1947,8 +1945,6 @@ def _classify_blocks(
                                                   speaker=pending_speaker))
                 else:
                     result.append(ClassifiedBlock(block=block, role="stage_direction"))
-                    if not block.is_merged_parenthetical:
-                        pending_speaker = None
 
         elif role == "character_cue":
             if block.is_split_continuation and pending_speaker is not None:
@@ -1960,16 +1956,22 @@ def _classify_blocks(
                                               speaker=pending_speaker))
             elif block.caps_ratio >= 0.80:
                 # Confirmed character cue — predominantly ALL CAPS.
-                speaker = _normalize_speaker(text).rstrip(".:,")
-                if not speaker:
-                    # Normalization stripped everything (e.g. "(CONTINUED:)" or
-                    # "(MORE)" page-continuation markers).  Treat as noise and
-                    # preserve pending_speaker so the speech continues correctly.
-                    result.append(ClassifiedBlock(block=block, role="noise"))
+                # Reject blocks that are far from the speaker column — these are
+                # typically right-column labels in parallel-speech layouts where
+                # two characters' lines appear side-by-side on the same y.
+                if abs(block.x0 - profile.speaker_x) > _X_TOLERANCE * 5:
+                    result.append(ClassifiedBlock(block=block, role="stage_direction"))
                 else:
-                    pending_speaker = speaker
-                    result.append(ClassifiedBlock(block=block, role="speaker_cue",
-                                                  speaker=speaker))
+                    speaker = _normalize_speaker(text).rstrip(".:,")
+                    if not speaker:
+                        # Normalization stripped everything (e.g. "(CONTINUED:)" or
+                        # "(MORE)" page-continuation markers).  Treat as noise and
+                        # preserve pending_speaker so the speech continues correctly.
+                        result.append(ClassifiedBlock(block=block, role="noise"))
+                    else:
+                        pending_speaker = speaker
+                        result.append(ClassifiedBlock(block=block, role="speaker_cue",
+                                                      speaker=speaker))
             else:
                 # Scorer misfired: short mixed-case block (stage direction, one-word
                 # response) at a high-frequency x-zone scored as CC via zone signals.
@@ -1980,8 +1982,6 @@ def _classify_blocks(
                                                   speaker=pending_speaker))
                 else:
                     result.append(ClassifiedBlock(block=block, role="stage_direction"))
-                    if not block.is_merged_parenthetical:
-                        pending_speaker = None
 
         elif role == "dialog":
             if pending_speaker is not None:
@@ -1995,12 +1995,6 @@ def _classify_blocks(
 
         else:  # stage_direction
             result.append(ClassifiedBlock(block=block, role="stage_direction"))
-            # Merged parentheticals are mid-speech embedded asides — the same
-            # character continues after them, so preserve pending_speaker.
-            # All other stage directions (scene transitions, action blocks)
-            # reset the speaker.
-            if not block.is_merged_parenthetical:
-                pending_speaker = None
 
     return result
 

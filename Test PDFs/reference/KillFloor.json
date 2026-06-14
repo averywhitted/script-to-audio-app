@@ -1056,8 +1056,13 @@
           "sig": "Sghy"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "B",
           "sig": "S"
         },
         {
@@ -1066,13 +1071,13 @@
           "sig": "Yly"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Is"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Igsmotw"
         },
         {
@@ -3973,8 +3978,8 @@
           "sig": "Sgthuat"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "ANDY",
           "sig": "Iym"
         },
         {
@@ -4694,8 +4699,13 @@
           "sig": "Idrh"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "R"
+        },
+        {
           "kind": "dialog",
-          "speaker": "RICK",
+          "speaker": "ANDY",
           "sig": "Ltg“"
         },
         {
@@ -4704,8 +4714,8 @@
           "sig": "LH"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "ANDY",
           "sig": "MsLg"
         },
         {
@@ -4714,13 +4724,13 @@
           "sig": "Bl("
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "ANDY",
           "sig": "G"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "ANDY",
           "sig": "Waa"
         },
         {
@@ -5110,8 +5120,13 @@
           "sig": "H"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "B"
+        },
+        {
           "kind": "dialog",
-          "speaker": "B",
+          "speaker": "ANDY",
           "sig": "Wyut"
         },
         {
@@ -6212,8 +6227,13 @@
           "sig": "lpbatcaBwohe"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "B"
+        },
+        {
           "kind": "dialog",
-          "speaker": "B",
+          "speaker": "ANDY",
           "sig": "SSS"
         },
         {
@@ -6447,8 +6467,13 @@
           "sig": "IsIlB"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "B"
+        },
+        {
           "kind": "dialog",
-          "speaker": "B",
+          "speaker": "ANDY",
           "sig": "A"
         },
         {
@@ -6853,18 +6878,23 @@
       "title": "SCENE 12 (part 2)",
       "elements": [
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Onab"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Tdtitd"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "A"
+        },
+        {
           "kind": "dialog",
-          "speaker": "ANDY",
+          "speaker": "B",
           "sig": "Tn"
         },
         {
@@ -6873,18 +6903,23 @@
           "sig": "IssuB"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "TfwIrtstcith"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Irstded"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "A"
+        },
+        {
           "kind": "dialog",
-          "speaker": "ANDY",
+          "speaker": "B",
           "sig": "Ibytowdiay"
         },
         {
@@ -6893,28 +6928,28 @@
           "sig": "Wdysu"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Ibideby"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Ibyjldc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Bc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "B"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "YdcB"
         },
         {

@@ -4795,18 +4795,18 @@
       "title": "Scene 1 (part 9)",
       "elements": [
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "ELEANOR",
           "sig": "B"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "ELEANOR",
           "sig": "Tne"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "ELEANOR",
           "sig": "B"
         },
         {

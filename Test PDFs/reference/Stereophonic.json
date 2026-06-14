@@ -6,17 +6,17 @@
   },
   "title": "S T E R E O P",
   "characters": [
+    "D A V I D",
     "CONTROL ROOM",
     "GROVER",
     "SIMON",
     "DIANA",
-    "CHARLIE",
     "HOLLY",
+    "CHARLIE",
     "PETER",
     "REG",
     "REG & SIMON",
-    "SHORT PAUSE",
-    "DEAD SILENCE"
+    "SHORT PAUSE"
   ],
   "scenes": [
     {
@@ -34,18 +34,18 @@
           "sig": "S2a3M1P4FwoJ1"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "D A V I D",
           "sig": "NStpitcrasroamsTsriuacs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "D A V I D",
           "sig": "Itttsdttpdotlstpitcrdotritsr"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "D A V I D",
           "sig": "MotphahqoscTalooccosbrPpcathtasoAds(iacfwtnbodsoTntbewpTplitsbhaomTiePpcattpabawNiaT"
         },
         {
@@ -74,8 +74,8 @@
           "sig": "CmtmsG(SD"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "CmtmsG(GtYwtgttT"
         },
         {
@@ -384,18 +384,28 @@
           "sig": "Cyctsitmpio"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "C"
+        },
+        {
           "kind": "dialog",
-          "speaker": "CHARLIE",
+          "speaker": "GROVER",
           "sig": "O/D(hMhilab"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "C"
+        },
+        {
           "kind": "parenthetical",
-          "speaker": "CHARLIE",
+          "speaker": "GROVER",
           "sig": "(ctmp"
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
+          "speaker": "GROVER",
           "sig": "IoG(I/o"
         },
         {
@@ -446,6 +456,11 @@
         {
           "kind": "dialog",
           "speaker": "DIANA",
+          "sig": "C"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "C"
         },
         {
@@ -835,8 +850,8 @@
           "sig": "Gltmwshc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HOLLY",
           "sig": "Sfapitm"
         },
         {
@@ -1551,8 +1566,8 @@
           "sig": "HfbamHesiattrhfwspgSrwitsr"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "REG",
           "sig": "HgtsahkP(GCwghabc"
         },
         {
@@ -1576,8 +1591,8 @@
           "sig": "SptqcCO"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Tptboc"
         },
         {
@@ -1606,18 +1621,24 @@
           "sig": "SaDmtwttb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "PbitsrRTwsmfSDystfRRIltmiEBS"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PsdoasapacgrRdalgacuSdip"
-        },
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 4)",
+      "elements": [
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "HtadohcwtPD(alocYgCyTtgWhn-S"
         },
         {
@@ -1656,23 +1677,43 @@
           "sig": "Ac/"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
+        },
+        {
           "kind": "dialog",
-          "speaker": "HOLLY",
+          "speaker": "REG",
           "sig": "Oi/fIwSAR/gc"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
+        },
+        {
           "kind": "dialog",
-          "speaker": "HOLLY",
+          "speaker": "REG",
           "sig": "IwjtJthfas/s—DIj/"
         },
         {
-          "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "d—/thDIrhwyhs"
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
+          "speaker": "REG",
+          "sig": "d—/thDIrhwyhs"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REG",
           "sig": "hadwy/k"
         },
         {
@@ -1688,22 +1729,21 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OIcjditr"
-        }
-      ]
-    },
-    {
-      "number": 4,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 4)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "w(IdkwI"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "kciet/S(W"
         },
         {
@@ -1997,8 +2037,8 @@
           "sig": "PsrphsasboHiatgibDshawsth"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "GaP"
         },
         {
@@ -2032,8 +2072,8 @@
           "sig": "DmhwisrP(O"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Gw"
         },
         {
@@ -2170,7 +2210,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PlsbitsrDf"
-        },
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 5)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -2265,13 +2311,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TutvitsrSfalbTvimtsaitsrttC"
-        }
-      ]
-    },
-    {
-      "number": 5,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 5)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -2641,31 +2681,6 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PisthftsrGttvbo"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "WtP"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "Iwayi—WaydmYntbpaGIsTmwo"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "YntktmoYntpaGGS"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "TgsttimpcyfiuGaotcPs"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "AlmGaaPs"
         }
       ]
     },
@@ -2673,6 +2688,36 @@
       "number": 6,
       "title": "Act 4 is set in a music studio in Los Angeles, CA (part 6)",
       "elements": [
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "WtP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Iwayi—WaydmYntbpaGIsTmwo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "YntktmoYntpaGGS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "TgsttimpcyfiuGaotcPs"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AlmGaaPs"
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -2804,13 +2849,13 @@
           "sig": "soHnRs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "SIMON",
           "sig": "hadlD"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "SIMON",
           "sig": "Ayo"
         },
         {
@@ -2839,8 +2884,8 @@
           "sig": "AsdDetsttod"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "Otcic"
         },
         {
@@ -2914,13 +2959,18 @@
           "sig": "Sctcta/EmG(hbHshs/"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "R"
+        },
+        {
           "kind": "dialog",
-          "speaker": "REG",
+          "speaker": "SIMON",
           "sig": "ThInctGNn/nYrHYrBcThhgci"
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
+          "speaker": "SIMON",
           "sig": "btsiadknGBc"
         },
         {
@@ -3106,6 +3156,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "CyanlamIn(StadbSiiamkailt"
         },
         {
@@ -3151,6 +3206,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AtIdktrAttabAigItijIWmuak"
         },
         {
@@ -3171,7 +3231,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Idtil"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -3181,7 +3251,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Dytycdswi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -3191,7 +3271,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ljsw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -3204,18 +3299,18 @@
           "sig": "HeTaasDfhpapiihpSstc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "AwlIteotd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "Srajitcr"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "Risatcsih"
         },
         {
@@ -3287,7 +3382,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Psstevvband"
-        },
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 7)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -3347,13 +3448,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Rtatglit"
-        }
-      ]
-    },
-    {
-      "number": 7,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 7)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "SIMON",
@@ -4497,8 +4592,8 @@
           "sig": "YS(bialaShtwioYry"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "REG",
           "sig": "Stahl"
         },
         {
@@ -4624,6 +4719,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IkBnialtftowLmsy"
         },
         {
@@ -4634,12 +4734,37 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wdyt"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "B"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "R"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Id"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "R"
         },
         {
           "kind": "stage_direction",
@@ -4679,6 +4804,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "RafRaf"
         },
         {
@@ -4694,7 +4824,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ogtwigsw“SwpodHwdytswpod"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "B"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -4724,6 +4869,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WwyitmWkyuanWdybhAtcitl"
         },
         {
@@ -4734,7 +4884,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "DAP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Oo"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -4744,7 +4904,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "DAP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Oo"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -4764,7 +4934,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "DAP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ifioa"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -4785,6 +4965,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Wgtkod"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -4814,7 +4999,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Id"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -4839,7 +5034,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "R"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -4882,13 +5087,13 @@
           "sig": "WwGguam"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HOLLY",
           "sig": "SltsGCwftEotsTiu1Biualy"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HOLLY",
           "sig": "CdiH"
         },
         {
@@ -4899,7 +5104,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Acwgmbotc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -4909,12 +5124,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "R"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ilmb/aw"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "GembGftloth"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -4927,8 +5157,8 @@
           "sig": "Inmom"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HOLLY",
           "sig": "AIchPGftl"
         },
         {
@@ -4942,39 +5172,54 @@
           "sig": "Hlohh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "IschPGfs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "NIhtmoPAIhigGfi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "OGEg"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "YGRtlid"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "LdiG(Osb(CRt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(rt(Wr“tt"
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(rt"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Wr“tt"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Tstp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -4989,7 +5234,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SIfrtm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
         },
         {
           "kind": "stage_direction",
@@ -4999,7 +5254,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Tns"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
         },
         {
           "kind": "stage_direction",
@@ -5007,14 +5272,19 @@
           "sig": "WdifrtyItifo"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "HdisGGWdyciahal"
         },
         {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "NIdwt‘alIdhttcita‘alebtwlsd(WaydotWcybltuapatwgoih(PYspatttatkatiagualfhG(Inpta"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "dialog",
@@ -5034,7 +5304,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wyp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "dialog",
@@ -5089,6 +5369,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Sr"
         },
         {
@@ -5115,6 +5400,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "wItyamsl"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "PAD"
         },
         {
           "kind": "stage_direction",
@@ -5149,6 +5439,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "PAD"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ml"
         },
         {
@@ -5174,7 +5469,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "R"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Y"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -5189,17 +5494,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "R"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Icdt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "HtsG"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "IstsamwP"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "IstsamwP"
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -5207,8 +5522,13 @@
           "sig": "TaltsIlial/m"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "R"
+        },
+        {
           "kind": "dialog",
-          "speaker": "REG",
+          "speaker": "PETER",
           "sig": "O/CPItywbtw"
         },
         {
@@ -5249,6 +5569,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OsiykwilIamsAitmosiabdWotbTatlTsisTwasaeTsTACAtadbAsmtdbwtd"
         },
         {
@@ -5259,7 +5584,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Smth/o"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
         },
         {
           "kind": "stage_direction",
@@ -5284,6 +5624,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "BB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "aystotb"
         },
         {
@@ -5294,7 +5639,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "SP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ayo"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -5319,6 +5684,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hpdhdfam"
         },
         {
@@ -5327,8 +5697,8 @@
           "sig": "Slhda"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "LtiaGyrtGgatuCrt"
         },
         {
@@ -5347,8 +5717,13 @@
           "sig": "TbstpAfsiSsdawhhsftrotbtsCstt"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "PETER",
           "sig": "DtdswtyG(Ichasrwts"
         },
         {
@@ -5357,13 +5732,18 @@
           "sig": "S(hh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "YcwG(Tsalr"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "PETER",
           "sig": "TsarG(YiretyhtkdHtkd"
         },
         {
@@ -5372,8 +5752,13 @@
           "sig": "Shtkd"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "PETER",
           "sig": "IdhiG(Ir"
         },
         {
@@ -5382,53 +5767,79 @@
           "sig": "ShtkdaA"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "OyIhiG(Hi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "ThhtkdsmGTttsatuafl"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "YyyoWtdk"
-        },
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 10)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HftdkttsHptsalbjthi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "HpismG(Pialm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "HdG(Nyrtimysdsbay"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "PETER",
           "sig": "WtG(Ybtsdtcttrtpsniirbay"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "PETER",
           "sig": "OG(Smtysdbd"
         },
         {
-          "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "YsiItibdimtsr/wIG(NIk"
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "PETER",
+          "sig": "YsiItibdimtsr/wIG(NIk"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "ht/kdG(Natwbd"
         },
         {
@@ -5442,8 +5853,8 @@
           "sig": "HpagocShtkdCNtsra"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "WiwuattyktdttG(Imyyltt"
         },
         {
@@ -5452,13 +5863,18 @@
           "sig": "TgatttpiotsdSp"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "GROVER",
           "sig": "ItmG(OwatTttluahac"
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "GROVER",
           "sig": "SdG(Onp"
         },
         {
@@ -5467,8 +5883,13 @@
           "sig": "SpHs"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "GROVER",
           "sig": "OntsaraFG(Idhitt(tDyhi"
         },
         {
@@ -5497,8 +5918,13 @@
           "sig": "AdiapowApOwIeYckctNwceaIccibG(Dfowfi"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "GROVER",
           "sig": "IigGO"
         },
         {
@@ -5519,7 +5945,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WmdkWtmdk"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "R"
         },
         {
           "kind": "stage_direction",
@@ -5529,7 +5965,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Noti"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
         },
         {
           "kind": "stage_direction",
@@ -5605,13 +6051,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SswbhdsfoateGYwlmhts"
-        }
-      ]
-    },
-    {
-      "number": 10,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 10)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -5633,8 +6073,13 @@
           "sig": "Ss"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "GROVER",
           "sig": "IalbG(Yy"
         },
         {
@@ -5748,14 +6193,19 @@
           "sig": "SsatdkwGf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "wtmRNtyIpfsjIdd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "aCGanornWanobItoanl"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "aCGanornWanobItoanl"
+          "sig": "S"
         },
         {
           "kind": "stage_direction",
@@ -5888,8 +6338,8 @@
           "sig": "HwheaDlshh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "Gphhitcr"
         },
         {
@@ -6091,10 +6541,16 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SLGTwasn(nDmaf"
-        },
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 11)",
+      "elements": [
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "Howy"
         },
         {
@@ -6166,13 +6622,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DcfawHdsfab"
-        }
-      ]
-    },
-    {
-      "number": 11,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 11)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "HOLLY",
@@ -6261,12 +6711,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TnlyBinyfTlwfAwlaTcilBtjiicIwtcmhadb"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "DPAH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Iitbl"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -6277,6 +6742,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Tsool"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -6301,6 +6771,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YlcianIk"
         },
         {
@@ -6314,8 +6789,8 @@
           "sig": "TsptlHsmtDwhaahghsasTwbafmiRjtbqfapwHCoabolpeGoabSetcrSirafs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "PistdicSWmk(ftCb"
         },
         {
@@ -6351,6 +6826,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "CwjtotIhai"
         },
         {
@@ -6371,6 +6851,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "OSlpotfotDfotf"
         },
         {
@@ -6381,12 +6866,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Rcynhtf"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Rnstp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -6409,8 +6904,8 @@
           "sig": "(tb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "LtifttvG(Er"
         },
         {
@@ -6436,6 +6931,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YbsIysaBtwcoa"
         },
         {
@@ -6447,6 +6947,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Ltiwjtp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -6476,6 +6981,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YbsIysaBtwcoacIcmsLydoalsBwgil"
         },
         {
@@ -6491,7 +7001,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "DAPAH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Iitbl"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -6501,12 +7021,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "DAPAH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Tsool"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "FbsWedlt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "PADAH"
         },
         {
           "kind": "stage_direction",
@@ -6516,7 +7051,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TnlybinyfTlwfawlaTcilBtjiicIttcmhadb"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "DAPAH"
         },
         {
           "kind": "stage_direction",
@@ -6526,7 +7071,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Fmn"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "DAPAH"
         },
         {
           "kind": "stage_direction",
@@ -6536,7 +7091,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "FbsWedlt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "DAPAH"
         },
         {
           "kind": "stage_direction",
@@ -6546,12 +7111,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IitblaIitblaIitblaIitblaIitblaIitbla"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "DAPAH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Iitbla"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -6562,6 +7142,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "WtfamossPsalCcsHloaDCstt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -6584,9 +7169,14 @@
           "sig": "Srhe"
         },
         {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "DmhhwatsG(LvttItwapb"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "DmhhwatsG(LvttItwapb"
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -6724,8 +7314,8 @@
           "sig": "HwaPaDPaDwbHaRehh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HOLLY",
           "sig": "DwPrtj"
         },
         {
@@ -7357,11 +7947,16 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "GmtttMGsftb"
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "GmtttMGsftb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "TsbdG(Ygigbyntwttgals"
         },
         {
@@ -7372,16 +7967,21 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Uh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "SIMON",
           "sig": "UhTy(O(GOwr“t3"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "SIMON",
           "sig": "TaspG(CIm"
         },
         {
@@ -7398,7 +7998,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Itdv"
-        },
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 13)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -7410,19 +8016,34 @@
           "sig": "Yb"
         },
         {
-          "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "HwttG(Id"
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "GROVER",
+          "sig": "HwttG(Id"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "IdG(YyrsalbtDywtutct"
         },
         {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "DIwtuactIdnactGNNIdG(Itimmte"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
         },
         {
           "kind": "dialog",
@@ -7433,13 +8054,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TpfabistsdaG(CWigo"
-        }
-      ]
-    },
-    {
-      "number": 13,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 13)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -7456,8 +8071,13 @@
           "sig": "WiwJutbct"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "GROVER",
           "sig": "IdnIIdtmJmyobP"
         },
         {
@@ -7491,8 +8111,8 @@
           "sig": "Ssou"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "IsIdniGG(Wu/i"
         },
         {
@@ -7536,9 +8156,19 @@
           "sig": "Cyhi"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "S"
+        },
+        {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "GROVER",
           "sig": "UhGOltiftt“t3"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -7548,7 +8178,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "PADAH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TomstIsgStwtIck"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -7563,12 +8203,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wwtsr"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Wwww"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -7578,7 +8228,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "PAD"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TsrofmhBIkmottd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -7588,7 +8248,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "PHAD"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "BncgkuaWwww"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -7598,7 +8268,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "PAD"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wwww"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -7608,7 +8288,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "PADAH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IlacaIpffn"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -7618,7 +8308,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "PADAH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IltsaGmtttmMsisatmp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -7628,7 +8328,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "PADAH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "BIgmgaIomw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "PADAH"
         },
         {
           "kind": "stage_direction",
@@ -7636,9 +8346,14 @@
           "sig": "IsywIgtIgsywIgtIsywIgtIgsywIgtIsywIgtIgsywIgt"
         },
         {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "TftsG(tGisfg"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "TftsG(tGisfg"
+          "sig": "R"
         },
         {
           "kind": "stage_direction",
@@ -7648,7 +8363,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Idt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "R"
         },
         {
           "kind": "stage_direction",
@@ -7721,6 +8446,11 @@
           "sig": "TmkgGstt"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "IcgtnSljgf(Wdw/dddGOIpyi"
@@ -7733,12 +8463,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "WdwhtcwEygirifoy-P(Dtla"
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "WdwhtcwEygirifoy-P(Dtla"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "WP(“y/g—“"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "dialog",
@@ -7746,9 +8486,19 @@
           "sig": "Weygib/bbP(YdaGst"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "WtP(IutbaBotly—iw/aB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "dialog",
@@ -7756,14 +8506,29 @@
           "sig": "O/P(AitiaGss"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "R(hEy(iO/P(TaB/"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "OsyrP“/y"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "dialog",
@@ -7816,9 +8581,19 @@
           "sig": "DstlhiabP(GSrrJ"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "PETER",
           "sig": "S(chtP(Wu"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -7831,8 +8606,8 @@
           "sig": "SgispishalP(Dywtctk"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "PIgiPWwbhal/t"
         },
         {
@@ -7851,9 +8626,19 @@
           "sig": "DsaldatffabSlalthPIysItth/y"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "CyjhmPIahy(GGsoat"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "dialog",
@@ -7898,6 +8683,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WdwhtcwEy"
         },
         {
@@ -7911,28 +8701,53 @@
           "sig": "TawaswsjstP(Ljtiiadk/"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "PETER",
           "sig": "YgimhaIcdtslt(IcetsbIgsimhYtmtmt/PItyotIgyonCyntasn"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "PETER",
           "sig": "IjgimhPTdgiyohBap"
         },
         {
-          "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "IaapPO"
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "PETER",
+          "sig": "IaapPO"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "JhmwtPDywhOdywmtsuYjswyhoyhEijapwy"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "PETER",
           "sig": "IsltbIePIdltwystmrn"
         },
         {
@@ -7951,9 +8766,19 @@
           "sig": "Tnaw"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "PETER",
           "sig": "W/P‘t/na"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -7966,8 +8791,13 @@
           "sig": "PbhhihhS"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "PETER",
           "sig": "CIttypPN(DOWwnttrnscihPsCgGal"
         },
         {
@@ -8003,7 +8833,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "B/y"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -8013,7 +8853,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Twwwhtc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "B"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -8023,7 +8878,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Bwcci"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "B"
         },
         {
           "kind": "stage_direction",
@@ -8041,9 +8906,24 @@
           "sig": "OwIptr"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "GROVER",
           "sig": "IntatrG(wS"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -8053,7 +8933,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "B"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "PIcb(Nnnn/d"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -8074,6 +8974,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "IttYntoowtbwhtftWroorott"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -8103,6 +9008,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NPYdYdhtdiAingfeouaWhtsO"
         },
         {
@@ -8118,7 +9028,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Yassasfsi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -8133,7 +9053,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Idai"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -8143,7 +9073,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IgfldtvA/t"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -8166,8 +9111,8 @@
           "sig": "DerSdabow"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "SchtG(Ynab"
         },
         {
@@ -8176,9 +9121,19 @@
           "sig": "Swrtth"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "GROVER",
           "sig": "CwttwvGsth"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -8201,8 +9156,13 @@
           "sig": "Htf"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "GROVER",
           "sig": "GItG(Dywtciahal"
         },
         {
@@ -8284,7 +9244,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PCaGalt“R"
-        },
+        }
+      ]
+    },
+    {
+      "number": 14,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 14)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -8379,13 +9345,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PeOhgCaGhamGphfthlHctmtmstab"
-        }
-      ]
-    },
-    {
-      "number": 14,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 14)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -8612,13 +9572,13 @@
           "sig": "P("
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "LmttomtGYgi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Crtt"
         },
         {
@@ -8760,7 +9720,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PbbitsrCrtt"
-        },
+        }
+      ]
+    },
+    {
+      "number": 15,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 15)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -8792,9 +9758,19 @@
           "sig": "whwdbhsmCstt"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
           "kind": "dialog",
-          "speaker": "PETER",
+          "speaker": "GROVER",
           "sig": "TwhG(Ilis"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -8802,8 +9778,8 @@
           "sig": "Ymt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "ALgbttoIjdGaClaeo"
         },
         {
@@ -8817,13 +9793,23 @@
           "sig": "Wei"
         },
         {
-          "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "WdymyeiG(Yjamtroi"
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
+          "speaker": "GROVER",
+          "sig": "WdymyeiG(Yjamtroi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "WtfwydtG(Yamt"
         },
         {
@@ -8890,13 +9876,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PshfitweGisr"
-        }
-      ]
-    },
-    {
-      "number": 15,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 15)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "SIMON",
@@ -8973,8 +9953,8 @@
           "sig": "HlicastablftiotwtTgofab"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "SIMON",
           "sig": "Ais"
         },
         {
@@ -9108,8 +10088,8 @@
           "sig": "HwtmaEihHftmasiihbp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "CHARLIE",
           "sig": "Dets"
         },
         {
@@ -9246,7 +10226,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "GffihCltGws"
-        },
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 16)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "REG",
@@ -9283,8 +10269,8 @@
           "sig": "Gsatcabtraj"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Cets"
         },
         {
@@ -9371,13 +10357,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HgtthsfSsfamlafhgttcSphagocihHwhawa"
-        }
-      ]
-    },
-    {
-      "number": 16,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 16)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -10007,6 +10987,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "DAPAH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "JcmwOJcmwOJcmwOOWcsGaChrwtmsii"
         },
         {
@@ -10087,7 +11072,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WDt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -10095,13 +11090,23 @@
           "sig": "IdtthoaaJp"
         },
         {
-          "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "IttwsGIae/t"
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "CHARLIE",
+          "sig": "IttwsGIae/t"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "CHARLIE",
           "sig": "TwnmuAaHw/flcGWtii"
         },
         {
@@ -10147,6 +11152,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AdbtD"
         },
         {
@@ -10157,12 +11167,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Irntf"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YItaitodaItWIrh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -10197,7 +11222,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SsaboJDaotc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -10208,6 +11243,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SttmaofoDSgDg"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -10225,8 +11265,8 @@
           "sig": "Eitskofbfs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "HasC(pWiwlmtfuad"
         },
         {
@@ -10317,7 +11357,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Yassa/pDykt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -10327,12 +11377,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Yjtutsuanytmnttyt/su"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YgmaFH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "dialog",
@@ -10357,7 +11422,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Idsa"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -10367,7 +11447,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "B"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "If"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -10402,7 +11502,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IhyIhym/"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -10412,17 +11522,37 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YM"
         },
         {
-          "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "DTT"
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "GROVER",
+          "sig": "DTT"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "G/TH"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -10432,7 +11562,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Dtm/tsu"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -10445,8 +11585,8 @@
           "sig": "Hdy(IaalCghttu"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Dyectywetwts/nG(Ow/b"
         },
         {
@@ -10458,6 +11598,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DsheatacbG(Wb/"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -10482,7 +11627,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Gy"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "D"
         },
         {
           "kind": "stage_direction",
@@ -10515,9 +11670,19 @@
           "sig": "(PYGBMNIFOGAHA(rCnAEYGBMNNPIDTS!"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "DS"
+        },
+        {
           "kind": "dialog",
-          "speaker": "DEAD SILENCE",
+          "speaker": "DIANA",
           "sig": "GLNobanallodCfLdtaecgoo/hD(hbC"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -10527,7 +11692,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "W"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -10540,14 +11715,19 @@
           "sig": "YydtA"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "GwawdshanWaysuGIbrtg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "TSSDJSBYSLCG(iISLLODGYISIAHTTCFWRIGY"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "TSSDJSBYSLCG(iISLLODGYISIAHTTCFWRIGY"
+          "sig": "P"
         },
         {
           "kind": "dialog",
@@ -10557,12 +11737,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Tom"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "D"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "JLjkg"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "B"
         },
         {
           "kind": "stage_direction",
@@ -10573,6 +11768,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "SthuGWfs(rt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "DAPAH"
         },
         {
           "kind": "stage_direction",
@@ -11196,8 +12396,8 @@
           "sig": "Pettsritk"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "Retsr"
         },
         {
@@ -12113,8 +13313,8 @@
           "sig": "*"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Dchw"
         },
         {
@@ -12163,8 +13363,8 @@
           "sig": "HsatcapDswhitbotpbnamfHpoiwtfobouWjhtdHsmtlsttmfiia"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Tstvcb"
         },
         {
@@ -12173,18 +13373,18 @@
           "sig": "HrPbPoebthAttodvtofttotarage"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Thpotvaijh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "A"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Bs"
         }
       ]
