@@ -154,6 +154,7 @@ class TextBlock:
     is_bold: bool
     is_merged_parenthetical: bool = False  # produced by _merge_open_parentheticals
     is_split_continuation: bool = False   # tail block produced by _split_raw_block cue split
+    is_cue_with_inline_paren: bool = False  # "SPEAKER (stage direction)" — cue line with embedded direction
 
 
 @dataclass
@@ -1357,6 +1358,17 @@ def _split_raw_block(raw_block: dict, page_num: int) -> List[TextBlock]:
             tail = _make_text_block(run[1:], page_num)
             tail.is_split_continuation = True
             result.append(tail)
+        elif len(run) > 1 and _is_cue_with_inline_paren_line(first_text):
+            # "SPEAKER (stage direction)\nDialog" — the paren on the cue line
+            # drops the caps ratio below the normal threshold, so it can't be
+            # detected by _is_speaker_cue_text.  Split and tag the cue block so
+            # Phase 2 can force-classify it as a speaker cue.
+            cue = _make_text_block([run[0]], page_num)
+            cue.is_cue_with_inline_paren = True
+            result.append(cue)
+            tail = _make_text_block(run[1:], page_num)
+            tail.is_split_continuation = True
+            result.append(tail)
         else:
             result.append(_make_text_block(run, page_num))
     return result
@@ -1387,6 +1399,28 @@ def _is_speaker_cue_text(text: str) -> bool:
     if _PAGE_MARKER_RE.match(t):
         return False
     return True
+
+
+# Matches "NAME (stage direction)" — all-caps name followed by a parenthetical
+# that fills the rest of the line (nothing after the closing paren).
+_CUE_WITH_INLINE_PAREN_RE = re.compile(r'^([A-Z][A-Z\'\s.]{0,30}?)\s*\([^)]+\)\s*$')
+
+
+def _is_cue_with_inline_paren_line(text: str) -> bool:
+    """Return True for 'SPEAKER (stage direction)' cue lines where the paren
+    content prevents _is_speaker_cue_text from recognising the speaker name.
+
+    Excludes standard screenplay continuation markers like '(CONT'D)' and
+    '(cont.)' — those are handled elsewhere and don't need the extra split.
+    """
+    t = text.strip()
+    m = _CUE_WITH_INLINE_PAREN_RE.match(t)
+    if not m:
+        return False
+    if re.search(r'\(\s*cont', t, re.IGNORECASE):
+        return False
+    name = m.group(1).strip()
+    return bool(name) and _is_speaker_cue_text(name)
 
 
 def _make_text_block(lines: List[_RawLine], page_num: int) -> TextBlock:
@@ -1849,6 +1883,19 @@ def _classify_blocks(
         # Empty blocks are always noise regardless of score.
         if not text:
             result.append(ClassifiedBlock(block=block, role="noise"))
+            continue
+
+        # "SPEAKER (stage direction)" cue blocks — bypass Phase 1 scoring entirely.
+        # _split_raw_block already separated the cue from the dialog tail; here we
+        # just need to extract the speaker name and promote the block to speaker_cue.
+        if block.is_cue_with_inline_paren:
+            speaker = _normalize_speaker(text).rstrip(".:,")
+            if speaker:
+                pending_speaker = speaker
+                result.append(ClassifiedBlock(block=block, role="speaker_cue",
+                                              speaker=speaker))
+            else:
+                result.append(ClassifiedBlock(block=block, role="noise"))
             continue
 
         # Hard overrides for definitive format markers.  These regex patterns

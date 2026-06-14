@@ -7,11 +7,11 @@
   "title": "S T E R E O P",
   "characters": [
     "CONTROL ROOM",
+    "GROVER",
     "SIMON",
     "DIANA",
     "CHARLIE",
     "HOLLY",
-    "GROVER",
     "PETER",
     "REG",
     "REG & SIMON",
@@ -64,9 +64,9 @@
           "sig": "CitsrgfmtmTdtm‘nsGiwtmmotcPtTb&sitm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(BD"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "BD"
         },
         {
           "kind": "stage_direction",
@@ -89,14 +89,14 @@
           "sig": "CmtmeDwttsritk"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Gtt/O"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Gtt/O"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S(s“MTtutu"
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "Ttutu"
         },
         {
           "kind": "stage_direction",
@@ -104,24 +104,14 @@
           "sig": "CsDcbapntS"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Ont/BD"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "D(SWitnc"
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "Witnc"
         },
         {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Tcmb"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "D(WO/co"
         },
         {
           "kind": "dialog",
@@ -145,8 +135,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(G/D"
+          "speaker": "GROVER",
+          "sig": "G/D"
         },
         {
           "kind": "dialog",
@@ -155,8 +145,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "D(N/"
+          "speaker": "DIANA",
+          "sig": "N/"
         },
         {
           "kind": "dialog",
@@ -174,9 +164,9 @@
           "sig": "Cs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(GcygtG"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "GcygtG"
         },
         {
           "kind": "stage_direction",
@@ -210,8 +200,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "G(P/L"
+          "speaker": "GROVER",
+          "sig": "P/L"
         },
         {
           "kind": "dialog",
@@ -240,8 +230,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "G(P/R"
+          "speaker": "GROVER",
+          "sig": "P/R"
         },
         {
           "kind": "dialog",
@@ -265,8 +255,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(Cy/gbttgapal"
+          "speaker": "GROVER",
+          "sig": "Cy/gbttgapal"
         },
         {
           "kind": "dialog",
@@ -280,8 +270,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "S(dtmWwt"
+          "speaker": "SIMON",
+          "sig": "Wwt"
         },
         {
           "kind": "dialog",
@@ -350,23 +340,23 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(Yg"
+          "speaker": "GROVER",
+          "sig": "Yg"
         },
         {
           "kind": "dialog",
           "speaker": "DIANA",
-          "sig": "D(ahWIwb/sWdyjcm"
+          "sig": "WIwb/sWdyjcm"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(Hv"
+          "speaker": "GROVER",
+          "sig": "Hv"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "S(IwhagtInathag/t"
+          "speaker": "SIMON",
+          "sig": "IwhagtInathag/t"
         },
         {
           "kind": "dialog",
@@ -389,9 +379,9 @@
           "sig": "Cs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Cyctsitmpio"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Cyctsitmpio"
         },
         {
           "kind": "dialog",
@@ -435,8 +425,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(Itc/nsp"
+          "speaker": "GROVER",
+          "sig": "Itc/nsp"
         },
         {
           "kind": "dialog",
@@ -470,8 +460,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "S(cH"
+          "speaker": "SIMON",
+          "sig": "H"
         },
         {
           "kind": "dialog",
@@ -485,8 +475,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(I/snw"
+          "speaker": "GROVER",
+          "sig": "I/snw"
         },
         {
           "kind": "dialog",
@@ -501,17 +491,12 @@
         {
           "kind": "dialog",
           "speaker": "DIANA",
-          "sig": "G(C/"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "DIANA",
           "sig": "yjtmtgsits"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "S(nSai"
+          "speaker": "SIMON",
+          "sig": "Sai"
         },
         {
           "kind": "dialog",
@@ -555,8 +540,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "D(Anyhtdyp"
+          "speaker": "DIANA",
+          "sig": "Anyhtdyp"
         },
         {
           "kind": "stage_direction",
@@ -575,13 +560,8 @@
           "sig": "Pmtc/Gctpp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Y"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "HmabtSaD"
         },
         {
@@ -590,13 +570,13 @@
           "sig": "CsTmmotc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Tfi"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Tfi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "CgttuDWaIjnmbstHHs(ka/Is"
         },
         {
@@ -605,9 +585,9 @@
           "sig": "HceotsntSghask"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(LgtDV"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "LgtDV"
         },
         {
           "kind": "stage_direction",
@@ -615,13 +595,13 @@
           "sig": "CsHsbuwataG"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(PV"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "PV"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "CsH(GOG"
         },
         {
@@ -630,18 +610,13 @@
           "sig": "Gisfhtw"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(SV"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "CsG(RV"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "CghatuG(Owd(HS"
         },
         {
@@ -666,8 +641,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "H(ttCIjaysrq"
+          "speaker": "HOLLY",
+          "sig": "CIjaysrq"
         },
         {
           "kind": "dialog",
@@ -701,8 +676,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "D(hWn/adc"
+          "speaker": "DIANA",
+          "sig": "Wn/adc"
         },
         {
           "kind": "dialog",
@@ -711,13 +686,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "C(“iyf"
+          "speaker": "CHARLIE",
+          "sig": "“iyf"
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "G(hlacOrrOyIttg"
+          "speaker": "GROVER",
+          "sig": "OrrOyIttg"
         },
         {
           "kind": "dialog",
@@ -746,8 +721,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "G(lhcY/ti"
+          "speaker": "GROVER",
+          "sig": "Y/ti"
         },
         {
           "kind": "dialog",
@@ -786,12 +761,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "S(BOjatw/"
+          "speaker": "SIMON",
+          "sig": "BOjatw/"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "SIMON",
           "sig": "Gtadohc"
         },
         {
@@ -821,18 +796,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "C(GTrharnd"
+          "speaker": "CHARLIE",
+          "sig": "Trharnd"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "H(ctcW/p"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(CY"
+          "speaker": "HOLLY",
+          "sig": "W/p"
         },
         {
           "kind": "dialog",
@@ -875,9 +845,9 @@
           "sig": "Gtabdohctfam"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(TRIimN“dylmddddddWdylmbdbbdb"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "“dylmddddddWdylmbdbbdb"
         },
         {
           "kind": "stage_direction",
@@ -921,13 +891,18 @@
         },
         {
           "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Ity/"
+        },
+        {
+          "kind": "dialog",
           "speaker": "DIANA",
           "sig": "IkWialcIndtbs/b"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "S(stHYkwcth"
+          "speaker": "SIMON",
+          "sig": "Ykwcth"
         },
         {
           "kind": "dialog",
@@ -1016,8 +991,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "H(Awrgttat/rn"
+          "speaker": "HOLLY",
+          "sig": "Awrgttat/rn"
         },
         {
           "kind": "dialog",
@@ -1061,8 +1036,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "D(scIt/eshapitrIwgblit"
+          "speaker": "DIANA",
+          "sig": "It/eshapitrIwgblit"
         },
         {
           "kind": "dialog",
@@ -1071,13 +1046,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "D(assheshtolI/dtwshohpbegbotpWntgom"
+          "speaker": "DIANA",
+          "sig": "sheshtolI/dtwshohpbegbotpWntgom"
         },
         {
           "kind": "dialog",
           "speaker": "HOLLY",
-          "sig": "H(SCychfm"
+          "sig": "Cychfm"
         },
         {
           "kind": "dialog",
@@ -1106,8 +1081,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "G(TR“dbb/db"
+          "speaker": "GROVER",
+          "sig": "“dbb/db"
         },
         {
           "kind": "dialog",
@@ -1177,18 +1152,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "S(hmbOIfttyYsibitT4"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "Dsc"
+          "speaker": "SIMON",
+          "sig": "OIfttyYsibitT4"
         },
         {
           "kind": "dialog",
           "speaker": "SIMON",
-          "sig": "Y"
+          "sig": "Dsc"
         },
         {
           "kind": "dialog",
@@ -1247,13 +1217,18 @@
         },
         {
           "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "Ih"
+        },
+        {
+          "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Tsw"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S(wBasi"
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "Basi"
         },
         {
           "kind": "dialog",
@@ -1307,8 +1282,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "S(hb“ymr/"
+          "speaker": "SIMON",
+          "sig": "“ymr/"
         },
         {
           "kind": "dialog",
@@ -1362,8 +1337,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "P(hwDwekihgsu"
+          "speaker": "PETER",
+          "sig": "Dwekihgsu"
         },
         {
           "kind": "dialog",
@@ -1427,8 +1402,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "H(heOgpdsw/ta"
+          "speaker": "HOLLY",
+          "sig": "Ogpdsw/ta"
         },
         {
           "kind": "dialog",
@@ -1476,9 +1451,9 @@
           "sig": "PaGphaah"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(POhm"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Ohm"
         },
         {
           "kind": "dialog",
@@ -1537,13 +1512,18 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "G(CCth"
+          "speaker": "GROVER",
+          "sig": "Cth"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "ACrftpRsiDdWaulttoeotrtDaH"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "‘m"
         },
         {
           "kind": "dialog",
@@ -1561,9 +1541,9 @@
           "sig": "RgvctDaHHroaIufe"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "R(WtsWeta(aptHHd"
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "WtsWeta(aptHHd"
         },
         {
           "kind": "stage_direction",
@@ -1587,8 +1567,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "G(CqGtb"
+          "speaker": "GROVER",
+          "sig": "Gtb"
         },
         {
           "kind": "stage_direction",
@@ -1601,9 +1581,9 @@
           "sig": "Tptboc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(Rpal"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Rpal"
         },
         {
           "kind": "stage_direction",
@@ -1732,13 +1712,13 @@
           "sig": "Hsjuadasgbaf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S(MP“wnhmfwbtcs"
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "“wnhmfwbtcs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "SIMON",
           "sig": "SgRf"
         },
         {
@@ -1762,13 +1742,13 @@
           "sig": "SpafRagitsrwRaDfGwutaooe"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(CYhtapbth"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Yhtapbth"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Calc"
         },
         {
@@ -1807,9 +1787,9 @@
           "sig": "TahntcRhalbwahDidoPPpacahitC"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(CCyptittp"
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "Cyptittp"
         },
         {
           "kind": "dialog",
@@ -1848,8 +1828,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "S(CCwjhia"
+          "speaker": "SIMON",
+          "sig": "Cwjhia"
         },
         {
           "kind": "stage_direction",
@@ -1857,9 +1837,9 @@
           "sig": "CrttapplsitmotsTlsm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(fsiIttbotc"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Ittbotc"
         },
         {
           "kind": "dialog",
@@ -1923,8 +1903,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "H(OyliItyhi"
+          "speaker": "HOLLY",
+          "sig": "OyliItyhi"
         },
         {
           "kind": "dialog",
@@ -1997,9 +1977,9 @@
           "sig": "Cychfas"
         },
         {
-          "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "D(HpItyydhgiyf"
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "HpItyydhgiyf"
         },
         {
           "kind": "dialog",
@@ -2008,8 +1988,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "D(Cwllt"
+          "speaker": "DIANA",
+          "sig": "Cwllt"
         },
         {
           "kind": "stage_direction",
@@ -2037,9 +2017,9 @@
           "sig": "HaDwbaffas"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(sNrIhatrfyIjwtst"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "NrIhatrfyIjwtst"
         },
         {
           "kind": "stage_direction",
@@ -2062,14 +2042,9 @@
           "sig": "HinsaGwtioalbGnhsalatstsotVIGO–ih"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(Gattvt"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(W"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Gattvt"
         },
         {
           "kind": "stage_direction",
@@ -2077,9 +2052,9 @@
           "sig": "GldahpttwsHssthWGlbusiRIHF"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(O/h"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "O/h"
         },
         {
           "kind": "dialog",
@@ -2097,9 +2072,9 @@
           "sig": "HgucthfAdGlb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(hWh"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Wh"
         },
         {
           "kind": "stage_direction",
@@ -2188,8 +2163,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "BEAT",
-          "sig": "D(O"
+          "speaker": "DIANA",
+          "sig": "O"
         },
         {
           "kind": "stage_direction",
@@ -2228,8 +2203,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "G(dtvabIdwtgItyIdwatTttryibygstrgkipgsfItym"
+          "speaker": "GROVER",
+          "sig": "IdwtgItyIdwatTttryibygstrgkipgsfItym"
         },
         {
           "kind": "dialog",
@@ -2252,9 +2227,9 @@
           "sig": "onAshapogohbSbablsfadsb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(tvitsrY"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Y"
         },
         {
           "kind": "dialog",
@@ -2290,7 +2265,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TutvitsrSfalbTvimtsaitsrttC"
-        },
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 5)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -2413,8 +2394,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "G(Nw"
+          "speaker": "GROVER",
+          "sig": "Nw"
         },
         {
           "kind": "dialog",
@@ -2438,22 +2419,17 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "Y"
-        },
-        {
-          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "YaDC"
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "C(Wguty"
+          "speaker": "CHARLIE",
+          "sig": "Wguty"
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
+          "speaker": "CHARLIE",
           "sig": "Gtasob"
         },
         {
@@ -2470,13 +2446,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "CgabGsaCCsHttC"
-        }
-      ]
-    },
-    {
-      "number": 5,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 5)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -2494,8 +2464,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "C(halYl"
+          "speaker": "CHARLIE",
+          "sig": "Yl"
         },
         {
           "kind": "dialog",
@@ -2574,11 +2544,6 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "G(bhiTSS"
-        },
-        {
-          "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "W"
         },
@@ -2609,8 +2574,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "G(Trg"
+          "speaker": "GROVER",
+          "sig": "Trg"
         },
         {
           "kind": "dialog",
@@ -2619,8 +2584,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "G(wsIygbaafIsafIwjboItywaocp"
+          "speaker": "GROVER",
+          "sig": "IygbaafIsafIwjboItywaocp"
         },
         {
           "kind": "dialog",
@@ -2654,12 +2619,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "BEAT",
-          "sig": "C(Y"
+          "speaker": "CHARLIE",
+          "sig": "Y"
         },
         {
           "kind": "dialog",
-          "speaker": "BEAT",
+          "speaker": "CHARLIE",
           "sig": "Gsabs"
         },
         {
@@ -2701,7 +2666,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "AlmGaaPs"
-        },
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 6)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -2729,8 +2700,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "BEAT",
-          "sig": "D(Ms"
+          "speaker": "DIANA",
+          "sig": "Ms"
         },
         {
           "kind": "dialog",
@@ -2743,13 +2714,13 @@
           "sig": "DstatpoiacsoeeagsSaltP–wllhmbit"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(eTa"
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "Ta"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "HcIaba"
         },
         {
@@ -2763,9 +2734,9 @@
           "sig": "Hlidalaels"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(T"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "T"
         },
         {
           "kind": "dialog",
@@ -2843,9 +2814,9 @@
           "sig": "Ayo"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(YaycOcIo(Ishfy"
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "YaycOcIo(Ishfy"
         },
         {
           "kind": "dialog",
@@ -2859,8 +2830,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "BEAT",
-          "sig": "D(uO"
+          "speaker": "DIANA",
+          "sig": "O"
         },
         {
           "kind": "stage_direction",
@@ -2873,9 +2844,9 @@
           "sig": "Otcic"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(CTbwahtbwthahbIkfoAyfo"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "TbwahtbwthahbIkfoAyfo"
         },
         {
           "kind": "dialog",
@@ -2939,8 +2910,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "S(httRSctcta/EmG(hbHshs/"
+          "speaker": "SIMON",
+          "sig": "Sctcta/EmG(hbHshs/"
         },
         {
           "kind": "dialog",
@@ -2983,9 +2954,9 @@
           "sig": "UnPDpdtnSstabawitcrDhfamtwtPPlufhmSllsjcifasBs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "D(Ihs"
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "Ihs"
         },
         {
           "kind": "dialog",
@@ -3015,19 +2986,18 @@
         {
           "kind": "dialog",
           "speaker": "DIANA",
+          "sig": "Ln"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "Pgdatpa"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SsptdrGe"
-        }
-      ]
-    },
-    {
-      "number": 6,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 6)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -3040,8 +3010,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "D(Ystbsitr"
+          "speaker": "DIANA",
+          "sig": "Ystbsitr"
         },
         {
           "kind": "dialog",
@@ -3055,13 +3025,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "P(lSamiIoIf"
+          "speaker": "PETER",
+          "sig": "SamiIoIf"
         },
         {
           "kind": "dialog",
           "speaker": "DIANA",
-          "sig": "D(hcCyrmh"
+          "sig": "Cyrmh"
         },
         {
           "kind": "dialog",
@@ -3092,11 +3062,6 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SsptdDIhltboar"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "O"
         },
         {
           "kind": "dialog",
@@ -3151,7 +3116,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "D(SmAtlifItboabwIca"
+          "sig": "SmAtlifItboabwIca"
         },
         {
           "kind": "stage_direction",
@@ -3279,9 +3244,9 @@
           "sig": "YmhaDHp(iajrp&fiOySarttEEH(weanRHsRsotpLhb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "R(gOyYilf"
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "OyYilf"
         },
         {
           "kind": "dialog",
@@ -3305,13 +3270,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "S(hvAcitn"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "REG",
-          "sig": "Y"
+          "speaker": "SIMON",
+          "sig": "Acitn"
         },
         {
           "kind": "dialog",
@@ -3334,9 +3294,9 @@
           "sig": "SltjhitRRtatptSTptjbaf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "R(SIbtWiwctbtMay"
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "SIbtWiwctbtMay"
         },
         {
           "kind": "dialog",
@@ -3345,8 +3305,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "R(Wdyst"
+          "speaker": "REG",
+          "sig": "Wdyst"
         },
         {
           "kind": "dialog",
@@ -3370,8 +3330,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "R(Ng"
+          "speaker": "REG",
+          "sig": "Ng"
         },
         {
           "kind": "dialog",
@@ -3380,18 +3340,24 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "R(sYo"
+          "speaker": "REG",
+          "sig": "Yo"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Rtatglit"
-        },
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 7)",
+      "elements": [
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S(PWD"
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "WD"
         },
         {
           "kind": "dialog",
@@ -3495,8 +3461,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "R(PDytii"
+          "speaker": "REG",
+          "sig": "Dytii"
         },
         {
           "kind": "dialog",
@@ -3535,8 +3501,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "P(lWS"
+          "speaker": "PETER",
+          "sig": "WS"
         },
         {
           "kind": "dialog",
@@ -3545,8 +3511,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "P(W"
+          "speaker": "PETER",
+          "sig": "W"
         },
         {
           "kind": "dialog",
@@ -3625,12 +3591,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "P(IltujyfdImiInba"
+          "speaker": "PETER",
+          "sig": "IltujyfdImiInba"
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "PETER",
           "sig": "Ulb"
         },
         {
@@ -3675,8 +3641,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "S(aYb"
+          "speaker": "SIMON",
+          "sig": "Yb"
         },
         {
           "kind": "dialog",
@@ -3715,8 +3681,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "P(BIwoIttmafr(lGtpissWygts"
+          "speaker": "PETER",
+          "sig": "BIwoIttmafr(lGtpissWygts"
         },
         {
           "kind": "dialog",
@@ -3740,8 +3706,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "BEAT",
-          "sig": "P(YIsyr"
+          "speaker": "PETER",
+          "sig": "YIsyr"
         },
         {
           "kind": "dialog",
@@ -3826,17 +3792,12 @@
         {
           "kind": "dialog",
           "speaker": "PETER",
-          "sig": "R(Imm"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "PETER",
           "sig": "YiymaydWypmitlbWaystyam"
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "R(Ityvt"
+          "speaker": "REG",
+          "sig": "Ityvt"
         },
         {
           "kind": "dialog",
@@ -3891,8 +3852,8 @@
       ]
     },
     {
-      "number": 7,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 7)",
+      "number": 8,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 8)",
       "elements": [
         {
           "kind": "dialog",
@@ -3960,9 +3921,9 @@
           "sig": "Ww(haftthal"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "R(Sisi"
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "Sisi"
         },
         {
           "kind": "stage_direction",
@@ -3970,13 +3931,8 @@
           "sig": "Tlapeo"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "R(lSiS"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "REG",
           "sig": "M"
         },
         {
@@ -3990,14 +3946,14 @@
           "sig": "HwitrphcdcotfDsl"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "D(feWayd"
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "Wayd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(eN"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "N"
         },
         {
           "kind": "dialog",
@@ -4041,8 +3997,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "H(A"
+          "speaker": "HOLLY",
+          "sig": "A"
         },
         {
           "kind": "stage_direction",
@@ -4056,13 +4012,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "D(aO"
+          "speaker": "DIANA",
+          "sig": "O"
         },
         {
           "kind": "dialog",
           "speaker": "HOLLY",
-          "sig": "H(otDO"
+          "sig": "O"
         },
         {
           "kind": "dialog",
@@ -4136,8 +4092,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "H(Ist"
+          "speaker": "HOLLY",
+          "sig": "Ist"
         },
         {
           "kind": "dialog",
@@ -4148,11 +4104,6 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Ttjo"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "W"
         },
         {
           "kind": "dialog",
@@ -4296,8 +4247,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "D(Ybac"
+          "speaker": "DIANA",
+          "sig": "Ybac"
         },
         {
           "kind": "dialog",
@@ -4362,8 +4313,8 @@
       ]
     },
     {
-      "number": 8,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 8)",
+      "number": 9,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 9)",
       "elements": [
         {
           "kind": "dialog",
@@ -4372,8 +4323,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "S(Aa“dYltlma“d"
+          "speaker": "SIMON",
+          "sig": "“dYltlma“d"
         },
         {
           "kind": "dialog",
@@ -4387,8 +4338,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "D(haSwitcaY/s"
+          "speaker": "DIANA",
+          "sig": "SwitcaY/s"
         },
         {
           "kind": "dialog",
@@ -4402,8 +4353,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "D(hOntf"
+          "speaker": "DIANA",
+          "sig": "Ontf"
         },
         {
           "kind": "dialog",
@@ -4507,22 +4458,22 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "R(uIDNTYN(YWTOIWUANYLTHRYHAS"
+          "speaker": "REG",
+          "sig": "IDNTYN(YWTOIWUANYLTHRYHAS"
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "H(OIhas/Ootiyhmafo"
+          "speaker": "HOLLY",
+          "sig": "OIhas/Ootiyhmafo"
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "R(hICICYSYWSITHRBYDS"
+          "speaker": "REG",
+          "sig": "ICICYSYWSITHRBYDS"
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "REG",
           "sig": "Hmhvsavq"
         },
         {
@@ -4543,7 +4494,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "R(YS(bialaShtwioYry"
+          "sig": "YS(bialaShtwioYry"
         },
         {
           "kind": "stage_direction",
@@ -4576,9 +4527,9 @@
           "sig": "SaHDeitsrgthmsafamotahas"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(Dths"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Dths"
         },
         {
           "kind": "dialog",
@@ -4607,8 +4558,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "H(Ybn"
+          "speaker": "HOLLY",
+          "sig": "Ybn"
         },
         {
           "kind": "stage_direction",
@@ -4617,18 +4568,18 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "C(HMsgac"
+          "speaker": "CHARLIE",
+          "sig": "Msgac"
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
+          "speaker": "CHARLIE",
           "sig": "SwitsrasahdCSliCInacgPIcnliac(IctthpInstIvYhmoIcoItomsIaggIwdyf"
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "H(O"
+          "speaker": "HOLLY",
+          "sig": "O"
         },
         {
           "kind": "stage_direction",
@@ -4639,11 +4590,6 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DghalGhtEsatiPs"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(hgIwpm"
         },
         {
           "kind": "stage_direction",
@@ -4673,7 +4619,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "R(rYsiwtsb"
+          "sig": "Ysiwtsb"
         },
         {
           "kind": "stage_direction",
@@ -4753,27 +4699,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "H(dbW"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "Yo"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "H(DIlo"
+          "sig": "DIlo"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(ltaW"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(srLjrG(Lpod(CRT(rt(Wr“To"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "LjrG(Lpod(CRT(rt(Wr“To"
         },
         {
           "kind": "stage_direction",
@@ -5076,9 +5012,9 @@
           "sig": "HdisGGWdyciahal"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(NIdwt‘alIdhttcita‘alebtwlsd(WaydotWcybltuapatwgoih(PYspatttatkatiagualfhG(Inpta"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "NIdwt‘alIdhttcita‘alebtwlsd(WaydotWcybltuapatwgoih(PYspatttatkatiagualfhG(Inpta"
         },
         {
           "kind": "dialog",
@@ -5088,12 +5024,12 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "S(tltYboyv"
+          "sig": "Yboyv"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "H(SWdysuIyluuabctwkttawwbsalbmttfowbwpt"
+          "sig": "WdysuIyluuabctwkttawwbsalbmttfowbwpt"
         },
         {
           "kind": "stage_direction",
@@ -5106,14 +5042,14 @@
           "sig": "MpiIpmbkohaIHNBCWTTIG(Dygwttab/"
         },
         {
-          "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "H(ufhsYTUAWOABOAWMABDP"
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "YTUAWOABOAWMABDP"
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "G(rtWab"
+          "speaker": "GROVER",
+          "sig": "Wab"
         },
         {
           "kind": "stage_direction",
@@ -5127,8 +5063,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "G(wStfu"
+          "speaker": "GROVER",
+          "sig": "Stfu"
         },
         {
           "kind": "stage_direction",
@@ -5228,7 +5164,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(HInsat(R"
+          "sig": "Insat(R"
         },
         {
           "kind": "stage_direction",
@@ -5378,7 +5314,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(SIb"
+          "sig": "Ib"
         },
         {
           "kind": "stage_direction",
@@ -5516,11 +5452,6 @@
           "sig": "TgatttpiotsdSp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(YIhy"
-        },
-        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "ItmG(OwatTttluahac"
@@ -5547,8 +5478,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "G(Idhi/tt"
+          "speaker": "GROVER",
+          "sig": "Idhi/tt"
         },
         {
           "kind": "stage_direction",
@@ -5556,14 +5487,14 @@
           "sig": "Ssufhdk"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S(adWkttfiaikmewYkIwIhtiIrdIrdIwwjliaG(oeSm"
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "WkttfiaikmewYkIwIhtiIrdIrdIwwjliaG(oeSm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S(abAdiapowApOwIeYckctNwceaIccibG(Dfowfi"
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "AdiapowApOwIeYckctNwceaIccibG(Dfowfi"
         },
         {
           "kind": "dialog",
@@ -5581,9 +5512,9 @@
           "sig": "HjsahdkG(Wiw/"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S(qWmdkG(Y-/"
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "WmdkG(Y-/"
         },
         {
           "kind": "stage_direction",
@@ -5609,11 +5540,6 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HltrAa1s"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "R(noipNw"
         },
         {
           "kind": "stage_direction",
@@ -5651,9 +5577,9 @@
           "sig": "HisoabaffafRftamasac"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(CPHmttb"
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "PHmttb"
         },
         {
           "kind": "stage_direction",
@@ -5673,27 +5599,28 @@
         {
           "kind": "dialog",
           "speaker": "GROVER",
-          "sig": "G(S"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "GROVER",
           "sig": "SsdlujG(Hydot"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SswbhdsfoateGYwlmhts"
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 10)",
+      "elements": [
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "IsftmaIc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(PIsftmaIc"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(Idk"
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "Idk"
         },
         {
           "kind": "dialog",
@@ -5763,7 +5690,7 @@
         {
           "kind": "dialog",
           "speaker": "PETER",
-          "sig": "P(cRNoctpNoccih"
+          "sig": "NoctpNoccih"
         },
         {
           "kind": "dialog",
@@ -5779,13 +5706,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "RspasHuifacslpbo"
-        }
-      ]
-    },
-    {
-      "number": 9,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 9)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -5928,8 +5849,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "R(thY"
+          "speaker": "REG",
+          "sig": "Y"
         },
         {
           "kind": "stage_direction",
@@ -6068,8 +5989,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "H(dOty/"
+          "speaker": "HOLLY",
+          "sig": "Oty/"
         },
         {
           "kind": "dialog",
@@ -6078,8 +5999,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "H(sIwanimfPmoomm"
+          "speaker": "HOLLY",
+          "sig": "IwanimfPmoomm"
         },
         {
           "kind": "dialog",
@@ -6103,8 +6024,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "H(rInhtbd"
+          "speaker": "HOLLY",
+          "sig": "Inhtbd"
         },
         {
           "kind": "dialog",
@@ -6138,8 +6059,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "D(Oonof(lOwIstu(hcsAmfLsswcunw"
+          "speaker": "DIANA",
+          "sig": "Oonof(lOwIstu(hcsAmfLsswcunw"
         },
         {
           "kind": "dialog",
@@ -6245,11 +6166,17 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DcfawHdsfab"
-        },
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 11)",
+      "elements": [
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(Ikwyt"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Ikwyt"
         },
         {
           "kind": "dialog",
@@ -6264,12 +6191,7 @@
         {
           "kind": "dialog",
           "speaker": "HOLLY",
-          "sig": "D(NIn"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "H(cYasj"
+          "sig": "Yasj"
         },
         {
           "kind": "dialog",
@@ -6308,20 +6230,14 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "D(NIgn"
+          "speaker": "DIANA",
+          "sig": "NIgn"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Dheiadats"
-        }
-      ]
-    },
-    {
-      "number": 10,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 10)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "DIANA",
@@ -6378,9 +6294,9 @@
           "sig": "SfCstt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(TsgItwgiIa2dygwcian"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "TsgItwgiIa2dygwcian"
         },
         {
           "kind": "stage_direction",
@@ -6388,9 +6304,9 @@
           "sig": "YlcianIk"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(GhseSytan"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "GhseSytan"
         },
         {
           "kind": "stage_direction",
@@ -6413,13 +6329,13 @@
           "sig": "PdmmihhHifhgvfAab"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(tbWwIhai(muttwGdgaG(Ih"
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "WwIhai(muttwGdgaG(Ih"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "DSlaG(Hjl"
         },
         {
@@ -6478,9 +6394,9 @@
           "sig": "AtIwttwtasiwdTid2B"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Ogywti"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Ogywti"
         },
         {
           "kind": "stage_direction",
@@ -6503,9 +6419,9 @@
           "sig": "PnCgttrCntG"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Wu“t2"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Wu“t2"
         },
         {
           "kind": "stage_direction",
@@ -6525,7 +6441,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(hhNN(spTaam"
+          "sig": "NN(spTaam"
         },
         {
           "kind": "stage_direction",
@@ -6535,12 +6451,12 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(DAyspot(HItoHnagbok"
+          "sig": "Ayspot(HItoHnagbok"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "D(aPIdp"
+          "sig": "PIdp"
         },
         {
           "kind": "stage_direction",
@@ -6660,7 +6576,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(tIgbtosmIcdiyngctvdyeigitwAyntdiygbamsopittnl(Btuty"
+          "sig": "IgbtosmIcdiyngctvdyeigitwAyntdiygbamsopittnl(Btuty"
         },
         {
           "kind": "stage_direction",
@@ -6723,9 +6639,9 @@
           "sig": "HaRestm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "R(AF“cc/a"
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "“cc/a"
         },
         {
           "kind": "stage_direction",
@@ -6744,18 +6660,18 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "H(hp“"
+          "speaker": "HOLLY",
+          "sig": "“"
         },
         {
           "kind": "dialog",
           "speaker": "REG",
-          "sig": "R(whOritwyt"
+          "sig": "Oritwyt"
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "H(Yifti/wIt"
+          "speaker": "HOLLY",
+          "sig": "Yifti/wIt"
         },
         {
           "kind": "dialog",
@@ -6793,19 +6709,14 @@
           "sig": "DhbsattwtsawhtaaacRaHfkthhsa"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "R(Ywg"
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "Ywg"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "REG",
           "sig": "Tgtc"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(PaDG"
         },
         {
           "kind": "stage_direction",
@@ -6954,6 +6865,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "Nh/o"
+        },
+        {
+          "kind": "dialog",
           "speaker": "PETER",
           "sig": "Ydtfbi1wyhTBbIwtytltTBykI/w"
         },
@@ -7034,8 +6950,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "P(YM"
+          "speaker": "PETER",
+          "sig": "YM"
         },
         {
           "kind": "dialog",
@@ -7071,7 +6987,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hmisra1mahlhkousppb"
-        },
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 12)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "DIANA",
@@ -7089,8 +7011,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "P(sitO/"
+          "speaker": "PETER",
+          "sig": "O/"
         },
         {
           "kind": "dialog",
@@ -7179,8 +7101,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "D(Yr"
+          "speaker": "DIANA",
+          "sig": "Yr"
         },
         {
           "kind": "dialog",
@@ -7204,8 +7126,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "D(oiTmbt/"
+          "speaker": "DIANA",
+          "sig": "Tmbt/"
         },
         {
           "kind": "dialog",
@@ -7249,8 +7171,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "P(balhTm"
+          "speaker": "PETER",
+          "sig": "Tm"
         },
         {
           "kind": "dialog",
@@ -7264,8 +7186,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "D(thwttHdndagj"
+          "speaker": "DIANA",
+          "sig": "Hdndagj"
         },
         {
           "kind": "dialog",
@@ -7284,8 +7206,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "D(P"
+          "speaker": "DIANA",
+          "sig": "P"
         },
         {
           "kind": "dialog",
@@ -7299,8 +7221,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "P(tsbmhSydtIbagdItwywhkwm"
+          "speaker": "PETER",
+          "sig": "SydtIbagdItwywhkwm"
         },
         {
           "kind": "dialog",
@@ -7374,20 +7296,14 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "D(TIbfa"
+          "speaker": "DIANA",
+          "sig": "TIbfa"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PbhhihhTalp"
-        }
-      ]
-    },
-    {
-      "number": 11,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 11)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "PETER",
@@ -7449,9 +7365,9 @@
           "sig": "TsbdG(Ygigbyntwttgals"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S(GWtG(T"
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "WtG(T"
         },
         {
           "kind": "stage_direction",
@@ -7471,17 +7387,12 @@
         {
           "kind": "dialog",
           "speaker": "CHARLIE",
-          "sig": "Y"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "CHARLIE",
           "sig": "Hlsm"
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "G(HyaPapitsrCymouod"
+          "speaker": "GROVER",
+          "sig": "HyaPapitsrCymouod"
         },
         {
           "kind": "stage_direction",
@@ -7494,9 +7405,9 @@
           "sig": "Stasoc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Yb"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Yb"
         },
         {
           "kind": "dialog",
@@ -7511,7 +7422,7 @@
         {
           "kind": "dialog",
           "speaker": "SIMON",
-          "sig": "S(alnDIwtuactIdnactGNNIdG(Itimmte"
+          "sig": "DIwtuactIdnactGNNIdG(Itimmte"
         },
         {
           "kind": "dialog",
@@ -7522,16 +7433,22 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TpfabistsdaG(CWigo"
-        },
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 13)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "CsceStt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Igsasilafdgpiu"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Igsasilafdgpiu"
         },
         {
           "kind": "stage_direction",
@@ -7545,8 +7462,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "G(Ltiftt“t3"
+          "speaker": "GROVER",
+          "sig": "Ltiftt“t3"
         },
         {
           "kind": "stage_direction",
@@ -7554,9 +7471,9 @@
           "sig": "TsobttSiseClaGaslHstt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(OnilapJsidalb“t3"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "OnilapJsidalb“t3"
         },
         {
           "kind": "stage_direction",
@@ -7584,9 +7501,9 @@
           "sig": "Idnabct"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Ttisrbaydni"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Ttisrbaydni"
         },
         {
           "kind": "stage_direction",
@@ -7599,13 +7516,13 @@
           "sig": "Wtfdytytt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(TtictoawdhttwotItitfmWutct"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "TtictoawdhttwotItitfmWutct"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "AsoSllhmbuG(gTdsgbttio"
         },
         {
@@ -7614,9 +7531,9 @@
           "sig": "TpcgewSsbdHsascCttaastptct"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Cyhi"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Cyhi"
         },
         {
           "kind": "dialog",
@@ -7739,14 +7656,14 @@
           "sig": "Tfg"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Dywtciahal"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Dywtciahal"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "S(lkYYGY"
+          "sig": "YYGY"
         },
         {
           "kind": "stage_direction",
@@ -7775,8 +7692,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "S(eifahWSAGB"
+          "speaker": "SIMON",
+          "sig": "WSAGB"
         },
         {
           "kind": "stage_direction",
@@ -7796,7 +7713,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "D(TteoEFimhSftgIdecWdysrmKicayWdwhtcwEygirifo–"
+          "sig": "TteoEFimhSftgIdecWdysrmKicayWdwhtcwEygirifo–"
         },
         {
           "kind": "stage_direction",
@@ -7855,23 +7772,23 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(Cygalcttm"
+          "speaker": "GROVER",
+          "sig": "Cygalcttm"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "GROVER",
           "sig": "OblIetma/tp—G(Ikbtcc/y"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
+          "speaker": "GROVER",
           "sig": "WG(HNIwjstcygttmtmbIcgootvatIcciwtE"
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "P(GCycstftot"
+          "speaker": "PETER",
+          "sig": "Cycstftot"
         },
         {
           "kind": "dialog",
@@ -7919,9 +7836,9 @@
           "sig": "PIgiPWwbhal/t"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "D(rYIhthtnPInjtnTwsswtlt"
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "YIhthtnPInjtnTwsswtlt"
         },
         {
           "kind": "stage_direction",
@@ -7945,8 +7862,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(PWrootIywkaottIgntganr"
+          "speaker": "GROVER",
+          "sig": "WrootIywkaottIgntganr"
         },
         {
           "kind": "dialog",
@@ -8081,7 +7998,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(fWtwdyctycapf/m"
+          "sig": "Wtwdyctycapf/m"
         },
         {
           "kind": "stage_direction",
@@ -8096,7 +8013,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "D(tTwwwhtc"
+          "sig": "Twwwhtc"
         },
         {
           "kind": "stage_direction",
@@ -8109,9 +8026,9 @@
           "sig": "Bwcci"
         },
         {
-          "kind": "dialog",
-          "speaker": "BEAT",
-          "sig": "D(rWcwoiP(IttioGshhthhbie"
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "WcwoiP(IttioGshhthhbie"
         },
         {
           "kind": "dialog",
@@ -8151,17 +8068,12 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(Ayo"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "IhtlofmbycYancolofmaPAifrb(IgmiHorOS/j"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(auIttYntoowtbwhtftWroorott"
+          "sig": "IttYntoowtbwhtftWroorott"
         },
         {
           "kind": "stage_direction",
@@ -8171,7 +8083,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(qYcamthyanhyIcdbatstWayafYatacbItt"
+          "sig": "YcamthyanhyIcdbatstWayafYatacbItt"
         },
         {
           "kind": "stage_direction",
@@ -8231,11 +8143,6 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(O"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "IgfldtvA/t"
         },
         {
@@ -8249,9 +8156,9 @@
           "sig": "PaitsramttcrGqsotPsafmitahecrHsbditpcapohawTaamSrieGttso"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Wyr"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Wyr"
         },
         {
           "kind": "stage_direction",
@@ -8279,19 +8186,19 @@
           "sig": "TteoEFimhSftgIdecWdysrmKicayWdwhtcwEygirifoyIipminp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(PWdyt"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Wdyt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(sLto"
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "Lto"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Htf"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Htf"
         },
         {
           "kind": "dialog",
@@ -8370,11 +8277,6 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "Y"
-        },
-        {
-          "kind": "dialog",
           "speaker": "PETER",
           "sig": "Twrg"
         },
@@ -8430,11 +8332,6 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "W"
-        },
-        {
-          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "NmIjItwlty"
         },
@@ -8445,8 +8342,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "G(O"
+          "speaker": "GROVER",
+          "sig": "O"
         },
         {
           "kind": "dialog",
@@ -8486,8 +8383,8 @@
       ]
     },
     {
-      "number": 12,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 12)",
+      "number": 14,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 14)",
       "elements": [
         {
           "kind": "dialog",
@@ -8616,13 +8513,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "G(P"
+          "speaker": "GROVER",
+          "sig": "P"
         },
         {
           "kind": "dialog",
           "speaker": "CHARLIE",
-          "sig": "C(Ydtskoau"
+          "sig": "Ydtskoau"
         },
         {
           "kind": "dialog",
@@ -8735,9 +8632,9 @@
           "sig": "PgatusrtgCrt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S(a“d(“d"
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "“d(“d"
         },
         {
           "kind": "stage_direction",
@@ -8745,9 +8642,9 @@
           "sig": "HgfapihmCstt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(IdtIcpatwtte—ntpmilG(WhatotfyIccit"
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "IdtIcpatwtte—ntpmilG(WhatotfyIccit"
         },
         {
           "kind": "stage_direction",
@@ -8755,13 +8652,13 @@
           "sig": "PmtsalcttmShgCrtt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(OrG(Ohwg"
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "OrG(Ohwg"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "Crt"
         },
         {
@@ -8796,8 +8693,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "H(OSG"
+          "speaker": "HOLLY",
+          "sig": "OSG"
         },
         {
           "kind": "dialog",
@@ -8826,12 +8723,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "P(HwtG(ItiweYwthalPrhgbit"
+          "speaker": "PETER",
+          "sig": "HwtG(ItiweYwthalPrhgbit"
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "PETER",
           "sig": "CrttPOlh"
         },
         {
@@ -8865,23 +8762,23 @@
           "sig": "PbbitsrCrtt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(YrP"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "YrP"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "YCrt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Owr"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Owr"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "Rlbotc"
         },
         {
@@ -8916,8 +8813,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "G(Wei"
+          "speaker": "GROVER",
+          "sig": "Wei"
         },
         {
           "kind": "dialog",
@@ -8986,14 +8883,20 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "P(GFaYfYFGTFOOHYF"
+          "speaker": "PETER",
+          "sig": "FaYfYFGTFOOHYF"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PshfitweGisr"
-        },
+        }
+      ]
+    },
+    {
+      "number": 15,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 15)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "SIMON",
@@ -9056,20 +8959,14 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "H(cotaOmgYb"
+          "speaker": "HOLLY",
+          "sig": "OmgYb"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "InsfhfJCHlaac(afoswl—loeSsotwalasaiWaylHlara"
-        }
-      ]
-    },
-    {
-      "number": 13,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 13)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -9087,8 +8984,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "H(tolIsddywah"
+          "speaker": "HOLLY",
+          "sig": "Isddywah"
         },
         {
           "kind": "dialog",
@@ -9162,8 +9059,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "BEAT",
-          "sig": "G(bdiG(Swbfd"
+          "speaker": "GROVER",
+          "sig": "G(Swbfd"
         },
         {
           "kind": "dialog",
@@ -9186,9 +9083,9 @@
           "sig": "CsttTgdReitkaDaS"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "D(SMtsrtIhtdio/"
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "MtsrtIhtdio/"
         },
         {
           "kind": "dialog",
@@ -9229,11 +9126,6 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "IsatodIwaaYwjdyj"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "P(CSM"
         },
         {
           "kind": "dialog",
@@ -9312,13 +9204,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "C(htJliV/"
+          "speaker": "CHARLIE",
+          "sig": "JliV/"
         },
         {
           "kind": "dialog",
           "speaker": "GROVER",
-          "sig": "G(htIdgasIdwtwmeopIjwtgmGanshfa"
+          "sig": "IdgasIdwtwmeopIjwtgmGanshfa"
         },
         {
           "kind": "dialog",
@@ -9401,13 +9293,13 @@
           "sig": "HhbotwsdohcSlaboi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(RIhfyInbIwytbhr"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "IhfyInbIwytbhr"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HOLLY",
           "sig": "YcshrtotciylItwyw"
         },
         {
@@ -9441,19 +9333,9 @@
           "sig": "NnnIdwtht(matfwhhTmsIwthNsspooab"
         },
         {
-          "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "R(cW"
-        },
-        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hlahtboiql"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(ihjphpYs"
         },
         {
           "kind": "dialog",
@@ -9477,8 +9359,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "R(Ylm/"
+          "speaker": "REG",
+          "sig": "Ylm/"
         },
         {
           "kind": "dialog",
@@ -9489,7 +9371,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HgtthsfSsfamlafhgttcSphagocihHwhawa"
-        },
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 16)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -9502,8 +9390,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "G(Ryo"
+          "speaker": "GROVER",
+          "sig": "Ryo"
         },
         {
           "kind": "dialog",
@@ -9569,13 +9457,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "GltjatattpitHotfTpibaf"
-        }
-      ]
-    },
-    {
-      "number": 14,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 14)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "HOLLY",
@@ -9673,8 +9555,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "H(N"
+          "speaker": "HOLLY",
+          "sig": "N"
         },
         {
           "kind": "dialog",
@@ -9688,6 +9570,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Nco/"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "NYdhac"
         },
@@ -9698,8 +9585,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "H(ahIhasocMmwastIc"
+          "speaker": "HOLLY",
+          "sig": "IhasocMmwastIc"
         },
         {
           "kind": "dialog",
@@ -9778,8 +9665,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "H(alIdby"
+          "speaker": "HOLLY",
+          "sig": "Idby"
         },
         {
           "kind": "dialog",
@@ -9825,11 +9712,6 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Ib"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "O"
         },
         {
           "kind": "dialog",
@@ -9953,8 +9835,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "H(hiteHyebil"
+          "speaker": "HOLLY",
+          "sig": "Hyebil"
         },
         {
           "kind": "dialog",
@@ -9974,8 +9856,8 @@
       ]
     },
     {
-      "number": 15,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 15)",
+      "number": 17,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 17)",
       "elements": [
         {
           "kind": "dialog",
@@ -10009,8 +9891,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "G(Sw"
+          "speaker": "GROVER",
+          "sig": "Sw"
         },
         {
           "kind": "dialog",
@@ -10034,8 +9916,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "H(SDyfh"
+          "speaker": "HOLLY",
+          "sig": "Dyfh"
         },
         {
           "kind": "stage_direction",
@@ -10048,9 +9930,9 @@
           "sig": "YfhSsltnb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(SDysiDLN"
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "DysiDLN"
         },
         {
           "kind": "dialog",
@@ -10084,8 +9966,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "HOLLY",
-          "sig": "S(ftjWtd"
+          "speaker": "SIMON",
+          "sig": "Wtd"
         },
         {
           "kind": "dialog",
@@ -10133,14 +10015,14 @@
           "sig": "DiwdsElmpogooaatttthotmsitbWtfthCsartt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(Twfbldi"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Twfbldi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "C(GItootcjw"
+          "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "Itootcjw"
         },
         {
           "kind": "dialog",
@@ -10234,11 +10116,6 @@
         },
         {
           "kind": "dialog",
-          "speaker": "CHARLIE",
-          "sig": "Y"
-        },
-        {
-          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Wggbtwis(Isbwu"
         },
@@ -10315,7 +10192,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "H(hWaIsttf"
+          "sig": "WaIsttf"
         },
         {
           "kind": "stage_direction",
@@ -10338,9 +10215,9 @@
           "sig": "Cyst/"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "D(otshdSYGM"
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "SYGM"
         },
         {
           "kind": "stage_direction",
@@ -10425,17 +10302,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "H(qG"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "Yct"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(Ik/"
         },
         {
           "kind": "stage_direction",
@@ -10469,8 +10336,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "H(crHAotG(GuamSg"
+          "speaker": "HOLLY",
+          "sig": "HAotG(GuamSg"
         },
         {
           "kind": "stage_direction",
@@ -10480,12 +10347,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "D(hHs(shs"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "D(HSwwys"
+          "sig": "Hs(shs"
         },
         {
           "kind": "stage_direction",
@@ -10510,7 +10372,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "H(Ijwsa"
+          "sig": "Ijwsa"
         },
         {
           "kind": "stage_direction",
@@ -10523,19 +10385,14 @@
           "sig": "TOwtcotm(Hgmhn"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(hbS"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "WWw/tC(GqHu"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "G(hbIhHmf"
+          "sig": "IhHmf"
         },
         {
           "kind": "stage_direction",
@@ -10613,14 +10470,14 @@
           "sig": "Hphscatdhab"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "D(GJpttLgGYr/?"
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "JpttLgGYr/?"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "D(PaasDykIcstlayfIcsthy/v"
+          "sig": "DykIcstlayfIcsthy/v"
         },
         {
           "kind": "stage_direction",
@@ -10694,8 +10551,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "H(pOtaIwtkDgsuG(sS"
+          "speaker": "HOLLY",
+          "sig": "OtaIwtkDgsuG(sS"
         },
         {
           "kind": "stage_direction",
@@ -10710,12 +10567,12 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P(tDAlvap/"
+          "sig": "Alvap/"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "D(SthuGWfs(rt"
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "SthuGWfs(rt"
         },
         {
           "kind": "stage_direction",
@@ -10744,13 +10601,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "P(Wntdsatbp"
+          "speaker": "PETER",
+          "sig": "Wntdsatbp"
         },
         {
           "kind": "dialog",
           "speaker": "GROVER",
-          "sig": "G(hwHbhftm"
+          "sig": "Hbhftm"
         },
         {
           "kind": "dialog",
@@ -10775,7 +10632,7 @@
         {
           "kind": "dialog",
           "speaker": "PETER",
-          "sig": "P(F"
+          "sig": "F"
         },
         {
           "kind": "dialog",
@@ -10789,8 +10646,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "P(RpIaotpm"
+          "speaker": "PETER",
+          "sig": "Iaotpm"
         },
         {
           "kind": "dialog",
@@ -10849,11 +10706,6 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "O"
-        },
-        {
-          "kind": "dialog",
           "speaker": "PETER",
           "sig": "Bisalto"
         },
@@ -10904,11 +10756,6 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER",
-          "sig": "O"
-        },
-        {
-          "kind": "dialog",
           "speaker": "REG",
           "sig": "MydnabpotasypatiYkwywP(RchwIbbftm"
         },
@@ -10919,12 +10766,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "P(SSwdytIbr"
+          "speaker": "PETER",
+          "sig": "SwdytIbr"
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
+          "speaker": "PETER",
           "sig": "Ssah"
         },
         {
@@ -10945,18 +10792,13 @@
       ]
     },
     {
-      "number": 16,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 16)",
+      "number": 18,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 18)",
       "elements": [
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S(hpYkIkRfmyMmyYdkRtwIkhIktttbytBydauwRicfIdIkhallt(shdPlahLPmIbcYmywtbtpotr"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(id‘/w"
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "YkIkRfmyMmyYdkRtwIkhIktttbytBydauwRicfIdIkhallt(shdPlahLPmIbcYmywtbtpotr"
         },
         {
           "kind": "dialog",
@@ -11080,8 +10922,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "P(hYcsttmnatptyNw"
+          "speaker": "PETER",
+          "sig": "YcsttmnatptyNw"
         },
         {
           "kind": "dialog",
@@ -11090,18 +10932,18 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SHORT PAUSE",
-          "sig": "P(IakmftrWcyahhIw"
+          "speaker": "PETER",
+          "sig": "IakmftrWcyahhIw"
         },
         {
           "kind": "dialog",
-          "speaker": "SHORT PAUSE",
-          "sig": "S(yYsuP"
+          "speaker": "SIMON",
+          "sig": "YsuP"
         },
         {
           "kind": "dialog",
-          "speaker": "SHORT PAUSE",
-          "sig": "P(hWaystmltWdywthm"
+          "speaker": "PETER",
+          "sig": "WaystmltWdywthm"
         },
         {
           "kind": "dialog",
@@ -11164,13 +11006,8 @@
           "sig": "DeSsPattl"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(Dg"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "Ds"
         },
         {
@@ -11230,18 +11067,18 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "P(sIwkafpta"
+          "speaker": "PETER",
+          "sig": "Iwkafpta"
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "P(tImysm"
+          "speaker": "PETER",
+          "sig": "Imysm"
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "P(vImy"
+          "speaker": "PETER",
+          "sig": "Imy"
         },
         {
           "kind": "dialog",
@@ -11294,9 +11131,9 @@
           "sig": "DtohsHhisHeaarShhhHkhh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P(rIdhafAInhtYwrYwramfIdhcrIncoiIa(IacbIafole(dvsbihnmwId"
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "IdhafAInhtYwrYwramfIdhcrIncoiIa(IacbIafole(dvsbihnmwId"
         },
         {
           "kind": "dialog",
@@ -11310,8 +11147,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "D(pdiiWie"
+          "speaker": "DIANA",
+          "sig": "Wie"
         },
         {
           "kind": "stage_direction",
@@ -11405,8 +11242,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "G(UIdkiIgtf"
+          "speaker": "GROVER",
+          "sig": "UIdkiIgtf"
         },
         {
           "kind": "dialog",
@@ -11430,13 +11267,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "BEAT",
-          "sig": "G(luBIwtdagjmIm(Wayda"
+          "speaker": "GROVER",
+          "sig": "BIwtdagjmIm(Wayda"
         },
         {
           "kind": "dialog",
-          "speaker": "BEAT",
-          "sig": "R(sWdywtdagj"
+          "speaker": "REG",
+          "sig": "Wdywtdagj"
         },
         {
           "kind": "dialog",
@@ -11460,8 +11297,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "G(sIntg"
+          "speaker": "GROVER",
+          "sig": "Intg"
         },
         {
           "kind": "dialog",
@@ -11485,8 +11322,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "R(Dlam"
+          "speaker": "REG",
+          "sig": "Dlam"
         },
         {
           "kind": "dialog",
@@ -11521,11 +11358,6 @@
         {
           "kind": "dialog",
           "speaker": "REG",
-          "sig": "G(oOy"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "REG",
           "sig": "Oyccj"
         },
         {
@@ -11535,8 +11367,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "R(Bdy/t"
+          "speaker": "REG",
+          "sig": "Bdy/t"
         },
         {
           "kind": "dialog",
@@ -11550,13 +11382,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "G(hwWgthtm"
+          "speaker": "GROVER",
+          "sig": "Wgthtm"
         },
         {
           "kind": "dialog",
           "speaker": "REG",
-          "sig": "R(lWal"
+          "sig": "Wal"
         },
         {
           "kind": "dialog",
@@ -11565,8 +11397,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "G(WBiadTw"
+          "speaker": "GROVER",
+          "sig": "WBiadTw"
         },
         {
           "kind": "dialog",
@@ -11575,8 +11407,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "G(YnsdYwdtm/"
+          "speaker": "GROVER",
+          "sig": "YnsdYwdtm/"
         },
         {
           "kind": "dialog",
@@ -11595,12 +11427,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
-          "sig": "G(rqItsycd"
+          "speaker": "GROVER",
+          "sig": "Itsycd"
         },
         {
           "kind": "dialog",
-          "speaker": "REG",
+          "speaker": "GROVER",
           "sig": "Rlah"
         },
         {
@@ -11611,8 +11443,8 @@
       ]
     },
     {
-      "number": 17,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 17)",
+      "number": 19,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 19)",
       "elements": [
         {
           "kind": "dialog",
@@ -11776,13 +11608,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "P(DItwywtd"
+          "speaker": "PETER",
+          "sig": "Itwywtd"
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "D(ItwIwtdNtnwIwtdbypmiaipAIwnpthtcbItwwgttaCIwbbnaCawttotsanystot"
+          "speaker": "DIANA",
+          "sig": "ItwIwtdNtnwIwtdbypmiaipAIwnpthtcbItwwgttaCIwbbnaCawttotsanystot"
         },
         {
           "kind": "dialog",
@@ -11966,13 +11798,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "H(Isyiafd"
+          "speaker": "HOLLY",
+          "sig": "Isyiafd"
         },
         {
           "kind": "dialog",
           "speaker": "DIANA",
-          "sig": "D(abcO"
+          "sig": "O"
         },
         {
           "kind": "stage_direction",
@@ -11985,9 +11817,9 @@
           "sig": "DstfamSnGTleHstlitsretcr"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "D(hJC"
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "JC"
         },
         {
           "kind": "stage_direction",
@@ -12022,12 +11854,7 @@
         {
           "kind": "dialog",
           "speaker": "DIANA",
-          "sig": "G(aW"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "D(Gn"
+          "sig": "Gn"
         },
         {
           "kind": "dialog",
@@ -12041,8 +11868,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(IsId/mt"
+          "speaker": "GROVER",
+          "sig": "IsId/mt"
         },
         {
           "kind": "dialog",
@@ -12061,8 +11888,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PAUSE",
-          "sig": "G(Byttwkolan"
+          "speaker": "GROVER",
+          "sig": "Byttwkolan"
         },
         {
           "kind": "stage_direction",
@@ -12072,8 +11899,8 @@
       ]
     },
     {
-      "number": 18,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 18)",
+      "number": 20,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 20)",
       "elements": [
         {
           "kind": "dialog",
@@ -12092,8 +11919,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(RIdmt/oyj"
+          "speaker": "GROVER",
+          "sig": "RIdmt/oyj"
         },
         {
           "kind": "dialog",
@@ -12112,8 +11939,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(aWOnk"
+          "speaker": "GROVER",
+          "sig": "WOnk"
         },
         {
           "kind": "dialog",
@@ -12137,8 +11964,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "D(khtrOO"
+          "speaker": "DIANA",
+          "sig": "OO"
         },
         {
           "kind": "dialog",
@@ -12177,8 +12004,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "D(R"
+          "speaker": "DIANA",
+          "sig": "R"
         },
         {
           "kind": "dialog",
@@ -12187,12 +12014,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
-          "sig": "D(dOitwyw"
+          "speaker": "DIANA",
+          "sig": "Oitwyw"
         },
         {
           "kind": "dialog",
-          "speaker": "GROVER",
+          "speaker": "DIANA",
           "sig": "GbolDl"
         },
         {
@@ -12206,9 +12033,9 @@
           "sig": "Dmlhlwakatia"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "G(fSS“h"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "“h"
         },
         {
           "kind": "stage_direction",
@@ -12252,8 +12079,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "BEAT",
-          "sig": "G(Yd"
+          "speaker": "GROVER",
+          "sig": "Yd"
         },
         {
           "kind": "dialog",
@@ -12297,8 +12124,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "DIANA",
-          "sig": "G(vsIgdalmoh"
+          "speaker": "GROVER",
+          "sig": "Igdalmoh"
         },
         {
           "kind": "dialog",

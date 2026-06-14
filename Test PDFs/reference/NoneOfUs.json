@@ -6,8 +6,8 @@
   },
   "title": "None of Us Are Getting Out of This Alive.",
   "characters": [
-    "NATHAN",
     "AVA",
+    "NATHAN",
     "ELEANOR",
     "KARAOKE STEVE"
   ],
@@ -102,9 +102,9 @@
           "sig": "NNsbpbaaotamoaauoWnshf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(ha."
+          "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "."
         },
         {
           "kind": "dialog",
@@ -133,8 +133,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "NATHAN",
-          "sig": "A(h…dbt"
+          "speaker": "AVA",
+          "sig": "…dbt"
         },
         {
           "kind": "dialog",
@@ -183,8 +183,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "NATHAN",
-          "sig": "A(ifansuWnnnntnhtgYnhuYwmuIanWtfdycm"
+          "speaker": "AVA",
+          "sig": "WnnnntnhtgYnhuYwmuIanWtfdycm"
         },
         {
           "kind": "dialog",
@@ -273,8 +273,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "NATHAN",
-          "sig": "A(…dmIdkWayAys"
+          "speaker": "AVA",
+          "sig": "…dmIdkWayAys"
         },
         {
           "kind": "dialog",
@@ -283,8 +283,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "NATHAN",
-          "sig": "A(…ylh"
+          "speaker": "AVA",
+          "sig": "…ylh"
         },
         {
           "kind": "dialog",
@@ -473,8 +473,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "NATHAN",
-          "sig": "A(GBOIdkNgId(IdkiIwytbmonItId"
+          "speaker": "AVA",
+          "sig": "GBOIdkNgId(IdkiIwytbmonItId"
         },
         {
           "kind": "dialog",
@@ -502,16 +502,10 @@
           "sig": "A"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(wsats……myMF"
-        }
-      ]
-    },
-    {
-      "number": 2,
-      "title": "Scene 1 (part 2)",
-      "elements": [
+          "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "……myMF"
+        },
         {
           "kind": "dialog",
           "speaker": "NATHAN",
@@ -739,6 +733,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "NATHAN",
+          "sig": "Igs"
+        },
+        {
+          "kind": "dialog",
           "speaker": "AVA",
           "sig": "Byhagt"
         },
@@ -811,7 +810,13 @@
           "kind": "dialog",
           "speaker": "NATHAN",
           "sig": "Ints"
-        },
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Scene 1 (part 2)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -831,11 +836,6 @@
           "kind": "dialog",
           "speaker": "NATHAN",
           "sig": "Wwil"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(htiftft…Ith"
         },
         {
           "kind": "dialog",
@@ -941,17 +941,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "WaniadoafdlAisoaetiapgSguastwaSte-cpbseotwbwtuggapiMswaitwcnttetTiakotd"
-        }
-      ]
-    },
-    {
-      "number": 3,
-      "title": "Scene 1 (part 3)",
-      "elements": [
+        },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(btttCi"
+          "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "Ci"
         },
         {
           "kind": "stage_direction",
@@ -975,8 +969,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(fIaItp"
+          "speaker": "ELEANOR",
+          "sig": "IaItp"
         },
         {
           "kind": "dialog",
@@ -1015,8 +1009,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ELEANOR",
-          "sig": "A(jiG"
+          "speaker": "AVA",
+          "sig": "G"
         },
         {
           "kind": "dialog",
@@ -1030,8 +1024,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(tnnIstyjhfaapeeinutdosDywtdaSs"
+          "speaker": "ELEANOR",
+          "sig": "IstyjhfaapeeinutdosDywtdaSs"
         },
         {
           "kind": "dialog",
@@ -1095,8 +1089,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(ttwcAsIjgtayafqtwcgs"
+          "speaker": "ELEANOR",
+          "sig": "AsIjgtayafqtwcgs"
         },
         {
           "kind": "dialog",
@@ -1262,7 +1256,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "AlbottEsaah"
-        },
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Scene 1 (part 3)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -1334,9 +1334,9 @@
           "sig": "…YkwImmaC"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(dntaahatwgtbWdymmaC"
+          "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "WdymmaC"
         },
         {
           "kind": "dialog",
@@ -1375,8 +1375,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(baottOTDywam"
+          "speaker": "ELEANOR",
+          "sig": "OTDywam"
         },
         {
           "kind": "dialog",
@@ -1412,13 +1412,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "AsulaEEchharhewSapahohpbwAti"
-        }
-      ]
-    },
-    {
-      "number": 4,
-      "title": "Scene 1 (part 4)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -1431,8 +1425,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ELEANOR",
-          "sig": "A(covqwvWInhaSMvImlSIdsaInsOtalihsIdiotctgIwdshwmtaiwfalIbalaIlduhwdtSstIndiIanOlItiLwtttBIhdtiamesYkJlyk"
+          "speaker": "AVA",
+          "sig": "WInhaSMvImlSIdsaInsOtalihsIdiotctgIwdshwmtaiwfalIbalaIlduhwdtSstIndiIanOlItiLwtttBIhdtiamesYkJlyk"
         },
         {
           "kind": "dialog",
@@ -1490,9 +1484,9 @@
           "sig": "EitsTiagbosT"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(atcIbabo"
+          "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "Ibabo"
         },
         {
           "kind": "dialog",
@@ -1531,8 +1525,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(lumofIimftIctf"
+          "speaker": "ELEANOR",
+          "sig": "IimftIctf"
         },
         {
           "kind": "dialog",
@@ -1621,8 +1615,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ELEANOR",
-          "sig": "A(uWsIdtIcdt"
+          "speaker": "AVA",
+          "sig": "WsIdtIcdt"
         },
         {
           "kind": "dialog",
@@ -1766,8 +1760,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(tIkhutmfbiaapIlthacc"
+          "speaker": "ELEANOR",
+          "sig": "IkhutmfbiaapIlthacc"
         },
         {
           "kind": "dialog",
@@ -1783,7 +1777,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "AhLgotoaTfwWtlcutwaidpAicasiacAtshfEwsiaocAso"
-        },
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Scene 1 (part 4)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "ELEANOR",
@@ -1886,8 +1886,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(affifohCIwytsotfimdWth"
+          "speaker": "ELEANOR",
+          "sig": "CIwytsotfimdWth"
         },
         {
           "kind": "dialog",
@@ -1948,13 +1948,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "MaAaEfoAhhftft"
-        }
-      ]
-    },
-    {
-      "number": 5,
-      "title": "Scene 1 (part 5)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -2002,8 +1996,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(otfbuSwwsS3wwmitdtwtcchsWwfasyctayiittachsftcitlpoyvThcabymIacrtwwf"
+          "speaker": "ELEANOR",
+          "sig": "SwwsS3wwmitdtwtcchsWwfasyctayiittachsftcitlpoyvThcabymIacrtwwf"
         },
         {
           "kind": "dialog",
@@ -2044,11 +2038,6 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "BAsaEtiiSsslIssatigEwabcabfbme"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(lS"
         },
         {
           "kind": "parenthetical",
@@ -2097,8 +2086,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ELEANOR",
-          "sig": "A(atcYrmf(IsOIsItwywOIabpsygmcGwIsdbiyyd(tctEtaLwtaFYkWtFigoAyFKMFC"
+          "speaker": "AVA",
+          "sig": "Yrmf(IsOIsItwywOIabpsygmcGwIsdbiyyd(tctEtaLwtaFYkWtFigoAyFKMFC"
         },
         {
           "kind": "stage_direction",
@@ -2226,11 +2215,6 @@
           "sig": "SiywtgasoysIcrod"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(etfsogE"
-        },
-        {
           "kind": "dialog",
           "speaker": "ELEANOR",
           "sig": "-twblatsrtIlastmlwraLpts"
@@ -2271,11 +2255,6 @@
           "sig": "WIBIdwtsadd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "E(jcodpfam…"
-        },
-        {
           "kind": "dialog",
           "speaker": "ELEANOR",
           "sig": "W(fabIdtymvm"
@@ -2287,8 +2266,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(htIcasbpiyccitwyp"
+          "speaker": "ELEANOR",
+          "sig": "Icasbpiyccitwyp"
         },
         {
           "kind": "dialog",
@@ -2334,15 +2313,16 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "EntAwgineSrowtpabtfibuAsdsskootfpohdwwfho"
-        },
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Scene 1 (part 5)",
+      "elements": [
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "E(utghhfW"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "ELEANOR",
           "sig": "Aroaputp"
         },
         {
@@ -2356,9 +2336,9 @@
           "sig": "Otmh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(atpOy"
+          "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "Oy"
         },
         {
           "kind": "dialog",
@@ -2457,8 +2437,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(rwtgbotHmadtrTya"
+          "speaker": "ELEANOR",
+          "sig": "HmadtrTya"
         },
         {
           "kind": "dialog",
@@ -2466,16 +2446,10 @@
           "sig": "SywtmOlhpfi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "E(ftpgpibutfhItitttans"
-        }
-      ]
-    },
-    {
-      "number": 6,
-      "title": "Scene 1 (part 6)",
-      "elements": [
+          "kind": "dialog",
+          "speaker": "ELEANOR",
+          "sig": "Ititttans"
+        },
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -2563,12 +2537,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(fdtcAyarnHItoayaoattph(Tr"
+          "speaker": "ELEANOR",
+          "sig": "AyarnHItoayaoattph(Tr"
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
+          "speaker": "ELEANOR",
           "sig": "WylionynaitO(NNs"
         },
         {
@@ -2588,8 +2562,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(uOmg"
+          "speaker": "ELEANOR",
+          "sig": "Omg"
         },
         {
           "kind": "stage_direction",
@@ -2767,9 +2741,9 @@
           "sig": "Ybyvp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "E(dahGo"
+          "kind": "dialog",
+          "speaker": "ELEANOR",
+          "sig": "Go"
         },
         {
           "kind": "dialog",
@@ -2852,9 +2826,9 @@
           "sig": "Ne/s"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "E(tctsSwaydh"
+          "kind": "dialog",
+          "speaker": "ELEANOR",
+          "sig": "Swaydh"
         },
         {
           "kind": "dialog",
@@ -2938,8 +2912,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ELEANOR",
-          "sig": "A(dImntsd"
+          "speaker": "AVA",
+          "sig": "Imntsd"
         },
         {
           "kind": "dialog",
@@ -3153,8 +3127,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ELEANOR",
-          "sig": "A(hwIgITwatwsstwthkwmTpapfmarnpoarnfWkAtsIbagmWinsIehbAIgItaltm"
+          "speaker": "AVA",
+          "sig": "IgITwatwsstwthkwmTpapfmarnpoarnfWkAtsIbagmWinsIehbAIgItaltm"
         },
         {
           "kind": "dialog",
@@ -3175,7 +3149,13 @@
           "kind": "dialog",
           "speaker": "AVA",
           "sig": "IpfuhSIdkwItyt"
-        },
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "Scene 1 (part 6)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "ELEANOR",
@@ -3285,13 +3265,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Battlwloliast"
-        }
-      ]
-    },
-    {
-      "number": 7,
-      "title": "Scene 1 (part 7)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -3399,8 +3373,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ELEANOR",
-          "sig": "A(Oco"
+          "speaker": "AVA",
+          "sig": "Oco"
         },
         {
           "kind": "dialog",
@@ -3651,7 +3625,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "EpsrihhSsaifamaloasAstcI"
-        },
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "Scene 1 (part 7)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -3703,9 +3683,9 @@
           "sig": "LtnEaAansaastEhawgifohAimtcab"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "E(aobiapsGgggggGGGYYYY"
+          "kind": "dialog",
+          "speaker": "ELEANOR",
+          "sig": "GgggggGGGYYYY"
         },
         {
           "kind": "stage_direction",
@@ -3747,17 +3727,6 @@
           "speaker": "ELEANOR",
           "sig": "Dyfa"
         },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "E(beShboiyW"
-        }
-      ]
-    },
-    {
-      "number": 8,
-      "title": "Scene 1 (part 8)",
-      "elements": [
         {
           "kind": "parenthetical",
           "speaker": "AVA",
@@ -3965,8 +3934,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ELEANOR",
-          "sig": "A(Larw"
+          "speaker": "AVA",
+          "sig": "Larw"
         },
         {
           "kind": "dialog",
@@ -4125,8 +4094,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(hfY"
+          "speaker": "ELEANOR",
+          "sig": "Y"
         },
         {
           "kind": "dialog",
@@ -4201,18 +4170,13 @@
       ]
     },
     {
-      "number": 9,
-      "title": "Scene 1 (part 9)",
+      "number": 8,
+      "title": "Scene 1 (part 8)",
       "elements": [
         {
           "kind": "dialog",
           "speaker": "ELEANOR",
           "sig": "AWTy"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(htfHy"
         },
         {
           "kind": "dialog",
@@ -4290,9 +4254,9 @@
           "sig": "StWdtem"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A(bthNolft"
+          "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "Nolft"
         },
         {
           "kind": "dialog",
@@ -4561,8 +4525,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(itIdIdkwIstInsaotolbIgInt(oAIhiotIIdmtjIsitwiIjwt"
+          "speaker": "ELEANOR",
+          "sig": "IdIdkwIstInsaotolbIgInt(oAIhiotIIdmtjIsitwiIjwt"
         },
         {
           "kind": "dialog",
@@ -4686,8 +4650,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "KS(TtototTAfwagtgswkiafmjartstQcaytfoflos"
+          "speaker": "KARAOKE STEVE",
+          "sig": "TtototTAfwagtgswkiafmjartstQcaytfoflos"
         },
         {
           "kind": "dialog",
@@ -4827,8 +4791,8 @@
       ]
     },
     {
-      "number": 10,
-      "title": "Scene 1 (part 10)",
+      "number": 9,
+      "title": "Scene 1 (part 9)",
       "elements": [
         {
           "kind": "stage_direction",
@@ -4887,8 +4851,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(tpA"
+          "speaker": "ELEANOR",
+          "sig": "A"
         },
         {
           "kind": "dialog",
@@ -5298,8 +5262,8 @@
       ]
     },
     {
-      "number": 11,
-      "title": "Scene 1 (part 11)",
+      "number": 10,
+      "title": "Scene 1 (part 10)",
       "elements": [
         {
           "kind": "dialog",
@@ -5473,12 +5437,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
-          "sig": "E(ssIfYtttamilntbtatpTbftptariamitmw"
+          "speaker": "ELEANOR",
+          "sig": "IfYtttamilntbtatpTbftptariamitmw"
         },
         {
           "kind": "dialog",
-          "speaker": "AVA",
+          "speaker": "ELEANOR",
           "sig": "SiIttLifBiiRtwLtpwoyartwTcdwtmtdTspyosttliccoRtw(oheCh"
         },
         {
