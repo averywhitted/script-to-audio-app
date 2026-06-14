@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "Against the Hillside 11.20.17.pdf",
-    "generated": "2026-06-13",
+    "generated": "2026-06-14",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "Against the Hillside",
@@ -2477,6 +2477,11 @@
           "kind": "dialog",
           "speaker": "JARED",
           "sig": "TwmpWdylb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "F"
         },
         {
           "kind": "dialog",

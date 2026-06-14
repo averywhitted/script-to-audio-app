@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "EMMA Script (2).pdf",
-    "generated": "2026-06-13",
+    "generated": "2026-06-14",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "E M M A",
@@ -18,7 +18,8 @@
     "MRS. BATES",
     "JANE",
     "FRANK",
-    "MRS. ELTON"
+    "MRS. ELTON",
+    "AN UNPLEASANT"
   ],
   "scenes": [
     {
@@ -7663,6 +7664,11 @@
       "number": 14,
       "title": "SCENE 4: HARRIET REVEALS",
       "elements": [
+        {
+          "kind": "dialog",
+          "speaker": "AN UNPLEASANT",
+          "sig": "M"
+        },
         {
           "kind": "stage_direction",
           "speaker": null,

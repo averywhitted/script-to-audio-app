@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "Kill Floor (LCT Reading Draft).pdf",
-    "generated": "2026-06-13",
+    "generated": "2026-06-14",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "KILL FLOOR",
@@ -951,9 +951,9 @@
           "sig": "Br"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "BAstmroalbSIro"
+          "kind": "dialog",
+          "speaker": "B",
+          "sig": "AstmroalbSIro"
         },
         {
           "kind": "stage_direction",
@@ -1027,12 +1027,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BA"
+          "speaker": "B",
+          "sig": "A"
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
+          "speaker": "B",
           "sig": "Sawhotwo"
         },
         {
@@ -1328,8 +1328,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ANDY",
-          "sig": "BN"
+          "speaker": "B",
+          "sig": "N"
         },
         {
           "kind": "dialog",
@@ -1553,8 +1553,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ANDY",
-          "sig": "BWdtsao"
+          "speaker": "B",
+          "sig": "Wdtsao"
         },
         {
           "kind": "dialog",
@@ -1814,8 +1814,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "B“"
+          "speaker": "B",
+          "sig": "“"
         },
         {
           "kind": "dialog",
@@ -1874,8 +1874,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BYid"
+          "speaker": "B",
+          "sig": "Yid"
         },
         {
           "kind": "dialog",
@@ -1964,8 +1964,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BIjdwtgcow"
+          "speaker": "B",
+          "sig": "Ijdwtgcow"
         },
         {
           "kind": "dialog",
@@ -2004,8 +2004,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BUyIgIcttmcat"
+          "speaker": "B",
+          "sig": "UyIgIcttmcat"
         },
         {
           "kind": "dialog",
@@ -2059,8 +2059,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BHttydaawa"
+          "speaker": "B",
+          "sig": "Httydaawa"
         },
         {
           "kind": "dialog",
@@ -2214,8 +2214,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BOyabnh"
+          "speaker": "B",
+          "sig": "Oyabnh"
         },
         {
           "kind": "dialog",
@@ -2309,8 +2309,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BNyId"
+          "speaker": "B",
+          "sig": "NyId"
         },
         {
           "kind": "dialog",
@@ -2886,8 +2886,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ANDY",
-          "sig": "BYite"
+          "speaker": "B",
+          "sig": "Yite"
         },
         {
           "kind": "dialog",
@@ -3929,37 +3929,42 @@
         },
         {
           "kind": "dialog",
-          "speaker": "B",
+          "speaker": "ANDY",
+          "sig": "B"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANDY",
           "sig": "Oynayp"
         },
         {
           "kind": "dialog",
-          "speaker": "B",
+          "speaker": "ANDY",
           "sig": "LIhhfyiafdbIawofTr"
         },
         {
           "kind": "dialog",
-          "speaker": "B",
+          "speaker": "ANDY",
           "sig": "amp"
         },
         {
           "kind": "dialog",
-          "speaker": "B",
+          "speaker": "ANDY",
           "sig": "JwtcaswsosywInrswyl"
         },
         {
           "kind": "dialog",
-          "speaker": "B",
+          "speaker": "ANDY",
           "sig": "s"
         },
         {
           "kind": "dialog",
-          "speaker": "B",
+          "speaker": "ANDY",
           "sig": "TagoImtafamjngbjf"
         },
         {
           "kind": "dialog",
-          "speaker": "B",
+          "speaker": "ANDY",
           "sig": "Hsigowy"
         },
         {
@@ -5121,8 +5126,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ANDY",
-          "sig": "BTgb/Waydh"
+          "speaker": "B",
+          "sig": "Tgb/Waydh"
         },
         {
           "kind": "dialog",
@@ -5455,58 +5460,58 @@
           "sig": "Bmapc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "BHS"
+          "kind": "dialog",
+          "speaker": "B",
+          "sig": "HS"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "U"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "YdhtshtmasOaItgi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "BuIdwtttytayalIbt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "asotlaItmttsabttl"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "itfatttsbttIttfwb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "aIycoIptfytwawctaiAI"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "gsmotwsA"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Cmyfj"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Jk"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "B"
         },
         {
@@ -5525,33 +5530,33 @@
           "sig": "Hwttf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "BWynf"
+          "kind": "dialog",
+          "speaker": "B",
+          "sig": "Wynf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Iswiyn"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Cth"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Sf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Gf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Ufb"
         },
         {
@@ -5647,7 +5652,7 @@
         {
           "kind": "dialog",
           "speaker": "B",
-          "sig": "BSySdmC"
+          "sig": "SySdmC"
         },
         {
           "kind": "dialog",
@@ -5665,48 +5670,48 @@
           "sig": "BprHdfi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "BH"
+          "kind": "dialog",
+          "speaker": "B",
+          "sig": "H"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "W"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "UgYIgjhoC"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "F"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "NtgTg"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "O"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "SIsytFas"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "A"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "B",
           "sig": "Syb"
         },
         {
@@ -7019,8 +7024,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ANDY",
-          "sig": "BTaJdtmlI1"
+          "speaker": "B",
+          "sig": "TaJdtmlI1"
         },
         {
           "kind": "dialog",
@@ -7139,8 +7144,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ANDY",
-          "sig": "BNa"
+          "speaker": "B",
+          "sig": "Na"
         },
         {
           "kind": "stage_direction",
@@ -8142,8 +8147,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BN"
+          "speaker": "B",
+          "sig": "N"
         },
         {
           "kind": "dialog",
@@ -8312,8 +8317,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BItywacr"
+          "speaker": "B",
+          "sig": "Itywacr"
         },
         {
           "kind": "dialog",
@@ -8533,8 +8538,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BNIwt"
+          "speaker": "B",
+          "sig": "NIwt"
         },
         {
           "kind": "dialog",
@@ -8683,8 +8688,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BGootw"
+          "speaker": "B",
+          "sig": "Gootw"
         },
         {
           "kind": "dialog",
@@ -8803,8 +8808,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BItywacr"
+          "speaker": "B",
+          "sig": "Itywacr"
         },
         {
           "kind": "dialog",
@@ -8858,8 +8863,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "SIMON",
-          "sig": "BWaysfc"
+          "speaker": "B",
+          "sig": "Waysfc"
         },
         {
           "kind": "dialog",
@@ -10051,8 +10056,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ANDY",
-          "sig": "BFytLiyw"
+          "speaker": "B",
+          "sig": "FytLiyw"
         },
         {
           "kind": "dialog",
@@ -10096,8 +10101,8 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ANDY",
-          "sig": "BIdcyhtlm"
+          "speaker": "B",
+          "sig": "Idcyhtlm"
         },
         {
           "kind": "dialog",

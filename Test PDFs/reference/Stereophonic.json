@@ -1,11 +1,12 @@
 {
   "_meta": {
     "source_pdf": "4.10.24_Stereophonic (2).pdf",
-    "generated": "2026-06-13",
+    "generated": "2026-06-14",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "S T E R E O P",
   "characters": [
+    "CONTROL ROOM",
     "SIMON",
     "DIANA",
     "CHARLIE",
@@ -15,10 +16,7 @@
     "REG",
     "REG & SIMON",
     "SHORT PAUSE",
-    "OK",
-    "WHOA! PETER! // HEY HEY!",
-    "DEAD SILENCE",
-    "OK //"
+    "DEAD SILENCE"
   ],
   "scenes": [
     {
@@ -49,6 +47,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "MotphahqoscTalooccosbrPpcathtasoAds(iacfwtnbodsoTntbewpTplitsbhaomTiePpcattpabawNiaT"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "CONTROL ROOM",
+          "sig": "SR"
         },
         {
           "kind": "stage_direction",
@@ -983,6 +986,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "I/"
+        },
+        {
+          "kind": "dialog",
           "speaker": "SIMON",
           "sig": "NInk/InkHIbp"
         },
@@ -1601,6 +1609,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "“Psgafomesjuad"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "IWPM"
         },
         {
           "kind": "stage_direction",
@@ -3306,6 +3319,11 @@
           "sig": "YkwgfacitnMM(M(hhtjW(he"
         },
         {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "IMIU"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Psstevvband"
@@ -4481,6 +4499,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Ltatip"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "IPIFOT"
         },
         {
           "kind": "dialog",
@@ -7382,7 +7405,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "OK",
+          "speaker": "PETER",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
           "sig": "Hp"
         },
         {
@@ -8372,6 +8400,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Wcdtsbtnwcdtmtwtvap"
         },
@@ -8434,6 +8467,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Cstt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "O"
         },
         {
           "kind": "dialog",
@@ -8902,6 +8940,11 @@
           "sig": "PtohhHsitcrhfG—"
         },
         {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "DYWYN/B"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Cguaiigcvq"
@@ -8912,13 +8955,28 @@
           "sig": "W/W"
         },
         {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "YTWTFIWWYIS/WWYB"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "YTMTE/TT"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PmaGshhasha"
         },
         {
           "kind": "dialog",
-          "speaker": "WHOA! PETER! // HEY HEY!",
+          "speaker": "CHARLIE",
+          "sig": "WP/HH"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "CHARLIE",
           "sig": "SroapPa"
         },
         {
@@ -10500,6 +10558,16 @@
           "sig": "YM"
         },
         {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "DTT"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "G/TH"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DTFTDTTSWET/W"
@@ -11007,7 +11075,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "OK //",
+          "speaker": "SIMON",
+          "sig": "O/"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SIMON",
           "sig": "P(hYcsttmnatptyNw"
         },
         {
@@ -11735,6 +11808,16 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "ItygsasoiAltalaiiacod"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "O"
         },
         {
           "kind": "dialog",

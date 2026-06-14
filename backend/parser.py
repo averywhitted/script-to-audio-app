@@ -153,6 +153,7 @@ class TextBlock:
     is_italic: bool                 # majority of chars are italic
     is_bold: bool
     is_merged_parenthetical: bool = False  # produced by _merge_open_parentheticals
+    is_split_continuation: bool = False   # tail block produced by _split_raw_block cue split
 
 
 @dataclass
@@ -1353,7 +1354,9 @@ def _split_raw_block(raw_block: dict, page_num: int) -> List[TextBlock]:
         if len(run) > 1 and _is_speaker_cue_text(first_text):
             # Split speaker cue from following content.
             result.append(_make_text_block([run[0]], page_num))
-            result.append(_make_text_block(run[1:], page_num))
+            tail = _make_text_block(run[1:], page_num)
+            tail.is_split_continuation = True
+            result.append(tail)
         else:
             result.append(_make_text_block(run, page_num))
     return result
@@ -1372,8 +1375,10 @@ def _is_speaker_cue_text(text: str) -> bool:
     t = text.strip()
     if not t or len(t) > 50:
         return False
+    if not t[0].isupper():
+        return False
     alpha = [c for c in t if c.isalpha()]
-    if len(alpha) < 2:
+    if len(alpha) < 1:
         return False
     if sum(1 for c in alpha if c.isupper()) / len(alpha) < 0.9:
         return False
@@ -1899,7 +1904,14 @@ def _classify_blocks(
                         pending_speaker = None
 
         elif role == "character_cue":
-            if block.caps_ratio >= 0.80:
+            if block.is_split_continuation and pending_speaker is not None:
+                # This block is the dialog tail produced when _split_raw_block separated
+                # a speaker cue from its following text.  Even if it scores as CC (e.g.
+                # "B." after "ANDY"), the pending speaker is already correct — treat it
+                # as dialog rather than promoting it to a new speaker cue.
+                result.append(ClassifiedBlock(block=block, role="dialog",
+                                              speaker=pending_speaker))
+            elif block.caps_ratio >= 0.80:
                 # Confirmed character cue — predominantly ALL CAPS.
                 speaker = _normalize_speaker(text).rstrip(".:,")
                 if not speaker:

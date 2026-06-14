@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "5.0 None of Us Are Getting Out of This Alive (2).pdf",
-    "generated": "2026-06-13",
+    "generated": "2026-06-14",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "None of Us Are Getting Out of This Alive.",
@@ -9,7 +9,6 @@
     "NATHAN",
     "AVA",
     "ELEANOR",
-    "I…",
     "KARAOKE STEVE"
   ],
   "scenes": [
@@ -351,6 +350,11 @@
           "kind": "dialog",
           "speaker": "NATHAN",
           "sig": "Isye"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "I"
         },
         {
           "kind": "dialog",
@@ -867,6 +871,11 @@
           "kind": "dialog",
           "speaker": "NATHAN",
           "sig": "AwahYwthh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "I"
         },
         {
           "kind": "dialog",
@@ -4672,7 +4681,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "I…",
+          "speaker": "AVA",
+          "sig": "I"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AVA",
           "sig": "KS(TtototTAfwagtgswkiafmjartstQcaytfoflos"
         },
         {
@@ -5073,6 +5087,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "I"
+        },
+        {
+          "kind": "dialog",
           "speaker": "ELEANOR",
           "sig": "YasspYktr"
         },
@@ -5085,6 +5104,11 @@
           "kind": "dialog",
           "speaker": "ELEANOR",
           "sig": "Yfm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AVA",
+          "sig": "I"
         },
         {
           "kind": "dialog",
@@ -5270,7 +5294,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PEluaAAsmtas"
-        },
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "title": "Scene 1 (part 11)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -5285,13 +5315,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "BElahhasmtifSrhhcnTtwsoseodAiacnbbhagEasnEshesaloagsTmtssssaAInpbsmcairhBotAitb"
-        }
-      ]
-    },
-    {
-      "number": 11,
-      "title": "Scene 1 (part 11)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
