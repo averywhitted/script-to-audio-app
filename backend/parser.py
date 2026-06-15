@@ -676,6 +676,73 @@ def _infer_layout_profile(blocks: List[TextBlock], page_width: float = 612.0) ->
 
 
 # ---------------------------------------------------------------------------
+# Document model — the script's own conventions, learned in a first pass
+# ---------------------------------------------------------------------------
+#
+# A screenplay is internally consistent: the same finite set of character names
+# recurs as cues hundreds of times. Discovering that *cast lexicon* up front lets
+# the classifier key cue detection on "is this token one of THIS script's
+# characters?" instead of re-judging caps ratio every time — which is what kills
+# garbled cues, off-column column-labels, and most per-script threshold tuning.
+
+
+@dataclass
+class DocumentModel:
+    """Per-document conventions learned from a first pass over the blocks.
+
+    `cast` is the trusted speaker set (names that recur as cues); `cast_lexicon`
+    holds the raw cue-candidate counts (including single-occurrence names). The
+    layout `profile` carries the spatial columns.
+    """
+    profile: LayoutProfile
+    cast_lexicon: Dict[str, int]   # normalized name -> cue-candidate occurrence count
+    cast: Set[str]                 # confident cast: names seen as a cue >= 2 times
+    cue_columns: List[float]       # 5pt-bucketed x positions where cues cluster
+
+    def is_cast(self, name: Optional[str]) -> bool:
+        return bool(name) and name in self.cast
+
+
+def _cue_candidate_name(block: TextBlock) -> Optional[str]:
+    """If a block looks like a speaker cue, return its normalized name, else None."""
+    if block.is_cue_with_inline_paren or (block.line_count == 1 and _is_speaker_cue_text(block.text)):
+        name = _normalize_speaker(block.text).rstrip(".:,").strip()
+        return name or None
+    return None
+
+
+def _build_document_model(blocks: List[TextBlock], profile: LayoutProfile) -> DocumentModel:
+    """First pass: learn the cast lexicon and cue columns from cue-shaped blocks.
+
+    Slash-compound cues ("ADA / TOM / DENISE") are split so each member is counted
+    individually. A name is "cast" once it has appeared as a cue at least twice —
+    enough to reject one-off garbled cues while still capturing real characters
+    (a character who only speaks once stays a low-confidence, single-occurrence
+    candidate in cast_lexicon).
+    """
+    lexicon: Counter = Counter()
+    cue_xs: List[float] = []
+    for block in blocks:
+        name = _cue_candidate_name(block)
+        if not name:
+            continue
+        cue_xs.append(block.x0)
+        parts = [p.strip() for p in name.split(" / ")] if " / " in name else [name]
+        for p in parts:
+            if p:
+                lexicon[p] += 1
+
+    cast = {name for name, n in lexicon.items() if n >= 2}
+    cue_columns = sorted({round(x / 5) * 5 for x in cue_xs})
+    return DocumentModel(
+        profile=profile,
+        cast_lexicon=dict(lexicon),
+        cast=cast,
+        cue_columns=cue_columns,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Block classifier
 # ---------------------------------------------------------------------------
 
@@ -1312,6 +1379,13 @@ def _block_parse(pdf_path: str, title: str, config: Optional[dict]) -> Script:
         f"{profile.stage_dir_x:.0f}" if profile.stage_dir_x else "None",
         profile.is_split_layout,
     )
+
+    # Stage 2: learn the document's own conventions (cast lexicon, cue columns).
+    # Computed and logged here; classification does not consume it yet (Stage 3).
+    model = _build_document_model(blocks, profile)
+    top_cast = sorted(model.cast, key=lambda n: -model.cast_lexicon[n])
+    logger.debug("Document model: %d cast, cue_columns=%s, cast=%s",
+                 len(model.cast), model.cue_columns, top_cast[:20])
 
     classified = _classify_blocks(blocks, profile)
     result = _build_script_from_blocks(classified, title=title, config=config)
