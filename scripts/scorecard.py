@@ -184,6 +184,12 @@ def save_watermark(results: dict[str, dict]) -> None:
 
 
 def check_watermark(results: dict[str, dict]) -> int:
+    """Compare the current run to the watermark and print the full delta + verdict.
+
+    Returns 1 (regression) if any guarded metric dropped beyond tolerance or any
+    script gained unattributed dialog; 0 otherwise. Improvements are shown too, so
+    one command answers "did my change help, hurt, or hold?".
+    """
     if not WATERMARK_PATH.exists():
         print("\nNo watermark yet. Run `python scripts/scorecard.py --save` first.")
         return 0
@@ -191,25 +197,45 @@ def check_watermark(results: dict[str, dict]) -> int:
         base = json.load(f)
 
     regressions: list[str] = []
+    improvements: list[str] = []
     for name, m in results.items():
         b = base.get(name)
         if b is None:
+            improvements.append(f"  {name}: NEW script in scorecard")
             continue
-        if m["attrib"] < b["attrib"] - _ATTRIB_TOLERANCE:
-            regressions.append(
-                f"  {name}: attrib {b['attrib']*100:.1f}% → {m['attrib']*100:.1f}%")
-        if not m["provisional_kind"] and m["kind"] < b["kind"] - _ATTRIB_TOLERANCE:
-            regressions.append(
-                f"  {name}: kind {b['kind']*100:.1f}% → {m['kind']*100:.1f}%")
+        # attrib
+        d = m["attrib"] - b["attrib"]
+        if d < -_ATTRIB_TOLERANCE:
+            regressions.append(f"  ⬇ {name}: attrib {b['attrib']*100:.1f}% → {m['attrib']*100:.1f}%")
+        elif d > _ATTRIB_TOLERANCE:
+            improvements.append(f"  ⬆ {name}: attrib {b['attrib']*100:.1f}% → {m['attrib']*100:.1f}%")
+        # kind (not guarded for provisional refs, but still reported)
+        dk = m["kind"] - b["kind"]
+        if dk < -_ATTRIB_TOLERANCE and not m["provisional_kind"]:
+            regressions.append(f"  ⬇ {name}: kind {b['kind']*100:.1f}% → {m['kind']*100:.1f}%")
+        elif dk > _ATTRIB_TOLERANCE:
+            tag = " (provisional)" if m["provisional_kind"] else ""
+            improvements.append(f"  ⬆ {name}: kind {b['kind']*100:.1f}% → {m['kind']*100:.1f}%{tag}")
+        # unattributed dialog (always a bug signal)
         if m["noSpk"] > b["noSpk"]:
-            regressions.append(
-                f"  {name}: noSpk {b['noSpk']} → {m['noSpk']} (more unattributed dialog)")
+            regressions.append(f"  ⬇ {name}: noSpk {b['noSpk']} → {m['noSpk']} (more unattributed dialog)")
+        elif m["noSpk"] < b["noSpk"]:
+            improvements.append(f"  ⬆ {name}: noSpk {b['noSpk']} → {m['noSpk']} (less unattributed dialog)")
 
+    if improvements:
+        print("\nImprovements vs watermark:")
+        print("\n".join(improvements))
     if regressions:
         print("\n✗ REGRESSION vs watermark:")
         print("\n".join(regressions))
+        print("\nVERDICT: WORSE — do not commit. Fix the regression, or if this change is an")
+        print("intentional improvement, run `python scripts/scorecard.py --save` to accept it.")
         return 1
-    print("\n✓ No regression vs watermark.")
+    if improvements:
+        print("\nVERDICT: BETTER — no regressions. Lock it in with "
+              "`python scripts/scorecard.py --save` (then regenerate any changed reference baselines).")
+    else:
+        print("\nVERDICT: HOLD — no change vs watermark. ✓")
     return 0
 
 
