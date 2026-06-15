@@ -620,7 +620,11 @@ class LayoutProfile:
     is_split_layout: bool      # True when speaker_x and dialog_x differ by > 30 pt
 
 
-def _infer_layout_profile(blocks: List[TextBlock], page_width: float = 612.0) -> LayoutProfile:
+def _infer_layout_profile(
+    blocks: List[TextBlock],
+    page_width: float = 612.0,
+    exclude_stage_dir_cols: Tuple[float, ...] = (),
+) -> LayoutProfile:
     """Infer the script's spatial layout from a flat list of TextBlocks.
 
     Algorithm:
@@ -630,6 +634,11 @@ def _infer_layout_profile(blocks: List[TextBlock], page_width: float = 612.0) ->
        around the dialog column.
     4. Any remaining low-caps-ratio blocks at a third x cluster are
        stage directions.
+
+    ``exclude_stage_dir_cols`` lists x-buckets that are known DIALOG columns of
+    cast cues (e.g. the right column of a two-column script). They must never be
+    chosen as the stage-direction column, otherwise that column's dialog would be
+    mislabelled as stage directions.
     """
     def _modal_x(xs: List[float]) -> Optional[float]:
         if not xs:
@@ -656,11 +665,16 @@ def _infer_layout_profile(blocks: List[TextBlock], page_width: float = 612.0) ->
 
     # Stage direction x: low-caps blocks that are NOT at dialog_x and are
     # not speaker cues themselves (e.g. TheHarvest stage dirs live at x=270).
+    # Exclude known dialog columns (a second text column is not a SD column).
+    def _is_excluded(x: float) -> bool:
+        return any(abs(x - c) <= _X_TOLERANCE for c in exclude_stage_dir_cols)
+
     stage_dir_xs = [
         b.x0 for b in blocks
         if b.caps_ratio < 0.5
         and b.char_count > 20
         and abs(b.x0 - dialog_x) > 20
+        and not _is_excluded(b.x0)
         and not _is_speaker_cue_text(b.text)
         and not (b.starts_with_paren and b.ends_with_paren)
     ]
@@ -686,59 +700,120 @@ def _infer_layout_profile(blocks: List[TextBlock], page_width: float = 612.0) ->
 # garbled cues, off-column column-labels, and most per-script threshold tuning.
 
 
+# Universal non-name words that look like cues (ALL-CAPS, short) but are scene
+# beats / time-of-day markers, never characters. Kept small and format-agnostic.
+_NON_CAST_WORDS = frozenset({
+    "PAUSE", "BEAT", "SILENCE", "BLACKOUT", "INTERMISSION", "INTERVAL",
+    "NIGHT", "DAY", "MORNING", "AFTERNOON", "EVENING", "DAWN", "DUSK", "NOON",
+    "MIDNIGHT", "LATER", "CONTINUOUS", "MOMENTS", "SIMULTANEOUSLY", "END",
+    "CURTAIN", "PROLOGUE", "EPILOGUE", "OK",
+})
+
+# A clean cue name is ALL-CAPS letters with only spaces / . / ' / - between them
+# (e.g. "MRS. WESTON", "KARAOKE STEVE", "JEAN-PAUL"). This rejects dialog fragments
+# like "I-", "I…", "EMMA!" that otherwise pass the loose cue test.
+_CLEAN_CUE_NAME_RE = re.compile(r"^[A-Z][A-Z0-9 .'\-]*$")
+
+
 @dataclass
 class DocumentModel:
     """Per-document conventions learned from a first pass over the blocks.
 
     `cast` is the trusted speaker set (names that recur as cues); `cast_lexicon`
-    holds the raw cue-candidate counts (including single-occurrence names). The
-    layout `profile` carries the spatial columns.
+    holds the raw cue-candidate counts (including single-occurrence names).
+    `cue_columns` / `dialog_columns` are the DENSE x-buckets where cast cues and
+    their following dialog actually cluster — these capture multi-column layouts
+    (a two-column script has two of each). The layout `profile` carries the
+    primary spatial columns.
     """
     profile: LayoutProfile
     cast_lexicon: Dict[str, int]   # normalized name -> cue-candidate occurrence count
     cast: Set[str]                 # confident cast: names seen as a cue >= 2 times
-    cue_columns: List[float]       # 5pt-bucketed x positions where cues cluster
+    cue_columns: List[float]       # dense x-buckets where cast cues cluster
+    dialog_columns: List[float]    # dense x-buckets where dialog follows cast cues
 
     def is_cast(self, name: Optional[str]) -> bool:
         return bool(name) and name in self.cast
+
+    def near_cue_column(self, x: float) -> bool:
+        return any(abs(x - c) <= _X_TOLERANCE for c in self.cue_columns)
 
 
 def _cue_candidate_name(block: TextBlock) -> Optional[str]:
     """If a block looks like a speaker cue, return its normalized name, else None."""
     if block.is_cue_with_inline_paren or (block.line_count == 1 and _is_speaker_cue_text(block.text)):
         name = _normalize_speaker(block.text).rstrip(".:,").strip()
-        return name or None
+        if name and _CLEAN_CUE_NAME_RE.match(name) and name not in _NON_CAST_WORDS:
+            return name
     return None
 
 
-def _build_document_model(blocks: List[TextBlock], profile: LayoutProfile) -> DocumentModel:
-    """First pass: learn the cast lexicon and cue columns from cue-shaped blocks.
+def _dense_buckets(xs: List[float], total: int) -> List[float]:
+    """5pt x-buckets that hold a meaningful share of ``total`` items.
+
+    A column counts as "dense" if it has >= max(5, 8% of total) entries — enough
+    to be a real text column (e.g. each side of a two-column layout) rather than
+    a handful of stray off-column labels (e.g. KillFloor's parallel-speech marks).
+    """
+    if not xs:
+        return []
+    counts = Counter(round(x / 5) * 5 for x in xs)
+    threshold = max(5, int(0.08 * total))
+    return sorted(float(b) for b, n in counts.items() if n >= threshold)
+
+
+def _build_document_model(blocks: List[TextBlock], page_width: float = 612.0) -> DocumentModel:
+    """First pass: learn the cast lexicon, cue columns, and dialog columns.
 
     Slash-compound cues ("ADA / TOM / DENISE") are split so each member is counted
     individually. A name is "cast" once it has appeared as a cue at least twice —
-    enough to reject one-off garbled cues while still capturing real characters
-    (a character who only speaks once stays a low-confidence, single-occurrence
-    candidate in cast_lexicon).
+    enough to reject one-off garbled cues while still capturing real characters.
+
+    Cue columns are the dense x-buckets where cast cues appear; dialog columns are
+    the dense x-buckets of the blocks that immediately follow cast cues. Both are
+    multi-valued so a two-column script is represented faithfully. The layout
+    profile is then inferred with the dialog columns excluded from stage-direction
+    detection (a second text column must not be read as a stage-direction column).
     """
     lexicon: Counter = Counter()
-    cue_xs: List[float] = []
     for block in blocks:
         name = _cue_candidate_name(block)
         if not name:
             continue
-        cue_xs.append(block.x0)
         parts = [p.strip() for p in name.split(" / ")] if " / " in name else [name]
         for p in parts:
             if p:
                 lexicon[p] += 1
-
     cast = {name for name, n in lexicon.items() if n >= 2}
-    cue_columns = sorted({round(x / 5) * 5 for x in cue_xs})
+
+    # Second pass for column geometry, restricted to confirmed cast cues.
+    cue_xs: List[float] = []
+    dialog_xs: List[float] = []
+    for i, block in enumerate(blocks):
+        name = _cue_candidate_name(block)
+        primary = name.split(" / ")[0].strip() if name and " / " in name else name
+        if not primary or primary not in cast:
+            continue
+        cue_xs.append(block.x0)
+        if i + 1 < len(blocks):
+            nxt = blocks[i + 1]
+            if nxt.caps_ratio < 0.5 and not (nxt.starts_with_paren and nxt.ends_with_paren):
+                dialog_xs.append(nxt.x0)
+
+    total_cues = len(cue_xs)
+    cue_columns = _dense_buckets(cue_xs, total_cues)
+    dialog_columns = _dense_buckets(dialog_xs, total_cues)
+
+    profile = _infer_layout_profile(
+        blocks, page_width=page_width,
+        exclude_stage_dir_cols=tuple(dialog_columns),
+    )
     return DocumentModel(
         profile=profile,
         cast_lexicon=dict(lexicon),
         cast=cast,
         cue_columns=cue_columns,
+        dialog_columns=dialog_columns,
     )
 
 
@@ -770,6 +845,7 @@ _SCENE_HEADING_BLOCK_RE = re.compile(
 )
 
 _X_TOLERANCE = 15.0           # pt — two x-values are "the same column" if within this
+_TWO_COLUMN_MIN_GAP = 200.0   # pt — min separation of cue columns to treat a script as two-column
 # Only merge a parenthetical that continues into the immediately following block
 # (dist = 1) AND whose opener ends mid-word (no sentence-ending punctuation).
 # Larger spans mean the blocks are already semantically separate elements.
@@ -1058,9 +1134,48 @@ def _score_blocks(
     return [_score_block(b, profile, doc_stats) for b in blocks]
 
 
+def _reorder_columns(blocks: List[TextBlock], model: DocumentModel) -> List[TextBlock]:
+    """Reorder blocks into reading order for multi-column ("newspaper") layouts.
+
+    PyMuPDF returns blocks roughly top-to-bottom, which interleaves the two
+    columns of a two-column script by y-position. That scrambles the speaker
+    state machine (a left-column line can pick up a right-column cue). When the
+    document model found two or more dense cue columns, we read each page one
+    column at a time (left fully, then right), which is the script's true reading
+    order. Single-column scripts (one cue column) are returned unchanged.
+    """
+    cols = sorted(model.cue_columns)
+    if len(cols) < 2:
+        return blocks
+
+    # A genuine two-column layout has its cue columns far apart (left half vs
+    # right half of the page). Cues merely spread across nearby x-buckets (e.g.
+    # Mercury Fur's 245–285) are a single column with positional variation — do
+    # NOT reorder. The absolute gap is robust; page_width is not (it is inflated
+    # by the right column's text extent).
+    if cols[-1] - cols[0] < _TWO_COLUMN_MIN_GAP:
+        return blocks
+
+    # Split midway between the two columns so each side's cues and their indented
+    # dialog/SD all fall on the correct side.
+    split = (cols[0] + cols[-1]) / 2.0
+    by_page: Dict[int, List[TextBlock]] = {}
+    for b in blocks:
+        by_page.setdefault(b.page, []).append(b)
+
+    ordered: List[TextBlock] = []
+    for page in sorted(by_page):
+        page_blocks = by_page[page]
+        left = sorted((b for b in page_blocks if b.x0 < split), key=lambda b: b.y0)
+        right = sorted((b for b in page_blocks if b.x0 >= split), key=lambda b: b.y0)
+        ordered.extend(left)
+        ordered.extend(right)
+    return ordered
+
+
 def _classify_blocks(
     blocks: List[TextBlock],
-    profile: LayoutProfile,
+    model: DocumentModel,
 ) -> List[ClassifiedBlock]:
     """Two-phase block classification.
 
@@ -1069,12 +1184,12 @@ def _classify_blocks(
     from typographic, positional, and document-frequency signals.
 
     Phase 2 — semantic pass (below): reads the sequence of scored blocks and
-    applies speaker-attribution state.  The only sequence-level overrides are:
-      • dialog with no pending speaker → reclassified stage_direction (scripts
-        where stage dirs share the dialog column, e.g. NoneOfUs)
-      • merged parenthetical stage_direction → pending_speaker preserved so
-        the character continues after the embedded aside (EDDIE pattern)
+    applies speaker-attribution state, consulting the per-document model
+    (cast lexicon + dense cue/dialog columns) so multi-column layouts and
+    off-column cues are handled without per-script tuning.
     """
+    profile = model.profile
+    blocks = _reorder_columns(blocks, model)
     scored = _score_blocks(blocks, profile)
     result: List[ClassifiedBlock] = []
     pending_speaker: Optional[str] = None
@@ -1159,10 +1274,13 @@ def _classify_blocks(
                                               speaker=pending_speaker))
             elif block.caps_ratio >= 0.80:
                 # Confirmed character cue — predominantly ALL CAPS.
-                # Reject blocks that are far from the speaker column — these are
-                # typically right-column labels in parallel-speech layouts where
-                # two characters' lines appear side-by-side on the same y.
-                if abs(block.x0 - profile.speaker_x) > _X_TOLERANCE * 5:
+                # An off-column cue is only real if it sits in another DENSE cue
+                # column — i.e. a genuine second text column (e.g. EMMA's right
+                # column at x≈570). A lone off-column label with no dense column
+                # behind it is a parallel-speech marker (e.g. KillFloor x≈360) and
+                # must not hijack the pending speaker.
+                off_column = abs(block.x0 - profile.speaker_x) > _X_TOLERANCE * 5
+                if off_column and not model.near_cue_column(block.x0):
                     result.append(ClassifiedBlock(block=block, role="stage_direction"))
                 else:
                     speaker = _normalize_speaker(text).rstrip(".:,")
@@ -1372,22 +1490,21 @@ def _block_parse(pdf_path: str, title: str, config: Optional[dict]) -> Script:
     page_widths = [b.x1 for b in blocks if b.x1 > 200]
     page_width = max(page_widths) + 90.0 if page_widths else 612.0
 
-    profile = _infer_layout_profile(blocks, page_width=page_width)
+    # Learn the document's own conventions (cast lexicon + dense cue/dialog
+    # columns); the layout profile is inferred inside, dialog-column-aware.
+    model = _build_document_model(blocks, page_width=page_width)
+    profile = model.profile
+    top_cast = sorted(model.cast, key=lambda n: -model.cast_lexicon[n])
     logger.debug(
         "Block profile: speaker_x=%.0f dialog_x=%.0f stage_dir_x=%s split=%s",
         profile.speaker_x, profile.dialog_x,
         f"{profile.stage_dir_x:.0f}" if profile.stage_dir_x else "None",
         profile.is_split_layout,
     )
+    logger.debug("Document model: %d cast, cue_cols=%s dialog_cols=%s cast=%s",
+                 len(model.cast), model.cue_columns, model.dialog_columns, top_cast[:20])
 
-    # Stage 2: learn the document's own conventions (cast lexicon, cue columns).
-    # Computed and logged here; classification does not consume it yet (Stage 3).
-    model = _build_document_model(blocks, profile)
-    top_cast = sorted(model.cast, key=lambda n: -model.cast_lexicon[n])
-    logger.debug("Document model: %d cast, cue_columns=%s, cast=%s",
-                 len(model.cast), model.cue_columns, top_cast[:20])
-
-    classified = _classify_blocks(blocks, profile)
+    classified = _classify_blocks(blocks, model)
     result = _build_script_from_blocks(classified, title=title, config=config)
     scene_count = len(result.scenes) if result else 0
     print(f"[parser] BLOCK PARSE OK — {len(blocks)} blocks, {scene_count} scenes, "
