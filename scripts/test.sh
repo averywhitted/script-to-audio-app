@@ -41,6 +41,36 @@ run_python() {
     else
         fail "Python tests FAILED"
     fi
+
+    # Correctness oracle: score the live parser against locked ground truth and
+    # fail on any regression vs the watermark. This catches "fixed one script,
+    # broke another" — which the reference tests (change detectors) cannot.
+    section "Parser correctness scorecard"
+    if "$PYTHON" scripts/scorecard.py --check 2>&1; then
+        ok "Scorecard: no regression vs watermark"
+    else
+        fail "Scorecard: REGRESSION vs watermark"
+    fi
+}
+
+# ── Python fast subset (used by the edit hook during parser work) ──────────────
+# Runs the parser UNIT tests only — skips the slow reference/scorecard pass, which
+# is run explicitly at stage boundaries instead. Keeps the per-edit hook snappy.
+
+run_python_fast() {
+    section "Python unit tests (fast: no reference/scorecard)"
+    PYTHON=""
+    for candidate in .venv/bin/python3 .venv/bin/python vendor/python/bin/python3 python3; do
+        if [ -x "$candidate" ] 2>/dev/null || command -v "$candidate" &>/dev/null; then
+            PYTHON="$candidate"; break
+        fi
+    done
+    if [ -z "$PYTHON" ]; then fail "No Python found."; return; fi
+    if "$PYTHON" -m pytest backend/tests/ -q -k "not reference" 2>&1 | tail -20; then
+        ok "Python fast tests passed"
+    else
+        fail "Python fast tests FAILED"
+    fi
 }
 
 # ── Swift build + unit tests ──────────────────────────────────────────────────
@@ -76,11 +106,12 @@ run_swift() {
 # ── dispatch ──────────────────────────────────────────────────────────────────
 
 case "$SUITE" in
-    python) run_python ;;
-    swift)  run_swift  ;;
-    all)    run_python; run_swift ;;
+    python)      run_python ;;
+    python-fast) run_python_fast ;;
+    swift)       run_swift  ;;
+    all)         run_python; run_swift ;;
     *)
-        echo "Usage: bash scripts/test.sh [python|swift|all]"
+        echo "Usage: bash scripts/test.sh [python|python-fast|swift|all]"
         exit 1
         ;;
 esac

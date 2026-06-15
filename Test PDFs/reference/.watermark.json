@@ -1,0 +1,51 @@
+{
+  "TheHarvest": {
+    "attrib": 1.0,
+    "kind": 1.0,
+    "noSpk": 0,
+    "scenes": 16,
+    "overlaps": 2
+  },
+  "KillFloor": {
+    "attrib": 1.0,
+    "kind": 1.0,
+    "noSpk": 0,
+    "scenes": 21,
+    "overlaps": 0
+  },
+  "NoneOfUs": {
+    "attrib": 1.0,
+    "kind": 0.9314845024469821,
+    "noSpk": 0,
+    "scenes": 10,
+    "overlaps": 0
+  },
+  "MercuryFur": {
+    "attrib": 1.0,
+    "kind": 0.948,
+    "noSpk": 0,
+    "scenes": 24,
+    "overlaps": 0
+  },
+  "AgainstTheHillside": {
+    "attrib": 1.0,
+    "kind": 0.9144079885877318,
+    "noSpk": 0,
+    "scenes": 16,
+    "overlaps": 0
+  },
+  "EMMA": {
+    "attrib": 0.9558232931726908,
+    "kind": 0.47737068965517243,
+    "noSpk": 0,
+    "scenes": 16,
+    "overlaps": 0
+  },
+  "Stereophonic": {
+    "attrib": 0.9781962338949455,
+    "kind": 0.8295819935691319,
+    "noSpk": 0,
+    "scenes": 20,
+    "overlaps": 0
+  }
+}

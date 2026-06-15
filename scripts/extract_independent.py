@@ -476,6 +476,260 @@ def extract_mercuryfur(pdf_path: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Shared helpers for the single/two-column scripts below
+# ---------------------------------------------------------------------------
+
+_SCENE_HEAD_RE = re.compile(r'^(ACT|SCENE|PART|PROLOGUE|EPILOGUE)\b', re.I)
+
+
+def _lines_with_italic(page, *, x_filter=None):
+    """Like _page_lines but also returns the italic fraction of each line.
+
+    x_filter: optional (lo, hi) — keep only lines whose first word x0 is in range.
+    Returns [(x0, text, italic_frac)].
+    """
+    words = page.extract_words(extra_attrs=["fontname"])
+    rows = {}
+    for w in words:
+        y = round(w['top'] / 3) * 3
+        rows.setdefault(y, []).append(w)
+    out = []
+    for y in sorted(rows):
+        ws = sorted(rows[y], key=lambda w: w['x0'])
+        x0 = ws[0]['x0']
+        if x_filter and not (x_filter[0] <= x0 <= x_filter[1]):
+            ws = [w for w in ws if x_filter[0] <= w['x0'] <= x_filter[1]]
+            if not ws:
+                continue
+            x0 = ws[0]['x0']
+        text = ' '.join(w['text'] for w in ws).strip()
+        if not text:
+            continue
+        fonts = [w.get('fontname', '') for w in ws]
+        ital = sum(1 for f in fonts
+                   if 'italic' in f.lower() or 'oblique' in f.lower()) / max(len(fonts), 1)
+        out.append((x0, text, ital))
+    return out
+
+
+def _cue_core(text: str) -> str:
+    """Strip a trailing parenthetical and surrounding punctuation from a cue line."""
+    return re.sub(r'\s*\(.*\)\s*$', '', text.strip()).strip().rstrip('.:')
+
+
+# ---------------------------------------------------------------------------
+# AgainstTheHillside
+#
+# Pure single column: cues, dialog, and stage directions ALL at x≈90.
+#   speaker cue       : short ALL-CAPS line whose name is in the cast lexicon
+#   stage direction   : italic (TimesNewRomanPS-ItalicMT) mixed-case prose
+#   dialog            : roman mixed-case prose following a cue
+# The cast lexicon is discovered in a first pass (ALL-CAPS cue candidates that
+# recur >= 3 times) so a one-word ALL-CAPS shout in dialog isn't mistaken for a
+# cue. Front matter (title + cast list) is on pages 0-1.
+# ---------------------------------------------------------------------------
+
+def extract_against_hillside(pdf_path: str) -> list[dict]:
+    # Pass 1 — discover the cast lexicon.
+    cue_freq = {}
+    with pdfplumber.open(pdf_path) as pdf:
+        for pi, page in enumerate(pdf.pages):
+            if pi < 2:
+                continue
+            for _x, text, itf in _lines_with_italic(page):
+                if itf > 0.5 or _SCENE_HEAD_RE.match(text):
+                    continue
+                if _is_caps_cue(text, max_len=30):
+                    cue_freq[_cue_core(text)] = cue_freq.get(_cue_core(text), 0) + 1
+    cast = {name for name, n in cue_freq.items() if n >= 3}
+
+    # Pass 2 — classify.
+    elements = []
+    current_speaker = None
+    with pdfplumber.open(pdf_path) as pdf:
+        for pi, page in enumerate(pdf.pages):
+            if pi < 2:
+                continue
+            for x0, text, itf in _lines_with_italic(page):
+                if x0 > 380 and re.match(r'^\d+\.?$', text):
+                    continue
+                if text.strip().lower() == "against the hillside":
+                    continue  # running page-header title, not dialog
+                if _SCENE_HEAD_RE.match(text):
+                    current_speaker = None
+                    continue
+                if itf > 0.5:
+                    elements.append(_make("stage_direction", None, text))
+                    continue
+                core = _cue_core(text)
+                if _is_caps_cue(text, max_len=30) and core in cast:
+                    _, inline_p = _split_cue_paren(text)
+                    current_speaker = core
+                    if inline_p:
+                        elements.append(_make("parenthetical", current_speaker, inline_p))
+                    continue
+                if re.match(r'^\(.*\)\s*$', text):
+                    elements.append(_make("parenthetical", current_speaker, text))
+                    continue
+                elements.append(_make("dialog", current_speaker, text))
+    return elements
+
+
+# ---------------------------------------------------------------------------
+# EMMA
+#
+# Two-column "newspaper" layout. pdfplumber reads across both columns and
+# interleaves them into garbage, so we filter words to a column x-range BEFORE
+# grouping into lines, then read each column top-to-bottom (left, then right).
+#   speaker cue     : "NAME:" colon-cue (EMMA:, KNIGHTLEY:, MRS. WESTON:)
+#   stage direction : italic mixed-case prose (x≈124 left / 647 right)
+#   parenthetical   : line starting with "("
+#   dialog          : everything else, attributed to the current speaker
+# current_speaker persists across columns/pages (only a new cue changes it).
+# ---------------------------------------------------------------------------
+
+_EMMA_COLS = ((40, 300), (560, 720))
+_EMMA_CUE_RE = re.compile(r'^([A-Z][A-Z .]{1,24}):\s*(.*)$')
+
+
+def extract_emma(pdf_path: str) -> list[dict]:
+    # Pass 1 — discover the colon-cue cast.
+    freq = {}
+    with pdfplumber.open(pdf_path) as pdf:
+        for pg in pdf.pages:
+            for col in _EMMA_COLS:
+                for _x, t, _it in _lines_with_italic(pg, x_filter=col):
+                    m = _EMMA_CUE_RE.match(t)
+                    if m:
+                        freq[m.group(1).strip()] = freq.get(m.group(1).strip(), 0) + 1
+    cast = {n for n, c in freq.items() if c >= 3}
+
+    # Pass 2 — classify column by column. Emit nothing until the first cue is
+    # seen, which skips the front matter (title, copyright, cast list).
+    elements = []
+    current = None
+    started = False
+    skip_title = False
+    with pdfplumber.open(pdf_path) as pdf:
+        for pg in pdf.pages:
+            for col in _EMMA_COLS:
+                for x, t, it in _lines_with_italic(pg, x_filter=col):
+                    if re.match(r'^\d+\.?$', t):
+                        continue
+                    # Scene headings ("SCENE 5:", "ACT TWO") are consumed as scene
+                    # boundaries by the parser — not emitted as elements. Skip the
+                    # heading line and a following ALL-CAPS title line ("EMMA WORKS II").
+                    if _SCENE_HEAD_RE.match(t):
+                        skip_title = True
+                        continue
+                    if skip_title:
+                        skip_title = False
+                        core = _cue_core(t)
+                        if core and core == core.upper() and ':' not in t:
+                            continue  # heading title line
+                    m = _EMMA_CUE_RE.match(t)
+                    if m and m.group(1).strip() in cast:
+                        current = m.group(1).strip()
+                        started = True
+                        rest = m.group(2).strip()
+                        if rest.startswith('('):
+                            elements.append(_make("parenthetical", current, rest))
+                        elif rest:
+                            elements.append(_make("dialog", current, rest))
+                        continue
+                    if not started:
+                        continue
+                    if it > 0.5 and not t.startswith('('):
+                        elements.append(_make("stage_direction", None, t))
+                        continue
+                    if t.startswith('('):
+                        elements.append(_make("parenthetical", current, t))
+                        continue
+                    elements.append(_make("dialog", current, t))
+    return elements
+
+
+# ---------------------------------------------------------------------------
+# Stereophonic  *** PROVISIONAL — not locked ***
+#
+# Main dialogue column at x≈119, parallel overlap column (CHARLIE) at x≈590.
+# Cues are ALL-CAPS cast names; "//" marks overlap points within dialog.
+#
+# CAVEAT: stage directions sit at the SAME x as dialog with NO italic/font
+# signal ("Holly enters and hangs up her jacket." is roman, x=119). There is no
+# reliable typographic way to separate SD from dialog here, so the kind split is
+# BEST-EFFORT (cast-name-subject + present-tense heuristic). Attribution (which
+# speaker) IS reliable. Treat this reference as provisional until hand-reviewed;
+# the scorecard scores it but it is intentionally left unlocked.
+# ---------------------------------------------------------------------------
+
+_STEREO_COLS = ((90, 400), (560, 720))
+# Standalone direction words that appear in the cue position but are not speakers.
+_STEREO_NON_CUE = {"PAUSE", "BEAT", "SHORT PAUSE", "LONG PAUSE", "SILENCE", "OK"}
+# Heuristic SD: a full sentence whose subject is a (title-cased) cast member or
+# a scene noun, describing action — e.g. "Holly enters…", "The meters move…".
+_STEREO_SD_RE = re.compile(
+    r'^(Holly|Diana|Peter|Grover|Simon|Reg|Charlie|The|A|Lights|Music|They|She|He|Everyone)\b'
+    r'.*(enters?|exits?|sits?|stands?|moves?|checks?|starts?|crochets?|scratches?'
+    r'|hangs?|makes?|looks?|turns?|nods?|walks?|plays?|laughs?|smiles?|beat)\b.*\.$'
+)
+
+
+def extract_stereophonic(pdf_path: str) -> list[dict]:
+    # Pass 1 — discover the cast (exclude direction words / compound group cues).
+    freq = {}
+    with pdfplumber.open(pdf_path) as pdf:
+        for pg in pdf.pages:
+            for col in _STEREO_COLS:
+                for _x, t, _it in _lines_with_italic(pg, x_filter=col):
+                    if _is_caps_cue(t, max_len=20):
+                        core = _cue_core(t)
+                        # Cast names are single tokens; exclude direction words.
+                        if core and ' ' not in core and core not in _STEREO_NON_CUE:
+                            freq[core] = freq.get(core, 0) + 1
+    cast = {n for n, c in freq.items() if c >= 5}
+
+    # Pass 2 — classify. Skip front matter until the first cue.
+    elements = []
+    current = None
+    started = False
+    with pdfplumber.open(pdf_path) as pdf:
+        for pg in pdf.pages:
+            for col in _STEREO_COLS:
+                for x, t, it in _lines_with_italic(pg, x_filter=col):
+                    if re.match(r'^\d+\.?$', t) or re.match(r'^\d+/\d+/\d+$', t):
+                        continue
+                    core = _cue_core(t)
+                    # Group/overlap cue: "DIANA AND PETER AND HOLLY"
+                    if ' AND ' in core and all(p.strip() in cast for p in core.split(' AND ')):
+                        current = core.split(' AND ')[0].strip()
+                        started = True
+                        continue
+                    if core in cast and _is_caps_cue(t, max_len=20):
+                        _, inline_p = _split_cue_paren(t)
+                        current = core
+                        started = True
+                        if inline_p:
+                            elements.append(_make("parenthetical", current, inline_p))
+                        continue
+                    if not started:
+                        continue
+                    # Direction words in cue position → stage direction.
+                    if core in _STEREO_NON_CUE:
+                        elements.append(_make("stage_direction", None, t))
+                        continue
+                    if t.startswith('(') and t.rstrip().endswith(')'):
+                        elements.append(_make("parenthetical", current, t))
+                        continue
+                    # Best-effort SD detection (no font signal available).
+                    if _STEREO_SD_RE.match(t):
+                        elements.append(_make("stage_direction", None, t))
+                        continue
+                    elements.append(_make("dialog", current, t))
+    return elements
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -485,6 +739,10 @@ EXTRACTORS = {
     "NoneOfUs":   (extract_noneous,    "5.0 None of Us Are Getting Out of This Alive (2).pdf",
                    "None of Us Are Getting Out of This Alive"),
     "MercuryFur": (extract_mercuryfur, "Mercury Fur-13 f Draft-June 10-2013.pdf", "Mercury Fur"),
+    "AgainstTheHillside": (extract_against_hillside, "Against the Hillside 11.20.17.pdf",
+                           "Against the Hillside"),
+    "EMMA": (extract_emma, "EMMA Script (2).pdf", "Emma"),
+    "Stereophonic": (extract_stereophonic, "4.10.24_Stereophonic (2).pdf", "Stereophonic"),
 }
 
 
