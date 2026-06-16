@@ -404,11 +404,17 @@ def test_bundled_corrections_config_loads():
     assert isinstance(cfg["non_cue_words"], list)
     assert isinstance(cfg["speaker_aliases"], dict)
     assert isinstance(cfg["noise_line_patterns"], list)
-    # Spot-check a few expected entries
-    assert "VOICE" in cfg["non_cue_words"]
-    assert "CROWD" in cfg["non_cue_words"]
-    assert "CHORUS" in cfg["non_cue_words"]
-    assert "ENSEMBLE" in cfg["non_cue_words"]
+    # non_cue_words now holds ONLY true non-speakers (sound effects / environment),
+    # which are dropped to stage_direction.
+    assert "MUSIC" in cfg["non_cue_words"]
+    assert "DOORBELL" in cfg["non_cue_words"]
+    assert "SIREN" in cfg["non_cue_words"]
+    # Generic SPEAKING roles must NOT be here — they are voiced (at low confidence,
+    # flagged for review) via parser._GENERIC_ROLES, not silently dropped.
+    assert "VOICE" not in cfg["non_cue_words"]
+    assert "CROWD" not in cfg["non_cue_words"]
+    assert "MAN" not in cfg["non_cue_words"]
+    assert {"VOICE", "CROWD", "CHORUS", "MAN", "WOMAN"} <= p._GENERIC_ROLES
     # Noise patterns should be compiled regexes
     assert all(hasattr(p_, "search") for p_ in cfg["noise_line_patterns"])
 

@@ -130,6 +130,7 @@ def _script_summary(script: script_parser.Script) -> Dict[str, Any]:
                         "overlapCue": element.overlap_cue,
                         "overlapTexts": element.overlap_texts,
                         "confidence": element.confidence,
+                        "reason": element.reason,
                     }
                     for element in scene.elements
                     if element.text.strip()

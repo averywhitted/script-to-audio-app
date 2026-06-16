@@ -1788,7 +1788,7 @@ private struct SceneElementRow: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 9))
                                 .foregroundStyle(AppColors.lowConfidence.opacity(0.75))
-                                .help("Parser is uncertain about this classification — check the speaker or type")
+                                .help(element.reason ?? "Parser is uncertain about this line — check the speaker or type")
                         }
                         Button { showingEdit = true } label: {
                             Text("Edit")

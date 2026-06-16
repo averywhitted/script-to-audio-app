@@ -70,7 +70,8 @@ class Element:
     speaker: Optional[str] = None
     overlap_cue: Optional[List[str]] = None   # set when multiple speakers share a line simultaneously
     overlap_texts: Optional[List[str]] = None # per-voice texts (parallel with overlap_cue); None = all voices read .text
-    confidence: float = 1.0  # 1.0 = known speaker / strong evidence; 0.7 = unknown speaker; 0.4 = fallback
+    confidence: float = 1.0  # 1.0 = known speaker / strong evidence; <0.7 = flagged for review
+    reason: Optional[str] = None  # human-readable why-flagged note shown on the Review ⚠ (None = confident)
 
 
 @dataclass
@@ -1425,6 +1426,38 @@ def _split_leading_paren(text: str) -> Tuple[Optional[str], str]:
     return None, text
 
 
+# Generic ensemble / bit-part roles: real speaking parts (so they SHOULD be
+# voiced) but not named characters — flag them so the user can confirm the line
+# and assign a voice, rather than silently dropping them from the audio.
+_GENERIC_ROLES = frozenset({
+    "VOICE", "VOICES", "VOICE OF", "OFFSTAGE VOICE", "RECORDED VOICE", "OFFSTAGE",
+    "MAN", "WOMAN", "BOY", "GIRL", "CHILD", "CHILDREN", "KID",
+    "CROWD", "CHORUS", "ENSEMBLE", "COMPANY", "GROUP", "ALL", "BOTH", "UNISON",
+    "SOLDIER", "SOLDIERS", "GUARD", "GUARDS", "OFFICER", "SERVANT", "SERVANTS",
+    "ATTENDANT", "MESSENGER", "GHOST", "SPIRIT", "SHADOW", "ANNOUNCER",
+    "STRANGER", "PASSERBY", "PERSON", "PEOPLE", "FIGURE", "NURSE", "DOCTOR",
+    "WAITER", "WAITRESS", "BARTENDER", "DRIVER", "OPERATOR",
+})
+
+
+def _dialog_confidence(speaker: Optional[str], cast: Set[str]) -> Tuple[float, Optional[str]]:
+    """Confidence + review note for a dialog line, from how sure we are of its speaker.
+
+    Returns (1.0, None) for a confident line (a recurring named character) and a
+    lower score + reason for lines worth a human glance: generic roles (voiced but
+    unnamed) and one-off speakers (often a mis-read cue or a header that slipped
+    through). The Review UI shows the ⚠ + reason whenever confidence < 0.7.
+    """
+    if not speaker:
+        return 0.5, "No speaker detected — assigned by position."
+    base = speaker.split(" / ")[0].strip()
+    if base in _GENERIC_ROLES:
+        return 0.6, f"“{base}” is a generic role — confirm the line and assign a voice."
+    if cast and base not in cast:
+        return 0.6, f"“{base}” speaks only once — check this is the right character."
+    return 1.0, None
+
+
 def _build_script_from_blocks(
     classified: List[ClassifiedBlock],
     title: str,
@@ -1522,11 +1555,14 @@ def _build_script_from_blocks(
                                                  text=paren, speaker=norm_speaker))
                 remaining = rest
             if remaining:
+                conf, reason = _dialog_confidence(norm_speaker, cast or set())
                 current_elements.append(Element(
                     kind="dialog",
                     text=remaining,
                     speaker=norm_speaker,
                     overlap_cue=overlap_cue,
+                    confidence=conf,
+                    reason=reason,
                 ))
 
         elif role == "parenthetical":
@@ -1809,6 +1845,9 @@ def _mark_single_occurrence_confidence(script: Script) -> None:
             if el.kind in ("dialog", "parenthetical") and el.speaker:
                 if counts.get(el.speaker, 0) == 1 and el.speaker not in known:
                     el.confidence = min(el.confidence, 0.7)
+                    if el.reason is None:
+                        el.reason = (f"“{el.speaker}” speaks only once — "
+                                     "check this is the right character.")
 
 
 def _finalise(script: Script) -> Script:
