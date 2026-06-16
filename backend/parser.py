@@ -701,12 +701,18 @@ def _infer_layout_profile(
 
 
 # Universal non-name words that look like cues (ALL-CAPS, short) but are scene
-# beats / time-of-day markers, never characters. Kept small and format-agnostic.
+# beats / time-of-day markers / screenplay production markers, never characters.
+# Kept format-agnostic. Matched on the normalized cue name (parens stripped).
 _NON_CAST_WORDS = frozenset({
+    # stage / time beats
     "PAUSE", "BEAT", "SILENCE", "BLACKOUT", "INTERMISSION", "INTERVAL",
     "NIGHT", "DAY", "MORNING", "AFTERNOON", "EVENING", "DAWN", "DUSK", "NOON",
     "MIDNIGHT", "LATER", "CONTINUOUS", "MOMENTS", "SIMULTANEOUSLY", "END",
     "CURTAIN", "PROLOGUE", "EPILOGUE", "OK",
+    # screenplay production / revision markers (common in shooting scripts)
+    "CONTINUED", "OMITTED", "INSERT", "INTERCUT", "INTERCUTTING", "MONTAGE",
+    "FLASHBACK", "FLASHFORWARD", "BACK TO SCENE", "SERIES OF SHOTS",
+    "TITLE", "SUPER", "CARD", "THE END", "FADE IN", "FADE OUT",
 })
 
 # A clean cue name is ALL-CAPS letters with only spaces / . / ' / - between them
@@ -731,12 +737,31 @@ class DocumentModel:
     cast: Set[str]                 # confident cast: names seen as a cue >= 2 times
     cue_columns: List[float]       # dense x-buckets where cast cues cluster
     dialog_columns: List[float]    # dense x-buckets where dialog follows cast cues
+    furniture: Set[str]            # exact texts that repeat across many pages =
+                                   # watermarks / headers / footers / draft stamps /
+                                   # (CONTINUED) / OMITTED — page furniture, never voiced
 
     def is_cast(self, name: Optional[str]) -> bool:
         return bool(name) and name in self.cast
 
     def near_cue_column(self, x: float) -> bool:
         return any(abs(x - c) <= _X_TOLERANCE for c in self.cue_columns)
+
+    def near_dialog_column(self, x: float) -> bool:
+        return any(abs(x - c) <= _X_TOLERANCE for c in self.dialog_columns)
+
+    def is_furniture(self, block: "TextBlock") -> bool:
+        """A block is page furniture only if its exact text repeats across many
+        pages AND it sits OUTSIDE the text body — i.e. not in a dialog column and
+        not in a cue column. This is the margin/gutter where watermarks, running
+        headers/footers, page numbers and "(CONTINUED)" live. Body text (dialog,
+        cues, and stage directions that share the cue column like "Pause.") is in
+        a column and is therefore never treated as furniture, even when a short
+        line like "What?" or "Yeah." recurs on many pages. Production markers that
+        sit AT a cue column (OMITTED, CONTINUED:) are handled by the cue stoplist."""
+        return (block.text.strip() in self.furniture
+                and not self.near_dialog_column(block.x0)
+                and not self.near_cue_column(block.x0))
 
 
 def _cue_candidate_name(block: TextBlock) -> Optional[str]:
@@ -804,6 +829,28 @@ def _build_document_model(blocks: List[TextBlock], page_width: float = 612.0) ->
     cue_columns = _dense_buckets(cue_xs, total_cues)
     dialog_columns = _dense_buckets(dialog_xs, total_cues)
 
+    # Page furniture: exact texts that repeat across many distinct pages — the
+    # defining property of watermarks, running headers/footers, draft/revision
+    # stamps, "(CONTINUED)", "OMITTED", etc. A name that normalizes to a cast
+    # member (e.g. "BECKY (O.S.)") is NOT furniture even though cues recur on many
+    # pages. The dialog-column exclusion (applied at classify time) protects any
+    # repeated dialog refrain.
+    pages_by_text: Dict[str, Set[int]] = defaultdict(set)
+    for block in blocks:
+        t = block.text.strip()
+        if t:
+            pages_by_text[t].add(block.page)
+    n_pages = max((b.page for b in blocks), default=0) + 1
+    furniture_threshold = max(5, int(0.05 * n_pages))
+    furniture: Set[str] = set()
+    for text, pages in pages_by_text.items():
+        if len(pages) < furniture_threshold:
+            continue
+        norm = _normalize_speaker(text).rstrip(".:,").strip()
+        if norm in cast:
+            continue  # recurring cast cue, not furniture
+        furniture.add(text)
+
     profile = _infer_layout_profile(
         blocks, page_width=page_width,
         exclude_stage_dir_cols=tuple(dialog_columns),
@@ -814,6 +861,7 @@ def _build_document_model(blocks: List[TextBlock], page_width: float = 612.0) ->
         cast=cast,
         cue_columns=cue_columns,
         dialog_columns=dialog_columns,
+        furniture=furniture,
     )
 
 
@@ -1203,6 +1251,15 @@ def _classify_blocks(
             result.append(ClassifiedBlock(block=block, role="noise"))
             continue
 
+        # Page furniture: exact text repeating across many pages, off the dialog
+        # column — watermarks (e.g. an author name on every page), running
+        # headers/footers, draft/revision stamps, "(CONTINUED)", "OMITTED". Drop
+        # it so it is never voiced, regardless of how it would otherwise score.
+        # This is what makes watermarked screenplays reliable.
+        if model.is_furniture(block):
+            result.append(ClassifiedBlock(block=block, role="noise"))
+            continue
+
         # "SPEAKER (stage direction)" cue blocks — bypass Phase 1 scoring entirely.
         # _split_raw_block already separated the cue from the dialog tail; here we
         # just need to extract the speaker name and promote the block to speaker_cue.
@@ -1284,10 +1341,11 @@ def _classify_blocks(
                     result.append(ClassifiedBlock(block=block, role="stage_direction"))
                 else:
                     speaker = _normalize_speaker(text).rstrip(".:,")
-                    if not speaker:
+                    if not speaker or speaker in _NON_CAST_WORDS:
                         # Normalization stripped everything (e.g. "(CONTINUED:)" or
-                        # "(MORE)" page-continuation markers).  Treat as noise and
-                        # preserve pending_speaker so the speech continues correctly.
+                        # "(MORE)"), or the "cue" is a production/beat marker
+                        # (OMITTED, CONTINUED, INSERT…). Treat as noise and preserve
+                        # pending_speaker so the speech continues correctly.
                         result.append(ClassifiedBlock(block=block, role="noise"))
                     else:
                         pending_speaker = speaker

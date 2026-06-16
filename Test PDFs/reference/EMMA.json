@@ -1254,11 +1254,6 @@
           "sig": "Ppjtm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
-        },
-        {
           "kind": "dialog",
           "speaker": "EMMA",
           "sig": "HiamiashmasoAidnthaTWMtds"
@@ -2359,11 +2354,6 @@
           "kind": "dialog",
           "speaker": "KNIGHTLEY",
           "sig": "TgicpauiauﬂtYatahoritwWcHScPbtachtRM"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "parenthetical",
@@ -5603,11 +5593,6 @@
           "sig": "OC(lcthttdTtld"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
-        },
-        {
           "kind": "dialog",
           "speaker": "EMMA",
           "sig": "S(chtUS"
@@ -5788,11 +5773,6 @@
           "sig": "WitmwmAhwwgColfppctmabaciew—yaIfAIfiraiarLInauaiamsomsf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
-        },
-        {
           "kind": "dialog",
           "speaker": "EMMA",
           "sig": "—miIhptwIo"
@@ -5861,11 +5841,6 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Iaaar"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "parenthetical",
@@ -6940,11 +6915,6 @@
           "sig": "MKcmhlls"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
-        },
-        {
           "kind": "dialog",
           "speaker": "MRS. WESTON",
           "sig": "Twywi“Vh"
@@ -7654,11 +7624,6 @@
           "kind": "dialog",
           "speaker": "MISS BATES",
           "sig": "OJdsmtbhaMKtIrfnosni—Istthmt(hhtYkrrart"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "dialog",
@@ -8535,11 +8500,6 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "B"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "Wtd"
         },
         {
@@ -9227,11 +9187,6 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HkhIabo"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "parenthetical",

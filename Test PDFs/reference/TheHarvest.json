@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "TheHarvest(3.0).pdf",
-    "generated": "2026-06-14",
+    "generated": "2026-06-15",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "THE HARVEST",
@@ -1062,17 +1062,6 @@
           "sig": "“mittwiassttsyhtwir"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
-        }
-      ]
-    },
-    {
-      "number": 3,
-      "title": "THREE DAYS TO DEPARTURE (part 3)",
-      "elements": [
-        {
           "kind": "dialog",
           "speaker": "MICHAELA",
           "sig": "M((rW"
@@ -1091,7 +1080,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "JghalP"
-        },
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "THREE DAYS TO DEPARTURE (part 3)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "MICHAELA",
@@ -1621,13 +1616,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "JlaTTdlb"
-        }
-      ]
-    },
-    {
-      "number": 4,
-      "title": "THREE DAYS TO DEPARTURE (part 4)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -1637,11 +1626,6 @@
           "kind": "dialog",
           "speaker": "ADA",
           "sig": "HtttktigtssocbwatgoIamiflitHwftptcth"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
         },
         {
           "kind": "dialog",
@@ -1752,7 +1736,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PAtadfhSc"
-        },
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "THREE DAYS TO DEPARTURE (part 4)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "MARCUS",
@@ -2167,13 +2157,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "P"
-        }
-      ]
-    },
-    {
-      "number": 5,
-      "title": "THREE DAYS TO DEPARTURE (part 5)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -2328,7 +2312,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PTTboHlafJ"
-        },
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "THREE DAYS TO DEPARTURE (part 5)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "JOSH",
@@ -2768,13 +2758,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PMsdJritk"
-        }
-      ]
-    },
-    {
-      "number": 6,
-      "title": "THREE DAYS TO DEPARTURE (part 6)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "MICHAELA",
@@ -2939,7 +2923,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TsaeoUs"
-        },
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "THREE DAYS TO DEPARTURE (part 6)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -3184,11 +3174,6 @@
           "kind": "dialog",
           "speaker": "MICHAELA",
           "sig": "NiwIsonaCWhfhbsadptmfyfytwtwt"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
         },
         {
           "kind": "dialog",
@@ -3555,11 +3540,6 @@
           "kind": "dialog",
           "speaker": "ADA",
           "sig": "OygwltghltbgfBahhtaykLIcdiIlTTfyTfAylhHsolthotoothdatdsitmoitc"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
         },
         {
           "kind": "dialog",
@@ -4915,11 +4895,6 @@
           "sig": "TcwstapbtNiWWTahdhaloatiotltocaapaacaeVAhwtpftiatpioitrfatgap"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
-        },
-        {
           "kind": "dialog",
           "speaker": "TOM",
           "sig": "T(AIsrtaiabiapltawtm"
@@ -6147,11 +6122,6 @@
           "sig": "Imltstytrsurwynitptymotswywot"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
-        },
-        {
           "kind": "dialog",
           "speaker": "JOSH",
           "sig": "J(IgIjflwIwfSllsowstlmktIdtrtttiwIntstromld"
@@ -6962,11 +6932,6 @@
           "kind": "dialog",
           "speaker": "JOSH",
           "sig": "HehbtbytlySwgpytHhsawtmfwmemImittobIcwihaHsitbwotksawmaIbwotcsohuCBo"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
         },
         {
           "kind": "dialog",

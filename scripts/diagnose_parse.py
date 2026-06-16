@@ -50,13 +50,17 @@ def main() -> None:
     blocks = p._merge_open_parentheticals(blocks)
     print(f"  {len(blocks)} blocks extracted")
 
-    # --- Infer layout profile ---
+    # --- Build the document model (cast lexicon + columns + layout profile) ---
     page_widths = [b.x1 for b in blocks if b.x1 > 200]
     page_width = max(page_widths) + 90.0 if page_widths else 612.0
-    profile = p._infer_layout_profile(blocks, page_width=page_width)
+    model = p._build_document_model(blocks, page_width=page_width)
+    profile = model.profile
     print(f"  Profile: speaker_x={profile.speaker_x:.0f}  dialog_x={profile.dialog_x:.0f}  "
           f"stage_dir_x={profile.stage_dir_x if profile.stage_dir_x is None else round(profile.stage_dir_x)}  "
           f"split_layout={profile.is_split_layout}")
+    top_cast = sorted(model.cast, key=lambda n: -model.cast_lexicon[n])
+    print(f"  Cast ({len(model.cast)}): " + ", ".join(f"{n}({model.cast_lexicon[n]})" for n in top_cast[:16]))
+    print(f"  cue_columns={model.cue_columns}  dialog_columns={model.dialog_columns}")
 
     if args.profile:
         bucket_counts = Counter(round(b.x0 / 5) * 5 for b in blocks)
@@ -67,7 +71,7 @@ def main() -> None:
     print()
 
     # --- Classify ---
-    classified = p._classify_blocks(blocks, profile)
+    classified = p._classify_blocks(blocks, model)
     if args.page is not None:
         classified = [cb for cb in classified if cb.block.page == args.page]
         print(f"Filtered to page {args.page}: {len(classified)} blocks\n")
