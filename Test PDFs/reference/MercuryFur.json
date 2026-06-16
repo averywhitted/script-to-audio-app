@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "Mercury Fur-13 f Draft-June 10-2013.pdf",
-    "generated": "2026-06-15",
+    "generated": "2026-06-16",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "MERCURY FUR",
@@ -11,7 +11,6 @@
     "NAZ",
     "LOLA",
     "PARTY PIECE",
-    "ELLIOT AND DARREN",
     "SPINX",
     "DUCHESS",
     "PARTY GUEST"
@@ -6439,8 +6438,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "ELLIOT AND DARREN",
-          "sig": "S"
+          "speaker": "ELLIOT",
+          "sig": "S",
+          "overlap_cue": [
+            "ELLIOT",
+            "DARREN"
+          ]
         },
         {
           "kind": "stage_direction",

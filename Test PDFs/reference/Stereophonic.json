@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "4.10.24_Stereophonic (2).pdf",
-    "generated": "2026-06-15",
+    "generated": "2026-06-16",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "S T E R E O P",
@@ -14,9 +14,7 @@
     "CHARLIE",
     "PETER",
     "REG",
-    "REG & SIMON",
-    "SHORT PAUSE",
-    "PETER AND DIANA AND HOLLY"
+    "SHORT PAUSE"
   ],
   "scenes": [
     {
@@ -1788,8 +1786,12 @@
         },
         {
           "kind": "dialog",
-          "speaker": "REG & SIMON",
-          "sig": "“yfsoe"
+          "speaker": "REG",
+          "sig": "“yfsoe",
+          "overlap_cue": [
+            "REG",
+            "SIMON"
+          ]
         },
         {
           "kind": "stage_direction",
@@ -7662,8 +7664,13 @@
         },
         {
           "kind": "dialog",
-          "speaker": "PETER AND DIANA AND HOLLY",
-          "sig": "TftsG(tGisfg"
+          "speaker": "PETER",
+          "sig": "TftsG(tGisfg",
+          "overlap_cue": [
+            "PETER",
+            "DIANA",
+            "HOLLY"
+          ]
         },
         {
           "kind": "dialog",

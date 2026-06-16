@@ -1458,6 +1458,28 @@ def _dialog_confidence(speaker: Optional[str], cast: Set[str]) -> Tuple[float, O
     return 1.0, None
 
 
+_GROUP_CUE_SEP_RE = re.compile(r"\s*(?:&|,|\bAND\b)\s*", re.IGNORECASE)
+
+
+def _split_group_cue(speaker: str, cast: Set[str]) -> Optional[List[str]]:
+    """Split a simultaneous/unison cue into its members, else None.
+
+    " / "-separated cues keep their existing behavior (split unconditionally —
+    this is the established slash-overlap format). "&" / "," / "and"-separated
+    cues ("SALLY & EVELYN", "BOWZIE, TONY, & SALLY", "SALLY AND TONY") are split
+    only when every member is a known cast name, so ordinary names are never
+    accidentally torn apart.
+    """
+    if " / " in speaker:
+        parts = [s.strip() for s in speaker.split(" / ") if s.strip()]
+        if len(parts) >= 2:
+            return parts
+    parts = [s.strip() for s in _GROUP_CUE_SEP_RE.split(speaker) if s.strip()]
+    if len(parts) >= 2 and cast and all(s in cast for s in parts):
+        return parts
+    return None
+
+
 def _build_script_from_blocks(
     classified: List[ClassifiedBlock],
     title: str,
@@ -1535,14 +1557,14 @@ def _build_script_from_blocks(
             continue
 
         if role == "dialog":
-            # Handle overlap cues (e.g. "ADA / TOM / DENISE")
+            # Handle simultaneous/unison cues — "ADA / TOM / DENISE", but also
+            # "SALLY & EVELYN" / "BOWZIE, TONY, & SALLY" (members must be cast).
             speaker = cb.speaker or ""
             overlap_cue: Optional[List[str]] = None
-            if " / " in speaker:
-                parts = [p.strip() for p in speaker.split(" / ") if p.strip()]
-                if len(parts) >= 2:
-                    overlap_cue = parts
-                    speaker = parts[0]
+            parts = _split_group_cue(speaker, cast or set())
+            if parts:
+                overlap_cue = parts
+                speaker = parts[0]
             norm_speaker = _normalize_speaker(speaker)
             # Peel off any leading parentheticals like "(He sighs.) I think..."
             # before emitting the dialog proper.
