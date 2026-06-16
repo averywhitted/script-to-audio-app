@@ -81,17 +81,24 @@ final class PythonBridge {
             fm.fileExists(atPath: url.appendingPathComponent(workerRelative).path)
         }
 
-        // 1. Path baked into Info.plist at build time via $(SRCROOT)/..
-        //    Covers Xcode Debug/Release builds where the executable is in DerivedData.
-        //    Trust it unconditionally — calling valid() would touch ~/Documents and
-        //    trigger a TCC prompt on first launch.
-        if let baked = Bundle.main.infoDictionary?["TRRepoRoot"] as? String {
-            return URL(fileURLWithPath: baked).standardizedFileURL
+        // 1. Path baked into Info.plist at build time via $(SRCROOT).
+        //    Points at the developer's source tree, so a build run from Xcode uses
+        //    the LIVE backend (no rebuild needed for parser edits). It MUST be
+        //    validated: on any other machine the developer's path does not exist,
+        //    and trusting it blindly was exactly why a distributed .app could not
+        //    find the worker. When it is invalid we fall through to the bundled copy
+        //    below. (On the dev machine the path is real, so the existence check is
+        //    cheap and needs no access the app does not already have to read scripts.)
+        if let baked = Bundle.main.infoDictionary?["TRRepoRoot"] as? String,
+           !baked.isEmpty {
+            let url = URL(fileURLWithPath: baked).standardizedFileURL
+            if valid(url) { return url }
         }
 
-        // 2. Bundled inside a .app (packaged distribution)
-        // audio_worker.py lives at Contents/Resources/backend/audio_worker.py
-        // We want Contents/Resources/ so that backend/audio_worker.py resolves correctly.
+        // 2. Bundled inside a .app (packaged distribution) — the fallback that makes
+        //    distributed builds work on machines without the developer's source tree.
+        //    audio_worker.py lives at Contents/Resources/backend/audio_worker.py;
+        //    return Contents/Resources/ so backend/audio_worker.py resolves correctly.
         if let bundleURL = Bundle.main.url(forResource: "audio_worker", withExtension: "py") {
             let candidate = bundleURL
                 .deletingLastPathComponent()   // → .../backend/
