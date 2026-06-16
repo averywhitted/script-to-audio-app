@@ -713,12 +713,25 @@ _NON_CAST_WORDS = frozenset({
     "CONTINUED", "OMITTED", "INSERT", "INTERCUT", "INTERCUTTING", "MONTAGE",
     "FLASHBACK", "FLASHFORWARD", "BACK TO SCENE", "SERIES OF SHOTS",
     "TITLE", "SUPER", "CARD", "THE END", "FADE IN", "FADE OUT",
+    # unambiguous front-matter section headers (never character names). Note:
+    # front-matter trimming itself does NOT rely on this list — it keys off the
+    # learned cast (the first cue whose name actually recurs) — so locational/
+    # temporal labels like TIME/PLACE/SPACE are deliberately NOT listed here
+    # (they could be real character names in an abstract play, and the cast-based
+    # trim drops them anyway).
+    "CHARACTERS", "CHARACTER", "CAST", "CAST OF CHARACTERS", "DRAMATIS PERSONAE",
+    "SYNOPSIS",
 })
 
 # A clean cue name is ALL-CAPS letters with only spaces / . / ' / - between them
 # (e.g. "MRS. WESTON", "KARAOKE STEVE", "JEAN-PAUL"). This rejects dialog fragments
 # like "I-", "I…", "EMMA!" that otherwise pass the loose cue test.
 _CLEAN_CUE_NAME_RE = re.compile(r"^[A-Z][A-Z0-9 .'\-]*$")
+
+# Max vertical spread (pt) for a repeated text to count as "pinned" page furniture.
+# Half an inch tolerates minor per-page drift while excluding body text, which
+# varies in y by hundreds of points across the pages it recurs on.
+_FURNITURE_Y_PIN_TOL = 36.0
 
 
 @dataclass
@@ -751,17 +764,15 @@ class DocumentModel:
         return any(abs(x - c) <= _X_TOLERANCE for c in self.dialog_columns)
 
     def is_furniture(self, block: "TextBlock") -> bool:
-        """A block is page furniture only if its exact text repeats across many
-        pages AND it sits OUTSIDE the text body — i.e. not in a dialog column and
-        not in a cue column. This is the margin/gutter where watermarks, running
-        headers/footers, page numbers and "(CONTINUED)" live. Body text (dialog,
-        cues, and stage directions that share the cue column like "Pause.") is in
-        a column and is therefore never treated as furniture, even when a short
-        line like "What?" or "Yeah." recurs on many pages. Production markers that
-        sit AT a cue column (OMITTED, CONTINUED:) are handled by the cue stoplist."""
-        return (block.text.strip() in self.furniture
-                and not self.near_dialog_column(block.x0)
-                and not self.near_cue_column(block.x0))
+        """A block is page furniture if its exact text is in the furniture set —
+        text that repeats across many pages pinned to a fixed vertical position
+        (running headers/footers, watermarks, page numbers, "(CONTINUED)"). The
+        y-pinning test (applied when the set is built) is what separates furniture
+        from body text that merely recurs: a header sits at the same y on every
+        page, whereas a repeated dialog line ("What?") or stage direction
+        ("Pause.") appears at varying y. Production markers at a cue column
+        (OMITTED, CONTINUED:) are handled separately by the cue stoplist."""
+        return block.text.strip() in self.furniture
 
 
 def _cue_candidate_name(block: TextBlock) -> Optional[str]:
@@ -829,17 +840,22 @@ def _build_document_model(blocks: List[TextBlock], page_width: float = 612.0) ->
     cue_columns = _dense_buckets(cue_xs, total_cues)
     dialog_columns = _dense_buckets(dialog_xs, total_cues)
 
-    # Page furniture: exact texts that repeat across many distinct pages — the
-    # defining property of watermarks, running headers/footers, draft/revision
-    # stamps, "(CONTINUED)", "OMITTED", etc. A name that normalizes to a cast
-    # member (e.g. "BECKY (O.S.)") is NOT furniture even though cues recur on many
-    # pages. The dialog-column exclusion (applied at classify time) protects any
-    # repeated dialog refrain.
+    # Page furniture: exact texts that repeat across many distinct pages AND are
+    # "pinned" to a fixed vertical position on each page — the defining property
+    # of watermarks, running headers/footers, page numbers, draft/revision stamps
+    # and "(CONTINUED)". A running header left-aligned at the body margin sits at
+    # the dialog x, so position-x cannot identify it — but it appears at the SAME
+    # y on every page, whereas body text that merely recurs ("What?", "Pause.")
+    # appears at VARYING y. y-pinning is therefore the robust discriminator. A
+    # name that normalizes to a cast member (e.g. "BECKY (O.S.)") is never
+    # furniture even though cues recur on many pages.
     pages_by_text: Dict[str, Set[int]] = defaultdict(set)
+    ys_by_text: Dict[str, List[float]] = defaultdict(list)
     for block in blocks:
         t = block.text.strip()
         if t:
             pages_by_text[t].add(block.page)
+            ys_by_text[t].append(block.y0)
     n_pages = max((b.page for b in blocks), default=0) + 1
     furniture_threshold = max(5, int(0.05 * n_pages))
     furniture: Set[str] = set()
@@ -849,7 +865,9 @@ def _build_document_model(blocks: List[TextBlock], page_width: float = 612.0) ->
         norm = _normalize_speaker(text).rstrip(".:,").strip()
         if norm in cast:
             continue  # recurring cast cue, not furniture
-        furniture.add(text)
+        ys = ys_by_text[text]
+        if max(ys) - min(ys) <= _FURNITURE_Y_PIN_TOL:
+            furniture.add(text)
 
     profile = _infer_layout_profile(
         blocks, page_width=page_width,
@@ -1411,6 +1429,7 @@ def _build_script_from_blocks(
     classified: List[ClassifiedBlock],
     title: str,
     config: Optional[dict] = None,
+    cast: Optional[Set[str]] = None,
 ) -> Script:
     """Assemble a Script from classified blocks.
 
@@ -1430,14 +1449,37 @@ def _build_script_from_blocks(
                                 elements=list(current_elements)))
         current_elements.clear()
 
-    # If scene headings exist, drop all content before the first heading to
-    # remove front-matter contamination (title pages, cast lists, etc.).
+    # Drop front-matter contamination (title page, author, agent, dedication,
+    # cast list, production photos). Dialogue cannot begin before the first
+    # speaker cue, so everything before the start of the play is front matter:
+    #   • With scene headings → start at the first heading (keeps the heading).
+    #   • Without headings → start at the first speaker cue (a heading-less play
+    #     like Mercury Fur / None of Us / Too Heavy otherwise dumps its whole
+    #     title page into Scene 1). The opening stage direction immediately before
+    #     the first cue is sacrificed — a small price for not voicing an agent's
+    #     phone number and a cast list.
     has_headings = any(cb.role == "scene_heading" for cb in classified)
     if has_headings:
         first_idx = next(i for i, cb in enumerate(classified) if cb.role == "scene_heading")
         classified = classified[first_idx:]
     else:
         scene_number = 1  # no headings → everything goes into one scene
+        # Start at the first cue for a *recurring cast member*. Front-matter
+        # section headers ("CHARACTERS", "TIME", "PLACE", "SPACE") get detected as
+        # one-off cues but never recur, so they are not in the cast — keying off
+        # the learned cast trims the whole title/cast page without a hand-list of
+        # header words. Fall back to the first cue of any kind if cast is unknown.
+        cast = cast or set()
+        first_cue = next(
+            (i for i, cb in enumerate(classified)
+             if cb.role == "speaker_cue" and cb.speaker in cast),
+            None,
+        )
+        if first_cue is None:
+            first_cue = next((i for i, cb in enumerate(classified)
+                              if cb.role == "speaker_cue"), None)
+        if first_cue is not None:
+            classified = classified[first_cue:]
 
     for cb in classified:
         role = cb.role
@@ -1563,7 +1605,7 @@ def _block_parse(pdf_path: str, title: str, config: Optional[dict]) -> Script:
                  len(model.cast), model.cue_columns, model.dialog_columns, top_cast[:20])
 
     classified = _classify_blocks(blocks, model)
-    result = _build_script_from_blocks(classified, title=title, config=config)
+    result = _build_script_from_blocks(classified, title=title, config=config, cast=model.cast)
     scene_count = len(result.scenes) if result else 0
     print(f"[parser] BLOCK PARSE OK — {len(blocks)} blocks, {scene_count} scenes, "
           f"speaker_x={profile.speaker_x:.0f} dialog_x={profile.dialog_x:.0f}",

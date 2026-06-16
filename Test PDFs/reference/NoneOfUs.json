@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "5.0 None of Us Are Getting Out of This Alive (2).pdf",
-    "generated": "2026-06-14",
+    "generated": "2026-06-15",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "None of Us Are Getting Out of This Alive.",
@@ -16,91 +16,6 @@
       "number": 1,
       "title": "Scene 1",
       "elements": [
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "NoUAGOoTA"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "bKK"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "k"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "CHARACTERS",
-          "sig": "A3aerrel"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "CHARACTERS",
-          "sig": "E4aeppuel"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "CHARACTERS",
-          "sig": "N4aesbnoel"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "CHARACTERS",
-          "sig": "KSpbtsaaN"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "SETTING",
-          "sig": "PdsbCOaLK"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "SETTING",
-          "sig": "Aatpotcosw"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "NOTES ON DIALOGUE",
-          "sig": "A/sittiao"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "NOTES ON DIALOGUE",
-          "sig": "Ti(sbv"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "NOTES ON DIALOGUE",
-          "sig": "A…eittiawpEtss"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "NOTE ON MUSIC",
-          "sig": "TiaswitsbtbtIknagrttkotIahotSDhiwssawissIwtsIdcwsicftmIwliiiwtsIintsisbastiirp(fiatbaisArufmw“bTS"
-        },
-        {
-          "kind": "dialog",
-          "speaker": "NOTE ON MUSIC",
-          "sig": "B"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "AalbidwsassluosaapbvTgofafrtwsbiabob"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "StpsuaTtwsafsAoebtawmottfiibStafttrottbpsusHfibiaslatpsawshsasrtcIWaufamwswatpoliroOwwcopitlrstabaptptheTtfpcActablo"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "NNsbpbaaotamoaauoWnshf"
-        },
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -810,13 +725,7 @@
           "kind": "dialog",
           "speaker": "NATHAN",
           "sig": "Ints"
-        }
-      ]
-    },
-    {
-      "number": 2,
-      "title": "Scene 1 (part 2)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -871,7 +780,13 @@
           "kind": "dialog",
           "speaker": "NATHAN",
           "sig": "AwahYwthh"
-        },
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Scene 1 (part 2)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -1256,13 +1171,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "AlbottEsaah"
-        }
-      ]
-    },
-    {
-      "number": 3,
-      "title": "Scene 1 (part 3)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "AVA",
@@ -1322,7 +1231,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "AphhitsateotcEfasmuAgnhaAibimu"
-        },
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Scene 1 (part 3)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "ELEANOR",
