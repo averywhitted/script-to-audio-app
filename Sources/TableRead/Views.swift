@@ -5,7 +5,7 @@ import AppKit
 // When the full speaker list is provided, uses a golden-angle hue wheel so no
 // two speakers ever share a color regardless of cast size. Falls back to a
 // fixed-palette hash only when the list is unavailable.
-private func speakerColor(_ speaker: String, in allSpeakers: [String] = []) -> Color {
+func speakerColor(_ speaker: String, in allSpeakers: [String] = []) -> Color {
     let sorted = allSpeakers.isEmpty ? [] : allSpeakers.sorted()
 
     // Resolve the speaker's position in the sorted list.
@@ -1012,6 +1012,14 @@ struct GenerateView: View {
                         Text(idleCaption).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
+                    if !state.isGenerating && state.sceneFileInfo.values.contains(where: { $0.exists }) {
+                        Button { state.isShowingPlayer = true } label: {
+                            Label("Listen", systemImage: "play.circle")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.accentColor)
+                    }
                     if state.isGenerating {
                         Button {
                             if state.isPaused { state.resumeGeneration() }
@@ -1325,6 +1333,15 @@ private struct GenerationCompletePanel: View {
 
                 // Actions
                 VStack(spacing: 10) {
+                    Button {
+                        state.isShowingPlayer = true
+                    } label: {
+                        Label("Listen", systemImage: "play.circle.fill")
+                            .frame(minWidth: 260)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+
                     if let dir = outputDir {
                         Button {
                             NSWorkspace.shared.open(dir)
@@ -1332,7 +1349,7 @@ private struct GenerationCompletePanel: View {
                             Label("Open Output in Finder", systemImage: "folder.fill")
                                 .frame(minWidth: 260)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.bordered)
                         .controlSize(.large)
                     }
 

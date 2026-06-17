@@ -10,6 +10,7 @@ extension Notification.Name {
 struct ContentView: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var projectStore: ProjectStore
+    @StateObject private var playerState = PlayerState()
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @State private var showOnboarding  = false
     @State private var showBugReport   = false
@@ -63,6 +64,14 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .showUpdateSheet)) { _ in
             showUpdateSheet = true
+        }
+        .sheet(isPresented: $state.isShowingPlayer, onDismiss: { playerState.pause() }) {
+            PlayerView()
+                .environmentObject(state)
+                .environmentObject(playerState)
+        }
+        .onChange(of: state.isShowingPlayer) { _, showing in
+            if showing { playerState.load(from: state) }
         }
         // Auto-prompt once per launch when an update is detected
         .onChange(of: state.availableUpdate) { update in
