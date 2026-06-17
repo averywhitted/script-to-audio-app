@@ -21,6 +21,8 @@ The pipeline emits progress callbacks so the GUI can update.
 from __future__ import annotations
 
 import array
+import datetime
+import json
 import os
 import re
 import shutil
@@ -29,7 +31,7 @@ import subprocess
 import tempfile
 import wave
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 from parser import Element, Scene, Script
 from tts_engines import TTSEngine, TTSFatalError
@@ -65,8 +67,19 @@ class GenerationProgress:
 class GenerationResult:
     output_dir: str
     files: List[str] = field(default_factory=list)
+    cue_files: List[str] = field(default_factory=list)
     skipped_scenes: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
+
+
+@dataclass
+class CueEntry:
+    index: int
+    kind: str
+    speaker: str
+    text: str
+    start_time: float
+    end_time: float
 
 
 @dataclass
@@ -217,6 +230,33 @@ def scene_filename(scene: Scene, ext: str = "m4a") -> str:
     return f"Scene_{scene.number:02d}_{_sanitize_filename_part(scene.title)}.{ext}"
 
 
+def _write_cue_map(path: str, scene: Scene, cues: List[CueEntry], total_frames: int) -> None:
+    """Write per-element timing data as a JSON sidecar alongside the M4A."""
+    total_duration = round(total_frames / PCM_SAMPLE_RATE, 4)
+    data = {
+        "schemaVersion": 1,
+        "sceneNumber": scene.number,
+        "sceneTitle": scene.title,
+        "generatedAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "totalDuration": total_duration,
+        "cues": [
+            {
+                "index": c.index,
+                "kind": c.kind,
+                "speaker": c.speaker,
+                "text": c.text,
+                "startTime": c.start_time,
+                "endTime": c.end_time,
+            }
+            for c in cues
+        ],
+    }
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
+
 # ---------------------------------------------------------------------------
 # Driver
 # ---------------------------------------------------------------------------
@@ -232,15 +272,22 @@ def generate_scene(
     scene_index: int = 0,
     total_scenes: int = 1,
     cancel_check: Optional[Callable[[], bool]] = None,
+    cue_cb: Optional[Callable[[int, str], None]] = None,
 ) -> Optional[str]:
     """Render one scene to a single M4A file. Returns the output path, or
-    None if the scene had no audible content (and therefore no file)."""
+    None if the scene had no audible content (and therefore no file).
+    If cue_cb is provided, it is called with (scene_number, cue_path) after
+    the .cues.json sidecar is written."""
     elements = [e for e in scene.elements if e.text.strip()]
     if not elements:
         return None
 
     os.makedirs(work_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
+
+    cue_entries: List[CueEntry] = []
+    cue_idx = 0
+    total_frames_written = 0
 
     combined_wav = os.path.join(work_dir, f"scene_{scene.number:02d}_combined.wav")
     writer = _open_writer(combined_wav)
@@ -315,6 +362,7 @@ def generate_scene(
             else:
                 pause = _transition_pause(previous_kind, previous_speaker, first_el)
             writer.writeframes(_silence_frames(pause))
+            audio_start_frames = writer.tell()
 
             try:
                 if chunk.overlap_voices and len(chunk.overlap_voices) >= 2:
@@ -339,6 +387,42 @@ def generate_scene(
                         f"skipped elements {chunk.start_index}-{chunk.end_index}: {e}"
                     ))
 
+            audio_end_frames = writer.tell()
+            if audio_end_frames > audio_start_frames:
+                audio_start = audio_start_frames / PCM_SAMPLE_RATE
+                audio_end = audio_end_frames / PCM_SAMPLE_RATE
+                chunk_elements = elements[chunk.start_index : chunk.end_index + 1]
+                if len(chunk_elements) == 1:
+                    el = chunk_elements[0]
+                    speaker = (
+                        "/".join(el.overlap_cue)
+                        if el.overlap_cue and len(el.overlap_cue) >= 2
+                        else (el.speaker or NARRATOR_KEY)
+                    )
+                    cue_entries.append(CueEntry(
+                        index=cue_idx, kind=el.kind, speaker=speaker,
+                        text=el.text.strip(),
+                        start_time=round(audio_start, 4), end_time=round(audio_end, 4),
+                    ))
+                    cue_idx += 1
+                else:
+                    # Multi-element merged chunk: distribute time proportionally by char count
+                    texts = [e.text.strip() for e in chunk_elements]
+                    total_chars = sum(len(t) for t in texts) or 1
+                    audio_duration = audio_end - audio_start
+                    t = audio_start
+                    for j, el in enumerate(chunk_elements):
+                        frac = len(texts[j]) / total_chars
+                        end_t = round(t + frac * audio_duration, 4)
+                        cue_entries.append(CueEntry(
+                            index=cue_idx, kind=el.kind,
+                            speaker=el.speaker or NARRATOR_KEY,
+                            text=texts[j],
+                            start_time=round(t, 4), end_time=end_t,
+                        ))
+                        t = end_t
+                        cue_idx += 1
+
             previous_speaker = first_el.speaker
             previous_kind = first_el.kind
             previous_was_overlap = current_is_overlap
@@ -354,6 +438,7 @@ def generate_scene(
 
         # Tail silence
         writer.writeframes(_silence_frames(PAUSE_AT_SCENE_END))
+        total_frames_written = writer.tell()
     finally:
         writer.close()
 
@@ -365,6 +450,17 @@ def generate_scene(
         os.remove(combined_wav)
     except OSError:
         pass
+
+    # Write per-element cue map sidecar (always, so Swift can discover it on startup)
+    if cue_entries:
+        cue_path = os.path.join(output_dir, scene_filename(scene, ext="cues.json"))
+        try:
+            _write_cue_map(cue_path, scene, cue_entries, total_frames_written)
+            if cue_cb is not None:
+                cue_cb(scene.number, cue_path)
+        except Exception:
+            pass  # cue map is optional; never fail the render over it
+
     return out_path
 
 
@@ -538,9 +634,15 @@ def generate_script(
     progress_cb: Optional[Callable[[GenerationProgress], None]] = None,
     cancel_check: Optional[Callable[[], bool]] = None,
     scene_filter: Optional[List[int]] = None,  # only render scenes whose .number is in this list
+    cue_cb: Optional[Callable[[int, str], None]] = None,  # (scene_number, cue_path)
 ) -> GenerationResult:
     os.makedirs(output_dir, exist_ok=True)
     result = GenerationResult(output_dir=output_dir)
+
+    def _scene_cue_cb(scene_number: int, cue_path: str) -> None:
+        result.cue_files.append(cue_path)
+        if cue_cb is not None:
+            cue_cb(scene_number, cue_path)
 
     target_scenes = script.scenes
     if scene_filter is not None:
@@ -561,6 +663,7 @@ def generate_script(
                     scene_index=i,
                     total_scenes=len(target_scenes),
                     cancel_check=cancel_check,
+                    cue_cb=_scene_cue_cb,
                 )
                 if path:
                     result.files.append(path)

@@ -443,6 +443,9 @@ def _generate(payload: Dict[str, Any]) -> int:
             "message": progress.message,
         })
 
+    def cue_cb(scene_number: int, cue_path: str) -> None:
+        _emit({"event": "cueMap", "sceneNumber": scene_number, "cueFilePath": cue_path})
+
     t0 = time.time()
     result = generate_script(
         script=script,
@@ -451,11 +454,13 @@ def _generate(payload: Dict[str, Any]) -> int:
         output_dir=output_dir,
         progress_cb=progress_cb,
         scene_filter=scene_numbers,
+        cue_cb=cue_cb,
     )
     _emit({
         "event": "done",
         "outputDir": result.output_dir,
         "files": result.files,
+        "cueFiles": result.cue_files,
         "errors": result.errors,
         "skippedScenes": result.skipped_scenes,
         "seconds": round(time.time() - t0, 1),

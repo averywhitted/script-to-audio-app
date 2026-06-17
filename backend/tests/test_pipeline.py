@@ -590,6 +590,38 @@ class TestFullRender:
         assert len(result.files) == 1          # only scene 2 produced a file
         assert len(result.skipped_scenes) == 1  # scene 1 was skipped
 
+    @needs_afconvert
+    def test_cue_map_written_alongside_m4a(self):
+        """generate_script writes a .cues.json sidecar next to each .m4a and
+        calls cue_cb with the scene number and path."""
+        import json as _json
+        script = _make_script(n_scenes=1)
+        assignment = auto_assign(script.characters, _VOICES)
+        engine = _StubEngine()
+        received_cues: list = []
+        with patch("audio_pipeline._synthesize_into", _silent_synthesize_into):
+            with tempfile.TemporaryDirectory() as out_dir:
+                result = generate_script(
+                    script, engine, assignment, out_dir,
+                    cue_cb=lambda sn, cp: received_cues.append((sn, cp)),
+                )
+                assert result.errors == [], f"Errors: {result.errors}"
+                assert len(result.cue_files) == 1
+                cue_path = result.cue_files[0]
+                assert Path(cue_path).exists()
+                assert cue_path.endswith(".cues.json")
+                assert received_cues == [(1, cue_path)]
+                data = _json.loads(Path(cue_path).read_text())
+        assert data["schemaVersion"] == 1
+        assert data["sceneNumber"] == 1
+        assert data["totalDuration"] > 0
+        cues = data["cues"]
+        assert len(cues) > 0
+        for c in cues:
+            assert c["startTime"] < c["endTime"]
+            assert c["endTime"] <= data["totalDuration"] + 0.01
+            assert c["speaker"] in {"ALICE", "BOB", "__NARRATOR__"}
+
 
 # ===========================================================================
 # 5. Overlap / simultaneous-speech cue detection (#33 Phase 1)
