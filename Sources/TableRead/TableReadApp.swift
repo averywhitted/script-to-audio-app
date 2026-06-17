@@ -6,12 +6,18 @@ import UserNotifications
 struct TableReadApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var state = AppState()
+    @StateObject private var projectStore = ProjectStore()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(state)
+                .environmentObject(projectStore)
                 .frame(minWidth: 1040, minHeight: 680)
+                .task {
+                    state.projectStore = projectStore
+                    appDelegate.projectStore = projectStore
+                }
         }
         .windowStyle(.titleBar)
         .commands {
@@ -162,6 +168,7 @@ struct TableReadApp: App {
         Settings {
             SettingsView()
                 .environmentObject(state)
+                .environmentObject(projectStore)
         }
     }
 }
@@ -232,11 +239,36 @@ extension TableReadApp {
 // MARK: - App Delegate
 
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    var projectStore: ProjectStore?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         // Register as delegate so notifications appear even when the app is in the foreground.
         UNUserNotificationCenter.current().delegate = self
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let store = projectStore, !store.pendingDeletion.isEmpty else {
+            return .terminateNow
+        }
+        let alert = NSAlert()
+        alert.messageText = "Delete \(store.pendingDeletion.count) project\(store.pendingDeletion.count == 1 ? "" : "s") permanently?"
+        alert.informativeText = "Projects marked for deletion will be moved to the Trash."
+        alert.addButton(withTitle: "Delete & Quit")
+        alert.addButton(withTitle: "Keep & Quit")
+        alert.addButton(withTitle: "Cancel")
+        let response = alert.runModal()
+        switch response {
+        case .alertFirstButtonReturn:
+            store.confirmDeletion()
+            return .terminateNow
+        case .alertSecondButtonReturn:
+            store.pendingDeletion = []
+            return .terminateNow
+        default:
+            return .terminateCancel
+        }
     }
 
     func applicationWillBecomeActive(_ notification: Notification) {

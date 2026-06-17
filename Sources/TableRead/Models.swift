@@ -250,6 +250,31 @@ struct GenerationEvent: Codable, Sendable {
     var seconds: Double?
     /// 0.0–1.0 download/install progress fraction; nil = indeterminate.
     var fraction: Double?
+    /// 1-based scene number; emitted with the "cueMap" event.
+    var sceneNumber: Int?
+    /// Path to the written .cues.json sidecar; emitted with the "cueMap" event.
+    var cueFilePath: String?
+}
+
+// MARK: - Cue map (lyrics-sync player)
+
+struct SceneCue: Codable, Identifiable {
+    var id: Int { index }
+    var index: Int
+    var kind: String        // "dialog" | "stage_direction" | "parenthetical"
+    var speaker: String     // "__NARRATOR__" for narration; slash-joined for overlaps
+    var text: String
+    var startTime: Double
+    var endTime: Double
+}
+
+struct SceneCueMap: Codable {
+    var schemaVersion: Int  // 1
+    var sceneNumber: Int
+    var sceneTitle: String
+    var generatedAt: Date
+    var totalDuration: Double
+    var cues: [SceneCue]
 }
 
 /// Matches NARRATOR_KEY in voice_assignment.py

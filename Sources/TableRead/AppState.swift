@@ -59,6 +59,15 @@ final class AppState: ObservableObject {
     /// Populated by checkRenderedScenes() and updated after each render.
     @Published var sceneFileInfo: [Int: SceneOutputInfo] = [:]
 
+    /// Cue map sidecar URLs, keyed by scene number. Populated during and after generation.
+    @Published var sceneCueFiles: [Int: URL] = [:]
+
+    /// Scenes that have a render on disk but whose script was edited since the last render.
+    @Published var scenesNeedingRerender: Set<Int> = []
+
+    /// Whether the integrated player sheet is showing.
+    @Published var isShowingPlayer = false
+
     // Render completion
     @Published var generationComplete = false
 
@@ -127,6 +136,12 @@ final class AppState: ObservableObject {
     private var redoStack: [AppStateSnapshot] = []
     private var undoPushSuppressCount = 0
 
+    /// Set by ProjectStore after both objects are initialized.
+    weak var projectStore: ProjectStore?
+
+    /// When non-nil, the output directory defaults to this folder (the open project's folder).
+    var currentProjectFolder: URL?
+
     let bridge = PythonBridge()
     private var previewSound: NSSound?
 
@@ -179,6 +194,7 @@ final class AppState: ObservableObject {
 
     func goTo(_ target: WorkflowStep) {
         guard canNavigate(to: target) else { return }
+        persistProjectIfNeeded()    // flush voice assignments and other in-flight state
         let steps = WorkflowStep.allCases
         let currentIdx = steps.firstIndex(of: step) ?? 0
         let targetIdx  = steps.firstIndex(of: target) ?? 0
@@ -196,8 +212,9 @@ final class AppState: ObservableObject {
 
     func importPDF(_ url: URL) {
         selectedPDF = url
-        outputDirectory = nil   // reset so the new script defaults to "next to the PDF"
+        outputDirectory = currentProjectFolder  // nil outside a project → defaults to next to PDF
         sceneFileInfo = [:]     // clear stale file-existence badges
+        sceneCueFiles = [:]
         isWorking = true
         status = "Parsing script..."
         errorMessage = nil
@@ -761,6 +778,14 @@ final class AppState: ObservableObject {
         generationComplete = false
         renderStartTime = nil
         sceneFileInfo = [:]
+        sceneCueFiles = [:]
+        scenesNeedingRerender = []
+        isShowingPlayer = false
+        currentProjectFolder = nil
+        outputDirectory = nil
+        corrections = [:]
+        sceneTitleOverrides = [:]
+        userAddedElements = [:]
         status = "Choose a PDF script to begin."
     }
 
@@ -831,6 +856,7 @@ final class AppState: ObservableObject {
                         if let message = event.message {
                             if message.hasPrefix("✓") {
                                 sceneProgress[sceneNumber] = 1.0
+                                scenesNeedingRerender.remove(sceneNumber)
                                 if notifyOnSceneComplete {
                                     let title = event.sceneTitle ?? "Scene \(sceneNumber)"
                                     sendNotification(
@@ -893,6 +919,11 @@ final class AppState: ObservableObject {
                     NSWorkspace.shared.open(dir)
                 }
             }
+        case "cueMap":
+            if let n = event.sceneNumber, let p = event.cueFilePath {
+                sceneCueFiles[n] = URL(fileURLWithPath: p)
+                scenesNeedingRerender.remove(n)
+            }
         default:
             appendLog(event.message ?? event.event, .info)
         }
@@ -904,8 +935,9 @@ final class AppState: ObservableObject {
 
     // MARK: - Helpers
 
-    private func defaultOutputDirectory(for pdf: URL) -> URL {
-        pdf.deletingLastPathComponent()
+    func defaultOutputDirectory(for pdf: URL) -> URL {
+        if let projectFolder = currentProjectFolder { return projectFolder }
+        return pdf.deletingLastPathComponent()
             .appendingPathComponent(pdf.deletingPathExtension().lastPathComponent + " - table read")
     }
 
@@ -932,16 +964,23 @@ final class AppState: ObservableObject {
         let outDir = outputDirectory ?? defaultOutputDirectory(for: pdf)
         let fm = FileManager.default
         var info: [Int: SceneOutputInfo] = [:]
+        var cueFiles: [Int: URL] = [:]
         for scene in sceneList {
             let fname = Self.sceneFilename(number: scene.number, title: scene.title)
-            let path = outDir.appendingPathComponent(fname).path
+            let cueName = fname.replacingOccurrences(of: ".m4a", with: ".cues.json")
+            let filePath = outDir.appendingPathComponent(fname)
+            let cuePath  = outDir.appendingPathComponent(cueName)
             info[scene.number] = SceneOutputInfo(
-                exists: fm.fileExists(atPath: path),
+                exists: fm.fileExists(atPath: filePath.path),
                 filename: fname,
                 title: scene.title
             )
+            if fm.fileExists(atPath: cuePath.path) {
+                cueFiles[scene.number] = cuePath
+            }
         }
         sceneFileInfo = info
+        sceneCueFiles = cueFiles
     }
 
     private func format(seconds: Double) -> String {
@@ -972,6 +1011,8 @@ extension AppState {
         )
         corrections[k] = correction
         Self.persistCorrections(corrections)
+        markSceneDirtyIfRendered(correction.sceneNumber)
+        persistProjectIfNeeded()
         // Upload in the background if the user opted in.
         Task.detached(priority: .background) { [weak self] in
             await self?.uploadPendingCorrections()
@@ -983,6 +1024,8 @@ extension AppState {
         let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: textKey)
         corrections.removeValue(forKey: k)
         Self.persistCorrections(corrections)
+        markSceneDirtyIfRendered(sceneNumber)
+        persistProjectIfNeeded()
     }
 
     func exportCorrections() -> URL? {
@@ -1073,6 +1116,7 @@ extension AppState {
         byPDF[sceneNumber] = title.isEmpty ? nil : title
         sceneTitleOverrides[pdfPath] = byPDF
         Self.persistSceneTitleOverrides(sceneTitleOverrides)
+        persistProjectIfNeeded()
     }
 
     func effectiveSceneTitle(pdfPath: String, scene: SceneSummary) -> String {
@@ -1230,6 +1274,8 @@ extension AppState {
         let key = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
         userAddedElements[key, default: []].append(el)
         Self.persistUserAddedElements(userAddedElements)
+        markSceneDirtyIfRendered(sceneNumber)
+        persistProjectIfNeeded()
     }
 
     func addElementWithContent(afterTextKey: String, speaker: String, text: String,
@@ -1245,6 +1291,8 @@ extension AppState {
         let key = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
         userAddedElements[key, default: []].append(el)
         Self.persistUserAddedElements(userAddedElements)
+        markSceneDirtyIfRendered(sceneNumber)
+        persistProjectIfNeeded()
     }
 
     /// Marks a parser-detected overlap element as noise and re-adds the surviving voice(s) as
@@ -1379,6 +1427,8 @@ extension AppState {
         userAddedElements[key]?[idx].text = text
         userAddedElements[key]?[idx].kind = kind
         Self.persistUserAddedElements(userAddedElements)
+        markSceneDirtyIfRendered(sceneNumber)
+        persistProjectIfNeeded()
     }
 
     func deleteAddedElement(id: UUID, sceneNumber: Int, pdfPath: String) {
@@ -1387,6 +1437,8 @@ extension AppState {
         userAddedElements[key]?.removeAll { $0.id == id }
         if userAddedElements[key]?.isEmpty == true { userAddedElements.removeValue(forKey: key) }
         Self.persistUserAddedElements(userAddedElements)
+        markSceneDirtyIfRendered(sceneNumber)
+        persistProjectIfNeeded()
     }
 
     /// Return parsed elements interleaved with any user-added lines, capped at `limit` parsed elements.
@@ -1552,6 +1604,53 @@ extension AppState {
                 UpdateLogger.log("downloadAndInstallUpdate: FAILED — \(error)")
                 updateDownloadState = .failed(error.localizedDescription)
             }
+        }
+    }
+}
+
+// MARK: - Project integration
+
+extension AppState {
+    /// Load state from an open project and trigger a parse of the project's PDF.
+    func loadFromProject(_ project: Project) {
+        guard let folderURL = project.folderURL,
+              let pdfURL = project.pdfURL else { return }
+        currentProjectFolder = folderURL
+        voiceAssignment = project.voiceAssignment
+        characterGenderOverrides = project.characterGenderOverrides
+        corrections = project.corrections
+        sceneTitleOverrides = project.sceneTitleOverrides
+        userAddedElements = project.userAddedElements
+        if let engine = EngineKind(rawValue: project.selectedEngine) {
+            selectedEngine = engine
+        }
+        importPDF(pdfURL)
+    }
+
+    /// Write current in-memory state back into the project struct (for saving).
+    func syncToProject(_ project: Project) -> Project {
+        var p = project
+        p.voiceAssignment = voiceAssignment
+        p.characterGenderOverrides = characterGenderOverrides
+        p.corrections = corrections
+        p.sceneTitleOverrides = sceneTitleOverrides
+        p.userAddedElements = userAddedElements
+        p.selectedEngine = selectedEngine.rawValue
+        p.renderedScenes = sceneFileInfo.compactMap { num, info in info.exists ? num : nil }.sorted()
+        if let title = script?.title, !title.isEmpty { p.scriptTitle = title }
+        return p
+    }
+
+    /// Persist state to the current project if one is open. Called after every mutation.
+    func persistProjectIfNeeded() {
+        guard let store = projectStore, store.currentProject != nil else { return }
+        store.saveCurrentProject(self)
+    }
+
+    /// Mark a rendered scene as needing a re-render because its script was edited.
+    func markSceneDirtyIfRendered(_ sceneNumber: Int) {
+        if sceneFileInfo[sceneNumber]?.exists == true {
+            scenesNeedingRerender.insert(sceneNumber)
         }
     }
 }

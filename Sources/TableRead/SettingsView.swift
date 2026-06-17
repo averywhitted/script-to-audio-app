@@ -3,6 +3,7 @@ import AppKit
 
 struct SettingsView: View {
     @EnvironmentObject private var state: AppState
+    @EnvironmentObject private var projectStore: ProjectStore
 
     var body: some View {
         TabView {
@@ -12,11 +13,15 @@ struct SettingsView: View {
             EnginesSettingsTab()
                 .tabItem { Label("Engines", systemImage: "waveform") }
 
+            ProjectsSettingsTab()
+                .tabItem { Label("Projects", systemImage: "folder") }
+
             AboutTab()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 520, height: 520)
         .environmentObject(state)
+        .environmentObject(projectStore)
     }
 }
 
@@ -399,6 +404,55 @@ private struct EngineManagementRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Projects tab
+
+private struct ProjectsSettingsTab: View {
+    @EnvironmentObject private var projectStore: ProjectStore
+    @State private var isChoosingFolder = false
+
+    var body: some View {
+        Form {
+            Section {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(projectStore.projectsBaseURL.lastPathComponent)
+                                .font(.callout.weight(.medium))
+                            Text(projectStore.projectsBaseURL.deletingLastPathComponent().path)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        Spacer()
+                        Button("Change…") { isChoosingFolder = true }
+                            .buttonStyle(.borderless)
+                        Button("Reveal") {
+                            NSWorkspace.shared.open(projectStore.projectsBaseURL)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                    Text("New projects are created inside this folder by default.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Default Projects Folder")
+            }
+        }
+        .formStyle(.grouped)
+        .fileImporter(
+            isPresented: $isChoosingFolder,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                projectStore.changeProjectsBaseURL(url)
+            }
+        }
     }
 }
 
