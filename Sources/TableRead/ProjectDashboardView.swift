@@ -377,6 +377,9 @@ private struct CastPanelView: View {
                 }
             }
         }
+        .onAppear {
+            if state.voices.isEmpty { state.fetchVoices() }
+        }
     }
 }
 
