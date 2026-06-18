@@ -151,11 +151,16 @@ final class PlayerState: ObservableObject {
         currentTime = p.currentTime
         updateCurrentCue()
 
-        // Mute my lines: jump past the current cue's audio
+        // Mute my lines: jump past the current cue's audio.
+        // Guard `currentTime < cue.endTime` so we only seek once per cue — without
+        // this, updateCurrentCue()'s lastIndex fallback can return the muted cue again
+        // when we're in the inter-cue gap, causing us to seek to the same spot every tick.
         if muteMyLines && !myRole.isEmpty && currentCueIndex >= 0 {
             let cue = cues[currentCueIndex]
-            if isMyLine(cue) {
-                p.currentTime = cue.endTime + 0.05
+            if isMyLine(cue) && currentTime < cue.endTime {
+                let nextIdx = currentCueIndex + 1
+                let target = nextIdx < cues.count ? cues[nextIdx].startTime : cue.endTime + 0.1
+                p.currentTime = target
                 currentTime = p.currentTime
                 updateCurrentCue()
             }

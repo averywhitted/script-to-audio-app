@@ -419,7 +419,8 @@ struct SceneReviewRow: View {
                             let eKey = String(element.text.prefix(60))
                             let elementIsActive: Bool = {
                                 guard let info = activeInfo, info.sceneNumber == scene.number else { return false }
-                                return element.text.trimmingCharacters(in: .whitespaces) == info.cueText
+                                return element.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    == info.cueText.trimmingCharacters(in: .whitespacesAndNewlines)
                             }()
                             let blockedText: String? = {
                                 guard let info = activeInfo, info.blockMyLines, !info.myRole.isEmpty else { return nil }
@@ -506,6 +507,13 @@ struct SceneReviewRow: View {
             if !isExpanded {
                 showAllLines = false
                 if isMyScene { selection.clear() }
+            }
+        }
+        .onAppear {
+            // Handle the case where the row is (re-)created while the scene is already playing.
+            // onChange won't fire here because there's no prior value to diff against.
+            if activeInfo?.sceneNumber == scene.number {
+                expanded = true
             }
         }
         .onChange(of: activeInfo?.sceneNumber) { _, sceneNum in
