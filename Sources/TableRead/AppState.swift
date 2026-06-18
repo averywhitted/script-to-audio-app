@@ -65,9 +65,6 @@ final class AppState: ObservableObject {
     /// Scenes that have a render on disk but whose script was edited since the last render.
     @Published var scenesNeedingRerender: Set<Int> = []
 
-    /// Whether the integrated player sheet is showing.
-    @Published var isShowingPlayer = false
-
     // Render completion
     @Published var generationComplete = false
 
@@ -780,7 +777,6 @@ final class AppState: ObservableObject {
         sceneFileInfo = [:]
         sceneCueFiles = [:]
         scenesNeedingRerender = []
-        isShowingPlayer = false
         currentProjectFolder = nil
         outputDirectory = nil
         corrections = [:]

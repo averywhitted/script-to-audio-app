@@ -33,6 +33,12 @@ func speakerColor(_ speaker: String, in allSpeakers: [String] = []) -> Color {
     return Color(hue: hue, saturation: 0.68, brightness: 0.88)
 }
 
+func blockText(_ text: String) -> String {
+    text.split(separator: " ", omittingEmptySubsequences: false)
+        .map { String(repeating: "_", count: $0.count) }
+        .joined(separator: " ")
+}
+
 // MARK: - Import
 
 struct ImportView: View {
@@ -263,11 +269,12 @@ struct ReviewView: View {
     }
 }
 
-private struct SceneReviewRow: View {
+struct SceneReviewRow: View {
     var scene: SceneSummary
     var pdfPath: String
     var allSpeakers: [String]
     var isSelected: Bool
+    var activeInfo: ActiveElementInfo? = nil
     var toggle: () -> Void
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var selection: ReviewSelectionState
@@ -410,12 +417,22 @@ private struct SceneReviewRow: View {
                         switch item {
                         case .parsed(let element):
                             let eKey = String(element.text.prefix(60))
+                            let elementIsActive: Bool = {
+                                guard let info = activeInfo, info.sceneNumber == scene.number else { return false }
+                                return element.text.trimmingCharacters(in: .whitespaces) == info.cueText
+                            }()
+                            let blockedText: String? = {
+                                guard let info = activeInfo, info.blockMyLines, !info.myRole.isEmpty else { return nil }
+                                return (element.speaker ?? "") == info.myRole ? blockText(element.text) : nil
+                            }()
                             SceneElementRow(
                                 element: element,
                                 pdfPath: pdfPath,
                                 sceneNumber: scene.number,
                                 allSpeakers: allSpeakers,
                                 isSelected: isElementSelected(eKey),
+                                isActive: elementIsActive,
+                                blockedDisplayText: blockedText,
                                 onToggleSelect: { toggleElement(eKey) }
                             ) {
                                 state.addElement(
@@ -491,6 +508,11 @@ private struct SceneReviewRow: View {
                 if isMyScene { selection.clear() }
             }
         }
+        .onChange(of: activeInfo?.sceneNumber) { _, sceneNum in
+            if sceneNum == scene.number {
+                withAnimation { expanded = true }
+            }
+        }
     }
 
     private func beginEditingTitle() {
@@ -560,7 +582,7 @@ struct CastView: View {
     }
 }
 
-private struct OpenAISetupPanel: View {
+struct OpenAISetupPanel: View {
     @EnvironmentObject private var state: AppState
 
     var body: some View {
@@ -583,7 +605,7 @@ private struct OpenAISetupPanel: View {
     }
 }
 
-private struct VoiceAssignmentList: View {
+struct VoiceAssignmentList: View {
     @EnvironmentObject private var state: AppState
 
     var body: some View {
@@ -1012,14 +1034,6 @@ struct GenerateView: View {
                         Text(idleCaption).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    if !state.isGenerating && state.sceneFileInfo.values.contains(where: { $0.exists }) {
-                        Button { state.isShowingPlayer = true } label: {
-                            Label("Listen", systemImage: "play.circle")
-                                .font(.caption.weight(.semibold))
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.accentColor)
-                    }
                     if state.isGenerating {
                         Button {
                             if state.isPaused { state.resumeGeneration() }
@@ -1333,15 +1347,6 @@ private struct GenerationCompletePanel: View {
 
                 // Actions
                 VStack(spacing: 10) {
-                    Button {
-                        state.isShowingPlayer = true
-                    } label: {
-                        Label("Listen", systemImage: "play.circle.fill")
-                            .frame(minWidth: 260)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-
                     if let dir = outputDir {
                         Button {
                             NSWorkspace.shared.open(dir)
@@ -1542,12 +1547,14 @@ extension URL {
     }
 }
 
-private struct SceneElementRow: View {
+struct SceneElementRow: View {
     var element: SceneElementSummary
     var pdfPath: String
     var sceneNumber: Int
     var allSpeakers: [String]
     var isSelected: Bool = false
+    var isActive: Bool = false
+    var blockedDisplayText: String? = nil
     var onToggleSelect: (() -> Void)? = nil
     var onAddLineBelow: (() -> Void)? = nil
 
@@ -1837,7 +1844,7 @@ private struct SceneElementRow: View {
                             .help("Insert a new line below this one")
                         }
                     }
-                    Text(displayText)
+                    Text(blockedDisplayText ?? displayText)
                         .font(.callout)
                         .foregroundStyle(isRemoved ? .tertiary : .primary)
                         .strikethrough(isRemoved, color: .secondary)
@@ -1849,6 +1856,8 @@ private struct SceneElementRow: View {
         .opacity(isRemoved ? 0.45 : 1)
         .padding(.vertical, 3)
         .onHover { isHovered = $0 }
+        .background(isActive ? Color.accentColor.opacity(0.1) : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 6))
     }
 }
 
@@ -2104,7 +2113,7 @@ private struct ManualOverlapRow: View {
 
 // MARK: - Selection actions toolbar
 
-private struct SelectionActionsBar: View {
+struct SelectionActionsBar: View {
     var selectedKeys: Set<String>
     var selectedAddedIds: Set<UUID>
     var scene: SceneSummary
@@ -2273,7 +2282,7 @@ private struct SelectionActionsBar: View {
 
 // MARK: - Undo / Redo bar
 
-private struct UndoRedoBar: View {
+struct UndoRedoBar: View {
     @EnvironmentObject private var state: AppState
 
     var body: some View {
@@ -2942,7 +2951,7 @@ private struct MetricStringCard: View {
     }
 }
 
-private struct EmptyState: View {
+struct EmptyState: View {
     var title: String
     var message: String
 

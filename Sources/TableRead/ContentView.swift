@@ -10,7 +10,6 @@ extension Notification.Name {
 struct ContentView: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var projectStore: ProjectStore
-    @StateObject private var playerState = PlayerState()
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @State private var showOnboarding  = false
     @State private var showBugReport   = false
@@ -23,8 +22,8 @@ struct ContentView: View {
                 ProjectGalleryView()
                     .transition(.opacity)
             } else {
-                // Active project: 4-step workflow
-                workflowView
+                // Active project: dashboard
+                ProjectDashboardView()
                     .transition(.opacity)
             }
         }
@@ -65,14 +64,6 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showUpdateSheet)) { _ in
             showUpdateSheet = true
         }
-        .sheet(isPresented: $state.isShowingPlayer, onDismiss: { playerState.pause() }) {
-            PlayerView()
-                .environmentObject(state)
-                .environmentObject(playerState)
-        }
-        .onChange(of: state.isShowingPlayer) { _, showing in
-            if showing { playerState.load(from: state) }
-        }
         // Auto-prompt once per launch when an update is detected
         .onChange(of: state.availableUpdate) { update in
             if update != nil && !state.didPromptForUpdate {
@@ -84,52 +75,9 @@ struct ContentView: View {
 
     // MARK: - Workflow view (active project)
 
-    private var workflowView: some View {
-        VStack(spacing: 0) {
-            WorkflowStepBar()
-            Divider()
-            ZStack {
-                if state.step == .importScript {
-                    ImportView(openImporter: {})
-                        .transition(stepTransition)
-                }
-                if state.step == .review {
-                    ReviewView()
-                        .transition(stepTransition)
-                }
-                if state.step == .cast {
-                    CastView()
-                        .transition(stepTransition)
-                }
-                if state.step == .generate {
-                    GenerateView()
-                        .transition(stepTransition)
-                }
-            }
-            .animation(.spring(response: 0.38, dampingFraction: 0.88), value: state.step)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipped()
-            .overlay {
-                if state.isWorking && !state.isGenerating {
-                    ProcessingOverlay()
-                }
-            }
-        }
-    }
-
-    private var stepTransition: AnyTransition {
-        .asymmetric(
-            insertion: state.navigatingForward
-                ? .move(edge: .trailing).combined(with: .opacity)
-                : .move(edge: .leading).combined(with: .opacity),
-            removal: state.navigatingForward
-                ? .move(edge: .leading).combined(with: .opacity)
-                : .move(edge: .trailing).combined(with: .opacity)
-        )
-    }
 }
 
-// MARK: - Horizontal step bar
+// MARK: - Horizontal step bar (legacy — kept for reference only)
 
 private struct WorkflowStepBar: View {
     @EnvironmentObject private var state: AppState

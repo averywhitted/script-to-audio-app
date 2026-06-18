@@ -29,13 +29,7 @@ struct PlayerView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Button { state.isShowingPlayer = false } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Close player")
+            // (close button removed — player is embedded in the Rehearse tab)
 
             if !playerState.scenes.isEmpty {
                 Picker("Scene", selection: Binding(
