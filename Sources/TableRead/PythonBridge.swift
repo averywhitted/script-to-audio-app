@@ -64,8 +64,16 @@ private final class EventLineParser: @unchecked Sendable {
 final class PythonBridge {
     let repositoryRoot: URL
 
+    /// Called with each Python stderr line. Set by AppState to route Python output to the debug log.
+    nonisolated(unsafe) var onPythonLog: (@Sendable (String) -> Void)?
+
     init() {
         repositoryRoot = Self.findRepositoryRoot()
+    }
+
+    nonisolated private func emitPythonLog(_ line: String) {
+        guard let handler = onPythonLog else { return }
+        handler(line)
     }
 
     // MARK: - Repository root detection
@@ -81,16 +89,24 @@ final class PythonBridge {
             fm.fileExists(atPath: url.appendingPathComponent(workerRelative).path)
         }
 
-        // 1. Path baked into Info.plist at build time via $(SRCROOT)/..
-        //    Covers Xcode Debug/Release builds where the executable is in DerivedData.
-        if let baked = Bundle.main.infoDictionary?["TRRepoRoot"] as? String {
+        // 1. Path baked into Info.plist at build time via $(SRCROOT).
+        //    Points at the developer's source tree, so a build run from Xcode uses
+        //    the LIVE backend (no rebuild needed for parser edits). It MUST be
+        //    validated: on any other machine the developer's path does not exist,
+        //    and trusting it blindly was exactly why a distributed .app could not
+        //    find the worker. When it is invalid we fall through to the bundled copy
+        //    below. (On the dev machine the path is real, so the existence check is
+        //    cheap and needs no access the app does not already have to read scripts.)
+        if let baked = Bundle.main.infoDictionary?["TRRepoRoot"] as? String,
+           !baked.isEmpty {
             let url = URL(fileURLWithPath: baked).standardizedFileURL
             if valid(url) { return url }
         }
 
-        // 2. Bundled inside a .app (packaged distribution)
-        // audio_worker.py lives at Contents/Resources/backend/audio_worker.py
-        // We want Contents/Resources/ so that backend/audio_worker.py resolves correctly.
+        // 2. Bundled inside a .app (packaged distribution) — the fallback that makes
+        //    distributed builds work on machines without the developer's source tree.
+        //    audio_worker.py lives at Contents/Resources/backend/audio_worker.py;
+        //    return Contents/Resources/ so backend/audio_worker.py resolves correctly.
         if let bundleURL = Bundle.main.url(forResource: "audio_worker", withExtension: "py") {
             let candidate = bundleURL
                 .deletingLastPathComponent()   // → .../backend/
@@ -141,6 +157,33 @@ final class PythonBridge {
         ])
         guard let estimate = response.estimate else { throw PythonBridgeError.badResponse }
         return estimate
+    }
+
+    /// Returns a mapping of scene number → SceneOutputInfo indicating whether
+    /// an output .m4a already exists for each scene.
+    func checkOutputFiles(pdf: URL, outputDir: URL) async throws -> [Int: SceneOutputInfo] {
+        let data = try await rawRequest([
+            "command": "checkOutputFiles",
+            "pdfPath": pdf.path,
+            "outputDir": outputDir.path,
+        ])
+
+        // Response is {"ok": true, "scenes": {"1": {...}, "2": {...}, ...}}
+        struct CheckResponse: Decodable {
+            var ok: Bool
+            var error: String?
+            var scenes: [String: SceneOutputInfo]?
+        }
+
+        let decoded = try JSONDecoder().decode(CheckResponse.self, from: data)
+        guard decoded.ok, let rawScenes = decoded.scenes else {
+            throw PythonBridgeError.failed(decoded.error ?? "checkOutputFiles failed")
+        }
+        // Convert string keys to Int
+        return Dictionary(uniqueKeysWithValues: rawScenes.compactMap { key, val in
+            guard let n = Int(key) else { return nil }
+            return (n, val)
+        })
     }
 
     func generate(
@@ -276,6 +319,14 @@ final class PythonBridge {
         generationProcess?.resume()
     }
 
+    /// Terminates an in-progress engine install (pip subprocess).
+    func cancelInstall() {
+        // installEngine uses streamRequest, which stores the active process in
+        // generationProcess (same slot, one stream at a time).
+        generationProcess?.terminate()
+        generationProcess = nil
+    }
+
     // MARK: - Process management
 
     private var generationProcess: Process?
@@ -374,6 +425,13 @@ final class PythonBridge {
 
             let response = output.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
+            // Forward Python stderr to the Xcode console and the in-app debug log.
+            if let errText = String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) {
+                errText.components(separatedBy: "\n").filter { !$0.isEmpty }.forEach {
+                    print("[py] \($0)")
+                    self.emitPythonLog($0)
+                }
+            }
             // Kokoro (and other engines) may print non-JSON download progress to stdout.
             // Scan from the end for the last line that looks like a JSON object.
             return Self.extractLastJSONLine(from: response) ?? response
@@ -448,6 +506,11 @@ final class PythonBridge {
                         parser.consume("", flush: true, onEvent: onEvent)
                     }
                     let stderr = String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                    // Forward Python stderr to the Xcode console and in-app debug log.
+                    stderr.components(separatedBy: "\n").filter { !$0.isEmpty }.forEach {
+                        print("[py] \($0)")
+                        self.emitPythonLog($0)
+                    }
 
                     if process.terminationStatus == 0 {
                         continuation.resume()

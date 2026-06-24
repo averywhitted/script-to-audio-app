@@ -1,7 +1,59 @@
 import Foundation
 import AppKit
 
+// MARK: - Update logger
+
+/// Appends timestamped entries to a persistent log file in Application Support.
+/// The file survives app restarts so post-mortem analysis is possible even
+/// after the install script relaunches a new version.
+enum UpdateLogger {
+    static var logURL: URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("TableRead")
+        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
+        return support.appendingPathComponent("update_log.txt")
+    }
+
+    static func log(_ message: String) {
+        let ts = ISO8601DateFormatter().string(from: Date())
+        let line = "[\(ts)] \(message)\n"
+        if let data = line.data(using: .utf8) {
+            if FileManager.default.fileExists(atPath: logURL.path),
+               let handle = try? FileHandle(forWritingTo: logURL) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                try? handle.close()
+            } else {
+                try? data.write(to: logURL)
+            }
+        }
+    }
+
+    static func clear() {
+        try? FileManager.default.removeItem(at: logURL)
+    }
+}
+
 // MARK: - Data types
+
+enum UpdateChannel: String, CaseIterable, Sendable {
+    case stable = "stable"
+    case beta   = "beta"
+
+    var displayName: String {
+        switch self {
+        case .stable: return "Stable"
+        case .beta:   return "Beta"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .stable: return "Tested, production-ready releases only."
+        case .beta:   return "Includes pre-releases with new features that may have rough edges."
+        }
+    }
+}
 
 struct UpdateInfo: Sendable, Equatable {
     /// Clean version string, e.g. "0.1.5"
@@ -54,11 +106,23 @@ actor AppUpdater {
 
     // MARK: — Check for updates
 
-    /// Fetches the latest GitHub release and returns an `UpdateInfo` if a newer version exists.
-    /// Returns `nil` when already up-to-date, when there are no releases yet, or on network error.
-    func checkForUpdates() async -> UpdateInfo? {
-        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/releases/latest")
-        else { return nil }
+    /// Fetches the appropriate GitHub release for the given channel and returns an
+    /// `UpdateInfo` if a newer version exists.  Returns `nil` when already
+    /// up-to-date, when there are no releases yet, or on network error.
+    ///
+    /// - **stable**: queries `/releases/latest` — GitHub returns the most recent
+    ///   non-prerelease, non-draft release.
+    /// - **beta**: queries `/releases?per_page=1` — returns the most recently
+    ///   published release regardless of prerelease status.
+    func checkForUpdates(channel: UpdateChannel = .beta) async -> UpdateInfo? {
+        let endpoint: String
+        switch channel {
+        case .stable:
+            endpoint = "https://api.github.com/repos/\(owner)/\(repo)/releases/latest"
+        case .beta:
+            endpoint = "https://api.github.com/repos/\(owner)/\(repo)/releases?per_page=1"
+        }
+        guard let url = URL(string: endpoint) else { return nil }
 
         var req = URLRequest(url: url, timeoutInterval: 12)
         req.setValue("application/vnd.github+json",   forHTTPHeaderField: "Accept")
@@ -70,16 +134,26 @@ actor AppUpdater {
               http.statusCode == 200
         else { return nil }
 
-        guard let json      = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let tag       = json["tag_name"]  as? String,
-              let htmlStr   = json["html_url"]  as? String,
-              let htmlURL   = URL(string: htmlStr)
+        // Beta uses the list endpoint (returns a JSON array); stable uses the
+        // single-object endpoint.  Normalise both to a single release dict.
+        let json: [String: Any]?
+        if channel == .beta {
+            let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+            json = arr?.first
+        } else {
+            json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        }
+
+        guard let release  = json,
+              let tag      = release["tag_name"] as? String,
+              let htmlStr  = release["html_url"]  as? String,
+              let htmlURL  = URL(string: htmlStr)
         else { return nil }
 
         guard AppUpdater.isNewer(tag, than: currentVersion) else { return nil }
 
-        let notes  = (json["body"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let assets = json["assets"] as? [[String: Any]] ?? []
+        let notes  = (release["body"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let assets = release["assets"] as? [[String: Any]] ?? []
         let asset  = assets.first { ($0["name"] as? String) == assetName }
 
         if let downloadStr = asset?["browser_download_url"] as? String,
@@ -92,7 +166,6 @@ actor AppUpdater {
                 hasZipAsset:  true
             )
         } else {
-            // Release exists but zip hasn't been uploaded yet — direct user to the page
             return UpdateInfo(
                 version:      tag.trimmingCharacters(in: CharacterSet(charactersIn: "vV")),
                 downloadURL:  htmlURL,
@@ -154,19 +227,31 @@ actor AppUpdater {
 
     /// Replaces the current running bundle with `newAppURL` via a detached helper script,
     /// then terminates this instance.
-    func installUpdate(from newAppURL: URL) throws {
+    func installUpdate(from newAppURL: URL) async throws {
         let currentApp = Bundle.main.bundleURL
+        UpdateLogger.log("installUpdate: begin")
+        UpdateLogger.log("  currentApp = \(currentApp.path)")
+        UpdateLogger.log("  newAppURL  = \(newAppURL.path)")
+
         let safeNew     = shell(newAppURL.path)
         let safeCurrent = shell(currentApp.path)
 
+        let logPath = UpdateLogger.logURL.path
         let script = """
         #!/bin/bash
-        sleep 1.5
-        rm -rf \(safeCurrent)
-        cp -R \(safeNew) \(safeCurrent)
-        xattr -cr \(safeCurrent)
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: started, pid=$$" >> \(shell(logPath))
+        sleep 2
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: removing old app" >> \(shell(logPath))
+        rm -rf \(safeCurrent) 2>>/tmp/tableread_update_err.txt
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: copying new app (exit $?)" >> \(shell(logPath))
+        cp -R \(safeNew) \(safeCurrent) 2>>/tmp/tableread_update_err.txt
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: xattr (exit $?)" >> \(shell(logPath))
+        xattr -cr \(safeCurrent) 2>>/tmp/tableread_update_err.txt
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: opening new app (exit $?)" >> \(shell(logPath))
         open \(safeCurrent)
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: done (exit $?)" >> \(shell(logPath))
         """
+
         let scriptURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("tableread_update_\(UUID().uuidString).sh")
         try script.write(to: scriptURL, atomically: true, encoding: .utf8)
@@ -174,13 +259,46 @@ actor AppUpdater {
             [.posixPermissions: NSNumber(value: 0o755)],
             ofItemAtPath: scriptURL.path
         )
-        let p = Process()
-        p.launchPath  = "/bin/bash"
-        p.arguments   = [scriptURL.path]
-        p.launch()
+        UpdateLogger.log("  scriptURL  = \(scriptURL.path)")
 
-        // Quit this instance — the script will reopen us after the copy completes
-        DispatchQueue.main.async { NSApplication.shared.terminate(nil) }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/bash")
+        p.arguments     = [scriptURL.path]
+        try p.run()
+        UpdateLogger.log("  bash script launched (pid \(p.processIdentifier))")
+
+        // Brief pause so the script process is definitely running before we exit.
+        try await Task.sleep(nanoseconds: 200_000_000)  // 200 ms
+
+        UpdateLogger.log("  calling NSApplication.terminate")
+        await MainActor.run { NSApplication.shared.terminate(nil) }
+
+        // Hard fallback — exit(0) is synchronous and cannot be blocked.
+        UpdateLogger.log("  terminate returned — calling exit(0)")
+        exit(0)
+    }
+
+    // MARK: — Dry-run test
+
+    /// Exercises the full install flow using a copy of the running app as the
+    /// "new" version.  Intended for use from the Debug menu only.
+    /// The app will quit and relaunch — test in a regular build, not Xcode.
+    func testInstall() async {
+        UpdateLogger.clear()
+        UpdateLogger.log("testInstall: begin — version \(currentVersion)")
+        do {
+            let src = Bundle.main.bundleURL
+            let tmp = FileManager.default.temporaryDirectory
+                .appendingPathComponent("TableReadTestUpdate_\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+            let copy = tmp.appendingPathComponent("TableRead.app")
+            UpdateLogger.log("testInstall: copying bundle to \(copy.path)")
+            try FileManager.default.copyItem(at: src, to: copy)
+            UpdateLogger.log("testInstall: copy done, calling installUpdate")
+            try await installUpdate(from: copy)
+        } catch {
+            UpdateLogger.log("testInstall: FAILED — \(error)")
+        }
     }
 
     // MARK: — Helpers

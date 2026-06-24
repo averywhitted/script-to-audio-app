@@ -1,0 +1,7369 @@
+{
+  "_meta": {
+    "source_pdf": "Against the Hillside 11.20.17.pdf",
+    "generated": "2026-06-14",
+    "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
+  },
+  "title": "Against the Hillside",
+  "characters": [
+    "SAYID",
+    "REEM",
+    "ERIN",
+    "MATT",
+    "FARID",
+    "AHMED",
+    "JARED",
+    "ANTHONY",
+    "MOUSSA",
+    "MATTHEW",
+    "WAHIDA"
+  ],
+  "scenes": [
+    {
+      "number": 1,
+      "title": "Scene 1 South Waziristan, Pakistan. Evening. Reem and Sayid’s home. Reem, late 20s, enters quietly, nodding, with a finger to her lips. Sayid, 30s, pulls his wife over, kisses her hungrily. Puts his hands all over her. Whispers in her ear.",
+      "elements": [
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wcman"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Dytym"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "L"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ynvgakq"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Spafh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Samtktm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "WSamtktmSsdltb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Awdys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Istmwthufmtk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Abafabh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "HmaaRpaa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Snmib"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "IgtsdnOwhtche"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Wawstth"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TtmashalIdk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Idwtlth"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "SacWltc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Idwt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "SgtbfSslhfAvgl"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "HmataSpa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "SkS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Sdka"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "SkIwl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Styo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "SsYkss"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Yb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "SkSSwntdt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "FyLdiTewIwtdt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "NImmpwiSIrhBncshtgult"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "WialfwataitwWabmwths"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "AwhsHwpofba"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Sd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "SwSwltJaIhMsntwaTAmfsAwtcitspTwtswKtshJlyh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ih"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "YhIhsymbhLttsbsotyuhLtmsyswbm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "His"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IdwhlltAbitsAtatwWwttiIttwtstIIlothIImanfWwtt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "LtmScguifSguwspSguabff"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Dlm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "BguwaqbAbtmitsocobOcrmithIntwtitw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IdwifhSIdwhtguti"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Awwyp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Twl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "L"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "YlSIrwl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Tg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "A"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Idu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "TiawotvAwwcdhtgutt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "BtiohWlh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "UwdnUwdtritg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TrWhdawWdlfswacwwttTinrtkuNrttal"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IhfAtihvtebfwsaawDoipjlt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wdkitwi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "WtfosdihmaWsg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "BtntmhbTmhbhT"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Aon"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TiTiac"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "FIgtgswWtTwIwhtkq"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "WIttwac"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "NhhR"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Iw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ih"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Tkaih"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "WhswbWhsfacagWhsootw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "OdlaSlama"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "JayltymJaIdtm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Tid"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IiTwu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "UYttwuWyam"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Igfaw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TmRwmusr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Idwttty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TmbarTmwcmusiWota"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IdkIdkBIcfteomSOmoyoWIcfte"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "AmSlt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Cs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Dtmts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "RInfy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Rtts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Idwtlth"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Swdlth"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Athwt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TwabwTwhdawTrtsftwsluats"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Iwntht"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ik"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Saq"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "St"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Ss"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ik"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ichpaqw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Lc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "C"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Srhhohs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wyctb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "NS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "T"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IwtbnIwnhac"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Idu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IdwasNhNlt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Iw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ycmtd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "AwcY"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TnwIm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "ByhYhtrtdwypTwiyPys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "IstnwIm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IsYhoetmwr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Alm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TfRLsPlgsr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "HstlSs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Itwmntrod"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Tr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "YYwhtbAtgIwcW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "BiIawcOitianb(rWwswsSatNbtrAnbSAbcr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Tht"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Twyto"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "WIaytctbt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Am"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SAYID",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Iwamutcbtht"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "An"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Hawmethwtm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "M"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Motm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Em"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Kyvd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "WOIhtqtcIpnftbamaIGmmm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "IdmtsmIjthmh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "AItysshIantp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Idsywap"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "TpitmFauRtk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Rtl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IdcatlIdc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Dywtgts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "DamiIwtgtblIai"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Pwytth"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Fm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "FW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Tact"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Dytyoithtgync"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Mnaf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wykitw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "SiyucithIwph"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Jfafmt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "N"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AnftnrTblsiWdTpw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "IgtahtcHmfIcahtc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Ihy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "PfW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "FItthBIwliaIbhr"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Scene 2",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "NEMaEaEaMbite3satktEioapfMwdab"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Wto"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Wnao"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SotbahurblSlahhasal"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "WIn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Vn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ityctio"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Mtinht"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Co"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "IcyhnIbpetm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Swmiq"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ywtssibpb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Tvr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Cyjhii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "NaIcSow"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SguagttboTcts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Yktdien"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Og"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ijs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Wtyapii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "FtptwEnMt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ydkt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "IdktTldotmtptktsattlhpbolhp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Mtc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ttf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "TncIllhsotfoamIgss"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Sc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Srasbd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "SwwttIttgiafOsBmn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "HkhaSpa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "MIhyheIhIheBIhavvld"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "YkIbstal"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YDssadfc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "NSdsadraakasgtacwiamstfc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YkIthmhtritwsotft"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "PhagRiavlw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AtmMtasob"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "GwIbitLM"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Hsd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Swbpitddbtk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Sar"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "BsssaJwthuonwwtkaac"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "EHmco"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "IbnWcgAIlJ"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Hagg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Slhriwy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Hbkm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Etab"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "SIgtssaIdwytgm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Hda"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Itystamwh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "WJAw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ytata"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "IsmomdwtIn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YchRYsRiavlw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YcnhMYdkhn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Dwhtdtrn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "WeWhbbhtei/"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Syhtritwys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "LymbhtdtaBTosBIn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ijtthann"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "WwcBybhitrSnwhttai"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Isanba"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "AwdicfYdkhn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Inabd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Wsyatgcuwi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Oyaafmabs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Nin"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "DylualoPnDRsp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Yabtwoop"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Sogant"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "P"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Pr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "WdtaiIdk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Idtta"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "SwYtIc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Idst"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "YalytIa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ic"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "BytIc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "BItytIttcyAwhatotwStigtraoya"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "ItyYdntwai"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "TotIwaAtttwctaTsTawIwaWcystwbsa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ish"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Idkish"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Bydkh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "SId"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "M"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "IwhDiadoShspwhdAwhhHutwFiwid"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "HtoIhtAm"
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Scene 2 (part 2)",
+      "elements": [
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "OM"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "IdwtjIdwtsiatSaasIwtfIwptlsNh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Iywrwshdt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "YsttsafIhtbp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ayn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Idkwywfm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "IwytmwJ"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "AswTpIwedItatal"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ias"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "EykwhtKWpdhsstJatiT"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "SygtMtwbbfy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "DyrhmlIm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Wwso"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "EwhacotwWcjwso"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Tgb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "GbtP"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Yj"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Aiycda"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "E"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "WwdbwytTwyh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Igtb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "M"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Icshaltt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Si"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "YamtdaBIasan"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Byaw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Yalfprn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YwrbydwtswtAiYdwts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "NIdwtdbIwtmmcIwthh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YlYstttfsByncttMCyhiTh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Igtb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "FYgtbBIwytusIdnyh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Wayta"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "IdwtbwsWchofmWcheagtPBwydtMImltbaIbfmaibftb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "E"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Iwrba"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Itamwh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "TstAlm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Hyhpiaw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YIbhii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "GgIttfy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YYIg"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SlMwhgHd"
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Scene 3",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SWPNRaShSelbhHhRritr"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REEM",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "An"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wihw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Cotb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Mssst"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "HuF6cihab"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Wt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wlohh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Ywdt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Pidott"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Ycgdt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Aicwtr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "NyhtthntgcttrAstats"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ibsh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Bthbass"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Whtwh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Rw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Rgo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Thl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "G"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "HaimTro"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "MAhi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Rcbiwalbow"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "H"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "FARID",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Tif"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SpidotfScA2cihabHivd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Yfm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "HaIt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "PtG"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "HwlHmhbotootb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "L"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Noecra"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SatafAbtwtptott"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "ScRAc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Rla"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Tlarn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Ittambw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Idk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Meaagatow"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ttnsabt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Amosbtm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Wihw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Cotb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Rrwcac"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "SqSawh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Smbgtkhbbp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Idttgtbmct"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Igtwh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "FctppotbwcPcitbnamHtscawhlhAlfRn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "WyltsA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Ithrs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "YIts"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "TmwhbRsbtdlaTwcisRnAa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "A"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ShasofhHsdSalbEjRrttwFkwtbShh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IcssYtii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "WW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "WLc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Yshgith"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "YR"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Ayp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Sfs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Igcoh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "NAS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Iwt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Tim"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Iwt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Lhlhwtl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Alln"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Dwhp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wnp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Icw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Iggs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "NnShId"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Twc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Igt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "MlhblSSwywIwr"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "FlSaRalawtbSmotlaiSnHpasotbRehhTsltfaltRpa"
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Scene 3 (part 2)",
+      "elements": [
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "DWs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Snalbatb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Whtpaf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "FtWhih"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "NS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "WcItywAsWtmtfpts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "WdAk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Dyrwjh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "AmhdAwamhdyhaf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IadwS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TimcMf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Dywtktroua"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TWwhtfh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "NYanpodlid"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "AwwydThntrtd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IhtyajcSTtsfapocTwyrwhjhywkttotfutdipobagtacEiwhtbbt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Iatoyc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IwrSiwuAwfaWpithaIphtbAwmlkqsWwksekSekawwwdiwwdiWysotmWiysIacStatobmlIasepiiftnTocpWcsofa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TwatRwymwvbtm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Pddt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "McidHwidHcns"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Np"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "OotwhtgtahftwcaWdytigtpfhftbr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Wsiby"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "WnooybWiiay"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Biam"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Biif"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Idm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "SwhtlHcynuWhtl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "IgtthtwhhhfhtIiocawwabi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "OdSTood"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Odhtgue"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SgttnrlRaSlatbdFrhabop"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "HwtsIduHwts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "WsltthTowwib"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "YYoc"
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "Scene 4",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "NACAFBJoMiswJe"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "M"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "LC"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Ts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Iss"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Twtls"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "WygaoTpasYpasYdwts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "AkcritaHagokcrita"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Ygl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "IksIs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Whit"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Idksiwh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "IahDykhmewwts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Iwha"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "JeM"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "YgWYtbwg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Tys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "BwydsltYmelb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "NlngthYhasrYwappEkt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Tys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Byhtlmkwgo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "InasthyfWIfftyYttwaet"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "IgtmacocDywacoc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "G"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "JguamcAhd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "YfF"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "YIdstotFt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "TwmpWdylb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "F"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "LgMYs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "IydltFIciwttilWtcts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Inf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Iidnf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "JhMacoc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Td"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "WychrfA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Tys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "SywhmArm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "T"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "TdammalnBbhiltTnetdtSt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "WewokWswowTwcbtw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Mn.MIsaIt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "IttTmacytaDbyu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "WadiIcbd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Jlb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "TstAgwfthTwws"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "G"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "JeM"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Ikyfwai"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ijdfltmhii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "HYdtthiptgotg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "NocId"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Dyew"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "IwawihsIkwaffi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "WhbpbiWdwaff"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Aliapyv"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "NysisIwytutinthahtYndfae"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "IgIhbhahtChrIdkwIwgi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Noud"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "YlmkiyntttoWcfrftYatpWchygftlBiyntsstwyw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "IhgtktpTr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Sii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "IflItatals"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Ywtad"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "NltIflimnsg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "LIdwtdtttt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Mlmsy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "IshedIkhbtmwHcIdtthf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Te"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Almbtm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "LmestyAtisItykTalIahlTIchAtIch"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "IsyttrotdoTtgyhos"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "AfaIcWdtat"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Altm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "IkyWYgt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Yhagd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Ms"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "YtsYt"
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "Scene 5",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SWPNRaShRhaboottSsiwtaiocSmthalohsoShsatdSpastbuttSfhhSotdIA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Aci"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Idtyba"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Ia"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "YIwjamfh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Swt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "YIk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "HsywbaIsIjntgo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Iu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Kkcarcar"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Icbh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "NmnIjttsnptbsah"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "SIchSsIcsuedd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Oc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "BIdwtdy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Yndm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Y"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "HsdStmp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "AystIniyw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IsAR"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "RIwltWwaltr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Rst"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "WW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "A"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Iilii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Titm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "TitmaIiyhIs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Ta"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "IsbsltomIhnbasatom"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "DwACImyt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Nn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Afmmp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Ycwmh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "As"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Iirtiyh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "SuAkotbutt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "AnImam"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Io"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "NrIsLmh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "NnTo"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "AHMED",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Rlshyfo"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "RsbsAboasptibitb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Gs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Fc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Jcu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Llyp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "In"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "WtbnttatTga"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REEM",
+          "sig": "(afs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "SsYdm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Apagftbalais"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "TfhtuA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Sshwmagyk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IbstlhkIfi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "B…"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Alahw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Itybg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "It"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "ItIititmaa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Wlio"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Sscs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "YlYgtl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Sisiyh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "IkiIkywgtdt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Ar"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "DSkIhg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "OcnHdkwhgim"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "RshhritbapotgSmtadtri"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IjfiitrItyaewhftfiwam"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Niw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "AydpatttMdhtpattt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ssptootbartatr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "BwWwkwtaoooAlmtytwooo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "SwRotmh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Hgahoha"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Lmcwy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Idkwyta"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Yyd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Yhm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Hlg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Lmcwy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Yhqti"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "IchIcpyIsIgifaIahw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Rda"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "WaygtdSootrwWBrRYcptiwbsfawtawac"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Kyvd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Plmc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "An"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "IngaaeiIw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "WwttYaIdt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Yattycalyh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Inlmh–"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Wtcwhgtt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "NA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "LtmIawyShdmasIcBsigootra"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Sda"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "AaIwitbrotnIjwits"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Slahfalt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "F"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "F"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "YFmWmyoteotbRs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Oy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Bagiyc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Ic"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "AA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Ng"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REEM",
+          "sig": "Anae"
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "title": "Scene 6",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "VNOwlMsitmheAyLAawatofHaM"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Yms"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "AsTefaw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "MWIhtsIahs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "IfsWwtoys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "J"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "NnTf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ynah"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Joos"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Hayli"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ilial"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "GTg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Me"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ihybfmlss"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Yl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Idacotnsu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Omm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "MeA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Siwy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ytowlh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "TwTwoyw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "OrYsSso"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Hdshttso"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "WhtlasWgataaI"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Awycbtth"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Swgs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Mshh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ymhltt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ns"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ydtab"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ns"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Idu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "SsosWwoth"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "YktylsWbwftm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "IssWwttla"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "InamoaYlh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Bwmths"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "YrWmth"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "TeSMluaA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Yetoadsom"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "SyshItd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "YsIwhwdadost"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Yshpwtk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Dtw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ftg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ahyshgtthbhh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Itss"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "HsgoitmoadaphfathTohsapafSsuatsHisllssrau"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "NsInnt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Sdied"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Wmhble"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Neo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "NsBlIsWmhble"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ymhshdi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "ImhfsIdre.Alm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Iwjast"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Itm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Hlhybh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Acms"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Ahayd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Fs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "YFIetsof"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "As"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "ItstfYlskGtFgttcDltsftlIf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ys"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "MATT",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "KaeoibthfYbswdittAyfwuHefbHyawbysHyctywbyffhHyfftwymBycthttaeAnsg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Als"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Isgs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Mluahv"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATT",
+          "sig": "Apuht"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Iahtmy"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MdatAl"
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "title": "Scene 1",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SmlPMSsrabFehHsSais"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Waydh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Timh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Wtii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "No"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "NoYsbays"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "YmsIsth"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Sysoa6"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Nihoa6itp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "IduWgttWhctbfad"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Hge"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "OtbWhnftbtmb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Idk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "OtmWnmfty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TaosuPauuoufJbIrthOshatf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "FsaS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "SyhtsffyYfhtsbyHfbh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Tr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "SwYwlyAyayr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "OtcuIhjdmr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Idu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ihbgtts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Tts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Stsic"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Tsinc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "BtansTcas"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TiwyawuTtasTtaaotApAtcithIibttasTtcdc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Bynat"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "IcdmIhbdmfmyKtbftsSedIgttsaIwIapalsAedIp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "FlaSh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Waylamlt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Byau"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ianu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "YaYanyfbnysTitmoamwiu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Whasm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "InasmYhrhdiHIwtymbswtbBIsntyau"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Srt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "FiRtmtybaf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "HacstlItautbfth"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Ywrtf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Iw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Yw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "ImmIwdaIp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Iasoyno"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "AIasotyoac"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Yasiarawaf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Ihiwnctt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Aghatsaoh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wkog"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Ham"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "T"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "HhptgumHwchoif"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Nti"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "SIdwitctt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "HyhyhuWclhsh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Hwetyngtmasn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Awc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Hwsoafw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TwhsnNwcdtWchtau"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "WdhacS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ocwd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "WdhamWhaftat"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Waoc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "IcyoyliS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "YwsocFtfoog"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Yn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Og"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "InjfhSIhawftsAyhsh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Iwlhi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Ywaayop"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "YhitnvHagtaosw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Ihtttbc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "OhhtgImyttoAs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Wwbp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Uhcyttw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "IiaeaS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ymms"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "IyasSYwnaogohf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "FlaSs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Iasthdhays"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Shntdwt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "OcnSOcn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "AsbtmFGlwylt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Iwsyt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Y"
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "title": "Scene 2",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "VLAvpEihhwamocAkatdEchwalatdsAkEramhwottdSlttpSftotdIavfAlewdahuiatc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "H"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "HIssirlIdmt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Way"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "ILAIwatb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Waydh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Alm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "IktisIdekiyslh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Elb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Iu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "IktirlIjwtttyahWymiIAyacq"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Edm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "IdrkwetdIwa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Esb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ci"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SmihejfetAcctdbh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Irrai"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "EnfApoawpopfhp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "IwsqdjsI"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Idkwettt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ga"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ikyhwhsotsp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Il"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Schaohc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Dhehts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "En"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Dhehwnwhcs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "HaDhedawohc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Eshh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ottgaic"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ech"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Hdtatt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "BIthdtyWttTct"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "CItyc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "NnDnIbooyhsIp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "EnAtabbtb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "AIkhwtatalHtm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "BdhegimdAwwgom"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ald"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Bee"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Alu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Islh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "OUGScypgmsohss"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "HdhdwtitsLttwmhfb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Hdhtt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ns"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Bhlhwyshmhbat"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Wwnhatst"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Wtuwwys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Idha"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Albahp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ayikgwaw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AfqElah"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "LATyn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "An"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "WdhamohiWmjiittfwtfgBnwNckhfgt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Agra"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "SIsfchIdkwIwt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AmEwAslafoow"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "CIayaf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YptCygajopboasfm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Yoc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ithufmtr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Adtr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Oc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Hsa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Isg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YntsadA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "OnI"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "ItitmYcthwIhts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ikb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "YntsadYaw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "IfIjntfawtgti"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "LMd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Agq"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "IcgytnotwIs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Ache"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "TamdwwihpIyrtthHsf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Idk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "IkiawiBgoi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SgothdawsidoapopShith"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "H"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "T"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "IpmntOtb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Cmaymaa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Iwwt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Iwyt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Alahfaw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Tsfaw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Igg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Yw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Tmottd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "Iethfy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "RYyYw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ERIN",
+          "sig": "G"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "G"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AgdthEctdalbai"
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "title": "Scene 3",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "PASisaiacwafaacTfirifohabhheStdttcoSthhsM1wsitdhan"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "H"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "H"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Ihfs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "OcCici"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Ty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "SdYchadyw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Ty"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MsaadPhnd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Tpsm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "GgHsycAhoay"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "F"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Awayim"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Ld"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "VgLmgo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "WsIcys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Cm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "P"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "YyPwdjf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "TyP"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Dypkyh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "NPTtIwmc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Itopf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Iu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Iwtbae"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Vg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "BInvgam"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wtwdfae"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "TwIh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "GFpt1db7"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "O711223"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wayd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "M"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "NnTnhydi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Iw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ittl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Ld"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Llat"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ssiotb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "TrIlt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wwylis"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Tma"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Icbyfnr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Iaaats"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Dst"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Iaagitwmf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wncott"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Swtao"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ls7db5"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "WdWg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "YkW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "YIlahatocatmitb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "OSoat"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Wyw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Trhntdwld"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Mmcad"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Is"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Ss"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ei"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "NmIgtbae"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Tg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "IgtmpAwcwtAtmwbsAtwcra"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TIwtyld"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Ydttdi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Idttmawdi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Ndo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "E"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "YaatsTwIehVd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "P"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "N7db5"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Cuhati"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MguttbatItalt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Ayh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MnSptfstiibtMHcMfam"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Wyf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "No"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "No"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "T"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "HlfAsya"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Is"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "AmMkw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Itr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Sl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "YYcs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Md"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Dymh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Slahfalt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Mmtmmmbs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "Mmbs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "Alm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "TotymdImfTitomF"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MnsAawhmttb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MOUSSA",
+          "sig": "SInsats"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SAYID",
+          "sig": "EtpTpit"
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "title": "Scene 4",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "VEAbnCJsahabAwbdadtas"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "A"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "LC"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "IsI"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "ToHydAIbaw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "YsIgs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Trnnft"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Wylthas"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Yoc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Hsa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "SHieg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "GRg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "WIgthtSaC"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "JeAwass"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Hteoyd"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "ANTHONY",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "RT"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Jn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Sygu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Tg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "AmJd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Sayslaho"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "NaWmalaIwd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "BmdbsiratcShhlfrbtbrImdtw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AnAsAphbd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Swaydn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Dafasc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ayli"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Nr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Is"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Iminofbmo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Ashh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "MWw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Whap"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "BycctHdWwystd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Rh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "AmJcA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Ydcfamf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Yct"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Jn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "H"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Js"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Dycfamf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "OyE"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Nk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Mmsamfs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "LmwhtIrawek"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Sywtdt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "WfRNTautdtTpwgrwwwa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Watnh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Jda"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Wwyhwtg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "IdkLwsawwcttkSwttgtsfis"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Tygoa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "NImtbs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Ag"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Yslagd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "T"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "AmAd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Ihetmf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Yh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "HkatmstMgBhdkInta"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "NswhdHpaktsooWpntai"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "PwhakotwDwtrt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "C"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Towmf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "MIttkmtIdk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Jd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "DywyktsAF"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Jtat"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Idk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Sitaw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "InIjdk"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "HdstHphbd"
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "title": "Scene 4 (part 2)",
+      "elements": [
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "OohssdtihtOtohItylttcoeoIsmpdtWwtftsdogvasbhWwtfloditn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ycsptotw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "YNshliwltIadkot"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "AmBmd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Blmtyloto"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Yrtnosupot"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Nk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "IlewalNerjwl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Dyri"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Atm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "NrTythmbu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Jtat"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Idts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Btwtwcyb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Aydri"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "NIkoeTsttImd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "An"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "NtwiwoKo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Jda"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Bykwyhtdk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Wt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Ygtguiap"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "ImmsYasittYngtftfPyb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "R"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "BtpitpTlkcluAptpoCAlIhtcWiwbltf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Acht"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Isohs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "T"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "A"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "IdfOInbiap"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "YitAF"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Aynbia"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "Ns"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AaJlaeofamTsJbolAjiTlutcTegsJchw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "Bio"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "O"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "TbsJtohwpabott"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "ANTHONY",
+          "sig": "IwgtsyLC"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JARED",
+          "sig": "YtAYt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "TshJltbAgbthf"
+        }
+      ]
+    },
+    {
+      "number": 14,
+      "title": "Scene 5",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "PNShFisiacsTwiqTdoIA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "FIweytba"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Idsa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "HeA"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "YloNmoBylo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "IhacimcIkwiintbt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Alan"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "SinhDw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Iw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Hats"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Ts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "YhttnAfshrAfanaBltHist"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Tsfamlaeo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Fn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Wis"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "K"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "KW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Aylwh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "YShajiar"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Aj"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "SvgaiIaFriah"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Bsds"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Sltwsntk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Ay"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Iwitlr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "A"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Fs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Atg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "SiighSigts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Ts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Tr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Wis"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "SisBIhnsstsh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "GTg"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AlmAtadb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "FIctayiywjmiK"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "K"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "YWclitmWcstngtytYcsygPwuYwltbwys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Fsihc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "NAIiootq"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "IkwyatYatmsiacAitIawdIhgaeyhtttm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Ap"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "RotslebDykwitfmtuItlrsciwTroviWFtsftgAtftIttampTimfTimfAhIaiKFtftIus"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "SchTawIopmsi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "F"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "FyTaoWiafabadrIttYatftaygThtycwYcwhnbms"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Amos"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "TttwwhcsdCafItwtcTwwttATwl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "PYatYhbsttmpWasWhasaTiaerPcwmLmhy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "IddhAIInlbii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Almos"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "OwaynvbwtaobagooNhwwalwhscit"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Ag"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "TopaotATaNffn–BwhaeoeAI–affueIttpIktrBtyniciabScit"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "Pcbwm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "NAIwsitcIwshwIcdnfh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "WcId"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "YcrtKwtdbYcrtyf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "YIw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "AycswaomAhttgsr"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AmAmtsntFTsis"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "Cyhhc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "AHMED",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "GHhthoTg"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "TsoadbthFlutts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FARID",
+          "sig": "FasANamopNomop"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "AkhfotfcFlov"
+        }
+      ]
+    },
+    {
+      "number": 15,
+      "title": "PART THREE",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "3ylLEAooWnih4sbaidradoGAwlooapstcbsAfkohdwcoM3shhito"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "P"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "WdluSb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Cici"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ty"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "McibsbtdHidisabsahawlah"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "CcTcify"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Hs"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "(hhGtmy"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "MATTHEW",
+          "sig": "(i"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "MW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "A"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "IdkIhaAic"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "YdWnm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "A"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "IctmaaBtysHamwiwaAIwshtpi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Ahwypin"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "IrebaPtgpIfyamaIhbatgioomh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "AwtiiP"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "MflBIwbIhrtttwhwWathwtttrBwIratAwswyfiKIt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Yf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "IdkCIsyap"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SnHptpoohbSrfiShtpvcSlaifalt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ii"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Y"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "MatlabAsmmWptpd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Titmwswu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Spibth"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Bywsy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Is"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Alm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Yhq"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "YIydm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Ycatwhy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "BIsptbsIdkwhi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "YfIdkwhiItwywtk"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "OIwe"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Vw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Dyrhis"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Hswy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "IwacIwaclaoAncantanp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Dhpwy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Wdyp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "SgHbmt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Wkot"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Adsb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Whg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ak"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ylh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Ilh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Swwh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "YfWdhctK"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "ItymhkHfdHwyfiW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Hfd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "YHwyaympWhftg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Wwbw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Ttou"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Swmmiiwu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Swr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Bw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "YfsTwIu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Wbvs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Iuy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Ianu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "In"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Alm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Yfwd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Is"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "TrolaTsuaod"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Hhtgo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "NmmhtgoHctlGts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Is"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Irthlh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Bhwd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Slhssm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "WayiTslhb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "NI"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "MmwnilwyfTinmcTinbstt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Slhsfalt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Swa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Dssa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Sd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Itysg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "YnsIctYnswiw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "IagtIwlytl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "PYdu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "TirIdnu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "MfwfbymBhpm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "MW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "HuttmmTswgotthwnowaThbyhPhfatgAsuats"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "HlaWeWru"
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "title": "PART THREE (part 2)",
+      "elements": [
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "SIktsIwvyAiaflIwhapoylimhAItwctsBtmsidbtmIbty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Almbt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "AIctytyabynIwbIflwatuTalkotBisakot"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Wis"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "MnmIwytl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "PI"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "BIwytusbydTftyfcstWav"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Htswl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "MmwnlStusmsSdtsSchwoIswrothIwtmahbswNtfscttmIwtfeLtuwcihHchktfhlvHcopohaohoihd"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Wdyhtmiasu"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "IrMRiuTsthbuhIuIinrIidwbAnyb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Aycsiaow"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Mis"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "AnIwaytsyo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "AmMdm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "MWItthbqe"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ijhas"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "IjhasaIl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "HwbyID"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "At"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "MwwsMswsAIgoapAIl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Bw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "BIdkaatwTcigtlamWeIhesyAhgtamatwAwaIstsIdkaIttmiIhapomfThTgh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Wshh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "YttiwacnAp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Oc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "BwhsopDyutOostofNopYswfhos"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Tssl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "BywhhYwwhphtBnpibiWabwttwnts"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "IdntcyMWYdnamoyfYaawYheyn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Alm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ishch"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Inp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ictum"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ychbc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Tt"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Iws"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "WnTsltfam"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Intgh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "ItsY"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Am"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Mwc"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "W"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Sit"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Wdht"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Wch"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Ykwmoi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Id"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Lliat"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Hstg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Iwyshah"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ty"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "St"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MATTHEW",
+          "sig": "Ty"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "TshThifamtlMeWmbthdSsdAamSdSphahcaluatcte"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "SsltfalltiahbhAtsoWaTssbuashalbahp"
+        }
+      ]
+    }
+  ]
+}

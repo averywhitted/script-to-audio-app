@@ -35,7 +35,7 @@ if str(ROOT) not in sys.path:
 
 import parser as script_parser
 import tts_engines
-from audio_pipeline import GenerationProgress, estimate_tts_requests, generate_script
+from audio_pipeline import GenerationProgress, estimate_tts_chars, estimate_tts_requests, generate_script
 from voice_assignment import Assignment, auto_assign
 
 
@@ -129,6 +129,8 @@ def _script_summary(script: script_parser.Script) -> Dict[str, Any]:
                         "text": element.text,
                         "overlapCue": element.overlap_cue,
                         "overlapTexts": element.overlap_texts,
+                        "confidence": element.confidence,
+                        "reason": element.reason,
                     }
                     for element in scene.elements
                     if element.text.strip()
@@ -149,15 +151,23 @@ def _voices_for_engine(engine_id: str) -> List[tts_engines.VoiceInfo]:
 
 def _estimate_openai(pdf_path: str, scene_numbers: List[int] | None) -> Dict[str, Any]:
     script = script_parser.parse_pdf(pdf_path)
-    voices = tts_engines.OpenAIEngine().list_voices()
+    engine = tts_engines.OpenAIEngine()
+    voices = engine.list_voices()
     assignment = auto_assign(script.characters, voices)
     request_count = estimate_tts_requests(script, assignment, scene_numbers)
+    total_chars = estimate_tts_chars(script, assignment, scene_numbers)
     rpm = tts_engines.OpenAIEngine.REQUESTS_PER_MINUTE
     minimum_seconds = int(((request_count + max(rpm, 1) - 1) // max(rpm, 1)) * 60)
+    # Cost estimate using tts-1 pricing (default model)
+    model = engine.DEFAULT_MODEL
+    rate = tts_engines.OpenAIEngine.COST_PER_1K_CHARS.get(model, 0.015)
+    estimated_cost_usd = (total_chars / 1000.0) * rate
     return {
         "requestCount": request_count,
         "requestsPerMinute": rpm,
         "minimumSeconds": minimum_seconds,
+        "totalChars": total_chars,
+        "estimatedCostUSD": round(estimated_cost_usd, 4),
     }
 
 
@@ -190,12 +200,26 @@ def _build_assignment(payload: Dict[str, Any], script, voices) -> Assignment:
     """Build an Assignment from an explicit mapping dict (from the UI) or auto-assign."""
     voices_by_id = {v.id: v for v in voices}
     explicit_map = payload.get("assignment")
+    script_speakers = [c.name for c in script.characters]
+    print(f"[DEBUG] _build_assignment: script speakers={script_speakers}", file=__import__("sys").stderr)
     if explicit_map:
+        print(f"[DEBUG] explicit_map keys={sorted(explicit_map.keys())}", file=__import__("sys").stderr)
+        # Validate: warn about keys in explicit_map that don't match any script speaker.
+        known = set(script_speakers) | {"__NARRATOR__"}
+        unmatched = [k for k in explicit_map if k not in known]
+        if unmatched:
+            print(f"[WARN] voice assignment keys not in script: {unmatched}", file=__import__("sys").stderr)
         # Fill in any missing characters with auto-assign so we never have a gap.
         base = auto_assign(script.characters, voices)
         merged = dict(base.mapping)
         merged.update(explicit_map)
+        # Validate voice IDs exist.
+        for char, vid in list(merged.items()):
+            if vid not in voices_by_id:
+                print(f"[WARN] voice id {vid!r} for {char!r} not found in engine — will fall back to narrator", file=__import__("sys").stderr)
+        print(f"[DEBUG] final merged assignment: { {k: v for k, v in merged.items()} }", file=__import__("sys").stderr)
         return Assignment(mapping=merged, voices_by_id=voices_by_id)
+    print("[DEBUG] no explicit assignment — using auto_assign", file=__import__("sys").stderr)
     return auto_assign(script.characters, voices)
 
 
@@ -433,6 +457,9 @@ def _generate(payload: Dict[str, Any]) -> int:
             "message": progress.message,
         })
 
+    def cue_cb(scene_number: int, cue_path: str) -> None:
+        _emit({"event": "cueMap", "sceneNumber": scene_number, "cueFilePath": cue_path})
+
     t0 = time.time()
     result = generate_script(
         script=script,
@@ -441,11 +468,13 @@ def _generate(payload: Dict[str, Any]) -> int:
         output_dir=output_dir,
         progress_cb=progress_cb,
         scene_filter=scene_numbers,
+        cue_cb=cue_cb,
     )
     _emit({
         "event": "done",
         "outputDir": result.output_dir,
         "files": result.files,
+        "cueFiles": result.cue_files,
         "errors": result.errors,
         "skippedScenes": result.skipped_scenes,
         "seconds": round(time.time() - t0, 1),
@@ -466,6 +495,23 @@ def _install_engine(payload: Dict[str, Any]) -> int:
         _emit({"event": "log", "level": "error",
                "message": f"No installable packages defined for engine '{engine_id}'."})
         return 1
+
+    # Guard: check available disk space before starting a download.
+    import shutil
+    _MIN_FREE_BYTES = 512 * 1024 * 1024   # 500 MiB minimum
+    try:
+        _check_dir = os.path.expanduser("~")
+        free_bytes = shutil.disk_usage(_check_dir).free
+        if free_bytes < _MIN_FREE_BYTES:
+            free_mb = free_bytes / (1024 * 1024)
+            _emit({"event": "log", "level": "error",
+                   "message": (
+                       f"Insufficient disk space: {free_mb:.0f} MB free. "
+                       f"At least 500 MB is needed to install {engine_id}."
+                   )})
+            return 1
+    except OSError:
+        pass  # If the check fails for any reason, let pip try anyway.
 
     _emit({"event": "started",
            "message": f"Installing {engine_id} packages: {', '.join(packages)}"})
@@ -493,10 +539,31 @@ def _install_engine(payload: Dict[str, Any]) -> int:
             text=True,
             bufsize=1,
         )
+        # Track install milestones to emit rough progress fractions.
+        # Pip doesn't stream byte-level progress over a pipe, so we map
+        # recognisable output lines to representative 0–1 fractions.
+        _collect_count = 0
+        _download_seen = False
         for line in iter(process.stdout.readline, ""):
             line = line.rstrip()
-            if line:
-                _emit({"event": "log", "level": "info", "message": line})
+            if not line:
+                continue
+            _emit({"event": "log", "level": "info", "message": line})
+            ll = line.lower()
+            # Milestone detection (order matters — check most specific first)
+            if "successfully installed" in ll:
+                _emit({"event": "progress", "fraction": 0.93})
+            elif "installing collected packages" in ll:
+                _emit({"event": "progress", "fraction": 0.80})
+            elif ll.startswith("downloading ") or "downloading " in ll and ".whl" in ll:
+                _download_seen = True
+                _emit({"event": "progress", "fraction": 0.40})
+            elif ll.startswith("collecting "):
+                _collect_count += 1
+                # Each "Collecting" line nudges progress 0.05 → 0.30 over up to 5 deps
+                frac = min(0.05 + (_collect_count - 1) * 0.05, 0.30)
+                if not _download_seen:
+                    _emit({"event": "progress", "fraction": round(frac, 2)})
         process.wait()
     except Exception as exc:
         _emit({"event": "log", "level": "error", "message": str(exc)})
@@ -508,6 +575,7 @@ def _install_engine(payload: Dict[str, Any]) -> int:
         return 1
 
     # Verify the import works before declaring victory
+    _emit({"event": "progress", "fraction": 0.97})
     try:
         if engine_id == "kokoro":
             import importlib
@@ -600,6 +668,7 @@ def _prepare_voice_previews(engine_id: str) -> None:
 
 
 def _preview_voice(payload: Dict[str, Any]) -> Dict[str, Any]:
+    import sys
     engine_id = payload.get("engine", "macOS")
     voice_id = payload.get("voiceId")
     api_key = payload.get("apiKey")
@@ -607,9 +676,11 @@ def _preview_voice(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": False, "error": "Missing voiceId."}
 
     engine = _engine_for_preview(engine_id, api_key)
-    voice = next((v for v in engine.list_voices() if v.id == voice_id), None)
+    available = engine.list_voices()
+    print(f"[DEBUG] previewVoice: engine={engine_id!r} requested={voice_id!r} available_ids={[v.id for v in available]}", file=sys.stderr)
+    voice = next((v for v in available if v.id == voice_id), None)
     if voice is None:
-        return {"ok": False, "error": f"Unknown voice '{voice_id}'."}
+        return {"ok": False, "error": f"Unknown voice '{voice_id}'. Available: {[v.id for v in available]}"}
 
     path = _preview_path(engine_id, voice.id)
     if engine_id == "kokoro":
@@ -649,6 +720,21 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
             assignment = auto_assign(script.characters, voices)
             result["autoAssign"] = assignment.mapping
         return result
+    if command == "checkOutputFiles":
+        pdf_path = payload["pdfPath"]
+        output_dir = payload["outputDir"]
+        script = script_parser.parse_pdf(pdf_path)
+        from audio_pipeline import scene_filename
+        result: Dict[str, Any] = {}
+        for scene in script.scenes:
+            fname = scene_filename(scene)
+            exists = os.path.isfile(os.path.join(output_dir, fname))
+            result[str(scene.number)] = {
+                "exists": exists,
+                "filename": fname,
+                "title": scene.title,
+            }
+        return {"ok": True, "scenes": result}
     if command == "estimateOpenAI":
         return {
             "ok": True,

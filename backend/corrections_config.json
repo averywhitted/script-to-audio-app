@@ -1,44 +1,9 @@
 {
   "_comment": "Data-driven parser corrections. Loaded at parse time — extend rules without code changes.",
-  "_version": 1,
+  "_version": 2,
 
+  "_non_cue_words_note": "ONLY true non-speakers (pure sound effects / environment) belong here — they are dropped to stage_direction and never voiced. Generic SPEAKING roles (VOICE, MAN, WOMAN, CROWD, SOLDIER, GHOST, ...) and devices that carry speech (PHONE, RADIO, TV, INTERCOM) are NOT listed: the parser now voices them at low confidence and flags them in Review (see _GENERIC_ROLES in parser.py), so real spoken lines are never silently dropped.",
   "non_cue_words": [
-    "VOICE",
-    "VOICES",
-    "OFFSTAGE",
-    "ONSTAGE",
-    "RECORDED",
-    "PRERECORDED",
-    "UNSEEN",
-    "UNKNOWN",
-    "UNISON",
-    "SIMULTANEOUSLY",
-    "MAN",
-    "WOMAN",
-    "BOY",
-    "GIRL",
-    "CHILD",
-    "CHILDREN",
-    "CROWD",
-    "AUDIENCE",
-    "FIGURE",
-    "PERSON",
-    "PEOPLE",
-    "SOLDIER",
-    "SOLDIERS",
-    "GUARD",
-    "GUARDS",
-    "OFFICER",
-    "OFFICIALS",
-    "GHOST",
-    "SPIRIT",
-    "SHADOW",
-    "ANNOUNCER",
-    "INTERCOM",
-    "PHONE",
-    "RADIO",
-    "TELEVISION",
-    "TV",
     "MUSIC",
     "SOUND",
     "NOISE",
@@ -48,12 +13,22 @@
     "PHONE RINGS",
     "DOORBELL",
     "KNOCK",
-    "KNOCKING"
+    "KNOCKING",
+    "SIREN",
+    "ALARM",
+    "BELL",
+    "SIMULTANEOUSLY"
   ],
 
   "speaker_aliases": {
   },
 
   "noise_line_patterns": [
+    "^(?:END OF (?:SCENE|ACT|PLAY|SCRIPT|PROLOGUE|EPILOGUE))\\b",
+    "^(?:INTERMISSION|INTERVAL)$",
+    "^(?:THE END|FINIS|CURTAIN FALLS|CURTAIN RISES?)$",
+    "^\\*(?:\\s*\\*){2,}\\s*$",
+    "^-{3,}\\s*$",
+    "^={3,}\\s*$"
   ]
 }

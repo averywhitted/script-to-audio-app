@@ -56,9 +56,10 @@ PYTHON="$VENDOR_DIR/bin/python3"
 echo "→ Upgrading pip..."
 "$PYTHON" -m pip install --upgrade pip --quiet
 
-echo "→ Installing core packages (pdfplumber, soundfile)..."
+echo "→ Installing core packages (pdfplumber, pymupdf, soundfile)..."
 "$PYTHON" -m pip install \
     "pdfplumber>=0.11" \
+    "pymupdf>=1.24" \
     "soundfile>=0.12" \
     --quiet
 

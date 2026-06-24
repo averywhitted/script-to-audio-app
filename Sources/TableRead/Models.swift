@@ -131,6 +131,8 @@ struct SceneElementSummary: Codable, Equatable, Identifiable, Sendable {
     var text: String
     var overlapCue: [String]?    // set when multiple speakers deliver this line simultaneously
     var overlapTexts: [String]?  // per-voice texts (parallel with overlapCue); nil = all voices read .text
+    var confidence: Double = 1.0 // parser confidence: 1.0 = known speaker, <0.7 = flagged for review
+    var reason: String?          // why the parser flagged this line (shown on the ⚠); nil = confident
 
     var id: String { "\(kind)-\(speaker ?? "narrator")-\(text.prefix(24))" }
 
@@ -160,12 +162,34 @@ struct OpenAIEstimate: Codable, Equatable, Sendable {
     var requestCount: Int
     var requestsPerMinute: Int
     var minimumSeconds: Int
+    var totalChars: Int = 0
+    var estimatedCostUSD: Double = 0
 
     var durationText: String {
         let minutes = max(1, minimumSeconds / 60)
         if minutes < 60 { return "\(minutes) min" }
         return "\(minutes / 60)h \(minutes % 60)m"
     }
+
+    /// Human-readable cost string, e.g. "< $0.01" or "$1.23".
+    var costText: String {
+        if estimatedCostUSD < 0.01 { return "< $0.01" }
+        if estimatedCostUSD < 1.0  { return String(format: "$%.2f", estimatedCostUSD) }
+        return String(format: "$%.2f", estimatedCostUSD)
+    }
+
+    /// Character count formatted for display, e.g. "42.3k".
+    var charsText: String {
+        if totalChars < 1_000 { return "\(totalChars)" }
+        return String(format: "%.1fk", Double(totalChars) / 1_000)
+    }
+}
+
+/// Per-scene info returned by the `checkOutputFiles` worker command.
+struct SceneOutputInfo: Codable, Equatable, Sendable {
+    var exists: Bool
+    var filename: String
+    var title: String
 }
 
 struct VoiceLibraryItem: Identifiable {
@@ -224,6 +248,33 @@ struct GenerationEvent: Codable, Sendable {
     var errors: [String]?
     var skippedScenes: [String]?
     var seconds: Double?
+    /// 0.0–1.0 download/install progress fraction; nil = indeterminate.
+    var fraction: Double?
+    /// 1-based scene number; emitted with the "cueMap" event.
+    var sceneNumber: Int?
+    /// Path to the written .cues.json sidecar; emitted with the "cueMap" event.
+    var cueFilePath: String?
+}
+
+// MARK: - Cue map (lyrics-sync player)
+
+struct SceneCue: Codable, Identifiable {
+    var id: Int { index }
+    var index: Int
+    var kind: String        // "dialog" | "stage_direction" | "parenthetical"
+    var speaker: String     // "__NARRATOR__" for narration; slash-joined for overlaps
+    var text: String
+    var startTime: Double
+    var endTime: Double
+}
+
+struct SceneCueMap: Codable {
+    var schemaVersion: Int  // 1
+    var sceneNumber: Int
+    var sceneTitle: String
+    var generatedAt: Date
+    var totalDuration: Double
+    var cues: [SceneCue]
 }
 
 /// Matches NARRATOR_KEY in voice_assignment.py
@@ -256,6 +307,20 @@ enum LogStyle: Equatable {
     case success
     case warning
     case error
+    case debug
+}
+
+struct DebugLogEntry: Identifiable, Equatable {
+    let id = UUID()
+    let timestamp: Date
+    var text: String
+    var style: LogStyle
+
+    var timestampString: String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f.string(from: timestamp)
+    }
 }
 
 // MARK: - User-added elements

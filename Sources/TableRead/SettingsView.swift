@@ -3,6 +3,7 @@ import AppKit
 
 struct SettingsView: View {
     @EnvironmentObject private var state: AppState
+    @EnvironmentObject private var projectStore: ProjectStore
 
     var body: some View {
         TabView {
@@ -12,11 +13,15 @@ struct SettingsView: View {
             EnginesSettingsTab()
                 .tabItem { Label("Engines", systemImage: "waveform") }
 
+            ProjectsSettingsTab()
+                .tabItem { Label("Projects", systemImage: "folder") }
+
             AboutTab()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 520, height: 520)
         .environmentObject(state)
+        .environmentObject(projectStore)
     }
 }
 
@@ -80,6 +85,20 @@ private struct GeneralSettingsTab: View {
                 }
             } header: {
                 Text("Software Update")
+            }
+
+            Section {
+                Picker("Update Channel", selection: $state.updateChannel) {
+                    ForEach(UpdateChannel.allCases, id: \.self) { channel in
+                        Text(channel.displayName).tag(channel)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text(state.updateChannel.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Update Channel")
             }
 
             Section {
@@ -272,25 +291,37 @@ private struct OpenAIKeyStatusBadge: View {
     @EnvironmentObject private var state: AppState
 
     var body: some View {
-        switch state.openAIKeyStatus {
-        case .idle:
-            if state.hasStoredOpenAIKey {
-                Label("API key saved in Keychain", systemImage: "key.fill")
+        HStack(spacing: 10) {
+            switch state.openAIKeyStatus {
+            case .idle:
+                if state.hasStoredOpenAIKey {
+                    Label("API key saved in Keychain", systemImage: "key.fill")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Test Key") {
+                        Task { await state.validateOpenAIKey(
+                            KeychainHelper.read(key: "openai_api_key") ?? ""
+                        )}
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.callout)
+                    .foregroundStyle(.tint)
+                }
+            case .checking:
+                ProgressView().controlSize(.small)
+                Label("Checking key…", systemImage: "arrow.trianglehead.2.clockwise")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            case .valid:
+                Label("API key verified — OpenAI TTS is active", systemImage: "checkmark.circle.fill")
+                    .font(.callout)
+                    .foregroundStyle(.green)
+            case .invalid(let reason):
+                Label(reason, systemImage: "xmark.circle.fill")
+                    .font(.callout)
+                    .foregroundStyle(.red)
             }
-        case .checking:
-            Label("Checking key…", systemImage: "arrow.trianglehead.2.clockwise")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-        case .valid:
-            Label("API key verified — OpenAI TTS is active", systemImage: "checkmark.circle.fill")
-                .font(.callout)
-                .foregroundStyle(.green)
-        case .invalid(let reason):
-            Label(reason, systemImage: "xmark.circle.fill")
-                .font(.callout)
-                .foregroundStyle(.red)
         }
     }
 }
@@ -318,9 +349,34 @@ private struct EngineManagementRow: View {
             Spacer()
 
             if isInstalling {
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.small)
-                    Text("Installing…").font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 10) {
+                    if let fraction = state.installProgress {
+                        VStack(alignment: .trailing, spacing: 3) {
+                            ProgressView(value: fraction)
+                                .progressViewStyle(.linear)
+                                .frame(width: 110)
+                                .animation(.easeInOut(duration: 0.3), value: fraction)
+                            Text(fraction >= 1.0
+                                 ? "Verifying…"
+                                 : "Installing… \(Int(fraction * 100))%")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                    } else {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("Installing…").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    Button {
+                        state.cancelInstall()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Cancel installation")
                 }
             } else if isUninstalling {
                 HStack(spacing: 6) {
@@ -348,6 +404,55 @@ private struct EngineManagementRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Projects tab
+
+private struct ProjectsSettingsTab: View {
+    @EnvironmentObject private var projectStore: ProjectStore
+    @State private var isChoosingFolder = false
+
+    var body: some View {
+        Form {
+            Section {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(projectStore.projectsBaseURL.lastPathComponent)
+                                .font(.callout.weight(.medium))
+                            Text(projectStore.projectsBaseURL.deletingLastPathComponent().path)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        Spacer()
+                        Button("Change…") { isChoosingFolder = true }
+                            .buttonStyle(.borderless)
+                        Button("Reveal") {
+                            NSWorkspace.shared.open(projectStore.projectsBaseURL)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                    Text("New projects are created inside this folder by default.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Default Projects Folder")
+            }
+        }
+        .formStyle(.grouped)
+        .fileImporter(
+            isPresented: $isChoosingFolder,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                projectStore.changeProjectsBaseURL(url)
+            }
+        }
     }
 }
 

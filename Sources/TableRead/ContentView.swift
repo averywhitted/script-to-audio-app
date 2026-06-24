@@ -9,58 +9,26 @@ extension Notification.Name {
 
 struct ContentView: View {
     @EnvironmentObject private var state: AppState
-    @State private var isImporting = false
+    @EnvironmentObject private var projectStore: ProjectStore
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @State private var showOnboarding  = false
     @State private var showBugReport   = false
     @State private var showUpdateSheet = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // The step bar has NO animation — it always snaps to the correct
-            // state immediately. Animation lives on the ZStack below.
-            WorkflowStepBar()
-            Divider()
-            ZStack {
-                if state.step == .importScript {
-                    ImportView(openImporter: { isImporting = true })
-                        .transition(stepTransition)
-                }
-                if state.step == .review {
-                    ReviewView()
-                        .transition(stepTransition)
-                }
-                if state.step == .cast {
-                    CastView()
-                        .transition(stepTransition)
-                }
-                if state.step == .generate {
-                    GenerateView()
-                        .transition(stepTransition)
-                }
-            }
-            // Animation is attached here (on the content ZStack) rather than
-            // inside goTo()'s withAnimation, so the step bar is never caught
-            // in a mid-animation state.
-            .animation(.spring(response: 0.38, dampingFraction: 0.88), value: state.step)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipped()
-            .overlay {
-                if state.isWorking && !state.isGenerating {
-                    ProcessingOverlay()
-                }
+        Group {
+            if projectStore.currentProject == nil {
+                // Home: project gallery
+                ProjectGalleryView()
+                    .transition(.opacity)
+            } else {
+                // Active project: dashboard
+                ProjectDashboardView()
+                    .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: projectStore.currentProject == nil)
         .background(FirstMouseAcceptingView())
-        .fileImporter(
-            isPresented: $isImporting,
-            allowedContentTypes: [.pdf],
-            allowsMultipleSelection: false
-        ) { result in
-            if case .success(let urls) = result, let url = urls.first {
-                state.importPDF(url)
-            }
-        }
         .alert("Something went wrong", isPresented: Binding(
             get: { state.errorMessage != nil },
             set: { if !$0 { state.errorMessage = nil } }
@@ -105,39 +73,60 @@ struct ContentView: View {
         }
     }
 
-    private var stepTransition: AnyTransition {
-        .asymmetric(
-            insertion: state.navigatingForward
-                ? .move(edge: .trailing).combined(with: .opacity)
-                : .move(edge: .leading).combined(with: .opacity),
-            removal: state.navigatingForward
-                ? .move(edge: .leading).combined(with: .opacity)
-                : .move(edge: .trailing).combined(with: .opacity)
-        )
-    }
+    // MARK: - Workflow view (active project)
+
 }
 
-// MARK: - Horizontal step bar
+// MARK: - Horizontal step bar (legacy — kept for reference only)
 
 private struct WorkflowStepBar: View {
     @EnvironmentObject private var state: AppState
+    @EnvironmentObject private var projectStore: ProjectStore
     @Environment(\.openSettings) private var openSettings
+    @State private var showHomeConfirm = false
 
     var body: some View {
         HStack(spacing: 0) {
-            // Script context (left anchor) — only shown once a script is loaded
-            VStack(alignment: .leading, spacing: 1) {
-                if let title = state.script?.title {
-                    Text(title)
-                        .font(.callout.weight(.semibold))
-                        .lineLimit(1)
-                }
-                if let pdf = state.selectedPDF {
-                    Text(pdf.lastPathComponent)
-                        .font(.caption2)
+            // Left anchor: Home button + project/script context
+            HStack(spacing: 10) {
+                Button {
+                    if state.isGenerating {
+                        showHomeConfirm = true
+                    } else {
+                        returnToGallery()
+                    }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                }
+                .buttonStyle(.plain)
+                .help("Back to Projects")
+                .confirmationDialog(
+                    "A render is in progress. Return to the project gallery?",
+                    isPresented: $showHomeConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button("Cancel Render & Go Home", role: .destructive) {
+                        state.cancelGeneration()
+                        returnToGallery()
+                    }
+                    Button("Keep Rendering", role: .cancel) {}
+                }
+
+                VStack(alignment: .leading, spacing: 1) {
+                    if let project = projectStore.currentProject {
+                        Text(project.name)
+                            .font(.callout.weight(.semibold))
+                            .lineLimit(1)
+                    }
+                    if let pdf = state.selectedPDF {
+                        Text(pdf.lastPathComponent)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
                 }
             }
             .frame(minWidth: 140, alignment: .leading)
@@ -173,11 +162,11 @@ private struct WorkflowStepBar: View {
                 } label: {
                     Label("Report a Bug", systemImage: "exclamationmark.circle")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.red.opacity(0.8))
+                        .foregroundStyle(AppColors.bugReport.opacity(0.8))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(
-                            Capsule().strokeBorder(Color.red.opacity(0.5), lineWidth: 1)
+                            Capsule().strokeBorder(AppColors.bugReport.opacity(0.5), lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
@@ -190,11 +179,11 @@ private struct WorkflowStepBar: View {
                     } label: {
                         Label("Update Available", systemImage: "arrow.down.circle.fill")
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(AppColors.updateAvailable)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(
-                                Capsule().strokeBorder(Color.orange.opacity(0.6), lineWidth: 1)
+                                Capsule().strokeBorder(AppColors.updateAvailable.opacity(0.6), lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)
@@ -215,6 +204,12 @@ private struct WorkflowStepBar: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 11)
         .background(.bar)
+    }
+
+    private func returnToGallery() {
+        state.persistProjectIfNeeded()
+        state.resetForNewProject()
+        projectStore.currentProject = nil
     }
 }
 

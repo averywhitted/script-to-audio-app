@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Parser regression gate.
+#
+# Blocks any commit that regresses the parser correctness scorecard versus the
+# locked watermark. Runs ONLY when parser-relevant files are staged, so ordinary
+# commits are not slowed down. This is the hard safety net behind "every fix
+# breaking something": a regression literally cannot be committed by accident.
+#
+# Installed via:  git config core.hooksPath scripts/git-hooks
+# (re-run that once after cloning; see CLAUDE.md "Parser change protocol").
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+# Gate only changes that can affect parser output.
+if ! git diff --cached --name-only | grep -qE '^backend/parser\.py$|^backend/corrections_config\.json$'; then
+    exit 0
+fi
+
+# Resolve a Python that has the deps (prefer the dev venv).
+PYTHON=""
+for c in .venv/bin/python3 .venv/bin/python vendor/python/bin/python3 python3; do
+    if [ -x "$c" ] 2>/dev/null || command -v "$c" &>/dev/null; then PYTHON="$c"; break; fi
+done
+if [ -z "$PYTHON" ]; then
+    echo "[pre-commit] No Python found — skipping scorecard gate." >&2
+    exit 0
+fi
+
+echo "[pre-commit] parser changed — scoring against the watermark (this parses the corpus, ~60–90s)…"
+if "$PYTHON" scripts/scorecard.py --check; then
+    exit 0
+fi
+
+cat >&2 <<'EOF'
+
+──────────────────────────────────────────────────────────────────────────────
+✗ Commit blocked: the parser scorecard REGRESSED vs the watermark.
+
+  • If it's a bug:  fix it, then re-run `python scripts/scorecard.py`.
+  • If the change is an INTENTIONAL improvement, accept it:
+        python scripts/scorecard.py --save                  # bump the watermark
+        python scripts/generate_reference.py <ChangedName>   # regen its baseline
+        git add "Test PDFs/reference/" && commit again
+  • To bypass once (not recommended):  git commit --no-verify
+──────────────────────────────────────────────────────────────────────────────
+EOF
+exit 1

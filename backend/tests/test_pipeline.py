@@ -590,127 +590,42 @@ class TestFullRender:
         assert len(result.files) == 1          # only scene 2 produced a file
         assert len(result.skipped_scenes) == 1  # scene 1 was skipped
 
+    @needs_afconvert
+    def test_cue_map_written_alongside_m4a(self):
+        """generate_script writes a .cues.json sidecar next to each .m4a and
+        calls cue_cb with the scene number and path."""
+        import json as _json
+        script = _make_script(n_scenes=1)
+        assignment = auto_assign(script.characters, _VOICES)
+        engine = _StubEngine()
+        received_cues: list = []
+        with patch("audio_pipeline._synthesize_into", _silent_synthesize_into):
+            with tempfile.TemporaryDirectory() as out_dir:
+                result = generate_script(
+                    script, engine, assignment, out_dir,
+                    cue_cb=lambda sn, cp: received_cues.append((sn, cp)),
+                )
+                assert result.errors == [], f"Errors: {result.errors}"
+                assert len(result.cue_files) == 1
+                cue_path = result.cue_files[0]
+                assert Path(cue_path).exists()
+                assert cue_path.endswith(".cues.json")
+                assert received_cues == [(1, cue_path)]
+                data = _json.loads(Path(cue_path).read_text())
+        assert data["schemaVersion"] == 1
+        assert data["sceneNumber"] == 1
+        assert data["totalDuration"] > 0
+        cues = data["cues"]
+        assert len(cues) > 0
+        for c in cues:
+            assert c["startTime"] < c["endTime"]
+            assert c["endTime"] <= data["totalDuration"] + 0.01
+            assert c["speaker"] in {"ALICE", "BOB", "__NARRATOR__"}
+
 
 # ===========================================================================
 # 5. Overlap / simultaneous-speech cue detection (#33 Phase 1)
 # ===========================================================================
-
-def _scenes_play(lines, known=("ALICE", "BOB")):
-    """Shorthand: call _extract_scenes_play directly with a known-speaker set."""
-    return p._extract_scenes_play(lines, set(known), noise=set())
-
-
-class TestOverlapCues:
-    """Parser correctly handles simultaneous-speech cues (Issue #33 Phase 1).
-
-    Tests call _extract_scenes_play directly (same pattern as test_parser.py)
-    to avoid depending on format-detection thresholds.
-    """
-
-    def test_slash_cue_sets_overlap_cue(self):
-        """ALICE/BOB line: speaker = ALICE, overlap_cue = ['ALICE', 'BOB']."""
-        scenes = _scenes_play([
-            "SCENE 1",
-            "ALICE/BOB",
-            "We both say this.",
-        ])
-        joint = [e for sc in scenes for e in sc.elements if e.overlap_cue]
-        assert joint, "Expected at least one element with overlap_cue set"
-        el = joint[0]
-        assert el.speaker == "ALICE"
-        assert "BOB" in el.overlap_cue
-
-    def test_slash_cue_speaker_is_first_part(self):
-        """When slash cue fires, the primary speaker is the first name."""
-        scenes = _scenes_play([
-            "SCENE 1",
-            "BOB/ALICE",  # reversed order this time
-            "We both say this.",
-        ])
-        joint = [e for sc in scenes for e in sc.elements if e.overlap_cue]
-        assert joint
-        assert joint[0].speaker == "BOB"
-        assert "ALICE" in joint[0].overlap_cue
-
-    def test_slash_cue_not_added_as_character(self):
-        """ALICE/BOB must not appear as a character in its own right."""
-        # Use parse_lines with enough dialog to build a character list
-        lines = (
-            ["ALICE", "Hello.", "BOB", "Hi."] * 10
-            + ["ALICE/BOB", "Together."] * 4
-        )
-        script = p.parse_lines(lines, title="Slash Test")
-        names = {c.name for c in script.characters}
-        assert "ALICE/BOB" not in names, f"Spurious joint character found: {names}"
-
-    def test_slash_cue_first_speaker_gets_voice_assignment(self):
-        """Voice assignment resolves ALICE/BOB to ALICE's voice (first part)."""
-        chars = [p.Character(name="ALICE"), p.Character(name="BOB")]
-        voices = [
-            VoiceInfo("v_alice", "Alice", gender="F"),
-            VoiceInfo("v_bob",   "Bob",   gender="M"),
-        ]
-        assignment = auto_assign(chars, voices)
-        # Simulate what render uses: voice_for("ALICE/BOB") should resolve to ALICE's voice
-        assert assignment.voice_for("ALICE/BOB") == assignment.voice_for("ALICE")
-
-    def test_compound_space_cue_splits_known_speakers(self):
-        """Two-column PDF artefact 'ALICE BOB' with both known → speaker=ALICE, overlap_cue."""
-        scenes = _scenes_play([
-            "SCENE 1",
-            "ALICE BOB",
-            "We both say this together.",
-        ])
-        joint = [e for sc in scenes for e in sc.elements if e.overlap_cue]
-        assert joint, "Expected at least one element with overlap_cue set for compound cue"
-        el = joint[0]
-        assert el.speaker == "ALICE"
-        assert el.overlap_cue == ["ALICE", "BOB"]
-
-    def test_compound_space_cue_not_added_as_character(self):
-        """'ALICE BOB' (space-compound) must not become a spurious 'ALICE BOB' character."""
-        scenes = _scenes_play([
-            "SCENE 1",
-            "ALICE",
-            "Solo line.",
-            "ALICE BOB",
-            "Together.",
-        ])
-        all_speakers = {e.speaker for sc in scenes for e in sc.elements if e.speaker}
-        assert "ALICE BOB" not in all_speakers, \
-            f"Spurious compound speaker found: {all_speakers}"
-
-    def test_unknown_space_compound_not_split(self):
-        """'ALICE STRANGER' where STRANGER is not a known speaker must NOT split."""
-        scenes = _scenes_play([
-            "SCENE 1",
-            "ALICE STRANGER",   # STRANGER not in known_speakers
-            "A line.",
-        ], known=("ALICE", "BOB"))  # STRANGER deliberately absent
-        joint = [e for sc in scenes for e in sc.elements if e.overlap_cue]
-        assert not joint, "Should not split unknown compound"
-
-    def test_split_compound_cue_helper_finds_split(self):
-        """_split_compound_cue finds the binary split when both halves are known."""
-        known = {"LEAH", "CREDIT CARD COMPANY", "ALICE", "BOB"}
-        assert p._split_compound_cue("LEAH CREDIT CARD COMPANY", known) == \
-               ["LEAH", "CREDIT CARD COMPANY"]
-        assert p._split_compound_cue("ALICE BOB", known) == ["ALICE", "BOB"]
-
-    def test_split_compound_cue_helper_returns_none_when_no_match(self):
-        """_split_compound_cue returns None when no split finds two known speakers."""
-        known = {"ALICE", "BOB"}
-        assert p._split_compound_cue("ALICE SMITH", known) is None   # SMITH not known
-        assert p._split_compound_cue("ALICE", known) is None          # no space → no split
-        assert p._split_compound_cue("ALICE BOB CAROL", known) is None  # 3-way not in known
-
-    def test_non_overlap_dialog_has_no_overlap_cue(self):
-        """Regular solo-speaker dialog must have overlap_cue=None."""
-        script = _make_script(1)
-        for sc in script.scenes:
-            for el in sc.elements:
-                assert el.overlap_cue is None, \
-                    f"Unexpected overlap_cue on solo line: {el}"
 
 
 # ===========================================================================
@@ -878,125 +793,3 @@ class TestOverlapRendering:
 # Per-voice overlap text: compound cues split, chorus cues do not
 # ---------------------------------------------------------------------------
 
-class TestOverlapTexts:
-    """_split_overlap_text helper and end-to-end per-voice text routing."""
-
-    def test_split_simple_two_sentence(self):
-        """Classic two-column: 'Alice line. Bob line.' splits at the period."""
-        result = p._split_overlap_text("Alice's line. Bob's answer.", n_voices=2)
-        assert result is not None
-        assert len(result) == 2
-        assert "Alice" in result[0]
-        assert "Bob" in result[1]
-
-    def test_split_question_mark(self):
-        """A question mark is a valid split boundary."""
-        result = p._split_overlap_text("What do you mean? I don't know.", n_voices=2)
-        assert result is not None
-        assert result[0].rstrip() == "What do you mean?"
-        assert "don't know" in result[1]
-
-    def test_split_ellipsis_as_unit(self):
-        """Ellipsis '. . .' treated as a terminal; split is AFTER the full run."""
-        result = p._split_overlap_text("That's a nice . . . So why did . . .", n_voices=2)
-        assert result is not None
-        assert result[0] == "That's a nice . . ."
-        assert result[1] == "So why did . . ."
-
-    def test_no_split_too_short(self):
-        """Very short text with no usable boundary returns None → chorus mode."""
-        result = p._split_overlap_text("What?!", n_voices=2)
-        assert result is None
-
-    def test_no_split_single_sentence(self):
-        """A single sentence with no internal boundary returns None."""
-        result = p._split_overlap_text("We're in this together!", n_voices=2)
-        assert result is None
-
-    def test_compound_cue_element_has_overlap_texts(self):
-        """Two-column space-compound cue produces non-None overlap_texts."""
-        lines = [
-            "SCENE ONE",
-            "ALICE BOB",
-            "First half. Second half.",
-        ]
-        known = {"ALICE", "BOB"}
-        scenes = p._extract_scenes_play(lines, known, set())
-        overlap_els = [e for sc in scenes for e in sc.elements if e.overlap_cue]
-        assert overlap_els, "Expected at least one overlap element"
-        el = overlap_els[0]
-        assert el.overlap_texts is not None
-        assert len(el.overlap_texts) == 2
-        assert "First half" in el.overlap_texts[0]
-        assert "Second half" in el.overlap_texts[1]
-
-    def test_slash_cue_has_no_overlap_texts(self):
-        """Slash cue (chorus) must NOT produce overlap_texts — both voices read same text."""
-        lines = [
-            "SCENE ONE",
-            "ALICE/BOB",
-            "Together now.",
-        ]
-        known = {"ALICE", "BOB"}
-        scenes = p._extract_scenes_play(lines, known, set())
-        overlap_els = [e for sc in scenes for e in sc.elements if e.overlap_cue]
-        assert overlap_els
-        el = overlap_els[0]
-        assert el.overlap_texts is None, "Slash cue should have no per-voice split"
-
-    def test_ampersand_cue_has_no_overlap_texts(self):
-        """Ampersand cue (chorus) must NOT produce overlap_texts."""
-        lines = [
-            "SCENE ONE",
-            "ALICE & BOB",
-            "What?!",
-        ]
-        known = {"ALICE", "BOB"}
-        scenes = p._extract_scenes_play(lines, known, set())
-        overlap_els = [e for sc in scenes for e in sc.elements if e.overlap_cue]
-        assert overlap_els
-        el = overlap_els[0]
-        assert el.overlap_texts is None, "Ampersand cue should have no per-voice split"
-
-    def test_overlap_texts_flows_to_render_chunk(self):
-        """overlap_texts from an Element is passed through to the RenderChunk."""
-        from audio_pipeline import _build_render_chunks
-        from parser import Element
-        from voice_assignment import Assignment
-        from tts_engines import VoiceInfo
-
-        el = Element(
-            kind="dialog",
-            speaker="ALICE",
-            text="First part. Second part.",
-            overlap_cue=["ALICE", "BOB"],
-            overlap_texts=["First part.", "Second part."],
-        )
-        vm = {"ALICE": "voice_a", "BOB": "voice_b", "__NARRATOR__": "voice_n"}
-        vi = {v: VoiceInfo(id=v, label=v) for v in vm.values()}
-        assign = Assignment(mapping=vm, voices_by_id=vi)
-        chunks = _build_render_chunks([el], assign)
-        assert chunks
-        chunk = chunks[0]
-        assert chunk.overlap_texts == ["First part.", "Second part."]
-
-    def test_chorus_overlap_texts_is_none_in_chunk(self):
-        """When overlap_texts is None (chorus), the chunk also has None."""
-        from audio_pipeline import _build_render_chunks
-        from parser import Element
-        from voice_assignment import Assignment
-        from tts_engines import VoiceInfo
-
-        el = Element(
-            kind="dialog",
-            speaker="ALICE",
-            text="Together now.",
-            overlap_cue=["ALICE", "BOB"],
-            overlap_texts=None,
-        )
-        vm = {"ALICE": "voice_a", "BOB": "voice_b", "__NARRATOR__": "voice_n"}
-        vi = {v: VoiceInfo(id=v, label=v) for v in vm.values()}
-        assign = Assignment(mapping=vm, voices_by_id=vi)
-        chunks = _build_render_chunks([el], assign)
-        assert chunks
-        assert chunks[0].overlap_texts is None

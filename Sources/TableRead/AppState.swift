@@ -25,6 +25,7 @@ final class AppState: ObservableObject {
     @Published var isGenerating = false
     @Published var generationProgress = 0.0
     @Published var generationLog: [GenerationLogLine] = []
+    @Published var debugLog: [DebugLogEntry] = []
     @Published var outputDirectory: URL?
     @Published var lastOutputDirectory: URL?
     @Published var status = "Choose a PDF script to begin."
@@ -45,6 +46,8 @@ final class AppState: ObservableObject {
     @Published var installLog: [GenerationLogLine] = []
     @Published var installingEngine: EngineKind? = nil
     @Published var uninstallingEngine: EngineKind? = nil
+    /// 0.0–1.0 while an engine is being installed; nil = no install in progress.
+    @Published var installProgress: Double? = nil
     @Published var previewingVoiceId: String?
     @Published var preparingPreviewVoiceId: String?
     @Published var renderStartTime: Date?
@@ -53,8 +56,21 @@ final class AppState: ObservableObject {
     @Published var renderingSceneNumbers: [Int] = []          // ordered list of scene numbers being rendered
     @Published var sceneProgress: [Int: Double] = [:]         // scene number → 0.0–1.0
 
+    /// Output-file presence per scene, keyed by scene number.
+    /// Populated by checkRenderedScenes() and updated after each render.
+    @Published var sceneFileInfo: [Int: SceneOutputInfo] = [:]
+
+    /// Cue map sidecar URLs, keyed by scene number. Populated during and after generation.
+    @Published var sceneCueFiles: [Int: URL] = [:]
+
+    /// Scenes that have a render on disk but whose script was edited since the last render.
+    @Published var scenesNeedingRerender: Set<Int> = []
+
     // Render completion
     @Published var generationComplete = false
+
+    /// Non-nil while a render is running in the background (user navigated back to gallery).
+    @Published var backgroundRenderProjectID: UUID? = nil
 
     // Pause state
     @Published var isPaused = false
@@ -66,6 +82,12 @@ final class AppState: ObservableObject {
     @Published var updateDownloadState: UpdateDownloadState = .idle
     /// Prevents showing the startup prompt sheet more than once per launch.
     @Published var didPromptForUpdate = false
+    @Published var updateChannel: UpdateChannel = {
+        let raw = UserDefaults.standard.string(forKey: "updateChannel") ?? ""
+        return UpdateChannel(rawValue: raw) ?? .beta
+    }() {
+        didSet { UserDefaults.standard.set(updateChannel.rawValue, forKey: "updateChannel") }
+    }
 
     // Settings — persisted via UserDefaults
     @Published var autoOpenFinderAfterRender: Bool = UserDefaults.standard.bool(forKey: "autoOpenFinderAfterRender") {
@@ -115,12 +137,22 @@ final class AppState: ObservableObject {
     private var redoStack: [AppStateSnapshot] = []
     private var undoPushSuppressCount = 0
 
+    /// Set by ProjectStore after both objects are initialized.
+    weak var projectStore: ProjectStore?
+
+    /// When non-nil, the output directory defaults to this folder (the open project's folder).
+    var currentProjectFolder: URL?
+
     let bridge = PythonBridge()
     private var previewSound: NSSound?
 
     var sceneList: [SceneSummary] { script?.scenes ?? [] }
 
     init() {
+        // Route Python subprocess stderr to the in-app debug log.
+        bridge.onPythonLog = { [weak self] line in
+            Task { @MainActor [weak self] in self?.dlog("[py] \(line)", .debug) }
+        }
         // Restore last output directory (path only — no file I/O at launch)
         if let savedPath = UserDefaults.standard.string(forKey: "lastOutputDirectory") {
             outputDirectory = URL(fileURLWithPath: savedPath)
@@ -167,6 +199,7 @@ final class AppState: ObservableObject {
 
     func goTo(_ target: WorkflowStep) {
         guard canNavigate(to: target) else { return }
+        persistProjectIfNeeded()    // flush voice assignments and other in-flight state
         let steps = WorkflowStep.allCases
         let currentIdx = steps.firstIndex(of: step) ?? 0
         let targetIdx  = steps.firstIndex(of: target) ?? 0
@@ -175,13 +208,19 @@ final class AppState: ObservableObject {
         if target == .cast && voices.isEmpty {
             fetchVoices()
         }
+        if target == .review {
+            checkRenderedScenes()
+        }
     }
 
     // MARK: - Import
 
     func importPDF(_ url: URL) {
+        dlog("importPDF: \(url.lastPathComponent)", .info)
         selectedPDF = url
-        outputDirectory = nil   // reset so the new script defaults to "next to the PDF"
+        outputDirectory = currentProjectFolder  // nil outside a project → defaults to next to PDF
+        sceneFileInfo = [:]     // clear stale file-existence badges
+        sceneCueFiles = [:]
         isWorking = true
         status = "Parsing script..."
         errorMessage = nil
@@ -197,6 +236,11 @@ final class AppState: ObservableObject {
                 let correctionCount = corrections.values.filter { $0.pdfIdentifier == url.path }.count
                 let suffix = correctionCount > 0 ? ", \(correctionCount) correction\(correctionCount == 1 ? "" : "s") applied" : ""
                 status = "\(parsed.sceneCount) scenes, \(parsed.characterCount) characters\(suffix)."
+                // Refresh rendered-scene badges immediately and persist so the
+                // gallery card reflects the true state even if the user never
+                // navigated away after the last render.
+                checkRenderedScenes()
+                persistProjectIfNeeded()
             } catch {
                 errorMessage = error.localizedDescription
                 status = "Parsing failed."
@@ -208,20 +252,28 @@ final class AppState: ObservableObject {
     // MARK: - Voice fetching
 
     func fetchVoices() {
-        guard let pdf = selectedPDF else { return }
         isFetchingVoices = true
         let engine = selectedEngine
+        let pdf = selectedPDF   // optional — only used for character auto-assignment
+        dlog("fetchVoices engine=\(engine.id) pdf=\(pdf?.lastPathComponent ?? "none")")
         Task {
             do {
                 let (list, autoAssign) = try await bridge.voices(engine: engine, pdf: pdf)
+                // Discard result if the user switched engine while we were fetching.
+                guard selectedEngine == engine else { return }
                 voices = list
-                // voiceAssignment is cleared whenever the engine changes, so apply
-                // server suggestions unconditionally — they become the starting defaults.
-                for (char, voiceId) in autoAssign {
+                // Only apply auto-assign suggestions for characters not yet in voiceAssignment
+                // so user selections are never silently overwritten.
+                var applied: [String] = []
+                for (char, voiceId) in autoAssign where voiceAssignment[char] == nil {
                     voiceAssignment[char] = voiceId
+                    applied.append(char)
                 }
+                dlog("fetchVoices done: \(list.count) voices, autoAssign \(autoAssign.count) total (\(applied.count) applied, \(autoAssign.count - applied.count) skipped — user had picks)", .info)
                 status = "\(list.count) voices available for \(engine.title)."
             } catch {
+                guard selectedEngine == engine else { return }
+                dlog("fetchVoices error: \(error.localizedDescription)", .error)
                 errorMessage = error.localizedDescription
                 status = "Could not load voices."
             }
@@ -276,6 +328,38 @@ final class AppState: ObservableObject {
         refreshOpenAIEstimate()
     }
 
+    /// Checks the output directory and selects only scenes that haven't been
+    /// rendered yet (no .m4a found for that scene number).
+    func selectMissingScenes() {
+        guard let pdf = selectedPDF else { return }
+        let out = outputDirectory ?? defaultOutputDirectory(for: pdf)
+        Task {
+            do {
+                let info = try await bridge.checkOutputFiles(pdf: pdf, outputDir: out)
+                let missing = Set(info.compactMap { num, scene in scene.exists ? nil : num })
+                await MainActor.run { sceneFileInfo = info }
+                if missing.isEmpty {
+                    // All scenes rendered — nothing to do
+                    await MainActor.run { status = "All selected scenes already rendered." }
+                } else {
+                    await MainActor.run {
+                        selectedScenes = missing
+                        refreshOpenAIEstimate()
+                        let allCount = info.count
+                        let doneCount = allCount - missing.count
+                        status = "\(missing.count) unrendered scene\(missing.count == 1 ? "" : "s") selected (\(doneCount) already done)."
+                    }
+                }
+            } catch {
+                // Silently ignore — user can still select manually
+                await MainActor.run { status = "Could not check output files: \(error.localizedDescription)" }
+            }
+        }
+    }
+
+    /// Check which scenes have already been rendered to the output folder
+    /// and populate sceneFileInfo for display in ReviewView.
+    /// Runs silently in the background — no status message on success.
     // MARK: - Engine selection
 
     /// Select an engine card without triggering install — used by card tap.
@@ -426,6 +510,7 @@ final class AppState: ObservableObject {
                 selectedEngine = .macOS
             }
             installingEngine = nil
+            installProgress = nil
         }
     }
 
@@ -449,9 +534,22 @@ final class AppState: ObservableObject {
                 installed.insert(.openAI)
             }
             installedEngines = installed
+            // Prefer Kokoro over the macOS default when it's available and
+            // the user hasn't explicitly chosen a different engine for a project.
+            if installed.contains(.kokoro) && selectedEngine == .macOS {
+                selectedEngine = .kokoro
+            }
         } catch {
             // Keep the current UI state if the worker cannot answer yet.
         }
+    }
+
+    func cancelInstall() {
+        bridge.cancelInstall()
+        appendInstallLog("Installation cancelled.", .warning)
+        installProgress = nil
+        installingEngine = nil
+        status = "Installation cancelled."
     }
 
     func uninstallEngine(_ engine: EngineKind) {
@@ -492,6 +590,7 @@ final class AppState: ObservableObject {
         status = "Preparing \(voice.label) preview…"
 
         let engine = selectedEngine
+        dlog("previewVoice id=\(voice.id) label=\(voice.label) engine=\(engine.id)")
         Task {
             do {
                 if engine == .openAI && openAIAPIKey.isEmpty {
@@ -501,6 +600,7 @@ final class AppState: ObservableObject {
                     engine: engine, voice: voice,
                     apiKey: engine == .openAI ? openAIAPIKey : nil
                 )
+                dlog("previewVoice ok: \(url.lastPathComponent)")
                 guard preparingPreviewVoiceId == voice.id else { return }
                 let sound = NSSound(contentsOf: url, byReference: true)
                 previewSound = sound
@@ -518,6 +618,7 @@ final class AppState: ObservableObject {
                 }
             } catch {
                 preparingPreviewVoiceId = nil
+                dlog("previewVoice error: \(error.localizedDescription)", .error)
                 errorMessage = error.localizedDescription
                 status = "Preview failed."
             }
@@ -527,10 +628,16 @@ final class AppState: ObservableObject {
     private func handleInstallEvent(_ event: GenerationEvent) {
         switch event.event {
         case "started":
+            installProgress = 0.0
             appendInstallLog(event.message ?? "Starting…", .info)
+        case "progress":
+            if let f = event.fraction {
+                installProgress = f
+            }
         case "log":
             appendInstallLog(event.message ?? "", style(from: event.level))
         case "done":
+            installProgress = 1.0
             appendInstallLog(event.message ?? "Done.", .success)
         default:
             if let msg = event.message, !msg.isEmpty {
@@ -590,10 +697,14 @@ final class AppState: ObservableObject {
         renderStartTime = Date()
         isGenerating = true
         isWorking = true
+        backgroundRenderProjectID = nil  // reset; will be set only if user navigates away
         status = "Rendering \(sceneNumbers.count) scene(s)..."
         appendLog("Starting render to \(out.path)", .info)
 
         let assignment = voiceAssignment
+        let assignmentDesc = assignment.isEmpty ? "(empty — will auto-assign)" :
+            assignment.map { "\($0.key)→\($0.value)" }.sorted().joined(separator: ", ")
+        dlog("generate scenes=\(sceneNumbers) engine=\(selectedEngine.id) assignment[\(assignment.count)]: \(assignmentDesc)", .info)
         let engine = selectedEngine
         // Load key from Keychain on demand — only at the point of actual use
         if engine == .openAI && openAIAPIKey.isEmpty {
@@ -642,6 +753,7 @@ final class AppState: ObservableObject {
         pauseStartTime = nil
         totalPausedSeconds = 0
         renderStartTime = nil
+        backgroundRenderProjectID = nil
         status = "Generation canceled."
     }
 
@@ -685,19 +797,31 @@ final class AppState: ObservableObject {
         undoStack = []; redoStack = []; canUndo = false; canRedo = false; undoStackCount = 0
         navigatingForward = false
         step = .importScript
-        script = nil
-        selectedPDF = nil
+        selectedScenes = []
+        currentProjectFolder = nil
+        corrections = [:]
+        sceneTitleOverrides = [:]
+        userAddedElements = [:]
+        characterGenderOverrides = [:]
         voices = []
         voiceAssignment = [:]
-        characterGenderOverrides = [:]
-        selectedScenes = []
-        generationLog = []
-        generationProgress = 0
-        sceneProgress = [:]
-        renderingSceneNumbers = []
-        generationComplete = false
-        renderStartTime = nil
         status = "Choose a PDF script to begin."
+        // Don't clear render state or PDF/script if a background render is running —
+        // checkRenderedScenes() and the "done" handler still need them.
+        if !isGenerating {
+            script = nil
+            selectedPDF = nil
+            outputDirectory = nil
+            generationLog = []
+            generationProgress = 0
+            sceneProgress = [:]
+            renderingSceneNumbers = []
+            generationComplete = false
+            renderStartTime = nil
+            sceneFileInfo = [:]
+            sceneCueFiles = [:]
+            scenesNeedingRerender = []
+        }
     }
 
     func setOutputDirectory(_ url: URL) {
@@ -767,6 +891,7 @@ final class AppState: ObservableObject {
                         if let message = event.message {
                             if message.hasPrefix("✓") {
                                 sceneProgress[sceneNumber] = 1.0
+                                scenesNeedingRerender.remove(sceneNumber)
                                 if notifyOnSceneComplete {
                                     let title = event.sceneTitle ?? "Scene \(sceneNumber)"
                                     sendNotification(
@@ -815,6 +940,22 @@ final class AppState: ObservableObject {
                 }
             } else {
                 generationComplete = true
+                checkRenderedScenes()   // refresh rendered badges in ReviewView
+                if let bgID = backgroundRenderProjectID {
+                    // Render completed while user was in the gallery — save result directly
+                    // and refresh the gallery card's "Rendered" tag.
+                    if var proj = projectStore?.projects.first(where: { $0.id == bgID }),
+                       proj.folderURL != nil {
+                        proj.renderedScenes = sceneFileInfo
+                            .compactMap { num, info in info.exists ? num : nil }
+                            .sorted()
+                        try? projectStore?.saveProject(proj)
+                    }
+                    backgroundRenderProjectID = nil
+                    projectStore?.loadAllProjects()
+                } else {
+                    persistProjectIfNeeded()
+                }
                 if notifyOnRenderComplete {
                     let fileCount = event.files?.count ?? 0
                     let folder = lastOutputDirectory?.lastPathComponent ?? "the output folder"
@@ -828,6 +969,12 @@ final class AppState: ObservableObject {
                     NSWorkspace.shared.open(dir)
                 }
             }
+        case "cueMap":
+            if let n = event.sceneNumber, let p = event.cueFilePath {
+                sceneCueFiles[n] = URL(fileURLWithPath: p)
+                scenesNeedingRerender.remove(n)
+                checkRenderedScenes()  // m4a was written before cue map; refresh badges immediately
+            }
         default:
             appendLog(event.message ?? event.event, .info)
         }
@@ -837,11 +984,60 @@ final class AppState: ObservableObject {
         generationLog.append(GenerationLogLine(text: text, style: style))
     }
 
+    func dlog(_ text: String, _ style: LogStyle = .debug) {
+        let entry = DebugLogEntry(timestamp: Date(), text: text, style: style)
+        debugLog.append(entry)
+        if debugLog.count > 2000 { debugLog.removeFirst(debugLog.count - 2000) }
+    }
+
     // MARK: - Helpers
 
-    private func defaultOutputDirectory(for pdf: URL) -> URL {
-        pdf.deletingLastPathComponent()
+    func defaultOutputDirectory(for pdf: URL) -> URL {
+        if let projectFolder = currentProjectFolder { return projectFolder }
+        return pdf.deletingLastPathComponent()
             .appendingPathComponent(pdf.deletingPathExtension().lastPathComponent + " - table read")
+    }
+
+    /// Replicate Python's `scene_filename()` locally so we can check output files
+    /// without spawning a Python process.  Must stay in sync with audio_pipeline.py:
+    ///   `f"Scene_{number:02d}_{sanitize(title)}.m4a"`
+    private static func sceneFilename(number: Int, title: String) -> String {
+        var s = title.trimmingCharacters(in: .whitespaces)
+        // Remove anything that's not a word char, space, or hyphen
+        s = s.replacingOccurrences(of: "[^\\p{L}\\p{N}\\s\\-]", with: "",
+                                   options: .regularExpression)
+        // Collapse runs of spaces/hyphens to a single underscore
+        s = s.replacingOccurrences(of: "[\\s\\-]+", with: "_",
+                                   options: .regularExpression)
+        s = s.trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+        let part = s.prefix(60).isEmpty ? "Scene" : String(s.prefix(60))
+        return String(format: "Scene_%02d_%@.m4a", number, part)
+    }
+
+    /// Fast local variant of checkRenderedScenes — uses the in-memory scene list
+    /// and local filesystem checks instead of spawning a Python worker.
+    func checkRenderedScenes() {
+        guard let pdf = selectedPDF, let sceneList = script?.scenes else { return }
+        let outDir = outputDirectory ?? defaultOutputDirectory(for: pdf)
+        let fm = FileManager.default
+        var info: [Int: SceneOutputInfo] = [:]
+        var cueFiles: [Int: URL] = [:]
+        for scene in sceneList {
+            let fname = Self.sceneFilename(number: scene.number, title: scene.title)
+            let cueName = fname.replacingOccurrences(of: ".m4a", with: ".cues.json")
+            let filePath = outDir.appendingPathComponent(fname)
+            let cuePath  = outDir.appendingPathComponent(cueName)
+            info[scene.number] = SceneOutputInfo(
+                exists: fm.fileExists(atPath: filePath.path),
+                filename: fname,
+                title: scene.title
+            )
+            if fm.fileExists(atPath: cuePath.path) {
+                cueFiles[scene.number] = cuePath
+            }
+        }
+        sceneFileInfo = info
+        sceneCueFiles = cueFiles
     }
 
     private func format(seconds: Double) -> String {
@@ -872,6 +1068,8 @@ extension AppState {
         )
         corrections[k] = correction
         Self.persistCorrections(corrections)
+        markSceneDirtyIfRendered(correction.sceneNumber)
+        persistProjectIfNeeded()
         // Upload in the background if the user opted in.
         Task.detached(priority: .background) { [weak self] in
             await self?.uploadPendingCorrections()
@@ -883,6 +1081,8 @@ extension AppState {
         let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: textKey)
         corrections.removeValue(forKey: k)
         Self.persistCorrections(corrections)
+        markSceneDirtyIfRendered(sceneNumber)
+        persistProjectIfNeeded()
     }
 
     func exportCorrections() -> URL? {
@@ -973,6 +1173,7 @@ extension AppState {
         byPDF[sceneNumber] = title.isEmpty ? nil : title
         sceneTitleOverrides[pdfPath] = byPDF
         Self.persistSceneTitleOverrides(sceneTitleOverrides)
+        persistProjectIfNeeded()
     }
 
     func effectiveSceneTitle(pdfPath: String, scene: SceneSummary) -> String {
@@ -1130,6 +1331,8 @@ extension AppState {
         let key = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
         userAddedElements[key, default: []].append(el)
         Self.persistUserAddedElements(userAddedElements)
+        markSceneDirtyIfRendered(sceneNumber)
+        persistProjectIfNeeded()
     }
 
     func addElementWithContent(afterTextKey: String, speaker: String, text: String,
@@ -1145,6 +1348,8 @@ extension AppState {
         let key = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
         userAddedElements[key, default: []].append(el)
         Self.persistUserAddedElements(userAddedElements)
+        markSceneDirtyIfRendered(sceneNumber)
+        persistProjectIfNeeded()
     }
 
     /// Marks a parser-detected overlap element as noise and re-adds the surviving voice(s) as
@@ -1279,6 +1484,8 @@ extension AppState {
         userAddedElements[key]?[idx].text = text
         userAddedElements[key]?[idx].kind = kind
         Self.persistUserAddedElements(userAddedElements)
+        markSceneDirtyIfRendered(sceneNumber)
+        persistProjectIfNeeded()
     }
 
     func deleteAddedElement(id: UUID, sceneNumber: Int, pdfPath: String) {
@@ -1287,6 +1494,8 @@ extension AppState {
         userAddedElements[key]?.removeAll { $0.id == id }
         if userAddedElements[key]?.isEmpty == true { userAddedElements.removeValue(forKey: key) }
         Self.persistUserAddedElements(userAddedElements)
+        markSceneDirtyIfRendered(sceneNumber)
+        persistProjectIfNeeded()
     }
 
     /// Return parsed elements interleaved with any user-added lines, capped at `limit` parsed elements.
@@ -1408,7 +1617,7 @@ extension AppState {
 extension AppState {
     /// Called once at launch (with a short delay) and whenever the user taps "Check for Updates".
     func checkForUpdates() async {
-        let info = await AppUpdater.shared.checkForUpdates()
+        let info = await AppUpdater.shared.checkForUpdates(channel: updateChannel)
         availableUpdate = info
     }
 
@@ -1429,6 +1638,7 @@ extension AppState {
         }
 
         updateDownloadState = .downloading(0)
+        UpdateLogger.log("downloadAndInstallUpdate: starting download of \(info.version)")
 
         Task {
             do {
@@ -1440,13 +1650,64 @@ extension AppState {
                         }
                     }
                 )
+                UpdateLogger.log("downloadAndInstallUpdate: download+extract complete — \(appURL.path)")
                 updateDownloadState = .installing
-                try await Task.sleep(nanoseconds: 200_000_000)   // brief pause so UI shows "Installing…"
+                try await Task.sleep(nanoseconds: 200_000_000)
+                UpdateLogger.log("downloadAndInstallUpdate: calling installUpdate")
                 try await AppUpdater.shared.installUpdate(from: appURL)
                 // App terminates inside installUpdate — we never reach here
+                UpdateLogger.log("downloadAndInstallUpdate: WARNING — reached after installUpdate")
             } catch {
+                UpdateLogger.log("downloadAndInstallUpdate: FAILED — \(error)")
                 updateDownloadState = .failed(error.localizedDescription)
             }
+        }
+    }
+}
+
+// MARK: - Project integration
+
+extension AppState {
+    /// Load state from an open project and trigger a parse of the project's PDF.
+    func loadFromProject(_ project: Project) {
+        guard let folderURL = project.folderURL,
+              let pdfURL = project.pdfURL else { return }
+        currentProjectFolder = folderURL
+        voiceAssignment = project.voiceAssignment
+        characterGenderOverrides = project.characterGenderOverrides
+        corrections = project.corrections
+        sceneTitleOverrides = project.sceneTitleOverrides
+        userAddedElements = project.userAddedElements
+        if let engine = EngineKind(rawValue: project.selectedEngine) {
+            selectedEngine = engine
+        }
+        importPDF(pdfURL)
+    }
+
+    /// Write current in-memory state back into the project struct (for saving).
+    func syncToProject(_ project: Project) -> Project {
+        var p = project
+        p.voiceAssignment = voiceAssignment
+        p.characterGenderOverrides = characterGenderOverrides
+        p.corrections = corrections
+        p.sceneTitleOverrides = sceneTitleOverrides
+        p.userAddedElements = userAddedElements
+        p.selectedEngine = selectedEngine.rawValue
+        p.renderedScenes = sceneFileInfo.compactMap { num, info in info.exists ? num : nil }.sorted()
+        if let title = script?.title, !title.isEmpty { p.scriptTitle = title }
+        return p
+    }
+
+    /// Persist state to the current project if one is open. Called after every mutation.
+    func persistProjectIfNeeded() {
+        guard let store = projectStore, store.currentProject != nil else { return }
+        store.saveCurrentProject(self)
+    }
+
+    /// Mark a rendered scene as needing a re-render because its script was edited.
+    func markSceneDirtyIfRendered(_ sceneNumber: Int) {
+        if sceneFileInfo[sceneNumber]?.exists == true {
+            scenesNeedingRerender.insert(sceneNumber)
         }
     }
 }

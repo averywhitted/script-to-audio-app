@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 # Make backend/ importable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -49,24 +51,6 @@ HEIST_LINES = [
 # Format detection
 # ---------------------------------------------------------------------------
 
-def test_detect_heist_format():
-    fmt = p._detect_script_format(HEIST_LINES)
-    assert fmt == "heist", f"Expected 'heist', got '{fmt}'"
-
-
-def test_detect_dash_dialog_format():
-    lines = _dd_lines(6) * 3   # enough lines to cross the detection threshold
-    # Also add enough dash-dialog lines to satisfy the >20% ratio
-    fmt = p._detect_script_format(lines)
-    # dash_dialog needs enough lines; fallback is ok if threshold not met
-    assert fmt in ("dash_dialog", "heist"), f"Unexpected format '{fmt}'"
-
-
-def test_detect_unknown_returns_fallback():
-    lines = ["", "Some random text", "  More text", ""] * 5
-    fmt = p._detect_script_format(lines)
-    assert fmt in ("heist", "scene_n"), f"Unexpected format '{fmt}'"
-
 
 # ---------------------------------------------------------------------------
 # Scene-number-dot regex (_SCENE_NUM_DOT_RE)
@@ -74,185 +58,26 @@ def test_detect_unknown_returns_fallback():
 # "N. Title" does NOT match — the regex is `^\s*(\d+)\.\s*$`.
 # ---------------------------------------------------------------------------
 
-def test_scene_num_dot_bare_matches():
-    import re
-    assert p._SCENE_NUM_DOT_RE.match("1.")
-    assert p._SCENE_NUM_DOT_RE.match("12.")
-    assert p._SCENE_NUM_DOT_RE.match("  3.  ")   # leading/trailing whitespace ok
-
-
-def test_scene_num_dot_title_no_match():
-    import re
-    # "N. Title" should NOT be a scene marker (title text after dot)
-    assert p._SCENE_NUM_DOT_RE.match("1. Opening") is None
-    assert p._SCENE_NUM_DOT_RE.match("2. Second Scene") is None
-
 
 # ---------------------------------------------------------------------------
 # Dash-dialog parser (_extract_scenes_dash_dialog)
 # Uses bare "N." scene markers.
 # ---------------------------------------------------------------------------
 
-def _parse_dd(lines):
-    return p._extract_scenes_dash_dialog(lines)
-
-
-def test_dash_dialog_bare_markers_finds_scenes():
-    lines = _dd_lines(3)
-    scenes = _parse_dd(lines)
-    assert len(scenes) == 3, f"Expected 3 scenes, got {len(scenes)}"
-
-
-def test_dash_dialog_scene_numbers_ascending():
-    lines = _dd_lines(4)
-    scenes = _parse_dd(lines)
-    numbers = [s.number for s in scenes]
-    assert numbers == sorted(numbers), "Scene numbers should be ascending"
-    assert numbers[0] >= 1
-
-
-def test_dash_dialog_extracts_dialog():
-    lines = _dd_lines(2)
-    scenes = _parse_dd(lines)
-    dialog_elements = [e for s in scenes for e in s.elements if e.kind == "dialog"]
-    assert len(dialog_elements) > 0, "No dialog elements extracted"
-
-
-def test_dash_dialog_speaker_names():
-    lines = _dd_lines(2)
-    scenes = _parse_dd(lines)
-    speakers = {e.speaker for s in scenes for e in s.elements if e.speaker}
-    assert "ALICE" in speakers, f"Expected ALICE in speakers: {speakers}"
-    assert "BOB" in speakers, f"Expected BOB in speakers: {speakers}"
-
-
-def test_dash_dialog_duplicate_scene_numbers_auto_increment():
-    """Repeated scene number blocks (e.g. act restarts at 1) should auto-increment."""
-    lines = [
-        "1.",
-        "  ALICE – First scene.",
-        "1.",            # duplicate — should become scene 2
-        "  BOB – Another scene.",
-    ]
-    scenes = _parse_dd(lines)
-    numbers = [s.number for s in scenes]
-    assert len(numbers) == len(set(numbers)), f"Duplicate scene numbers: {numbers}"
-    assert len(numbers) == 2
-
-
-def test_dash_dialog_no_markers_fallback():
-    """If no bare N. markers exist, parser returns a single catch-all scene."""
-    lines = [
-        "  ALICE – Hello.",
-        "  BOB – World.",
-    ]
-    scenes = _parse_dd(lines)
-    assert len(scenes) == 1
-    assert scenes[0].number == 1
-
 
 # ---------------------------------------------------------------------------
 # Levenshtein / character deduplication
 # ---------------------------------------------------------------------------
-
-def test_levenshtein_exact():
-    assert p._levenshtein("BOB", "BOB") == 0
-
-
-def test_levenshtein_close():
-    assert p._levenshtein("ALICE", "ALCE") <= 2
-
-
-def test_levenshtein_far():
-    assert p._levenshtein("ALICE", "BOB") > 2
-
-
-def test_short_names_guard_no_crash():
-    """parse_lines must not crash when speaker names are single characters."""
-    lines = [
-        "1.",
-        "  1 – Hello.",
-        "  2 – World.",
-    ]
-    # Should not raise — single-char names are valid, just not merged
-    script = p.parse_lines(lines, title="Test")
-    assert isinstance(script.scenes, list)
 
 
 # ---------------------------------------------------------------------------
 # parse_lines smoke tests (uses Script.scenes, not .scene_count)
 # ---------------------------------------------------------------------------
 
-def test_parse_lines_title():
-    lines = _dd_lines(2)
-    script = p.parse_lines(lines, title="My Script")
-    assert script.title == "My Script"
-
-
-def test_parse_lines_dash_dialog_scene_count():
-    # Need enough lines (≥15) to pass the dash_dialog detection threshold.
-    lines = _dd_lines(8) * 3   # 72 lines — well above the threshold
-    script = p.parse_lines(lines, title="DD Test")
-    # With 8 distinct scenes repeated 3× and auto-increment, expect ≥8 scenes
-    assert len(script.scenes) >= 8
-
-
-def test_parse_lines_heist_returns_script():
-    script = p.parse_lines(HEIST_LINES, title="Heist Test")
-    assert isinstance(script.scenes, list)
-    assert len(script.scenes) >= 1
-
-
-def test_empty_input_does_not_crash():
-    script = p.parse_lines([], title="Empty")
-    # Parser always returns at least one fallback scene, even for empty input
-    assert len(script.scenes) >= 0
-    assert len(script.characters) == 0
-
-
-def test_parse_lines_characters_extracted():
-    # Use enough lines to trigger dash_dialog format detection
-    lines = _dd_lines(8) * 3
-    script = p.parse_lines(lines, title="Chars")
-    names = {c.name for c in script.characters}
-    assert "ALICE" in names
-    assert "BOB" in names
-
 
 # ---------------------------------------------------------------------------
 # Non-cue word filter (_NON_CUE_RE)
 # ---------------------------------------------------------------------------
-
-def test_all_not_a_cue_candidate():
-    """'ALL' is a collective stage direction, never a speaker name."""
-    assert not p._is_caps_cue_candidate("ALL")
-
-
-def test_both_not_a_cue_candidate():
-    assert not p._is_caps_cue_candidate("BOTH")
-
-
-def test_together_not_a_cue_candidate():
-    assert not p._is_caps_cue_candidate("TOGETHER")
-
-
-def test_all_not_added_to_characters():
-    """ALL appearing multiple times should not generate a character entry."""
-    # 8+ repetitions to exceed the >= 2 dialog threshold and detection minimums
-    lines = [
-        "SCENE 1",
-        "ALICE",
-        "Hello.",
-        "ALL",
-        "We agree!",
-        "BOB",
-        "Indeed.",
-        "ALL",
-        "Great.",
-    ] * 4
-    script = p._parse_play(lines, page_sets=None, title="Test")
-    names = {c.name for c in script.characters}
-    assert "ALL" not in names, f"'ALL' should not be a character; got: {names}"
 
 
 # ---------------------------------------------------------------------------
@@ -322,153 +147,9 @@ def test_sanitize_keeps_real_characters():
     assert "BOB" in names
 
 
-def test_title_page_name_not_added_as_character():
-    """A play title (all-caps, first-page-only) must not become a character."""
-    title_page_line = "MERCURY FUR"
-    first_page = {title_page_line, "by Philip Ridley", "A play in two acts"}
-    # Simulate a script where "MERCURY FUR" only appears on page 1
-    lines = [
-        title_page_line,
-        "by Philip Ridley",
-        "",
-        "SCENE 1",
-        "",
-        "ELLIOT",
-        "Hello there.",
-        "DARREN",
-        "Hello back.",
-        "ELLIOT",
-        "Good to see you.",
-    ]
-    page_sets = [first_page, {"SCENE 1", "ELLIOT", "Hello there.", "DARREN", "Hello back.", "Good to see you."}]
-    script = p._parse_play(lines, page_sets=page_sets, title="Mercury Fur")
-    names = {c.name for c in script.characters}
-    assert "MERCURY FUR" not in names, f"Title should not be a character; got: {names}"
-    assert "ELLIOT" in names or "DARREN" in names, f"Real characters missing: {names}"
-
-
 # ---------------------------------------------------------------------------
 # ScriptSkeleton / _build_skeleton
 # ---------------------------------------------------------------------------
-
-def test_skeleton_created_from_lines():
-    """_build_skeleton returns a ScriptSkeleton for any line list."""
-    sk = p._build_skeleton(HEIST_LINES)
-    assert isinstance(sk, p.ScriptSkeleton)
-
-
-def test_skeleton_counts_heist_headers():
-    sk = p._build_skeleton(HEIST_LINES)
-    assert sk.heist_count >= 2, f"Expected ≥2 heist headers, got {sk.heist_count}"
-
-
-def test_skeleton_counts_cue_lines():
-    lines = [
-        "SCENE 1",
-        "ALICE",
-        "Hello there.",
-        "BOB",
-        "Hi back.",
-    ]
-    sk = p._build_skeleton(lines)
-    # ALICE and BOB are cue candidates (all-caps, followed by mixed-case)
-    assert len(sk.cue_line_indices) >= 2
-
-
-def test_skeleton_cue_score_positive_for_play():
-    """cue_score > 0 when all-caps lines are followed by mixed-case dialog."""
-    lines = ["ALICE", "Hello there.", "BOB", "Hi back."] * 10
-    sk = p._build_skeleton(lines)
-    assert sk.cue_score > 0
-
-
-def test_skeleton_scene_delimiter_indices_heist():
-    """Numbered heist headers land in scene_delimiter_indices."""
-    sk = p._build_skeleton(HEIST_LINES)
-    assert len(sk.scene_delimiter_indices) >= 2
-
-
-def test_skeleton_first_page_only():
-    """first_page_only contains lines exclusive to page 0."""
-    page0 = {"TITLE PAGE", "by Author", "ALICE"}
-    page1 = {"ALICE", "Hello.", "BOB"}
-    sk = p._build_skeleton([], page_sets=[page0, page1])
-    # "TITLE PAGE" and "by Author" are page-0-only; "ALICE" appears on both
-    assert "TITLE PAGE" in sk.first_page_only
-    assert "by Author" in sk.first_page_only
-    assert "ALICE" not in sk.first_page_only
-
-
-def test_skeleton_empty_page_sets():
-    """_build_skeleton handles empty page_sets gracefully."""
-    sk = p._build_skeleton([], page_sets=[])
-    assert sk.first_page_only == set()
-    assert sk.non_empty_count == 0
-
-
-def test_skeleton_non_empty_count():
-    lines = ["ALICE", "", "Hello.", "", "BOB", "Hi."]
-    sk = p._build_skeleton(lines)
-    assert sk.non_empty_count == 4  # ALICE, Hello., BOB, Hi.
-
-
-def test_skeleton_cast_section_range():
-    """cast_section_range is detected when a CHARACTERS header is present."""
-    lines = [
-        "CHARACTERS",
-        "ALICE  The hero",
-        "BOB    The villain",
-        "",
-        "",
-        "",
-        "SCENE 1",
-        "ALICE",
-        "Hello.",
-    ]
-    sk = p._build_skeleton(lines)
-    assert sk.cast_section_range is not None
-    start, end = sk.cast_section_range
-    assert start == 0
-    assert end > start
-
-
-def test_skeleton_no_cast_section():
-    lines = ["ALICE", "Hello.", "BOB", "Hi."]
-    sk = p._build_skeleton(lines)
-    assert sk.cast_section_range is None
-
-
-def test_format_detection_uses_skeleton():
-    """_detect_play_format produces the same result with and without a skeleton."""
-    lines = ["ALICE", "Hello.", "BOB", "Hi."] * 20
-    sk = p._build_skeleton(lines)
-    result_with    = p._detect_play_format(lines, skeleton=sk)
-    result_without = p._detect_play_format(lines)
-    assert result_with == result_without
-
-
-def test_detect_script_format_uses_skeleton():
-    """_detect_script_format produces the same result with and without a skeleton."""
-    sk = p._build_skeleton(HEIST_LINES)
-    result_with    = p._detect_script_format(HEIST_LINES, skeleton=sk)
-    result_without = p._detect_script_format(HEIST_LINES)
-    assert result_with == result_without
-
-
-def test_parse_lines_builds_skeleton_internally():
-    """parse_lines without an explicit skeleton still works (builds one internally)."""
-    lines = _dd_lines(4) * 4
-    script = p.parse_lines(lines, title="No Skeleton")
-    assert len(script.scenes) >= 1
-
-
-def test_parse_lines_accepts_skeleton():
-    """parse_lines accepts a pre-built skeleton without crashing or changing output."""
-    lines = _dd_lines(4) * 4
-    sk = p._build_skeleton(lines)
-    script_with    = p.parse_lines(lines, title="With", skeleton=sk)
-    script_without = p.parse_lines(lines, title="With")
-    assert len(script_with.scenes) == len(script_without.scenes)
 
 
 # ---------------------------------------------------------------------------
@@ -572,120 +253,6 @@ def _play_lines(*args: str) -> list[str]:
     return list(args)
 
 
-def test_narrator_paren_yields_to_last_character():
-    """After a narrator parenthetical, the next unannotated line goes to the
-    last non-narrator character rather than the narrator."""
-    lines = [
-        "SCENE ONE",
-        "EDDIE",
-        "Hello there.",
-        "NARRATOR",
-        "(Eddie picks up the phone)",
-        "This line should be Eddie's.",
-    ]
-    scenes = p._extract_scenes_play(lines, set(), set())
-    dialogs = [e for sc in scenes for e in sc.elements if e.kind == "dialog"]
-    # Find the last dialog line
-    last = dialogs[-1]
-    assert last.speaker == "EDDIE", (
-        f"Expected last dialog to be EDDIE, got '{last.speaker}'"
-    )
-    assert "Eddie" in last.text or "should be" in last.text
-
-
-def test_narrator_paren_no_prior_character_becomes_stage_dir():
-    """If no character has spoken yet, a post-narrator-paren line falls back
-    to stage direction (rather than crashing or being mis-attributed)."""
-    lines = [
-        "SCENE ONE",
-        "NARRATOR",
-        "(setting the scene)",
-        "An unannotated line with no prior character.",
-    ]
-    scenes = p._extract_scenes_play(lines, set(), set())
-    all_elements = [e for sc in scenes for e in sc.elements]
-    # The unannotated line should be a stage direction, not narrator dialog
-    # (last_non_narrator_speaker is None → current_speaker reset to None)
-    dialogs = [e for e in all_elements if e.kind == "dialog" and e.speaker == "NARRATOR"]
-    assert dialogs == [], (
-        f"Narrator dialog was emitted but should not be: {[d.text for d in dialogs]}"
-    )
-
-
-def test_narrator_paren_speaker_preserved_in_parenthetical():
-    """The parenthetical itself is still attributed to the narrator."""
-    lines = [
-        "SCENE ONE",
-        "EDDIE",
-        "Hello.",
-        "NARRATOR",
-        "(a note from the narrator)",
-        "Eddie continues.",
-    ]
-    scenes = p._extract_scenes_play(lines, set(), set())
-    parens = [e for sc in scenes for e in sc.elements if e.kind == "parenthetical"]
-    assert len(parens) == 1
-    assert parens[0].speaker == "NARRATOR"
-
-
-def test_regular_character_paren_does_not_reset_speaker():
-    """A non-narrator parenthetical does NOT reset current_speaker — the
-    character's following lines are still attributed to them (no prior dialog)."""
-    lines = [
-        "SCENE ONE",
-        "EDDIE",
-        "(answering the phone)",
-        "Hello, yes speaking.",
-    ]
-    scenes = p._extract_scenes_play(lines, set(), set())
-    dialogs = [e for sc in scenes for e in sc.elements if e.kind == "dialog"]
-    assert len(dialogs) == 1
-    assert dialogs[0].speaker == "EDDIE"
-    assert "Hello" in dialogs[0].text
-
-
-def test_character_paren_mid_speech_continues_attribution():
-    """flush_dialog() clears current_speaker when it emits queued dialog.
-    A parenthetical in the middle of a character's speech must restore the
-    speaker so the lines that follow are still attributed to them — not
-    treated as stage directions."""
-    lines = [
-        "SCENE ONE",
-        "EDDIE",
-        "I'm gonna freeze or say the wrong thing or . . .",
-        "No. Eddie, you'll be fine.",
-        "What's the worst that could happen?",
-        "(He tries not to think of the worst that could happen.)",
-        "I probably shouldn't say this, but, you know, I wouldn't have money problems.",
-    ]
-    scenes = p._extract_scenes_play(lines, set(), set())
-    dialogs = [e for sc in scenes for e in sc.elements if e.kind == "dialog"]
-    last = dialogs[-1]
-    assert last.speaker == "EDDIE", (
-        f"Expected last line attributed to EDDIE, got '{last.speaker}'"
-    )
-    assert "money problems" in last.text
-
-
-def test_narrator_dialog_then_paren_fallback():
-    """Narrator has dialog + parenthetical; following line goes to last character."""
-    lines = [
-        "SCENE ONE",
-        "ALICE",
-        "First line.",
-        "NARRATOR",
-        "Some narration.",
-        "(stage direction note)",
-        "Alice speaks again.",
-    ]
-    scenes = p._extract_scenes_play(lines, set(), set())
-    dialogs = [e for sc in scenes for e in sc.elements if e.kind == "dialog"]
-    last = dialogs[-1]
-    assert last.speaker == "ALICE", (
-        f"Expected ALICE after narrator paren, got '{last.speaker}'"
-    )
-
-
 # ---------------------------------------------------------------------------
 # corrections_config.json loader
 # ---------------------------------------------------------------------------
@@ -778,6 +345,49 @@ def test_apply_corrections_config_non_cue_removes_character():
     assert "VOICE" not in names
 
 
+def test_apply_corrections_config_non_cue_retagged_as_stage_direction():
+    """Elements whose speaker is a removed non-cue name are re-tagged as stage_direction."""
+    script = p.Script(
+        title="Test",
+        characters=[p.Character(name="CROWD"), p.Character(name="ANNA")],
+        scenes=[p.Scene(number=1, title="S1", elements=[
+            p.Element(kind="dialog", speaker="CROWD", text="Roars of approval."),
+            p.Element(kind="dialog", speaker="ANNA", text="Thank you all!"),
+        ])]
+    )
+    config = {"speaker_aliases": {}, "non_cue_words": ["CROWD"],
+              "noise_line_patterns": []}
+    result = p._apply_corrections_config(script, config)
+    elements = result.scenes[0].elements
+    crowd_el = elements[0]
+    assert crowd_el.kind == "stage_direction"
+    assert crowd_el.speaker is None
+    # ANNA should be unaffected
+    anna_el = elements[1]
+    assert anna_el.kind == "dialog"
+    assert anna_el.speaker == "ANNA"
+
+
+def test_apply_corrections_config_noise_pattern_retagged():
+    """Elements matching a noise_line_pattern are re-tagged as stage_direction."""
+    import re
+    script = p.Script(
+        title="Test",
+        characters=[p.Character(name="BOB")],
+        scenes=[p.Scene(number=1, title="S1", elements=[
+            p.Element(kind="dialog", speaker="BOB", text="(laughs)"),
+            p.Element(kind="dialog", speaker="BOB", text="Not a noise line."),
+        ])]
+    )
+    config = {"speaker_aliases": {}, "non_cue_words": [],
+              "noise_line_patterns": [re.compile(r"^\(laughs\)$")]}
+    result = p._apply_corrections_config(script, config)
+    elements = result.scenes[0].elements
+    assert elements[0].kind == "stage_direction"
+    assert elements[0].speaker is None
+    assert elements[1].kind == "dialog"
+
+
 def test_load_corrections_config_cached(tmp_path):
     """Second call with same path and mtime returns cached result."""
     cfg_file = tmp_path / "cfg.json"
@@ -794,32 +404,65 @@ def test_bundled_corrections_config_loads():
     assert isinstance(cfg["non_cue_words"], list)
     assert isinstance(cfg["speaker_aliases"], dict)
     assert isinstance(cfg["noise_line_patterns"], list)
-    # Spot-check a few expected entries
-    assert "VOICE" in cfg["non_cue_words"]
-    assert "CROWD" in cfg["non_cue_words"]
+    # non_cue_words now holds ONLY true non-speakers (sound effects / environment),
+    # which are dropped to stage_direction.
+    assert "MUSIC" in cfg["non_cue_words"]
+    assert "DOORBELL" in cfg["non_cue_words"]
+    assert "SIREN" in cfg["non_cue_words"]
+    # Generic SPEAKING roles must NOT be here — they are voiced (at low confidence,
+    # flagged for review) via parser._GENERIC_ROLES, not silently dropped.
+    assert "VOICE" not in cfg["non_cue_words"]
+    assert "CROWD" not in cfg["non_cue_words"]
+    assert "MAN" not in cfg["non_cue_words"]
+    assert {"VOICE", "CROWD", "CHORUS", "MAN", "WOMAN"} <= p._GENERIC_ROLES
+    # Noise patterns should be compiled regexes
+    assert all(hasattr(p_, "search") for p_ in cfg["noise_line_patterns"])
+
+
+# ---------------------------------------------------------------------------
+# Element confidence scoring
+# ---------------------------------------------------------------------------
+
+
+def test_element_confidence_defaults_to_one():
+    """Freshly constructed Element always starts at confidence 1.0."""
+    el = p.Element(kind="dialog", text="Hello", speaker="ALICE")
+    assert el.confidence == 1.0
+
+
+def test_single_occurrence_unknown_speaker_gets_reduced_confidence():
+    """A speaker who appears only once and isn't in the cast list should be flagged."""
+    script = p.Script(
+        title="Test",
+        characters=[p.Character(name="ALICE"), p.Character(name="BOB")],
+        scenes=[p.Scene(number=1, title="Scene 1", elements=[
+            p.Element(kind="dialog", speaker="ALICE", text="Hello.", confidence=1.0),
+            p.Element(kind="dialog", speaker="PHANTOM", text="Boo.", confidence=0.7),
+        ])]
+    )
+    p._mark_single_occurrence_confidence(script)
+    phantom_el = next(e for sc in script.scenes for e in sc.elements if e.speaker == "PHANTOM")
+    assert phantom_el.confidence <= 0.7
+
+
+def test_known_single_occurrence_speaker_keeps_full_confidence():
+    """A cast member who speaks only once should NOT be flagged — they're in the declared cast."""
+    script = p.Script(
+        title="Test",
+        characters=[p.Character(name="ALICE"), p.Character(name="BOB")],
+        scenes=[p.Scene(number=1, title="Scene 1", elements=[
+            p.Element(kind="dialog", speaker="ALICE", text="Hello.", confidence=1.0),
+            p.Element(kind="dialog", speaker="BOB", text="Hi.", confidence=1.0),
+        ])]
+    )
+    p._mark_single_occurrence_confidence(script)
+    bob_el = next(e for sc in script.scenes for e in sc.elements if e.speaker == "BOB")
+    assert bob_el.confidence == 1.0
 
 
 # ---------------------------------------------------------------------------
 # DR.-prefix speaker names (issue: period in name was blocking cue detection)
 # ---------------------------------------------------------------------------
-
-def test_dr_prefix_is_caps_cue_candidate():
-    """'DR. WOODLE' must pass _is_caps_cue_candidate despite the period."""
-    assert p._is_caps_cue_candidate("DR. WOODLE")
-
-
-def test_mr_prefix_is_caps_cue_candidate():
-    assert p._is_caps_cue_candidate("MR. SMITH")
-
-
-def test_mrs_prefix_is_caps_cue_candidate():
-    assert p._is_caps_cue_candidate("MRS. JONES")
-
-
-def test_sentence_period_still_blocked():
-    """A period that is NOT a title abbreviation must still be rejected."""
-    assert not p._is_caps_cue_candidate("WELL DONE.")
-    assert not p._is_caps_cue_candidate("OK.")
 
 
 def _play_lines_with_cast(**kwargs):
@@ -831,177 +474,24 @@ def _play_lines_with_cast(**kwargs):
     return cast_lines
 
 
-def test_dr_speaker_gets_dialog():
-    """DR. WOODLE lines are attributed to her, not swallowed as stage directions."""
-    lines = [
-        "Cast of Characters",
-        "DR. WOODLE Female. Therapist.",
-        "LEAH Female. Patient.",
-        "SCENE ONE",
-        "LEAH",
-        "Hello, Doctor.",
-        "DR. WOODLE",
-        "Good morning.",
-        "LEAH",
-        "How are you?",
-        "DR. WOODLE",
-        "Fine, thank you.",
-    ]
-    script = p._parse_play(lines, title="Test")
-    woodle_lines = [e for sc in script.scenes for e in sc.elements
-                    if e.speaker == "DR. WOODLE"]
-    assert len(woodle_lines) >= 2, "DR. WOODLE should have at least 2 dialog lines"
-
-
-def test_dr_speaker_in_character_list():
-    """DR. WOODLE must appear in the parsed character list."""
-    lines = [
-        "Cast of Characters",
-        "DR. WOODLE Female. Therapist.",
-        "LEAH Female. Patient.",
-        "SCENE ONE",
-        "DR. WOODLE",
-        "Good morning.",
-        "LEAH",
-        "Hello.",
-    ]
-    script = p._parse_play(lines, title="Test")
-    names = {c.name for c in script.characters}
-    assert "DR. WOODLE" in names
-
-
 # ---------------------------------------------------------------------------
 # Cast row parser: "NAME Male/Female description" format
 # ---------------------------------------------------------------------------
-
-def test_parse_cast_row_gender_first_basic():
-    result = p._parse_cast_row_gender_first("CHARLIE Male, 40s-50s. Problem solver.")
-    assert result is not None
-    assert result.name == "CHARLIE"
-    assert result.gender_hint == "M"
-
-
-def test_parse_cast_row_gender_first_with_period_in_name():
-    result = p._parse_cast_row_gender_first(
-        "DR. WOODLE Female. 40s-50s. Psychologist in training."
-    )
-    assert result is not None
-    assert result.name == "DR. WOODLE"
-    assert result.gender_hint == "F"
-
-
-def test_parse_cast_row_gender_first_voice_only_prefix():
-    result = p._parse_cast_row_gender_first(
-        "**Voice Only** CREDIT CARD COMPANY AUTOMATED VOICE: Female. Siri."
-    )
-    assert result is not None
-    assert result.name == "CREDIT CARD COMPANY AUTOMATED VOICE"
-    assert result.gender_hint == "F"
-
-
-def test_parse_cast_row_gender_first_slash_name():
-    result = p._parse_cast_row_gender_first(
-        "SHELBY/TRINA Female. Late teens to early 20s. Computer genius."
-    )
-    assert result is not None
-    assert result.name == "SHELBY/TRINA"
-    assert result.gender_hint == "F"
 
 
 # ---------------------------------------------------------------------------
 # _split_compound_cue: prefix matching for abbreviated names
 # ---------------------------------------------------------------------------
 
-def test_split_compound_cue_prefix_match():
-    """Right side abbreviates a known speaker — should still split."""
-    known = {"LEAH", "CREDIT CARD COMPANY AUTOMATED VOICE"}
-    result = p._split_compound_cue("LEAH CREDIT CARD COMPANY", known)
-    assert result == ["LEAH", "CREDIT CARD COMPANY"]
-
-
-def test_split_compound_cue_exact_match_unaffected():
-    """Exact matches still work after the prefix-match addition."""
-    known = {"ALICE", "BOB"}
-    assert p._split_compound_cue("ALICE BOB", known) == ["ALICE", "BOB"]
-
 
 # ---------------------------------------------------------------------------
 # Ampersand overlap cues: "MARA & EDDIE"
 # ---------------------------------------------------------------------------
 
-def test_ampersand_cue_splits_correctly():
-    """'MARA & EDDIE' should produce an overlap with speaker=MARA, cue=['MARA','EDDIE']."""
-    lines = [
-        "SCENE ONE",
-        "MARA",
-        "Alone line.",
-        "EDDIE",
-        "Another line.",
-        "MARA & EDDIE",
-        "Together now.",
-        "MARA",
-        "Back to solo.",
-    ]
-    known = {"MARA", "EDDIE"}
-    noise: set = set()
-    scenes = p._extract_scenes_play(lines, known, noise)
-    assert scenes, "Should produce at least one scene"
-    overlap_els = [e for sc in scenes for e in sc.elements if e.overlap_cue]
-    assert len(overlap_els) >= 1, "Should find at least one overlap element"
-    el = overlap_els[0]
-    assert el.speaker == "MARA"
-    assert "EDDIE" in el.overlap_cue
-
-
-def test_looks_like_chorus_handles_ampersand():
-    assert p._looks_like_chorus("MARA & EDDIE")
-    assert p._looks_like_chorus("ALICE/BOB")
-    assert not p._looks_like_chorus("CHARLIE")
-
 
 # ---------------------------------------------------------------------------
 # Orphan speaker: known-name orphans must NOT become stage directions
 # ---------------------------------------------------------------------------
-
-def test_known_name_orphan_not_emitted_as_stage_direction():
-    """After a parenthetical restores current_speaker, the next different-character
-    cue must NOT emit the restored speaker as a stage direction."""
-    lines = [
-        "SCENE ONE",
-        "EDDIE",
-        "Don't worry—it's fake!",
-        "(They freeze.)",
-        "LEAH",          # ← different character; EDDIE should not become a stage dir
-        "What?",
-    ]
-    known = {"EDDIE", "LEAH"}
-    noise: set = set()
-    scenes = p._extract_scenes_play(lines, known, noise)
-    elements = [e for sc in scenes for e in sc.elements]
-    # Verify no stage direction whose text is a known character name
-    bad = [e for e in elements if e.kind == "stage_direction" and e.text in known]
-    assert not bad, f"Orphan character names emitted as stage directions: {[e.text for e in bad]}"
-
-
-def test_slash_name_parts_added_to_known_speakers():
-    """SHELBY/TRINA in cast → both 'SHELBY' and 'TRINA' treated as known speakers
-    so neither becomes an orphan stage direction."""
-    lines = [
-        "SCENE ONE",
-        "SHELBY",
-        "I'm Shelby.",
-        "(Pause.)",
-        "TRINA",          # ← previously would emit orphan "SHELBY"
-        "I'm Trina.",
-    ]
-    # Simulate what _parse_play would build: only the slash form in known_speakers
-    known = {"SHELBY/TRINA"}
-    noise: set = set()
-    scenes = p._extract_scenes_play(lines, known, noise)
-    elements = [e for sc in scenes for e in sc.elements]
-    bad = [e for e in elements
-           if e.kind == "stage_direction" and e.text in {"SHELBY", "TRINA", "SHELBY/TRINA"}]
-    assert not bad, f"Unexpected character-name stage directions: {[e.text for e in bad]}"
 
 
 # ---------------------------------------------------------------------------
@@ -1009,143 +499,42 @@ def test_slash_name_parts_added_to_known_speakers():
 # ---------------------------------------------------------------------------
 
 
-def test_collect_page_noise_single_digit_period():
-    """'3.' (single-digit page number) must be recognised as noise."""
-    lines = ["3.", "LEAH", "Hello.", "EDDIE", "Hi."]
-    noise = p._collect_page_noise(lines)
-    assert "3." in noise, "Single-digit page number '3.' should be in noise set"
-
-
-def test_collect_page_noise_multi_digit_period():
-    """'22.' and '186.' must be recognised as noise (regression guard)."""
-    lines = ["22.", "186.", "LEAH", "Hello."]
-    noise = p._collect_page_noise(lines)
-    assert "22." in noise
-    assert "186." in noise
-
-
-def test_strip_page_number_words_removes_far_right_digits():
-    """Far-right digit-only words are stripped from a row."""
-    page_width = 612.0
-    row = [
-        {"text": "How", "x0": 72.0, "x1": 95.0, "top": 100.0},
-        {"text": "much", "x0": 100.0, "x1": 130.0, "top": 100.0},
-        {"text": "22", "x0": 560.0, "x1": 578.0, "top": 100.0},  # page number
-    ]
-    result = p._strip_page_number_words(row, page_width)
-    texts = [w["text"] for w in result]
-    assert "22" not in texts
-    assert "How" in texts and "much" in texts
-
-
-def test_strip_page_number_words_keeps_right_column_dialog():
-    """A right-column dialog word (not far-right, has letters) is NOT stripped."""
-    page_width = 612.0
-    row = [
-        {"text": "LEAH", "x0": 72.0, "x1": 110.0, "top": 100.0},
-        {"text": "EDDIE", "x0": 314.0, "x1": 360.0, "top": 100.0},  # right-col, letters
-    ]
-    result = p._strip_page_number_words(row, page_width)
-    assert len(result) == 2, "Right-column dialog word should NOT be stripped"
-
-
-def test_page_number_not_read_by_narrator():
-    """'3.' on its own line must not appear as narrator dialog."""
-    lines = [
-        "SCENE ONE",
-        "LEAH",
-        "Hello there.",
-        "3.",  # single-digit page number — must be noise, not narrator
-        "How are you?",
-    ]
-    noise = p._collect_page_noise(lines)
-    scenes = p._extract_scenes_play(lines, {"LEAH"}, noise)
-    elements = [e for sc in scenes for e in sc.elements]
-    narrator_texts = [e.text for e in elements if e.speaker == "NARRATOR"]
-    assert not any("3." in t for t in narrator_texts), (
-        f"Page number '3.' was voiced by narrator: {narrator_texts}"
-    )
-
-
-def test_dialog_number_not_treated_as_noise():
-    """A bare integer in dialog (e.g. a PIN code '1234') must NOT be silenced."""
-    lines = [
-        "SCENE ONE",
-        "EDDIE",
-        "1234",
-        "That's the code.",
-    ]
-    noise = p._collect_page_noise(lines)
-    # "1234" must NOT be in noise — it's dialog, not a page number
-    assert "1234" not in noise, "'1234' was incorrectly marked as noise"
-    # And it must appear in Eddie's dialog
-    scenes = p._extract_scenes_play(lines, {"EDDIE"}, noise)
-    elements = [e for sc in scenes for e in sc.elements]
-    dialog_texts = " ".join(e.text for e in elements if e.kind == "dialog")
-    assert "1234" in dialog_texts, f"'1234' missing from dialog: {dialog_texts}"
-
-
 # ---------------------------------------------------------------------------
 # Parenthetical attribution after blank-line-separated cue
 # ---------------------------------------------------------------------------
 
 
-def test_parenthetical_after_blank_attributed_to_cue_speaker():
-    """A parenthetical following a blank line after a cue stays with that character.
-
-    pdfplumber often inserts a blank line between the character-name row and
-    the following content.  The blank line clears current_speaker, but the
-    parenthetical should still be treated as a character note, not narrator SD.
-    """
-    lines = [
-        "SCENE ONE",
-        "EDDIE",
-        "",            # blank — simulates pdfplumber gap between name and content
-        "(He pauses.)",
-        "I can't believe it.",
-    ]
-    noise: set = set()
-    scenes = p._extract_scenes_play(lines, {"EDDIE"}, noise)
-    elements = [e for sc in scenes for e in sc.elements]
-
-    # The parenthetical must not be emitted as narrator stage direction
-    paren = [e for e in elements if e.kind == "parenthetical"]
-    assert paren, "Parenthetical element not found"
-    assert paren[0].speaker == "EDDIE", (
-        f"Parenthetical attributed to '{paren[0].speaker}', expected 'EDDIE'"
-    )
-
-    # The following dialog must be attributed to EDDIE too
-    dialog = [e for e in elements if e.kind == "dialog"]
-    assert dialog, "Dialog element not found"
-    assert dialog[0].speaker == "EDDIE", (
-        f"Post-parenthetical dialog attributed to '{dialog[0].speaker}', expected 'EDDIE'"
-    )
+# ---------------------------------------------------------------------------
+# Spatial x-zone tests (Phase 1 parser spatial refactor)
+# ---------------------------------------------------------------------------
 
 
-def test_dialog_after_paren_no_false_positive_between_chars():
-    """A stage-direction parenthetical between two characters stays with narrator."""
-    lines = [
-        "SCENE ONE",
-        "LEAH",
-        "Hi there.",
-        "",
-        "(The lights fade.)",
-        "",
-        "EDDIE",
-        "Hello.",
-    ]
-    noise: set = set()
-    scenes = p._extract_scenes_play(lines, {"LEAH", "EDDIE"}, noise)
-    elements = [e for sc in scenes for e in sc.elements]
+# ---------------------------------------------------------------------------
+# Phase-2 infrastructure: StructuredLine, ClassifiedLine, helpers
+# ---------------------------------------------------------------------------
 
-    # "(The lights fade.)" comes after LEAH has spoken, so _last_cue_speaker is cleared.
-    # It should be a stage direction with no speaker, not attributed to LEAH.
-    # Stage direction stores the raw text (with parens preserved by _normalize_text).
-    matching = [e for e in elements if "lights fade" in e.text]
-    assert matching, "Stage-direction parenthetical not found in output"
-    el = matching[0]
-    assert el.kind == "stage_direction", f"Expected stage_direction, got {el.kind!r}"
-    assert el.speaker != "LEAH", (
-        f"'The lights fade.' was incorrectly attributed to LEAH (speaker={el.speaker!r})"
-    )
+
+# ---------------------------------------------------------------------------
+# LayoutZones dataclass + properties
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# _infer_layout_zones
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# _build_script_from_classified
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# _classify_lines — zones kwarg wires into speaker/dialog bounds
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# _try_spatial_parse — graceful failure on missing/corrupt PDF
+# ---------------------------------------------------------------------------
+

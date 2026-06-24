@@ -23,7 +23,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -425,6 +425,12 @@ class OpenAIEngine(TTSEngine):
     ]
 
     DEFAULT_MODEL = "tts-1"  # tts-1 is fast and cheap; tts-1-hd is higher quality
+
+    # Pricing as of mid-2025 (USD per 1,000 characters)
+    COST_PER_1K_CHARS: Dict[str, float] = {
+        "tts-1":    0.015,
+        "tts-1-hd": 0.030,
+    }
 
     REQUESTS_PER_MINUTE = 3
     MAX_RATE_LIMIT_RETRIES = 6

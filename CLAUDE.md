@@ -5,13 +5,14 @@ Table Read converts screenplay PDFs into per-scene `.m4a` audio dramas using TTS
 Swift/SwiftUI macOS app → Python backend (`backend/audio_worker.py`) via stdin/stdout JSON bridge.
 
 ## Branch
-Active development is on `parser-refactor`. PRs target `main`.
+Active development is on `parser-block-extraction`. PRs target `main`.
 
 ## Testing — run after every code change
 
 ```bash
 bash scripts/test.sh          # full suite (Python + Swift build + Swift tests)
-bash scripts/test.sh python   # backend only (fast, ~2 s)
+bash scripts/test.sh python   # backend: pytest + parser scorecard (~3 min)
+bash scripts/test.sh python-fast  # parser unit tests only, no scorecard (~1 s)
 bash scripts/test.sh swift    # build + XCTest only (~30 s)
 ```
 
@@ -21,14 +22,46 @@ bash scripts/test.sh swift    # build + XCTest only (~30 s)
 - Swift changes → at minimum `bash scripts/test.sh swift`
 - Both touched → `bash scripts/test.sh` (full)
 
-The suite is also checked by a pre-commit hook (`.claude/settings.json`).
+The suite is also checked by a Claude PostToolUse hook (`.claude/settings.json`).
+
+## Parser change protocol — READ THIS before editing `backend/parser.py`
+
+The parser is governed by a **correctness oracle** so changes are convergent, not
+whack-a-mole. Four rewrites failed because there was no way to tell "better" from "worse";
+this protocol is that way. Follow it for ANY change to `backend/parser.py` or
+`backend/corrections_config.json`:
+
+1. **Make the change.**
+2. **Measure:** `python scripts/scorecard.py --check`
+   Scores the live parser on all 7 corpus scripts against the locked watermark and prints a
+   **BETTER / WORSE / HOLD** verdict with per-script deltas (attribution %, kind %, unattributed
+   dialog). (Or launch the `parser-regression-guard` agent, which runs this and reports.)
+3. **Act on the verdict:**
+   - **WORSE** → a script regressed. Fix or revert; do NOT commit. (The git pre-commit hook
+     blocks it anyway.)
+   - **HOLD** → no measured change — fine for refactors; confirm that's intended.
+   - **BETTER** → lock it in:
+     `python scripts/scorecard.py --save` (bump watermark), then
+     `python scripts/generate_reference.py <ChangedName>` (regen changed baselines), then commit
+     (include `Test PDFs/reference/`).
+4. **Never tune a global constant to fix one script without re-running the scorecard across ALL
+   scripts** — that is the exact trap this system exists to prevent. Prefer per-document logic
+   (the `DocumentModel`) over global constants.
+
+Enforcement: a git pre-commit hook (`scripts/git-hooks/pre-commit`, active via
+`git config core.hooksPath scripts/git-hooks` — **re-run once after cloning**) blocks any commit
+that regresses the scorecard when parser files are staged.
+
+Ground truth: `Test PDFs/reference/*_independent.json` (locked, parser-independent — the oracle).
+`{Name}.json` are parser-generated regression baselines (change-detectors; regenerate after
+intentional improvements). See memory `parser_audit_root_cause.md` for the full history.
 
 ## Project structure
 
 ```
 backend/
   audio_worker.py      # stdin/stdout JSON bridge — entry point for Swift
-  parser.py            # PDF screenplay parser (pdfplumber)
+  parser.py            # PDF screenplay parser (PyMuPDF blocks → DocumentModel → classify)
   tts_engines.py       # macOS say / Kokoro / OpenAI TTS implementations
   audio_pipeline.py    # scene-by-scene generation orchestration
   voice_assignment.py  # character → voice mapping logic
@@ -45,7 +78,12 @@ Sources/TableRead/
 scripts/
   embed_python.sh      # One-time: download python-build-standalone → vendor/python/
   xcode_copy_python.sh # Xcode Run Script phase: copies vendor/python/ into .app bundle
-  test.sh              # Master test runner
+  test.sh              # Master test runner (python target runs scorecard.py --check)
+  scorecard.py         # Parser correctness oracle — scores live parser vs ground truth
+  extract_independent.py  # Builds parser-independent ground truth (Test PDFs/reference/*_independent.json)
+  generate_reference.py   # Regenerates parser-baseline references after intentional changes
+  diagnose_parse.py    # Block-path parser diagnostics for one PDF
+  git-hooks/pre-commit # Blocks commits that regress the scorecard (core.hooksPath)
 
 vendor/python/          # Embedded CPython 3.12 — gitignored, built by embed_python.sh
 requirements.txt        # Core pip deps (pdfplumber, soundfile)
