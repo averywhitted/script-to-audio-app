@@ -37,6 +37,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Stub secrets
+        # EmailReporter.swift is gitignored (contains a private API key).
+        # Copy the template so xcodebuild can find the file. The empty token
+        # means bug reporting is disabled in CI builds — that's fine.
+        run: cp Sources/TableRead/EmailReporter.swift.template Sources/TableRead/EmailReporter.swift
+
       - name: Swift build
         run: |
           xcodebuild \
