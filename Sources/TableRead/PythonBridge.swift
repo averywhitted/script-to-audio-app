@@ -64,8 +64,16 @@ private final class EventLineParser: @unchecked Sendable {
 final class PythonBridge {
     let repositoryRoot: URL
 
+    /// Called with each Python stderr line. Set by AppState to route Python output to the debug log.
+    nonisolated(unsafe) var onPythonLog: (@Sendable (String) -> Void)?
+
     init() {
         repositoryRoot = Self.findRepositoryRoot()
+    }
+
+    nonisolated private func emitPythonLog(_ line: String) {
+        guard let handler = onPythonLog else { return }
+        handler(line)
     }
 
     // MARK: - Repository root detection
@@ -417,9 +425,12 @@ final class PythonBridge {
 
             let response = output.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
-            // Forward Python stderr to the Xcode console so parser diagnostics are visible.
+            // Forward Python stderr to the Xcode console and the in-app debug log.
             if let errText = String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) {
-                errText.components(separatedBy: "\n").filter { !$0.isEmpty }.forEach { print("[py] \($0)") }
+                errText.components(separatedBy: "\n").filter { !$0.isEmpty }.forEach {
+                    print("[py] \($0)")
+                    self.emitPythonLog($0)
+                }
             }
             // Kokoro (and other engines) may print non-JSON download progress to stdout.
             // Scan from the end for the last line that looks like a JSON object.
@@ -495,8 +506,11 @@ final class PythonBridge {
                         parser.consume("", flush: true, onEvent: onEvent)
                     }
                     let stderr = String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-                    // Forward Python stderr to the Xcode console.
-                    stderr.components(separatedBy: "\n").filter { !$0.isEmpty }.forEach { print("[py] \($0)") }
+                    // Forward Python stderr to the Xcode console and in-app debug log.
+                    stderr.components(separatedBy: "\n").filter { !$0.isEmpty }.forEach {
+                        print("[py] \($0)")
+                        self.emitPythonLog($0)
+                    }
 
                     if process.terminationStatus == 0 {
                         continuation.resume()

@@ -5,8 +5,6 @@ import SwiftUI
 struct ActiveElementInfo {
     var sceneNumber: Int
     var cueText: String
-    var myRole: String
-    var blockMyLines: Bool
 }
 
 // MARK: - SidePanelTab
@@ -15,6 +13,7 @@ enum SidePanelTab: String, CaseIterable {
     case cast = "Cast"
     case render = "Render"
     case rehearse = "Rehearse"
+    case log = "Log"
 }
 
 // MARK: - SceneTagKind
@@ -70,7 +69,7 @@ private struct DashboardTopBar: View {
             .buttonStyle(.plain)
             .help("Back to Projects")
             .confirmationDialog(
-                "A render is in progress. Return to the project gallery?",
+                "A render is in progress.",
                 isPresented: $showHomeConfirm,
                 titleVisibility: .visible
             ) {
@@ -149,6 +148,15 @@ private struct DashboardScriptArea: View {
     @EnvironmentObject private var playerState: PlayerState
     @StateObject private var selection = ReviewSelectionState()
 
+    // Auto-scroll: track when we last scrolled programmatically vs when user scrolled.
+    // If the user scrolled within the last 3 s, suppress auto-scroll so we don't fight them.
+    @State private var lastAutoScrollTime: Date = .distantPast
+    @State private var lastManualScrollTime: Date = .distantPast
+
+    private var autoScrollPaused: Bool {
+        Date().timeIntervalSince(lastManualScrollTime) < 3.0
+    }
+
     private var activeSceneNumber: Int? {
         let idx = playerState.currentSceneIndex
         guard idx >= 0, idx < playerState.scenes.count else { return nil }
@@ -161,14 +169,16 @@ private struct DashboardScriptArea: View {
         return playerState.cues[idx].text
     }
 
+    // ID of the individual element row for fine-grained centering.
+    // Matches the .id() applied to SceneElementRow inside SceneReviewRow.
+    private var activeElementID: String? {
+        guard let sceneNum = activeSceneNumber, let text = activeCueText else { return nil }
+        return "el-\(sceneNum)-\(String(text.prefix(60)))"
+    }
+
     private var activeInfo: ActiveElementInfo? {
         guard let sceneNum = activeSceneNumber, playerState.currentCueIndex >= 0 else { return nil }
-        return ActiveElementInfo(
-            sceneNumber: sceneNum,
-            cueText: activeCueText ?? "",
-            myRole: playerState.myRole,
-            blockMyLines: playerState.blockMyLines
-        )
+        return ActiveElementInfo(sceneNumber: sceneNum, cueText: activeCueText ?? "")
     }
 
     var body: some View {
@@ -209,23 +219,36 @@ private struct DashboardScriptArea: View {
                                         pdfPath: state.selectedPDF?.path ?? "",
                                         allSpeakers: ["Narrator"] + script.characters.map(\.name),
                                         isSelected: state.selectedScenes.contains(scene.number),
-                                        activeInfo: activeInfo?.sceneNumber == scene.number ? activeInfo : nil
+                                        activeInfo: activeInfo?.sceneNumber == scene.number ? activeInfo : nil,
+                                        practiceRole: playerState.myRole,
+                                        blockMyLines: playerState.blockMyLines,
+                                        muteMyLines: playerState.muteMyLines
                                     ) {
                                         state.toggleScene(scene)
                                     }
                                     .id("scene-\(scene.number)")
-                                    .opacity(activeInfo != nil && activeInfo?.sceneNumber != scene.number ? 0.55 : 1)
-                                    .animation(.easeInOut(duration: 0.2), value: activeInfo?.sceneNumber)
+                                    .opacity(activeSceneNumber != nil && activeSceneNumber != scene.number ? 0.55 : 1)
+                                    .animation(.easeInOut(duration: 0.2), value: activeSceneNumber)
                                 }
                             }
                             .padding(16)
                             .padding(.bottom, selection.isEmpty ? 0 : 64)
                         }
                         .environmentObject(selection)
+                        .onManualScroll(lastAutoScrollTime: lastAutoScrollTime) {
+                            lastManualScrollTime = Date()
+                        }
                         .onChange(of: playerState.currentCueIndex) { _, _ in
-                            guard let sceneNum = activeSceneNumber else { return }
+                            guard !autoScrollPaused, let sceneNum = activeSceneNumber else { return }
+                            lastAutoScrollTime = Date()
                             withAnimation(.spring(response: 0.3)) {
-                                proxy.scrollTo("scene-\(sceneNum)", anchor: .top)
+                                // Prefer scrolling to the element row for precise centering.
+                                // Falls back to scene header if the scene isn't expanded yet.
+                                if let elemID = activeElementID {
+                                    proxy.scrollTo(elemID, anchor: .center)
+                                } else {
+                                    proxy.scrollTo("scene-\(sceneNum)", anchor: .center)
+                                }
                             }
                         }
                     }
@@ -286,25 +309,44 @@ private struct ParseLoadingView: View {
 
 private struct SidePanelView: View {
     @Binding var tab: SidePanelTab
+    @EnvironmentObject private var state: AppState
+
+    private var hasLogAlerts: Bool {
+        state.debugLog.contains { $0.style == .error || $0.style == .warning }
+    }
+
+    @ViewBuilder
+    private func tabLabel(_ t: SidePanelTab) -> some View {
+        if t == .log && hasLogAlerts && tab != .log {
+            HStack(spacing: 3) {
+                Text(t.rawValue)
+                Circle().fill(Color.orange).frame(width: 6, height: 6)
+            }
+        } else {
+            Text(t.rawValue)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 ForEach(SidePanelTab.allCases, id: \.self) { t in
-                    Button(t.rawValue) { tab = t }
-                        .buttonStyle(.plain)
-                        .font(.subheadline.weight(tab == t ? .semibold : .regular))
-                        .foregroundStyle(tab == t ? Color.primary : Color.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .overlay(alignment: .bottom) {
-                            if tab == t {
-                                Rectangle()
-                                    .fill(Color.accentColor)
-                                    .frame(height: 2)
-                                    .transition(.opacity)
-                            }
+                    Button { tab = t } label: {
+                        tabLabel(t)
+                    }
+                    .buttonStyle(.plain)
+                    .font(.subheadline.weight(tab == t ? .semibold : .regular))
+                    .foregroundStyle(tab == t ? Color.primary : Color.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .overlay(alignment: .bottom) {
+                        if tab == t {
+                            Rectangle()
+                                .fill(Color.accentColor)
+                                .frame(height: 2)
+                                .transition(.opacity)
                         }
+                    }
                 }
             }
             .background(.bar)
@@ -317,6 +359,8 @@ private struct SidePanelView: View {
                 RenderPanelView()
             case .rehearse:
                 RehearsePanelView()
+            case .log:
+                DebugLogPanelView()
             }
         }
         .background(.regularMaterial)
@@ -594,7 +638,10 @@ private struct RehearsePanelView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding()
-            .onAppear { playerState.load(from: state) }
+            .onAppear {
+                state.checkRenderedScenes()
+                playerState.load(from: state)
+            }
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -683,11 +730,181 @@ private struct RehearsePanelView: View {
                         .help(playerState.myRole.isEmpty
                             ? "Select a role above to enable this"
                             : "Replace your lines with underscores for memorization practice")
+
+                    Divider()
+
+                    LabeledContent("Speed") {
+                        HStack(spacing: 6) {
+                            Button { playerState.stepRate(by: -0.05) } label: {
+                                Image(systemName: "minus")
+                                    .frame(width: 16, height: 16)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.mini)
+                            .disabled(playerState.playbackRate <= 0.5)
+                            .help("Slower (−0.05×)")
+
+                            Slider(
+                                value: Binding(
+                                    get: { Double(playerState.playbackRate) },
+                                    set: { playerState.setRate(Float($0)) }
+                                ),
+                                in: 0.5...2.0,
+                                step: 0.05
+                            )
+
+                            Button { playerState.stepRate(by: 0.05) } label: {
+                                Image(systemName: "plus")
+                                    .frame(width: 16, height: 16)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.mini)
+                            .disabled(playerState.playbackRate >= 2.0)
+                            .help("Faster (+0.05×)")
+
+                            Text(String(format: "%.2f×", playerState.playbackRate))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .frame(width: 42, alignment: .leading)
+                        }
+                    }
                 }
                 .padding(16)
                 .font(.callout)
             }
-            .onAppear { playerState.load(from: state) }
+            .onAppear {
+                state.checkRenderedScenes()
+                playerState.load(from: state)
+            }
+            .onChange(of: state.sceneFileInfo) { _, _ in
+                playerState.load(from: state)
+            }
+        }
+    }
+}
+
+// MARK: - DebugLogPanelView
+
+private struct DebugLogPanelView: View {
+    @EnvironmentObject private var state: AppState
+    @State private var filterLevel: LogStyle? = nil
+    @State private var scrollID: UUID?
+
+    private var filtered: [DebugLogEntry] {
+        guard let level = filterLevel else { return state.debugLog }
+        return state.debugLog.filter { $0.style == level }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Toolbar
+            HStack(spacing: 8) {
+                Text("\(state.debugLog.count) entries")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                filterButton("All", nil)
+                filterButton("Err", .error)
+                filterButton("Warn", .warning)
+                filterButton("Py", .debug)
+                Button {
+                    let text = state.debugLog.map { "[\($0.timestampString)] \($0.text)" }.joined(separator: "\n")
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                } label: {
+                    Image(systemName: "doc.on.doc").font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Copy all log entries")
+                Button {
+                    state.debugLog.removeAll()
+                } label: {
+                    Image(systemName: "trash").font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Clear log")
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.bar)
+            Divider()
+
+            if state.debugLog.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "list.bullet.clipboard").font(.title2).foregroundStyle(.tertiary)
+                    Text("No activity yet").font(.callout).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(filtered) { entry in
+                                HStack(alignment: .top, spacing: 6) {
+                                    Text(entry.timestampString)
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundStyle(.tertiary)
+                                        .frame(width: 72, alignment: .leading)
+                                    Text(entry.text)
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .foregroundStyle(logColor(entry.style))
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .id(entry.id)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .onChange(of: state.debugLog.last?.id) { _, newID in
+                        guard filterLevel == nil, let id = newID else { return }
+                        withAnimation { proxy.scrollTo(id, anchor: .bottom) }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func filterButton(_ label: String, _ level: LogStyle?) -> some View {
+        Button(label) { filterLevel = filterLevel == level ? nil : level }
+            .font(.caption2.weight(filterLevel == level ? .semibold : .regular))
+            .foregroundStyle(filterLevel == level ? Color.accentColor : Color.secondary)
+            .buttonStyle(.plain)
+    }
+
+    private func logColor(_ style: LogStyle) -> Color {
+        switch style {
+        case .error:   return .red
+        case .warning: return .orange
+        case .success: return .green
+        case .info:    return Color(nsColor: .labelColor)
+        case .debug:   return .secondary
+        }
+    }
+}
+
+// MARK: - Helpers
+
+private extension View {
+    /// Detects user-initiated scrolling and calls `action`. No-ops on macOS 14 (graceful
+    /// degradation: auto-scroll simply always fires on that OS).
+    @ViewBuilder
+    func onManualScroll(lastAutoScrollTime: Date, action: @escaping () -> Void) -> some View {
+        if #available(macOS 15.0, *) {
+            self.onScrollGeometryChange(for: Double.self) { geo in
+                geo.contentOffset.y
+            } action: { old, new in
+                guard abs(new - old) > 1.0 else { return }
+                // Ignore scroll changes that are part of our own animation (within 0.8 s buffer)
+                if Date().timeIntervalSince(lastAutoScrollTime) > 0.8 {
+                    action()
+                }
+            }
+        } else {
+            self
         }
     }
 }

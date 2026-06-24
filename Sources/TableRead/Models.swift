@@ -307,6 +307,20 @@ enum LogStyle: Equatable {
     case success
     case warning
     case error
+    case debug
+}
+
+struct DebugLogEntry: Identifiable, Equatable {
+    let id = UUID()
+    let timestamp: Date
+    var text: String
+    var style: LogStyle
+
+    var timestampString: String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f.string(from: timestamp)
+    }
 }
 
 // MARK: - User-added elements

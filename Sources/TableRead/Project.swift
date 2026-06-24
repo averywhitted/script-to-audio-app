@@ -38,7 +38,7 @@ struct Project: Codable, Identifiable {
 }
 
 extension Project {
-    static func new(name: String, folderURL: URL) -> Project {
+    static func new(name: String, folderURL: URL, engine: EngineKind = .macOS) -> Project {
         Project(
             id: UUID(),
             name: name,
@@ -51,7 +51,7 @@ extension Project {
             corrections: [:],
             sceneTitleOverrides: [:],
             userAddedElements: [:],
-            selectedEngine: EngineKind.macOS.rawValue,
+            selectedEngine: engine.rawValue,
             renderedScenes: [],
             folderURL: folderURL
         )

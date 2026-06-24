@@ -24,6 +24,7 @@ final class PlayerState: ObservableObject {
     @Published var myRole: String = ""
     @Published var muteMyLines: Bool = false
     @Published var blockMyLines: Bool = false
+    @Published var playbackRate: Float = 1.0
 
     private var player: AVAudioPlayer?
     private var tickTimer: Timer?
@@ -45,8 +46,28 @@ final class PlayerState: ObservableObject {
                 cueMap: cueMap
             ))
         }
+
+        let hadScenes = !scenes.isEmpty
+        // Capture the scene number playing before we swap the list
+        let currentNumber = scenes.indices.contains(currentSceneIndex)
+            ? scenes[currentSceneIndex].sceneNumber : nil
+
         scenes = items
-        if !scenes.isEmpty {
+        guard !scenes.isEmpty else { return }
+
+        if !hadScenes {
+            // First load — start at scene 0
+            switchToScene(0, autoPlay: false)
+        } else if let num = currentNumber,
+                  let idx = scenes.firstIndex(where: { $0.sceneNumber == num }) {
+            // Preserve active playback: just keep currentSceneIndex aligned.
+            // If cues weren't loaded yet (cue file just appeared), pull them in now.
+            currentSceneIndex = idx
+            if cues.isEmpty, let newCues = scenes[idx].cueMap?.cues, !newCues.isEmpty {
+                cues = newCues
+            }
+        } else {
+            // Current scene no longer in the list — fall back to scene 0
             switchToScene(0, autoPlay: false)
         }
     }
@@ -72,6 +93,7 @@ final class PlayerState: ObservableObject {
         cues = scenes[index].cueMap?.cues ?? []
 
         if let p = try? AVAudioPlayer(contentsOf: scenes[index].audioURL) {
+            p.enableRate = true
             p.prepareToPlay()
             player = p
         }
@@ -86,12 +108,24 @@ final class PlayerState: ObservableObject {
     func play() {
         guard let p = player else { return }
         p.play()
+        p.rate = playbackRate
         isPlaying = true
         startTimer()
     }
 
+    func setRate(_ rate: Float) {
+        let snapped = (rate * 20).rounded() / 20  // snap to 0.05 increments
+        playbackRate = max(0.5, min(2.0, snapped))
+        player?.rate = playbackRate
+    }
+
+    func stepRate(by delta: Float) {
+        setRate(playbackRate + delta)
+    }
+
     func pause() {
         player?.pause()
+        player?.volume = 1  // restore in case we paused mid-muted-line
         isPlaying = false
         stopTimer()
     }
@@ -151,20 +185,30 @@ final class PlayerState: ObservableObject {
         currentTime = p.currentTime
         updateCurrentCue()
 
-        // Mute my lines: jump past the current cue's audio.
-        // Guard `currentTime < cue.endTime` so we only seek once per cue — without
-        // this, updateCurrentCue()'s lastIndex fallback can return the muted cue again
-        // when we're in the inter-cue gap, causing us to seek to the same spot every tick.
-        if muteMyLines && !myRole.isEmpty && currentCueIndex >= 0 {
-            let cue = cues[currentCueIndex]
-            if isMyLine(cue) && currentTime < cue.endTime {
-                let nextIdx = currentCueIndex + 1
-                let target = nextIdx < cues.count ? cues[nextIdx].startTime : cue.endTime + 0.1
-                p.currentTime = target
-                currentTime = p.currentTime
-                updateCurrentCue()
+        // Mute my lines: silence the player during my cues so the timing gap is
+        // preserved (actor hears silence for the full line duration, aiding memorization).
+        // We also look one tick ahead (~0.06 s) so volume drops before the cue's
+        // audio starts, eliminating the flicker caused by the 50 ms tick interval.
+        let inMutedCue: Bool = {
+            guard muteMyLines, !myRole.isEmpty else { return false }
+            // Inside a muted cue?
+            if currentCueIndex >= 0 {
+                let cue = cues[currentCueIndex]
+                if isMyLine(cue) && currentTime >= cue.startTime && currentTime < cue.endTime {
+                    return true
+                }
             }
-        }
+            // Next cue is a muted line starting within one tick — pre-mute now
+            let nextIdx = currentCueIndex + 1
+            if nextIdx >= 0, nextIdx < cues.count {
+                let next = cues[nextIdx]
+                if isMyLine(next) && next.startTime - currentTime <= 0.06 {
+                    return true
+                }
+            }
+            return false
+        }()
+        p.volume = inMutedCue ? 0 : 1
 
         // Auto-advance to next scene when playback ends
         if !p.isPlaying && isPlaying {

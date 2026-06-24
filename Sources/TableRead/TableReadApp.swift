@@ -248,29 +248,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         UNUserNotificationCenter.current().delegate = self
     }
 
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let store = projectStore, !store.pendingDeletion.isEmpty else {
-            return .terminateNow
-        }
-        let alert = NSAlert()
-        alert.messageText = "Delete \(store.pendingDeletion.count) project\(store.pendingDeletion.count == 1 ? "" : "s") permanently?"
-        alert.informativeText = "Projects marked for deletion will be moved to the Trash."
-        alert.addButton(withTitle: "Delete & Quit")
-        alert.addButton(withTitle: "Keep & Quit")
-        alert.addButton(withTitle: "Cancel")
-        let response = alert.runModal()
-        switch response {
-        case .alertFirstButtonReturn:
-            store.confirmDeletion()
-            return .terminateNow
-        case .alertSecondButtonReturn:
-            store.pendingDeletion = []
-            return .terminateNow
-        default:
-            return .terminateCancel
-        }
-    }
-
     func applicationWillBecomeActive(_ notification: Notification) {
         // Make the window key *before* the activating click is processed so
         // that first click fires buttons directly instead of just focusing.

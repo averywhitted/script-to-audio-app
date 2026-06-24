@@ -2059,14 +2059,21 @@ def parse_pdf(pdf_path: str) -> Script:
     # Load data-driven corrections once.
     config = _load_corrections_config()
 
-    # Block-level (PyMuPDF) parse — the only parse path. PyMuPDF is bundled with
-    # the app; if it is somehow unavailable we fail loudly rather than silently
-    # producing a worse parse. (_block_parse applies corrections + _finalise.)
-    script = _block_parse(pdf_path, title, config)
-    if script is None:
+    # Verify PyMuPDF is available before attempting the block parse.
+    try:
+        import fitz as _fitz_check  # noqa: F401
+    except ImportError:
         raise RuntimeError(
             "PyMuPDF (fitz) is required to parse PDFs but is not installed. "
             "Install it with `pip install pymupdf`."
+        )
+
+    # Block-level (PyMuPDF) parse — the only parse path.
+    script = _block_parse(pdf_path, title, config)
+    if script is None:
+        raise RuntimeError(
+            "No text could be extracted from this PDF. "
+            "It may be a scanned document — Table Read requires PDFs with embedded text."
         )
     return script
 

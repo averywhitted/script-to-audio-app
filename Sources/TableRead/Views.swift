@@ -275,6 +275,9 @@ struct SceneReviewRow: View {
     var allSpeakers: [String]
     var isSelected: Bool
     var activeInfo: ActiveElementInfo? = nil
+    var practiceRole: String = ""
+    var blockMyLines: Bool = false
+    var muteMyLines: Bool = false
     var toggle: () -> Void
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var selection: ReviewSelectionState
@@ -422,10 +425,8 @@ struct SceneReviewRow: View {
                                 return element.text.trimmingCharacters(in: .whitespacesAndNewlines)
                     == info.cueText.trimmingCharacters(in: .whitespacesAndNewlines)
                             }()
-                            let blockedText: String? = {
-                                guard let info = activeInfo, info.blockMyLines, !info.myRole.isEmpty else { return nil }
-                                return (element.speaker ?? "") == info.myRole ? blockText(element.text) : nil
-                            }()
+                            let isMyElement = !practiceRole.isEmpty && (element.speaker ?? "") == practiceRole
+                            let blockedText: String? = blockMyLines && isMyElement ? blockText(element.text) : nil
                             SceneElementRow(
                                 element: element,
                                 pdfPath: pdfPath,
@@ -434,6 +435,7 @@ struct SceneReviewRow: View {
                                 isSelected: isElementSelected(eKey),
                                 isActive: elementIsActive,
                                 blockedDisplayText: blockedText,
+                                isMuted: muteMyLines && isMyElement,
                                 onToggleSelect: { toggleElement(eKey) }
                             ) {
                                 state.addElement(
@@ -444,6 +446,7 @@ struct SceneReviewRow: View {
                                     pdfPath: pdfPath
                                 )
                             }
+                            .id("el-\(scene.number)-\(eKey)")
                         case .manualOverlap(let primary, let secondary):
                             let pKey = String(primary.text.prefix(60))
                             ManualOverlapRow(
@@ -1308,7 +1311,7 @@ struct GenerateView: View {
 
     private func logColor(for style: LogStyle) -> Color {
         switch style {
-        case .info: .secondary; case .success: .green; case .warning: .orange; case .error: .red
+        case .info: .secondary; case .success: .green; case .warning: .orange; case .error: .red; case .debug: .secondary
         }
     }
 }
@@ -1563,6 +1566,7 @@ struct SceneElementRow: View {
     var isSelected: Bool = false
     var isActive: Bool = false
     var blockedDisplayText: String? = nil
+    var isMuted: Bool = false
     var onToggleSelect: (() -> Void)? = nil
     var onAddLineBelow: (() -> Void)? = nil
 
@@ -1810,6 +1814,12 @@ struct SceneElementRow: View {
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(speakerColor(displaySpeaker, in: allSpeakers))
                             .strikethrough(isRemoved)
+                        if isMuted {
+                            Image(systemName: "speaker.slash.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.orange)
+                                .help("Your line — muted during playback")
+                        }
                         if correction != nil && !isRemoved {
                             Circle()
                                 .fill(speakerColor(displaySpeaker, in: allSpeakers))
@@ -1854,7 +1864,7 @@ struct SceneElementRow: View {
                     }
                     Text(blockedDisplayText ?? displayText)
                         .font(.callout)
-                        .foregroundStyle(isRemoved ? .tertiary : .primary)
+                        .foregroundStyle(isRemoved ? AnyShapeStyle(.tertiary) : isMuted ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
                         .strikethrough(isRemoved, color: .secondary)
                         .lineLimit(isRemoved ? 1 : 4)
                 }

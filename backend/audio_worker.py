@@ -200,12 +200,26 @@ def _build_assignment(payload: Dict[str, Any], script, voices) -> Assignment:
     """Build an Assignment from an explicit mapping dict (from the UI) or auto-assign."""
     voices_by_id = {v.id: v for v in voices}
     explicit_map = payload.get("assignment")
+    script_speakers = [c.name for c in script.characters]
+    print(f"[DEBUG] _build_assignment: script speakers={script_speakers}", file=__import__("sys").stderr)
     if explicit_map:
+        print(f"[DEBUG] explicit_map keys={sorted(explicit_map.keys())}", file=__import__("sys").stderr)
+        # Validate: warn about keys in explicit_map that don't match any script speaker.
+        known = set(script_speakers) | {"__NARRATOR__"}
+        unmatched = [k for k in explicit_map if k not in known]
+        if unmatched:
+            print(f"[WARN] voice assignment keys not in script: {unmatched}", file=__import__("sys").stderr)
         # Fill in any missing characters with auto-assign so we never have a gap.
         base = auto_assign(script.characters, voices)
         merged = dict(base.mapping)
         merged.update(explicit_map)
+        # Validate voice IDs exist.
+        for char, vid in list(merged.items()):
+            if vid not in voices_by_id:
+                print(f"[WARN] voice id {vid!r} for {char!r} not found in engine — will fall back to narrator", file=__import__("sys").stderr)
+        print(f"[DEBUG] final merged assignment: { {k: v for k, v in merged.items()} }", file=__import__("sys").stderr)
         return Assignment(mapping=merged, voices_by_id=voices_by_id)
+    print("[DEBUG] no explicit assignment — using auto_assign", file=__import__("sys").stderr)
     return auto_assign(script.characters, voices)
 
 
@@ -654,6 +668,7 @@ def _prepare_voice_previews(engine_id: str) -> None:
 
 
 def _preview_voice(payload: Dict[str, Any]) -> Dict[str, Any]:
+    import sys
     engine_id = payload.get("engine", "macOS")
     voice_id = payload.get("voiceId")
     api_key = payload.get("apiKey")
@@ -661,9 +676,11 @@ def _preview_voice(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": False, "error": "Missing voiceId."}
 
     engine = _engine_for_preview(engine_id, api_key)
-    voice = next((v for v in engine.list_voices() if v.id == voice_id), None)
+    available = engine.list_voices()
+    print(f"[DEBUG] previewVoice: engine={engine_id!r} requested={voice_id!r} available_ids={[v.id for v in available]}", file=sys.stderr)
+    voice = next((v for v in available if v.id == voice_id), None)
     if voice is None:
-        return {"ok": False, "error": f"Unknown voice '{voice_id}'."}
+        return {"ok": False, "error": f"Unknown voice '{voice_id}'. Available: {[v.id for v in available]}"}
 
     path = _preview_path(engine_id, voice.id)
     if engine_id == "kokoro":
