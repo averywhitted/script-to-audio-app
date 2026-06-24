@@ -15,7 +15,7 @@ jobs:
   # ── Python backend tests ────────────────────────────────────────────────────
   python-tests:
     name: Python backend tests
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
@@ -33,7 +33,7 @@ jobs:
   # ── Swift build & unit tests ────────────────────────────────────────────────
   swift-tests:
     name: Swift build & tests
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
