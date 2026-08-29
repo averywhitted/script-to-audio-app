@@ -28,6 +28,7 @@ struct TableReadApp: App {
                 }
         }
         .windowStyle(.titleBar)
+        .defaultSize(width: 1440, height: 900)
         .commands {
             CommandGroup(replacing: .undoRedo) {
                 Button("Undo") { state.undo() }

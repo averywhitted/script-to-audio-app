@@ -41,6 +41,7 @@ import json
 import logging
 import os
 import re
+import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
@@ -787,6 +788,16 @@ def derive_format_profile(
             sample_count=len(exs),
         )
 
+    for role, geo in sorted(roles.items()):
+        print(
+            f"[DEBUG] derive_format_profile: {role} -> x=[{geo.x_min:.0f},{geo.x_max:.0f}] "
+            f"caps_min={geo.caps_ratio_min} bold={geo.is_bold} italic={geo.is_italic} "
+            f"from {geo.sample_count} example(s)",
+            file=sys.stderr,
+        )
+    if not roles:
+        print("[DEBUG] derive_format_profile: no recognized roles in tagged examples", file=sys.stderr)
+
     return FormatProfile(roles=roles, source_pdf_identifier=source_pdf_identifier)
 
 
@@ -843,12 +854,17 @@ def analyze_region(
                     ))
 
     if not spans:
+        print(
+            f"[DEBUG] analyze_region: page {page}, box=({x0:.0f},{y0:.0f})-({x1:.0f},{y1:.0f}) "
+            f"— no text spans found",
+            file=sys.stderr,
+        )
         return None
 
     text = "".join(s[2] for s in spans).strip()
     alpha = [c for c in text if c.isalpha()]
     caps_ratio = (sum(1 for c in alpha if c.isupper()) / len(alpha)) if alpha else 0.0
-    return RegionStyle(
+    region = RegionStyle(
         x0=min(s[0] for s in spans),
         x1=max(s[1] for s in spans),
         caps_ratio=caps_ratio,
@@ -856,6 +872,13 @@ def analyze_region(
         is_italic=all(s[4] for s in spans),
         text=text,
     )
+    print(
+        f"[DEBUG] analyze_region: page {page} -> x=[{region.x0:.0f},{region.x1:.0f}] "
+        f"caps={region.caps_ratio:.2f} bold={region.is_bold} italic={region.is_italic} "
+        f"text={region.text[:60]!r}",
+        file=sys.stderr,
+    )
+    return region
 
 
 def _profile_role_match(block: "TextBlock", geo: RoleGeometry) -> bool:
@@ -916,6 +939,12 @@ def _apply_format_profile_to_model(
         dialog_x=dialog_x,
         stage_dir_x=stage_dir_x,
         is_split_layout=abs(speaker_x - dialog_x) > 30,
+    )
+    print(
+        f"[DEBUG] apply_format_profile_to_model: speaker_x {model.profile.speaker_x:.0f}->{speaker_x:.0f}, "
+        f"dialog_x {model.profile.dialog_x:.0f}->{dialog_x:.0f}, "
+        f"cue_columns={[round(c) for c in cue_cols]}, dialog_columns={[round(c) for c in dialog_cols]}",
+        file=sys.stderr,
     )
     return replace(
         model, profile=new_layout_profile, cue_columns=cue_cols, dialog_columns=dialog_cols,
@@ -1498,6 +1527,7 @@ def _classify_blocks(
     scored = _score_blocks(blocks, profile)
     result: List[ClassifiedBlock] = []
     pending_speaker: Optional[str] = None
+    profile_override_counts: Counter = Counter()
 
     for sb in scored:
         block = sb.block
@@ -1551,6 +1581,8 @@ def _classify_blocks(
             # Long colon suffix → likely a TOC entry; fall through to scorer.
 
         forced_role = _classify_block_by_profile(block, format_profile) if format_profile else None
+        if forced_role is not None:
+            profile_override_counts[forced_role] += 1
         role = forced_role if forced_role is not None else sb.best_type
 
         if role == "noise":
@@ -1636,6 +1668,15 @@ def _classify_blocks(
 
         else:  # stage_direction
             result.append(ClassifiedBlock(block=block, role="stage_direction"))
+
+    if format_profile is not None:
+        total_overrides = sum(profile_override_counts.values())
+        detail = ", ".join(f"{role}={count}" for role, count in sorted(profile_override_counts.items()))
+        print(
+            f"[DEBUG] format_profile: {total_overrides} of {len(blocks)} blocks classified "
+            f"via profile override" + (f" ({detail})" if detail else " — no blocks matched any tagged role's geometry/style"),
+            file=sys.stderr,
+        )
 
     return result
 

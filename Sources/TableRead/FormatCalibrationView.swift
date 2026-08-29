@@ -27,6 +27,20 @@ enum CalibrationItem: String, CaseIterable, Identifiable {
         case .overlapIndicator: "Overlap Indicator"
         }
     }
+
+    /// Fixed, stable color per role — used for both the bottom bar's pills
+    /// and the boxes drawn on the page, so a role reads at a glance no
+    /// matter how many are on screen at once.
+    var color: Color {
+        switch self {
+        case .characterCue: .blue
+        case .dialog: .green
+        case .stageDirection: .orange
+        case .parenthetical: .purple
+        case .sceneHeading: .pink
+        case .overlapIndicator: .teal
+        }
+    }
 }
 
 // MARK: - FormatCalibrationSheet
@@ -48,6 +62,7 @@ struct FormatCalibrationSheet: View {
     @State private var showLibraryPicker = false
     @State private var showSaveAs = false
     @State private var newTemplateName = ""
+    @State private var showPrimer = true
 
     private func isResolved(_ item: CalibrationItem) -> Bool {
         excludedItems.contains(item.rawValue) || boxes.contains { $0.tag?.role == item.rawValue }
@@ -62,42 +77,51 @@ struct FormatCalibrationSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            pageNavigationBar
-            Divider()
-            ZStack(alignment: .bottom) {
-                FormatCalibrationPageView(
-                    pdfDocument: pdfDocument,
-                    pageIndex: currentPageIndex,
-                    boxes: $boxes,
-                    selectedBoxID: $selectedBoxID
-                )
-                if !boxes.isEmpty {
-                    CalibrationActionBar(
-                        allResolved: allResolved,
-                        resolvedCount: CalibrationItem.allCases.filter(isResolved).count,
-                        totalCount: CalibrationItem.allCases.count,
-                        unresolvedItems: unresolvedItems,
-                        isAnalyzing: isAnalyzing,
-                        isDeriving: isDeriving,
-                        onTagRole: { tagSelectedBox(as: $0) },
-                        onExcludeItem: { toggleExcluded($0) },
-                        onSaveAs: {
-                            newTemplateName = state.script?.title ?? "New Template"
-                            showSaveAs = true
-                        },
-                        onContinue: { deriveAndApply() }
+        ZStack {
+            VStack(spacing: 0) {
+                header
+                Divider()
+                pageNavigationBar
+                Divider()
+                ZStack(alignment: .bottom) {
+                    FormatCalibrationPageView(
+                        pdfDocument: pdfDocument,
+                        pageIndex: currentPageIndex,
+                        boxes: $boxes,
+                        selectedBoxID: $selectedBoxID
                     )
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 16)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    if !boxes.isEmpty {
+                        CalibrationActionBar(
+                            allResolved: allResolved,
+                            resolvedCount: CalibrationItem.allCases.filter(isResolved).count,
+                            totalCount: CalibrationItem.allCases.count,
+                            unresolvedItems: unresolvedItems,
+                            isAnalyzing: isAnalyzing,
+                            isDeriving: isDeriving,
+                            onTagRole: { tagSelectedBox(as: $0) },
+                            onExcludeItem: { toggleExcluded($0) },
+                            onSaveAs: {
+                                newTemplateName = state.script?.title ?? "New Template"
+                                showSaveAs = true
+                            },
+                            onContinue: { deriveAndApply() }
+                        )
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 16)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
+                .animation(.snappy(duration: 0.2), value: boxes.isEmpty)
             }
-            .animation(.snappy(duration: 0.2), value: boxes.isEmpty)
+
+            if showPrimer {
+                CalibrationPrimerOverlay(onDismiss: { withAnimation(.snappy(duration: 0.2)) { showPrimer = false } })
+                    .transition(.opacity)
+            }
         }
-        .frame(width: 900, height: 640)
+        .animation(.snappy(duration: 0.2), value: showPrimer)
+        .frame(minWidth: 1100, idealWidth: 1500, maxWidth: .infinity,
+               minHeight: 760, idealHeight: 960, maxHeight: .infinity)
         .task {
             if let pdf = state.selectedPDF {
                 pdfDocument = PDFDocument(url: pdf)
@@ -125,6 +149,14 @@ struct FormatCalibrationSheet: View {
             HStack {
                 Text("Help Table Read Read This Script")
                     .font(.title3.weight(.semibold))
+                Button {
+                    withAnimation(.snappy(duration: 0.2)) { showPrimer = true }
+                } label: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Show instructions")
                 Spacer()
                 Button("Choose from Library…") { showLibraryPicker = true }
                     .buttonStyle(.borderless)
@@ -199,11 +231,13 @@ struct FormatCalibrationSheet: View {
         guard let pdf = state.selectedPDF else { return }
 
         isAnalyzing = true
+        state.dlog("[calibration] analyzing box on page \(box.page + 1) for \"\(item.label)\"…", .debug)
         Task {
             defer { isAnalyzing = false }
             do {
                 let region = try await state.bridge.analyzeRegion(pdf: pdf, page: box.page, rect: box.rect)
                 guard let region else {
+                    state.dlog("[calibration] no text found under the box on page \(box.page + 1) for \"\(item.label)\"", .warning)
                     showTransientRegionError("Couldn't find any text there — try adjusting the box.")
                     return
                 }
@@ -218,7 +252,14 @@ struct FormatCalibrationSheet: View {
                     text: region.text
                 )
                 selectedBoxID = nil
+                state.dlog(
+                    "[calibration] tagged \"\(item.label)\" — x=[\(Int(region.x0)),\(Int(region.x1))] "
+                    + "caps=\(String(format: "%.2f", region.capsRatio)) bold=\(region.isBold) italic=\(region.isItalic) "
+                    + "text=\"\(region.text.prefix(40))\"",
+                    .success
+                )
             } catch {
+                state.dlog("[calibration] analyzeRegion failed — \(error.localizedDescription)", .error)
                 showTransientRegionError(error.localizedDescription)
             }
         }
@@ -242,12 +283,14 @@ struct FormatCalibrationSheet: View {
                 isBold: tag.isBold, isItalic: tag.isItalic, text: tag.text
             ))
         }
+        state.dlog("[calibration] deriving FormatProfile from \(examples.count) tagged example(s)…", .debug)
         var profile = try await state.bridge.deriveFormatProfile(
             pdf: state.selectedPDF ?? URL(fileURLWithPath: ""), examples: examples
         )
         if let overlapBox = boxes.first(where: { $0.tag?.role == CalibrationItem.overlapIndicator.rawValue }) {
             profile.overlapMarkerDescription = overlapBox.tag?.text
         }
+        state.dlog("[calibration] profile covers roles: \(profile.roles.keys.sorted().joined(separator: ", "))", .info)
         return profile
     }
 
@@ -257,9 +300,11 @@ struct FormatCalibrationSheet: View {
         Task {
             do {
                 let profile = try await buildProfile()
+                state.dlog("[calibration] applying profile and re-parsing — check the lines above for how many blocks the profile actually overrode", .info)
                 state.applyFormatProfile(profile)
                 dismiss()
             } catch {
+                state.dlog("[calibration] deriveAndApply failed — \(error.localizedDescription)", .error)
                 deriveError = error.localizedDescription
             }
             isDeriving = false
@@ -278,12 +323,67 @@ struct FormatCalibrationSheet: View {
                     profile: profile
                 )
                 try templateLibrary.save(item)
+                state.dlog("[calibration] saved template \"\(item.name)\" and applying it — re-parsing…", .info)
                 state.applyFormatProfile(profile)
                 dismiss()
             } catch {
+                state.dlog("[calibration] deriveAndSave failed — \(error.localizedDescription)", .error)
                 deriveError = error.localizedDescription
             }
             isDeriving = false
+        }
+    }
+}
+
+// MARK: - CalibrationPrimerOverlay
+
+/// Short primer shown automatically the moment the sheet opens, and
+/// re-openable any time via the header's "i" button.
+private struct CalibrationPrimerOverlay: View {
+    var onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Teach Table Read This Script's Layout")
+                    .font(.title3.weight(.semibold))
+
+                VStack(alignment: .leading, spacing: 12) {
+                    step(1, "Draw a box around one example of an element — drag directly on the page below.")
+                    step(2, "Tap the matching label in the bar at the bottom to tag it. Table Read reads the real text under your box right then.")
+                    step(3, "Move or resize a box any time — its tag clears automatically so it always matches what's actually inside it.")
+                    step(4, "Once every item is tagged or excluded, hit Continue to Parse to re-parse the script with your corrections.")
+                }
+
+                HStack {
+                    Spacer()
+                    Button("Got it") { onDismiss() }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding(24)
+            .frame(maxWidth: 460)
+            .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(nsColor: .separatorColor), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.25), radius: 24, x: 0, y: 8)
+        }
+    }
+
+    private func step(_ number: Int, _ text: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text("\(number)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 18, height: 18)
+                .background(Circle().fill(Color.accentColor))
+            Text(text)
+                .font(.callout)
+                .foregroundStyle(.secondary)
         }
     }
 }

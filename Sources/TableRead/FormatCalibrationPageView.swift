@@ -38,23 +38,29 @@ struct CalibrationBox: Identifiable, Equatable {
 
 /// Converts between PDF point-space (top-left origin, y-down — the same
 /// convention `analyze_region` and `_extract_blocks` use) and the rendered
-/// page image's view-space, given a fit-to-container scale.
+/// page image's view-space, given a fit-to-container scale plus the user's
+/// current zoom/pan. Every box position and gesture goes through this one
+/// converter, so zoom and pan never need special-casing anywhere else.
 struct PageCoordinateConverter {
     var pageSize: CGSize
     var containerSize: CGSize
+    var zoomScale: CGFloat = 1
+    var panOffset: CGSize = .zero
 
-    var scale: CGFloat {
+    private var fitScale: CGFloat {
         guard pageSize.width > 0, pageSize.height > 0 else { return 1 }
         return min(containerSize.width / pageSize.width, containerSize.height / pageSize.height)
     }
+
+    var scale: CGFloat { fitScale * zoomScale }
 
     private var renderedSize: CGSize {
         CGSize(width: pageSize.width * scale, height: pageSize.height * scale)
     }
 
     private var origin: CGPoint {
-        CGPoint(x: (containerSize.width - renderedSize.width) / 2,
-                y: (containerSize.height - renderedSize.height) / 2)
+        CGPoint(x: (containerSize.width - renderedSize.width) / 2 + panOffset.width,
+                y: (containerSize.height - renderedSize.height) / 2 + panOffset.height)
     }
 
     func viewRect(fromPagePoints rect: CGRect) -> CGRect {
@@ -95,58 +101,91 @@ struct FormatCalibrationPageView: View {
     @State private var dragAnchor: CGPoint?
     @State private var dragCurrent: CGPoint?
 
+    // Zoom / pan
+    @State private var zoomScale: CGFloat = 1
+    @State private var panOffset: CGSize = .zero
+    @State private var panDragStartOffset: CGSize?
+    @State private var isPanToolActive = false
+    @GestureState private var magnifyBy: CGFloat = 1
+
     private static let minBoxSide: CGFloat = 4
+    private static let minZoom: CGFloat = 0.5
+    private static let maxZoom: CGFloat = 8
+
+    private var effectiveZoom: CGFloat {
+        clampedZoom(zoomScale * magnifyBy)
+    }
+
+    private func clampedZoom(_ value: CGFloat) -> CGFloat {
+        min(max(value, Self.minZoom), Self.maxZoom)
+    }
 
     var body: some View {
         GeometryReader { geo in
-            let converter = PageCoordinateConverter(pageSize: pageSize, containerSize: geo.size)
-            ZStack(alignment: .topLeading) {
-                Color(nsColor: .textBackgroundColor)
-
-                if let pageImage {
-                    Image(nsImage: pageImage)
-                        .resizable()
-                        .scaledToFit()
+            let converter = PageCoordinateConverter(
+                pageSize: pageSize, containerSize: geo.size,
+                zoomScale: effectiveZoom, panOffset: panOffset
+            )
+            ZStack(alignment: .topTrailing) {
+                ZStack(alignment: .topLeading) {
+                    Color(nsColor: .textBackgroundColor)
                         .frame(width: geo.size.width, height: geo.size.height)
-                        .allowsHitTesting(false)
-                } else {
-                    ProgressView()
+
+                    if let pageImage {
+                        // Must go through the SAME converter as every box, or
+                        // zoom/pan would move boxes without moving the page
+                        // underneath them.
+                        let pageViewRect = converter.viewRect(fromPagePoints: CGRect(origin: .zero, size: pageSize))
+                        Image(nsImage: pageImage)
+                            .resizable()
+                            .frame(width: pageViewRect.width, height: pageViewRect.height)
+                            .offset(x: pageViewRect.minX, y: pageViewRect.minY)
+                            .allowsHitTesting(false)
+                    } else {
+                        ProgressView()
+                            .frame(width: geo.size.width, height: geo.size.height)
+                    }
+
+                    // Background create-drag / pan layer. Sits behind every
+                    // box, so a box's own gestures win hit-testing at its
+                    // location — same layering trick ProjectGalleryView's
+                    // rubber-band uses. Swaps between "draw a box" and "pan"
+                    // depending on which tool is active.
+                    Color.clear
+                        .contentShape(Rectangle())
                         .frame(width: geo.size.width, height: geo.size.height)
-                }
+                        .gesture(backgroundGesture(converter: converter))
 
-                // Background create-drag layer. Sits behind every box, so a
-                // box's own gestures win hit-testing at its location — same
-                // layering trick ProjectGalleryView's rubber-band uses.
-                Color.clear
-                    .contentShape(Rectangle())
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .gesture(createGesture(converter: converter))
+                    ForEach(boxes.indices.filter { boxes[$0].page == pageIndex }, id: \.self) { index in
+                        CalibrationBoxView(
+                            box: $boxes[index],
+                            isSelected: selectedBoxID == boxes[index].id,
+                            converter: converter,
+                            onSelect: { selectedBoxID = boxes[index].id },
+                            onDelete: {
+                                let id = boxes[index].id
+                                if selectedBoxID == id { selectedBoxID = nil }
+                                boxes.removeAll { $0.id == id }
+                            }
+                        )
+                    }
 
-                ForEach(boxes.indices.filter { boxes[$0].page == pageIndex }, id: \.self) { index in
-                    CalibrationBoxView(
-                        box: $boxes[index],
-                        isSelected: selectedBoxID == boxes[index].id,
-                        converter: converter,
-                        onSelect: { selectedBoxID = boxes[index].id },
-                        onDelete: {
-                            let id = boxes[index].id
-                            if selectedBoxID == id { selectedBoxID = nil }
-                            boxes.removeAll { $0.id == id }
-                        }
-                    )
+                    if let rect = liveDragRect {
+                        Rectangle()
+                            .fill(Color.accentColor.opacity(0.1))
+                            .overlay(Rectangle().stroke(Color.accentColor.opacity(0.6), lineWidth: 1))
+                            .frame(width: rect.width, height: rect.height)
+                            .offset(x: rect.minX, y: rect.minY)
+                            .allowsHitTesting(false)
+                    }
                 }
+                .clipped()
+                .coordinateSpace(name: "calibrationPage")
+                .gesture(magnifyGesture)
 
-                if let rect = liveDragRect {
-                    Rectangle()
-                        .fill(Color.accentColor.opacity(0.1))
-                        .overlay(Rectangle().stroke(Color.accentColor.opacity(0.6), lineWidth: 1))
-                        .frame(width: rect.width, height: rect.height)
-                        .offset(x: rect.minX, y: rect.minY)
-                        .allowsHitTesting(false)
-                }
+                zoomControls
+                    .padding(10)
             }
-            .clipped()
-            .coordinateSpace(name: "calibrationPage")
         }
         .background(Color(nsColor: .underPageBackgroundColor))
         .onChange(of: pdfDocument?.documentURL) { _, _ in renderCurrentPage() }
@@ -154,9 +193,82 @@ struct FormatCalibrationPageView: View {
         .onAppear { renderCurrentPage() }
     }
 
+    // MARK: - Zoom / pan controls
+
+    private var zoomControls: some View {
+        VStack(spacing: 4) {
+            Button {
+                withAnimation(.snappy(duration: 0.15)) { isPanToolActive.toggle() }
+            } label: {
+                Image(systemName: "hand.raised.fill")
+                    .frame(width: 22, height: 22)
+            }
+            .foregroundStyle(isPanToolActive ? Color.white : Color.primary)
+            .background(isPanToolActive ? Color.accentColor : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+            .help("Grab to pan")
+
+            Divider().frame(width: 22)
+
+            Button { zoomScale = clampedZoom(zoomScale * 1.25) } label: {
+                Image(systemName: "plus.magnifyingglass").frame(width: 22, height: 22)
+            }
+            .help("Zoom in")
+
+            Button { zoomScale = clampedZoom(zoomScale / 1.25) } label: {
+                Image(systemName: "minus.magnifyingglass").frame(width: 22, height: 22)
+            }
+            .help("Zoom out")
+
+            Button {
+                withAnimation(.snappy(duration: 0.2)) { zoomScale = 1; panOffset = .zero }
+            } label: {
+                Text("Fit").font(.system(size: 9, weight: .bold)).frame(width: 22, height: 16)
+            }
+            .help("Reset zoom to fit the window")
+        }
+        .buttonStyle(.plain)
+        .font(.system(size: 12))
+        .padding(6)
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.95), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(nsColor: .separatorColor), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
+    }
+
+    private var magnifyGesture: some Gesture {
+        MagnificationGesture()
+            .updating($magnifyBy) { value, state, _ in state = value }
+            .onEnded { value in
+                zoomScale = clampedZoom(zoomScale * value)
+            }
+    }
+
     private var liveDragRect: CGRect? {
         guard let a = dragAnchor, let b = dragCurrent else { return nil }
         return CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y))
+    }
+
+    /// Swaps the background gesture between "draw a box" (default) and
+    /// "pan" (when the hand tool is active) — type-erased since the two
+    /// underlying `DragGesture`s are otherwise distinct generic types.
+    private func backgroundGesture(converter: PageCoordinateConverter) -> AnyGesture<Void> {
+        if isPanToolActive {
+            return AnyGesture(panGesture().map { _ in })
+        } else {
+            return AnyGesture(createGesture(converter: converter).map { _ in })
+        }
+    }
+
+    private func panGesture() -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("calibrationPage"))
+            .onChanged { value in
+                if panDragStartOffset == nil { panDragStartOffset = panOffset }
+                guard let start = panDragStartOffset else { return }
+                panOffset = CGSize(width: start.width + value.translation.width,
+                                    height: start.height + value.translation.height)
+            }
+            .onEnded { _ in
+                panDragStartOffset = nil
+            }
     }
 
     private func createGesture(converter: PageCoordinateConverter) -> some Gesture {
@@ -228,11 +340,12 @@ private struct CalibrationBoxView: View {
                 .gesture(moveGesture)
 
             if let tag = box.tag {
-                Text(CalibrationItem(rawValue: tag.role)?.label ?? tag.role)
+                let item = CalibrationItem(rawValue: tag.role)
+                Text(item?.label ?? tag.role)
                     .font(.system(size: 9, weight: .semibold))
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
-                    .background(Color.accentColor, in: Capsule())
+                    .background(item?.color ?? .accentColor, in: Capsule())
                     .foregroundStyle(.white)
                     .offset(x: 2, y: -16)
                     .allowsHitTesting(false)
@@ -258,13 +371,17 @@ private struct CalibrationBoxView: View {
         .offset(x: frame.minX, y: frame.minY)
     }
 
+    private var roleColor: Color {
+        box.tag.flatMap { CalibrationItem(rawValue: $0.role)?.color } ?? .orange
+    }
+
     private var fillColor: Color {
-        box.tag == nil ? Color.orange.opacity(0.08) : Color.accentColor.opacity(0.12)
+        roleColor.opacity(box.tag == nil ? 0.08 : 0.14)
     }
 
     private var strokeColor: Color {
         if isSelected { return Color.accentColor }
-        return box.tag == nil ? Color.secondary : Color.accentColor.opacity(0.6)
+        return box.tag == nil ? roleColor.opacity(0.7) : roleColor
     }
 
     private var strokeStyle: StrokeStyle {
@@ -389,9 +506,13 @@ struct CalibrationActionBar: View {
                     HStack(spacing: 6) {
                         ForEach(unresolvedItems) { item in
                             HStack(spacing: 4) {
+                                Circle()
+                                    .fill(item.color)
+                                    .frame(width: 6, height: 6)
                                 Button { onTagRole(item) } label: {
                                     Text(item.label)
                                         .font(.system(size: 10, weight: .medium))
+                                        .foregroundStyle(item.color)
                                 }
                                 .buttonStyle(.plain)
                                 Button { onExcludeItem(item) } label: {
@@ -404,7 +525,7 @@ struct CalibrationActionBar: View {
                             }
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(.quaternary, in: Capsule())
+                            .background(item.color.opacity(0.15), in: Capsule())
                         }
                     }
                 }
