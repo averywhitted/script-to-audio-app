@@ -94,15 +94,12 @@ final class FormatProfileDecodingTests: XCTestCase {
 
 final class FormatTemplateLibraryTests: XCTestCase {
 
+    @MainActor
     private func makeTempLibrary() -> (FormatTemplateLibrary, URL) {
         let base = FileManager.default.temporaryDirectory
             .appendingPathComponent("TableReadTests-\(UUID().uuidString)")
         let library = FormatTemplateLibrary(baseURLProvider: { base })
         return (library, base)
-    }
-
-    override func tearDown() {
-        super.tearDown()
     }
 
     @MainActor func testSaveLoadRoundTrip() throws {
