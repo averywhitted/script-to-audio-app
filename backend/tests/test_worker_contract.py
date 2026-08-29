@@ -73,7 +73,7 @@ def test_swift_command_scrape_found_the_known_commands(command_names):
     expected_minimum = {
         "parse", "voices", "estimateOpenAI", "checkOutputFiles", "generate",
         "installEngine", "engineStatus", "uninstallEngine", "previewVoice",
-        "sampleBlocks", "deriveFormatProfile",
+        "analyzeRegion", "deriveFormatProfile",
     }
     missing = expected_minimum - set(command_names)
     assert not missing, f"Expected commands missing from the scrape: {missing}"

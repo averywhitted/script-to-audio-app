@@ -11,6 +11,7 @@ Run from the repo root:
 """
 
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -256,30 +257,128 @@ def test_classify_blocks_default_signature_unaffected():
 
 
 # ---------------------------------------------------------------------------
-# extract_sample_blocks / _dominant_font_size
+# analyze_region — live per-box scan backing the rubber-band calibration UI
+#
+# Uses direct span-dict fixtures (the exact shape of PyMuPDF's
+# page.get_text("dict")) via a fake `fitz` module rather than a real PDF, so
+# these run in CI's fast job too (no PyMuPDF install needed) and pin down the
+# span-flags/center-point logic exactly rather than depending on how a real
+# renderer happens to set bold/italic flags for a given font.
 # ---------------------------------------------------------------------------
 
 
-def test_dominant_font_size_picks_character_weighted_mode():
-    block = _block(100.0, "ALICE")
-    block.lines = [
-        [p.TextSpan(text="AB", bold=False, italic=False, font="Courier", size=12.0)],
-        [p.TextSpan(text="ABCDEFGHIJ", bold=False, italic=False, font="Courier", size=14.0)],
-    ]
-    assert p._dominant_font_size(block) == pytest.approx(14.0)
+def _span(text, x0, y0, x1, y1, bold=False, italic=False):
+    flags = 0
+    if bold:
+        flags |= 1 << 4
+    if italic:
+        flags |= 1 << 1
+    return {"text": text, "bbox": (x0, y0, x1, y1), "flags": flags}
 
 
-def test_dominant_font_size_defaults_when_no_spans():
-    block = _block(100.0, "ALICE")
-    block.lines = []
-    assert p._dominant_font_size(block) == pytest.approx(12.0)
+def _page_dict(spans, image_blocks=0):
+    blocks = [{"type": 0, "lines": [{"spans": spans}]}]
+    for _ in range(image_blocks):
+        blocks.append({"type": 1})
+    return {"blocks": blocks}
 
 
-def test_extract_sample_blocks_missing_pdf_raises():
-    # Mirrors _extract_blocks: only a missing PyMuPDF install degrades to [];
-    # a missing/unreadable file path still raises, same as parse_pdf's path.
-    # CI's fast Python job doesn't install PyMuPDF, so skip rather than fail
-    # when it's absent — that's the documented, already-relied-upon fallback.
-    pytest.importorskip("fitz")
-    with pytest.raises(Exception):
-        p.extract_sample_blocks("/nonexistent/path/does-not-exist.pdf")
+def _install_fake_fitz(monkeypatch, pages):
+    """pages: list of raw get_text('dict') payloads, one per page."""
+    class _FakePage:
+        def __init__(self, raw):
+            self._raw = raw
+
+        def get_text(self, kind):
+            assert kind == "dict"
+            return self._raw
+
+    class _FakeDoc:
+        def __init__(self):
+            self._pages = [_FakePage(raw) for raw in pages]
+
+        def __len__(self):
+            return len(self._pages)
+
+        def __getitem__(self, i):
+            return self._pages[i]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    fake_fitz = types.ModuleType("fitz")
+    fake_fitz.open = lambda path: _FakeDoc()
+    monkeypatch.setitem(sys.modules, "fitz", fake_fitz)
+
+
+def test_analyze_region_aggregates_matching_spans(monkeypatch):
+    _install_fake_fitz(monkeypatch, [_page_dict([
+        _span("JO", 200.0, 100.0, 220.0, 112.0),
+        _span("SH", 220.0, 100.0, 240.0, 112.0),
+    ])])
+    region = p.analyze_region("/tmp/x.pdf", 0, 190.0, 90.0, 250.0, 120.0)
+    assert region is not None
+    assert region.text == "JOSH"
+    assert region.x0 == pytest.approx(200.0)
+    assert region.x1 == pytest.approx(240.0)
+    assert region.caps_ratio == pytest.approx(1.0)
+    assert region.is_bold is False
+    assert region.is_italic is False
+
+
+def test_analyze_region_empty_box_returns_none(monkeypatch):
+    _install_fake_fitz(monkeypatch, [_page_dict([
+        _span("JOSH", 200.0, 100.0, 240.0, 112.0),
+    ])])
+    region = p.analyze_region("/tmp/x.pdf", 0, 0.0, 0.0, 10.0, 10.0)
+    assert region is None
+
+
+def test_analyze_region_uses_span_center_point_not_bbox_overlap(monkeypatch):
+    # A span whose bbox straddles the box edge but whose CENTER falls outside
+    # is excluded; robust to a box drawn a little off from the true extent.
+    _install_fake_fitz(monkeypatch, [_page_dict([
+        _span("EDGE", 95.0, 100.0, 135.0, 112.0),   # center x=115, outside [0,110]
+        _span("IN", 50.0, 100.0, 90.0, 112.0),      # center x=70, inside
+    ])])
+    region = p.analyze_region("/tmp/x.pdf", 0, 0.0, 90.0, 110.0, 120.0)
+    assert region is not None
+    assert region.text == "IN"
+
+
+def test_analyze_region_mixed_bold_yields_is_bold_false(monkeypatch):
+    _install_fake_fitz(monkeypatch, [_page_dict([
+        _span("BOLD", 100.0, 100.0, 140.0, 112.0, bold=True),
+        _span("PLAIN", 140.0, 100.0, 180.0, 112.0, bold=False),
+    ])])
+    region = p.analyze_region("/tmp/x.pdf", 0, 90.0, 90.0, 190.0, 120.0)
+    assert region is not None
+    assert region.is_bold is False
+
+
+def test_analyze_region_unanimous_italic_true(monkeypatch):
+    _install_fake_fitz(monkeypatch, [_page_dict([
+        _span("A", 100.0, 100.0, 110.0, 112.0, italic=True),
+        _span("B", 110.0, 100.0, 120.0, 112.0, italic=True),
+    ])])
+    region = p.analyze_region("/tmp/x.pdf", 0, 90.0, 90.0, 130.0, 120.0)
+    assert region is not None
+    assert region.is_italic is True
+
+
+def test_analyze_region_ignores_non_text_blocks(monkeypatch):
+    _install_fake_fitz(monkeypatch, [_page_dict(
+        [_span("JOSH", 200.0, 100.0, 240.0, 112.0)], image_blocks=1,
+    )])
+    region = p.analyze_region("/tmp/x.pdf", 0, 190.0, 90.0, 250.0, 120.0)
+    assert region is not None
+    assert region.text == "JOSH"
+
+
+def test_analyze_region_out_of_range_page_returns_none(monkeypatch):
+    _install_fake_fitz(monkeypatch, [_page_dict([_span("JOSH", 200.0, 100.0, 240.0, 112.0)])])
+    assert p.analyze_region("/tmp/x.pdf", 5, 190.0, 90.0, 250.0, 120.0) is None
+    assert p.analyze_region("/tmp/x.pdf", -1, 190.0, 90.0, 250.0, 120.0) is None

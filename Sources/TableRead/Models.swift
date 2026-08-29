@@ -541,23 +541,16 @@ struct FormatProfile: Codable, Equatable, Sendable {
     var sourcePdfIdentifier: String?
 }
 
-/// Raw sample block from the `sampleBlocks` bridge command — pre-classification.
-struct SampleBlock: Codable, Identifiable, Sendable {
-    var index: Int
-    var page: Int
+/// True geometry + style pulled directly from a user-drawn calibration box —
+/// the `analyzeRegion` bridge command's result. Independent of any
+/// pre-extracted block; see backend/parser.py's `analyze_region`.
+struct RegionStyle: Codable, Sendable {
     var x0: Double
-    var y0: Double
     var x1: Double
-    var y1: Double
-    var text: String
     var capsRatio: Double
     var isBold: Bool
     var isItalic: Bool
-    var fontSize: Double
-    var lineCount: Int
-    var charCount: Int
-
-    var id: Int { index }
+    var text: String
 }
 
 /// One user tag applied in the calibration UI — sent to `deriveFormatProfile`.
@@ -572,13 +565,13 @@ struct TaggedBlockExample: Codable, Sendable {
 }
 
 extension TaggedBlockExample {
-    init(role: String, block: SampleBlock) {
+    init(role: String, region: RegionStyle) {
         self.role = role
-        self.x0 = block.x0
-        self.x1 = block.x1
-        self.capsRatio = block.capsRatio
-        self.isBold = block.isBold
-        self.isItalic = block.isItalic
-        self.text = block.text
+        self.x0 = region.x0
+        self.x1 = region.x1
+        self.capsRatio = region.capsRatio
+        self.isBold = region.isBold
+        self.isItalic = region.isItalic
+        self.text = region.text
     }
 }

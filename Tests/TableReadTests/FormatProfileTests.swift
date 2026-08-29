@@ -62,25 +62,23 @@ final class FormatProfileDecodingTests: XCTestCase {
         XCTAssertEqual(decoded, original)
     }
 
-    func testSampleBlockDecodesRealBackendFixture() throws {
+    func testRegionStyleDecodesRealBackendFixture() throws {
         let json = """
-        {"index": 0, "page": 0, "x0": 100.0, "y0": 720.0, "x1": 200.0, "y1": 732.0,
-         "text": "ALICE", "capsRatio": 1.0, "isBold": false, "isItalic": false,
-         "fontSize": 12.0, "lineCount": 1, "charCount": 5}
+        {"x0": 100.0, "x1": 200.0, "capsRatio": 1.0, "isBold": false,
+         "isItalic": false, "text": "ALICE"}
         """
         let data = try XCTUnwrap(json.data(using: .utf8))
-        let block = try JSONDecoder().decode(SampleBlock.self, from: data)
-        XCTAssertEqual(block.text, "ALICE")
-        XCTAssertEqual(block.id, 0)
+        let region = try JSONDecoder().decode(RegionStyle.self, from: data)
+        XCTAssertEqual(region.text, "ALICE")
+        XCTAssertEqual(region.x0, 100.0)
+        XCTAssertEqual(region.x1, 200.0)
     }
 
-    func testTaggedBlockExampleFromSampleBlockCarriesGeometry() {
-        let block = SampleBlock(
-            index: 3, page: 0, x0: 100, y0: 200, x1: 260, y1: 212,
-            text: "JOSH", capsRatio: 1.0, isBold: true, isItalic: false,
-            fontSize: 12, lineCount: 1, charCount: 4
+    func testTaggedBlockExampleFromRegionStyleCarriesGeometry() {
+        let region = RegionStyle(
+            x0: 100, x1: 260, capsRatio: 1.0, isBold: true, isItalic: false, text: "JOSH"
         )
-        let example = TaggedBlockExample(role: "character_cue", block: block)
+        let example = TaggedBlockExample(role: "character_cue", region: region)
         XCTAssertEqual(example.role, "character_cue")
         XCTAssertEqual(example.x0, 100)
         XCTAssertEqual(example.x1, 260)

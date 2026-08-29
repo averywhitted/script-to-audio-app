@@ -188,21 +188,14 @@ def _format_profile_from_json(data: Dict[str, Any] | None) -> "script_parser.For
     )
 
 
-def _sample_block_dict(block: "script_parser.TextBlock", index: int) -> Dict[str, Any]:
+def _region_style_dict(region: "script_parser.RegionStyle") -> Dict[str, Any]:
     return {
-        "index": index,
-        "page": block.page,
-        "x0": block.x0,
-        "y0": block.y0,
-        "x1": block.x1,
-        "y1": block.y1,
-        "text": block.text,
-        "capsRatio": block.caps_ratio,
-        "isBold": block.is_bold,
-        "isItalic": block.is_italic,
-        "fontSize": script_parser._dominant_font_size(block),
-        "lineCount": block.line_count,
-        "charCount": block.char_count,
+        "x0": region.x0,
+        "x1": region.x1,
+        "capsRatio": region.caps_ratio,
+        "isBold": region.is_bold,
+        "isItalic": region.is_italic,
+        "text": region.text,
     }
 
 
@@ -818,19 +811,18 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
                 _format_profile_from_json(payload.get("formatProfile")),
             ),
         }
-    if command == "sampleBlocks":
-        pdf_path = payload["pdfPath"]
-        max_pages = payload.get("maxPages", 12)
-        max_blocks = payload.get("maxBlocks", 200)
-        blocks = script_parser.extract_sample_blocks(
-            pdf_path, max_pages=max_pages, max_blocks=max_blocks,
+    if command == "analyzeRegion":
+        region = script_parser.analyze_region(
+            payload["pdfPath"],
+            payload["page"],
+            payload["x0"],
+            payload["y0"],
+            payload["x1"],
+            payload["y1"],
         )
-        page_count = (max(b.page for b in blocks) + 1) if blocks else 0
         return {
             "ok": True,
-            "roles": list(script_parser._BTYPES),
-            "pageCount": page_count,
-            "blocks": [_sample_block_dict(b, i) for i, b in enumerate(blocks)],
+            "region": _region_style_dict(region) if region is not None else None,
         }
     if command == "deriveFormatProfile":
         examples = [

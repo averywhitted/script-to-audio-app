@@ -318,25 +318,31 @@ final class PythonBridge {
         return URL(fileURLWithPath: path)
     }
 
-    /// Raw sample blocks for the format calibration UI — pre-classification.
-    func sampleBlocks(pdf: URL, maxPages: Int = 12, maxBlocks: Int = 200) async throws -> (roles: [String], blocks: [SampleBlock]) {
-        struct SampleBlocksResponse: Decodable {
+    /// Scans the real PDF content under a user-drawn calibration box and
+    /// returns its true geometry + style, independent of the parser's own
+    /// segmentation. Returns nil when no text falls inside the box (an
+    /// expected, common outcome — not an error) so the caller can show an
+    /// inline "couldn't find text there" message.
+    func analyzeRegion(pdf: URL, page: Int, rect: CGRect) async throws -> RegionStyle? {
+        struct AnalyzeRegionResponse: Decodable {
             var ok: Bool
             var error: String?
-            var roles: [String]?
-            var blocks: [SampleBlock]?
+            var region: RegionStyle?
         }
         let data = try await rawRequest([
-            "command": "sampleBlocks",
+            "command": "analyzeRegion",
             "pdfPath": pdf.path,
-            "maxPages": maxPages,
-            "maxBlocks": maxBlocks,
+            "page": page,
+            "x0": rect.minX,
+            "y0": rect.minY,
+            "x1": rect.maxX,
+            "y1": rect.maxY,
         ])
-        let decoded = try JSONDecoder().decode(SampleBlocksResponse.self, from: data)
+        let decoded = try JSONDecoder().decode(AnalyzeRegionResponse.self, from: data)
         guard decoded.ok else {
-            throw PythonBridgeError.failed(decoded.error ?? "sampleBlocks failed")
+            throw PythonBridgeError.failed(decoded.error ?? "analyzeRegion failed")
         }
-        return (decoded.roles ?? [], decoded.blocks ?? [])
+        return decoded.region
     }
 
     /// Derives a FormatProfile from user-tagged sample blocks.

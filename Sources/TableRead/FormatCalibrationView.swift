@@ -1,12 +1,13 @@
+import PDFKit
 import SwiftUI
 
 /// The checklist items a user works through in the calibration sheet.
 /// `overlapIndicator` is a client-only pseudo-role: it's never sent to the
 /// backend's `_BTYPES` role vocabulary — the derived FormatProfile's
 /// `overlapMarkerDescription` is instead filled in locally from whichever
-/// sample block the user points at (metadata only in v1, not machine-applied
-/// — see backend/parser.py's derive_format_profile docstring).
-private enum CalibrationItem: String, CaseIterable, Identifiable {
+/// box the user tags it with (metadata only in v1, not machine-applied —
+/// see backend/parser.py's derive_format_profile docstring).
+enum CalibrationItem: String, CaseIterable, Identifiable {
     case characterCue = "character_cue"
     case dialog = "dialog"
     case stageDirection = "stage_direction"
@@ -26,17 +27,6 @@ private enum CalibrationItem: String, CaseIterable, Identifiable {
         case .overlapIndicator: "Overlap Indicator"
         }
     }
-
-    var hint: String {
-        switch self {
-        case .characterCue: "The speaker's name above their line"
-        case .dialog: "What a character says"
-        case .stageDirection: "Action / narration, not spoken"
-        case .parenthetical: "A short aside like (beat) or (to Dana)"
-        case .sceneHeading: "A scene or location marker"
-        case .overlapIndicator: "How simultaneous dialog is marked"
-        }
-    }
 }
 
 // MARK: - FormatCalibrationSheet
@@ -46,10 +36,12 @@ struct FormatCalibrationSheet: View {
     @EnvironmentObject private var templateLibrary: FormatTemplateLibrary
     @Environment(\.dismiss) private var dismiss
 
-    @State private var blocks: [SampleBlock] = []
-    @State private var isLoading = true
-    @State private var loadError: String?
-    @State private var tags: [Int: String] = [:]          // block.index -> CalibrationItem rawValue
+    @State private var pdfDocument: PDFDocument?
+    @State private var currentPageIndex = 0
+    @State private var boxes: [CalibrationBox] = []
+    @State private var selectedBoxID: UUID?
+    @State private var isAnalyzing = false
+    @State private var regionError: String?
     @State private var excludedItems: Set<String> = []    // CalibrationItem rawValues
     @State private var isDeriving = false
     @State private var deriveError: String?
@@ -57,12 +49,12 @@ struct FormatCalibrationSheet: View {
     @State private var showSaveAs = false
     @State private var newTemplateName = ""
 
-    private func taggedCount(_ item: CalibrationItem) -> Int {
-        tags.values.filter { $0 == item.rawValue }.count
+    private func isResolved(_ item: CalibrationItem) -> Bool {
+        excludedItems.contains(item.rawValue) || boxes.contains { $0.tag?.role == item.rawValue }
     }
 
-    private func isResolved(_ item: CalibrationItem) -> Bool {
-        excludedItems.contains(item.rawValue) || taggedCount(item) > 0
+    private var unresolvedItems: [CalibrationItem] {
+        CalibrationItem.allCases.filter { !isResolved($0) }
     }
 
     private var allResolved: Bool {
@@ -73,29 +65,44 @@ struct FormatCalibrationSheet: View {
         VStack(spacing: 0) {
             header
             Divider()
-            if isLoading {
-                ProgressView("Reading sample pages…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let loadError {
-                VStack(spacing: 10) {
-                    Image(systemName: "exclamationmark.triangle").font(.title2).foregroundStyle(.orange)
-                    Text(loadError).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(40)
-            } else {
-                HStack(spacing: 0) {
-                    blockList
-                    Divider()
-                    checklistPanel
-                        .frame(width: 240)
+            pageNavigationBar
+            Divider()
+            ZStack(alignment: .bottom) {
+                FormatCalibrationPageView(
+                    pdfDocument: pdfDocument,
+                    pageIndex: currentPageIndex,
+                    boxes: $boxes,
+                    selectedBoxID: $selectedBoxID
+                )
+                if !boxes.isEmpty {
+                    CalibrationActionBar(
+                        allResolved: allResolved,
+                        resolvedCount: CalibrationItem.allCases.filter(isResolved).count,
+                        totalCount: CalibrationItem.allCases.count,
+                        unresolvedItems: unresolvedItems,
+                        isAnalyzing: isAnalyzing,
+                        isDeriving: isDeriving,
+                        onTagRole: { tagSelectedBox(as: $0) },
+                        onExcludeItem: { toggleExcluded($0) },
+                        onSaveAs: {
+                            newTemplateName = state.script?.title ?? "New Template"
+                            showSaveAs = true
+                        },
+                        onContinue: { deriveAndApply() }
+                    )
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            Divider()
-            footer
+            .animation(.snappy(duration: 0.2), value: boxes.isEmpty)
         }
-        .frame(width: 820, height: 580)
-        .task { await loadBlocks() }
+        .frame(width: 900, height: 640)
+        .task {
+            if let pdf = state.selectedPDF {
+                pdfDocument = PDFDocument(url: pdf)
+            }
+        }
         .sheet(isPresented: $showLibraryPicker) {
             FormatTemplateLibraryPickerView { profile in
                 state.applyFormatProfile(profile)
@@ -127,126 +134,119 @@ struct FormatCalibrationSheet: View {
                 }
                 .buttonStyle(.borderless)
             }
-            Text("Tag a few example lines below for each item on the right — remove any that don't apply to this script.")
+            Text("Draw a box around an example of each item, then tag it from the bar at the bottom.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             if let deriveError {
                 Text(deriveError).font(.caption).foregroundStyle(.red)
             }
+            if let regionError {
+                Text(regionError).font(.caption).foregroundStyle(.orange)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
     }
 
-    // MARK: - Sample block list
+    // MARK: - Page navigation
 
-    private var blockList: some View {
-        ScrollView {
-            LazyVStack(spacing: 4) {
-                ForEach(blocks) { block in
-                    SampleBlockRow(
-                        block: block,
-                        selection: Binding(
-                            get: { tags[block.index] ?? "" },
-                            set: { newValue in
-                                if newValue.isEmpty { tags.removeValue(forKey: block.index) }
-                                else { tags[block.index] = newValue }
-                            }
-                        )
-                    )
-                }
-            }
-            .padding(12)
-        }
-    }
-
-    // MARK: - Checklist panel
-
-    private var checklistPanel: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Items to Identify")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 12)
-                ForEach(CalibrationItem.allCases) { item in
-                    ChecklistRow(
-                        item: item,
-                        count: taggedCount(item),
-                        isExcluded: excludedItems.contains(item.rawValue),
-                        onToggleExclude: {
-                            if excludedItems.contains(item.rawValue) {
-                                excludedItems.remove(item.rawValue)
-                            } else {
-                                excludedItems.insert(item.rawValue)
-                            }
-                        }
-                    )
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 14)
-            .padding(.bottom, 14)
-        }
-        .background(.regularMaterial)
-    }
-
-    // MARK: - Footer
-
-    private var footer: some View {
-        HStack {
-            Text("\(CalibrationItem.allCases.filter(isResolved).count) of \(CalibrationItem.allCases.count) resolved")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Button("Save to Library As…") {
-                newTemplateName = state.script?.title ?? "New Template"
-                showSaveAs = true
+    private var pageNavigationBar: some View {
+        HStack(spacing: 10) {
+            Button {
+                currentPageIndex -= 1
+            } label: {
+                Image(systemName: "chevron.left")
             }
             .buttonStyle(.borderless)
-            .disabled(!allResolved || isDeriving)
-            Button("Continue to Parse") { deriveAndApply() }
-                .buttonStyle(.borderedProminent)
-                .disabled(!allResolved || isDeriving)
-                .keyboardShortcut(.defaultAction)
+            .disabled(currentPageIndex <= 0)
+
+            Text("Page \(currentPageIndex + 1) of \(pdfDocument?.pageCount ?? 0)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 110)
+
+            Button {
+                currentPageIndex += 1
+            } label: {
+                Image(systemName: "chevron.right")
+            }
+            .buttonStyle(.borderless)
+            .disabled(currentPageIndex + 1 >= (pdfDocument?.pageCount ?? 0))
+
+            Spacer()
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Actions
 
-    private func loadBlocks() async {
-        guard let pdf = state.selectedPDF else {
-            loadError = "No script is open."
-            isLoading = false
-            return
+    private func toggleExcluded(_ item: CalibrationItem) {
+        if excludedItems.contains(item.rawValue) {
+            excludedItems.remove(item.rawValue)
+        } else {
+            excludedItems.insert(item.rawValue)
         }
-        do {
-            let (_, sampleBlocks) = try await state.bridge.sampleBlocks(pdf: pdf)
-            blocks = sampleBlocks
-            if sampleBlocks.isEmpty {
-                loadError = "Couldn't find any sample lines in this script."
+    }
+
+    /// Fires exactly one `analyzeRegion` call, against the selected box's
+    /// CURRENT rect, tagging it with the given role on success. This is the
+    /// only place region analysis happens — box create/move/resize never
+    /// call the backend.
+    private func tagSelectedBox(as item: CalibrationItem) {
+        guard let id = selectedBoxID, !isAnalyzing else { return }
+        guard let box = boxes.first(where: { $0.id == id }) else { return }
+        guard let pdf = state.selectedPDF else { return }
+
+        isAnalyzing = true
+        Task {
+            defer { isAnalyzing = false }
+            do {
+                let region = try await state.bridge.analyzeRegion(pdf: pdf, page: box.page, rect: box.rect)
+                guard let region else {
+                    showTransientRegionError("Couldn't find any text there — try adjusting the box.")
+                    return
+                }
+                // Re-locate by id: the box may have moved position in the
+                // array (or been deleted) during this await.
+                guard let idx = boxes.firstIndex(where: { $0.id == id }) else { return }
+                boxes[idx].tag = CalibrationBox.Tag(
+                    role: item.rawValue,
+                    x0: region.x0, x1: region.x1,
+                    capsRatio: region.capsRatio,
+                    isBold: region.isBold, isItalic: region.isItalic,
+                    text: region.text
+                )
+                selectedBoxID = nil
+            } catch {
+                showTransientRegionError(error.localizedDescription)
             }
-        } catch {
-            loadError = error.localizedDescription
         }
-        isLoading = false
+    }
+
+    private func showTransientRegionError(_ message: String) {
+        regionError = message
+        Task {
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            if regionError == message { regionError = nil }
+        }
     }
 
     /// Builds a FormatProfile from the current tags, then patches in the
     /// client-only overlap marker description before returning it.
     private func buildProfile() async throws -> FormatProfile {
-        let examples: [TaggedBlockExample] = blocks.compactMap { block in
-            guard let role = tags[block.index], role != CalibrationItem.overlapIndicator.rawValue else { return nil }
-            return TaggedBlockExample(role: role, block: block)
+        let examples: [TaggedBlockExample] = boxes.compactMap { box in
+            guard let tag = box.tag, tag.role != CalibrationItem.overlapIndicator.rawValue else { return nil }
+            return TaggedBlockExample(role: tag.role, region: RegionStyle(
+                x0: tag.x0, x1: tag.x1, capsRatio: tag.capsRatio,
+                isBold: tag.isBold, isItalic: tag.isItalic, text: tag.text
+            ))
         }
         var profile = try await state.bridge.deriveFormatProfile(
             pdf: state.selectedPDF ?? URL(fileURLWithPath: ""), examples: examples
         )
-        if let overlapIndex = tags.first(where: { $0.value == CalibrationItem.overlapIndicator.rawValue })?.key,
-           let overlapBlock = blocks.first(where: { $0.index == overlapIndex }) {
-            profile.overlapMarkerDescription = overlapBlock.text
+        if let overlapBox = boxes.first(where: { $0.tag?.role == CalibrationItem.overlapIndicator.rawValue }) {
+            profile.overlapMarkerDescription = overlapBox.tag?.text
         }
         return profile
     }
@@ -285,55 +285,6 @@ struct FormatCalibrationSheet: View {
             }
             isDeriving = false
         }
-    }
-}
-
-// MARK: - SampleBlockRow
-
-private struct SampleBlockRow: View {
-    var block: SampleBlock
-    @Binding var selection: String
-
-    var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(block.text.isEmpty ? "(blank)" : block.text)
-                    .font(.callout)
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-                HStack(spacing: 6) {
-                    Text("p\(block.page + 1) · x=\(Int(block.x0))")
-                    if block.isBold { badge("B") }
-                    if block.isItalic { badge("I") }
-                    if block.capsRatio >= 0.9 { badge("CAPS") }
-                }
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-            }
-            Spacer(minLength: 8)
-            Picker("Role", selection: $selection) {
-                Text("Not Tagged").tag("")
-                ForEach(CalibrationItem.allCases) { item in
-                    Text(item.label).tag(item.rawValue)
-                }
-            }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .frame(width: 160)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-            selection.isEmpty ? Color.clear : Color.accentColor.opacity(0.08),
-            in: RoundedRectangle(cornerRadius: 6)
-        )
-    }
-
-    private func badge(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 8, weight: .bold))
-            .padding(.horizontal, 3).padding(.vertical, 1)
-            .background(.secondary.opacity(0.15), in: RoundedRectangle(cornerRadius: 3))
     }
 }
 
@@ -417,42 +368,5 @@ private struct FormatTemplateRow: View {
             Button("Use as Starting Point", action: onUse)
             Button("Delete", role: .destructive, action: onDelete)
         }
-    }
-}
-
-// MARK: - ChecklistRow
-
-private struct ChecklistRow: View {
-    var item: CalibrationItem
-    var count: Int
-    var isExcluded: Bool
-    var onToggleExclude: () -> Void
-
-    private var isResolved: Bool { isExcluded || count > 0 }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: isResolved ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(isResolved ? Color.green : Color.secondary)
-                .font(.system(size: 15))
-                .padding(.top, 1)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.label)
-                    .font(.callout.weight(.medium))
-                    .strikethrough(isExcluded)
-                    .foregroundStyle(isExcluded ? Color.secondary : Color.primary)
-                Text(isExcluded ? "Not used in this script" : (count > 0 ? "\(count) example\(count == 1 ? "" : "s") tagged" : item.hint))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 4)
-            Button(action: onToggleExclude) {
-                Image(systemName: isExcluded ? "arrow.uturn.backward.circle" : "xmark.circle")
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help(isExcluded ? "This script does use this element" : "This script doesn't use this element")
-        }
-        .padding(.vertical, 4)
     }
 }

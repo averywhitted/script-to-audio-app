@@ -454,32 +454,6 @@ def _extract_blocks(pdf_path: str) -> List[TextBlock]:
     return result
 
 
-def extract_sample_blocks(
-    pdf_path: str, max_pages: int = 12, max_blocks: int = 200
-) -> List[TextBlock]:
-    """Lightweight extraction for the format-calibration UI: raw TextBlocks with
-    geometry+style, capped to the first `max_pages` pages (format conventions
-    are established early and repeat) and `max_blocks` total. Deliberately
-    stops before _build_document_model/_classify_blocks so the calibration UI
-    shows the user unbiased raw blocks, not the parser's guesses.
-    """
-    blocks = _extract_blocks(pdf_path)
-    if not blocks:
-        return []
-    blocks = _merge_open_parentheticals(blocks)
-    limited = [b for b in blocks if b.page < max_pages]
-    return limited[:max_blocks]
-
-
-def _dominant_font_size(block: TextBlock) -> float:
-    """Character-weighted modal font size across the block's spans."""
-    sizes: Counter = Counter()
-    for line in block.lines:
-        for span in line:
-            sizes[round(span.size)] += len(span.text)
-    return float(sizes.most_common(1)[0][0]) if sizes else 12.0
-
-
 def _split_raw_block(raw_block: dict, page_num: int) -> List[TextBlock]:
     """Convert one PyMuPDF block dict into one or more TextBlock objects."""
     # Build typed line tuples from PyMuPDF's nested dict structure.
@@ -814,6 +788,74 @@ def derive_format_profile(
         )
 
     return FormatProfile(roles=roles, source_pdf_identifier=source_pdf_identifier)
+
+
+@dataclass
+class RegionStyle:
+    """True geometry + style pulled directly from a user-drawn calibration
+    box, independent of anything _extract_blocks decided elsewhere on the
+    page. See analyze_region."""
+    x0: float
+    x1: float
+    caps_ratio: float
+    is_bold: bool
+    is_italic: bool
+    text: str
+
+
+def analyze_region(
+    pdf_path: str, page: int, x0: float, y0: float, x1: float, y1: float,
+) -> Optional[RegionStyle]:
+    """Scans the real page content inside a user-drawn rectangle (PDF point
+    space, top-left origin, y-down — same convention _extract_blocks uses)
+    and returns its true geometry + style, independent of whatever the block
+    classifier decided elsewhere on the page. This is what lets a calibration
+    box always reflect ground truth, even where the parser's own segmentation
+    is imperfect.
+
+    Operates on raw PyMuPDF spans (page.get_text("dict")), not on
+    _extract_blocks' TextBlocks — spans carry their own bbox, a finer
+    granularity than any pre-grouped block boundary. A span is "in" the box
+    if its center point falls inside it (robust to a box that's a little
+    larger or smaller than the true text extent). Returns None if nothing
+    qualifies — caller shows an inline "couldn't find text there" message.
+    """
+    import fitz  # PyMuPDF
+
+    with fitz.open(pdf_path) as doc:
+        if not (0 <= page < len(doc)):
+            return None
+        raw = doc[page].get_text("dict")
+
+    spans: List[Tuple[float, float, str, bool, bool]] = []
+    for block in raw["blocks"]:
+        if block["type"] != 0:
+            continue
+        for line in block["lines"]:
+            for span in line["spans"]:
+                sx0, sy0, sx1, sy1 = span["bbox"]
+                cx, cy = (sx0 + sx1) / 2, (sy0 + sy1) / 2
+                if x0 <= cx <= x1 and y0 <= cy <= y1:
+                    spans.append((
+                        sx0, sx1, span["text"],
+                        bool(span["flags"] & (1 << 4)),   # bold
+                        bool(span["flags"] & (1 << 1)),   # italic
+                    ))
+
+    if not spans:
+        return None
+
+    text = "".join(s[2] for s in spans).strip()
+    alpha = [c for c in text if c.isalpha()]
+    caps_ratio = (sum(1 for c in alpha if c.isupper()) / len(alpha)) if alpha else 0.0
+    return RegionStyle(
+        x0=min(s[0] for s in spans),
+        x1=max(s[1] for s in spans),
+        caps_ratio=caps_ratio,
+        is_bold=all(s[3] for s in spans),
+        is_italic=all(s[4] for s in spans),
+        text=text,
+    )
 
 
 def _profile_role_match(block: "TextBlock", geo: RoleGeometry) -> bool:
