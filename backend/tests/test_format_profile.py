@@ -278,5 +278,8 @@ def test_dominant_font_size_defaults_when_no_spans():
 def test_extract_sample_blocks_missing_pdf_raises():
     # Mirrors _extract_blocks: only a missing PyMuPDF install degrades to [];
     # a missing/unreadable file path still raises, same as parse_pdf's path.
+    # CI's fast Python job doesn't install PyMuPDF, so skip rather than fail
+    # when it's absent — that's the documented, already-relied-upon fallback.
+    pytest.importorskip("fitz")
     with pytest.raises(Exception):
         p.extract_sample_blocks("/nonexistent/path/does-not-exist.pdf")
