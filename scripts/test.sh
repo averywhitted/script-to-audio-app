@@ -88,6 +88,38 @@ run_swift() {
         return
     fi
 
+    # Belt-and-suspenders: the "Copy Python Runtime" build phase bundles
+    # backend/*.py into the app so the worker subprocess never needs Documents
+    # access. That phase's declared inputPaths only track vendor/python, so an
+    # incremental Xcode build CAN skip re-copying backend/*.py after a source
+    # edit (this is exactly how a real "Unknown command" bug shipped once,
+    # even though scripts/test.sh was green — see CLAUDE.md). alwaysOutOfDate
+    # on that phase should prevent it going forward; this check catches it if
+    # that ever regresses.
+    section "Bundled backend freshness"
+    BUILT_PRODUCTS_DIR=$(xcodebuild -showBuildSettings \
+        -project TableRead.xcodeproj -scheme TableRead \
+        -destination 'platform=macOS' 2>/dev/null \
+        | awk -F'= ' '/ BUILT_PRODUCTS_DIR /{print $2; exit}')
+    BUNDLED_BACKEND="$BUILT_PRODUCTS_DIR/TableRead.app/Contents/Resources/backend"
+    if [ -z "$BUILT_PRODUCTS_DIR" ] || [ ! -d "$BUNDLED_BACKEND" ]; then
+        fail "Could not locate bundled backend/ in the built app at '$BUNDLED_BACKEND' — did the Copy Python Runtime phase run?"
+    else
+        STALE=0
+        for src in backend/*.py; do
+            name="$(basename "$src")"
+            if ! diff -q "$src" "$BUNDLED_BACKEND/$name" >/dev/null 2>&1; then
+                echo "  ✗ stale in bundle: $name"
+                STALE=1
+            fi
+        done
+        if [ "$STALE" -eq 0 ]; then
+            ok "Bundled backend/*.py matches source"
+        else
+            fail "Bundled backend/*.py is stale — rebuild needed (Copy Python Runtime phase didn't refresh it)"
+        fi
+    fi
+
     section "Swift unit tests"
     if xcodebuild \
         test \

@@ -232,6 +232,7 @@
 /* Begin PBXShellScriptBuildPhase section */
 		A1B2C3D4E5F6A7B8C9D0BEEF /* Copy Python Runtime */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
