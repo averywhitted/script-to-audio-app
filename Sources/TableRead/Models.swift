@@ -513,3 +513,72 @@ extension ScriptSummary {
         return copy
     }
 }
+
+// MARK: - Format calibration (per-project parser override)
+//
+// Mirrors backend/parser.py's FormatProfile/RoleGeometry/TaggedExample and
+// audio_worker.py's _format_profile_to_json — field names must match those
+// camelCase keys exactly, since JSONDecoder silently leaves an unmatched
+// Optional field `nil` rather than failing (see FormatProfileTests.swift's
+// fixture-decode test, which guards against that drift).
+
+struct RoleGeometry: Codable, Equatable, Sendable {
+    var xMin: Double
+    var xMax: Double
+    var capsRatioMin: Double?
+    var isBold: Bool?
+    var isItalic: Bool?
+    var sampleCount: Int
+}
+
+/// Per-project override layer derived from user-tagged sample blocks. `nil`
+/// everywhere it's threaded through reproduces today's fully automatic parse.
+struct FormatProfile: Codable, Equatable, Sendable {
+    var version: Int = 1
+    var roles: [String: RoleGeometry] = [:]
+    var sceneHeadingPattern: String?
+    var overlapMarkerDescription: String?
+    var sourcePdfIdentifier: String?
+}
+
+/// Raw sample block from the `sampleBlocks` bridge command — pre-classification.
+struct SampleBlock: Codable, Identifiable, Sendable {
+    var index: Int
+    var page: Int
+    var x0: Double
+    var y0: Double
+    var x1: Double
+    var y1: Double
+    var text: String
+    var capsRatio: Double
+    var isBold: Bool
+    var isItalic: Bool
+    var fontSize: Double
+    var lineCount: Int
+    var charCount: Int
+
+    var id: Int { index }
+}
+
+/// One user tag applied in the calibration UI — sent to `deriveFormatProfile`.
+struct TaggedBlockExample: Codable, Sendable {
+    var role: String
+    var x0: Double
+    var x1: Double
+    var capsRatio: Double
+    var isBold: Bool
+    var isItalic: Bool
+    var text: String
+}
+
+extension TaggedBlockExample {
+    init(role: String, block: SampleBlock) {
+        self.role = role
+        self.x0 = block.x0
+        self.x1 = block.x1
+        self.capsRatio = block.capsRatio
+        self.isBold = block.isBold
+        self.isItalic = block.isItalic
+        self.text = block.text
+    }
+}

@@ -126,20 +126,22 @@ final class PythonBridge {
 
     // MARK: - Public API
 
-    func parse(pdf: URL) async throws -> ScriptSummary {
-        let response: WorkerEnvelope<ScriptSummary> = try await request([
-            "command": "parse",
-            "pdfPath": pdf.path,
-        ])
+    func parse(pdf: URL, formatProfile: FormatProfile? = nil) async throws -> ScriptSummary {
+        var payload: [String: Any] = ["command": "parse", "pdfPath": pdf.path]
+        if let formatProfile { payload["formatProfile"] = try jsonDict(formatProfile) }
+        let response: WorkerEnvelope<ScriptSummary> = try await request(payload)
         guard let script = response.script else { throw PythonBridgeError.badResponse }
         return script
     }
 
-    func voices(engine: EngineKind, pdf: URL?) async throws -> (voices: [VoiceSummary], autoAssign: [String: String]) {
+    func voices(
+        engine: EngineKind, pdf: URL?, formatProfile: FormatProfile? = nil
+    ) async throws -> (voices: [VoiceSummary], autoAssign: [String: String]) {
         var payload: [String: Any] = ["command": "voices", "engine": engine.id]
         if let pdf {
             payload["pdfPath"] = pdf.path
         }
+        if let formatProfile { payload["formatProfile"] = try jsonDict(formatProfile) }
         let data = try await rawRequest(payload)
         let decoder = JSONDecoder()
         let decoded = try decoder.decode(VoicesResponse.self, from: data)
@@ -149,24 +151,32 @@ final class PythonBridge {
         return (decoded.voices ?? [], decoded.autoAssign ?? [:])
     }
 
-    func estimateOpenAI(pdf: URL, sceneNumbers: [Int]) async throws -> OpenAIEstimate {
-        let response: WorkerEnvelope<OpenAIEstimate> = try await request([
+    func estimateOpenAI(
+        pdf: URL, sceneNumbers: [Int], formatProfile: FormatProfile? = nil
+    ) async throws -> OpenAIEstimate {
+        var payload: [String: Any] = [
             "command": "estimateOpenAI",
             "pdfPath": pdf.path,
             "sceneNumbers": sceneNumbers,
-        ])
+        ]
+        if let formatProfile { payload["formatProfile"] = try jsonDict(formatProfile) }
+        let response: WorkerEnvelope<OpenAIEstimate> = try await request(payload)
         guard let estimate = response.estimate else { throw PythonBridgeError.badResponse }
         return estimate
     }
 
     /// Returns a mapping of scene number → SceneOutputInfo indicating whether
     /// an output .m4a already exists for each scene.
-    func checkOutputFiles(pdf: URL, outputDir: URL) async throws -> [Int: SceneOutputInfo] {
-        let data = try await rawRequest([
+    func checkOutputFiles(
+        pdf: URL, outputDir: URL, formatProfile: FormatProfile? = nil
+    ) async throws -> [Int: SceneOutputInfo] {
+        var payload: [String: Any] = [
             "command": "checkOutputFiles",
             "pdfPath": pdf.path,
             "outputDir": outputDir.path,
-        ])
+        ]
+        if let formatProfile { payload["formatProfile"] = try jsonDict(formatProfile) }
+        let data = try await rawRequest(payload)
 
         // Response is {"ok": true, "scenes": {"1": {...}, "2": {...}, ...}}
         struct CheckResponse: Decodable {
@@ -195,6 +205,7 @@ final class PythonBridge {
         apiKey: String? = nil,
         userAddedElements: [String: [UserAddedElement]] = [:],
         corrections: [ParserCorrection] = [],
+        formatProfile: FormatProfile? = nil,
         onEvent: @escaping @MainActor (GenerationEvent) -> Void
     ) async throws {
         var payload: [String: Any] = [
@@ -204,6 +215,7 @@ final class PythonBridge {
             "engine": engine.id,
             "sceneNumbers": sceneNumbers,
         ]
+        if let formatProfile { payload["formatProfile"] = try jsonDict(formatProfile) }
         if !assignment.isEmpty {
             payload["assignment"] = assignment
         }
@@ -306,6 +318,47 @@ final class PythonBridge {
         return URL(fileURLWithPath: path)
     }
 
+    /// Raw sample blocks for the format calibration UI — pre-classification.
+    func sampleBlocks(pdf: URL, maxPages: Int = 12, maxBlocks: Int = 200) async throws -> (roles: [String], blocks: [SampleBlock]) {
+        struct SampleBlocksResponse: Decodable {
+            var ok: Bool
+            var error: String?
+            var roles: [String]?
+            var blocks: [SampleBlock]?
+        }
+        let data = try await rawRequest([
+            "command": "sampleBlocks",
+            "pdfPath": pdf.path,
+            "maxPages": maxPages,
+            "maxBlocks": maxBlocks,
+        ])
+        let decoded = try JSONDecoder().decode(SampleBlocksResponse.self, from: data)
+        guard decoded.ok else {
+            throw PythonBridgeError.failed(decoded.error ?? "sampleBlocks failed")
+        }
+        return (decoded.roles ?? [], decoded.blocks ?? [])
+    }
+
+    /// Derives a FormatProfile from user-tagged sample blocks.
+    func deriveFormatProfile(pdf: URL, examples: [TaggedBlockExample]) async throws -> FormatProfile {
+        struct DeriveResponse: Decodable {
+            var ok: Bool
+            var error: String?
+            var formatProfile: FormatProfile?
+        }
+        let examplesPayload = try examples.map { try jsonDict($0) }
+        let data = try await rawRequest([
+            "command": "deriveFormatProfile",
+            "pdfPath": pdf.path,
+            "examples": examplesPayload,
+        ])
+        let decoded = try JSONDecoder().decode(DeriveResponse.self, from: data)
+        guard decoded.ok, let profile = decoded.formatProfile else {
+            throw PythonBridgeError.failed(decoded.error ?? "deriveFormatProfile failed")
+        }
+        return profile
+    }
+
     func cancelGeneration() {
         generationProcess?.terminate()
         generationProcess = nil
@@ -393,6 +446,17 @@ final class PythonBridge {
             "PATH": "/usr/bin:/bin:/usr/local/bin",
             "TMPDIR": NSTemporaryDirectory(),
         ]
+    }
+
+    /// Encodes a Codable value into a `[String: Any]` dict suitable for a
+    /// rawRequest payload (which is serialized via JSONSerialization, not
+    /// JSONEncoder, so a Codable value can't be dropped in directly).
+    private func jsonDict<T: Encodable>(_ value: T) throws -> [String: Any] {
+        let data = try JSONEncoder().encode(value)
+        guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw PythonBridgeError.badResponse
+        }
+        return dict
     }
 
     /// Run the worker synchronously, return stdout as Data.

@@ -141,6 +141,71 @@ def _script_summary(script: script_parser.Script) -> Dict[str, Any]:
     }
 
 
+def _format_profile_to_json(profile: "script_parser.FormatProfile | None") -> Dict[str, Any] | None:
+    """FormatProfile dataclass -> camelCase JSON, mirroring Swift's FormatProfile."""
+    if profile is None:
+        return None
+    return {
+        "version": profile.version,
+        "roles": {
+            role: {
+                "xMin": geo.x_min,
+                "xMax": geo.x_max,
+                "capsRatioMin": geo.caps_ratio_min,
+                "isBold": geo.is_bold,
+                "isItalic": geo.is_italic,
+                "sampleCount": geo.sample_count,
+            }
+            for role, geo in profile.roles.items()
+        },
+        "sceneHeadingPattern": profile.scene_heading_pattern,
+        "overlapMarkerDescription": profile.overlap_marker_description,
+        "sourcePdfIdentifier": profile.source_pdf_identifier,
+    }
+
+
+def _format_profile_from_json(data: Dict[str, Any] | None) -> "script_parser.FormatProfile | None":
+    """Inverse of _format_profile_to_json — decodes the payload sent by Swift."""
+    if not data:
+        return None
+    roles = {
+        role: script_parser.RoleGeometry(
+            x_min=geo["xMin"],
+            x_max=geo["xMax"],
+            caps_ratio_min=geo.get("capsRatioMin"),
+            is_bold=geo.get("isBold"),
+            is_italic=geo.get("isItalic"),
+            sample_count=geo.get("sampleCount", 0),
+        )
+        for role, geo in (data.get("roles") or {}).items()
+    }
+    return script_parser.FormatProfile(
+        version=data.get("version", 1),
+        roles=roles,
+        scene_heading_pattern=data.get("sceneHeadingPattern"),
+        overlap_marker_description=data.get("overlapMarkerDescription"),
+        source_pdf_identifier=data.get("sourcePdfIdentifier"),
+    )
+
+
+def _sample_block_dict(block: "script_parser.TextBlock", index: int) -> Dict[str, Any]:
+    return {
+        "index": index,
+        "page": block.page,
+        "x0": block.x0,
+        "y0": block.y0,
+        "x1": block.x1,
+        "y1": block.y1,
+        "text": block.text,
+        "capsRatio": block.caps_ratio,
+        "isBold": block.is_bold,
+        "isItalic": block.is_italic,
+        "fontSize": script_parser._dominant_font_size(block),
+        "lineCount": block.line_count,
+        "charCount": block.char_count,
+    }
+
+
 def _voices_for_engine(engine_id: str) -> List[tts_engines.VoiceInfo]:
     if engine_id in {"openai", "openAI"}:
         return tts_engines.OpenAIEngine().list_voices()
@@ -149,8 +214,12 @@ def _voices_for_engine(engine_id: str) -> List[tts_engines.VoiceInfo]:
     return tts_engines.MacSayEngine().list_voices()
 
 
-def _estimate_openai(pdf_path: str, scene_numbers: List[int] | None) -> Dict[str, Any]:
-    script = script_parser.parse_pdf(pdf_path)
+def _estimate_openai(
+    pdf_path: str,
+    scene_numbers: List[int] | None,
+    format_profile: "script_parser.FormatProfile | None" = None,
+) -> Dict[str, Any]:
+    script = script_parser.parse_pdf(pdf_path, format_profile=format_profile)
     engine = tts_engines.OpenAIEngine()
     voices = engine.list_voices()
     assignment = auto_assign(script.characters, voices)
@@ -402,7 +471,8 @@ def _generate(payload: Dict[str, Any]) -> int:
     output_dir = payload["outputDir"]
     scene_numbers = payload.get("sceneNumbers")
     engine = _engine_for_payload(payload)
-    script = script_parser.parse_pdf(pdf_path)
+    format_profile = _format_profile_from_json(payload.get("formatProfile"))
+    script = script_parser.parse_pdf(pdf_path, format_profile=format_profile)
     voices = _voices_for_engine(payload.get("engine", "macOS"))
 
     if not voices:
@@ -696,7 +766,9 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
     command = payload.get("command")
     if command == "parse":
         pdf_path = payload["pdfPath"]
-        return {"ok": True, "script": _script_summary(script_parser.parse_pdf(pdf_path))}
+        format_profile = _format_profile_from_json(payload.get("formatProfile"))
+        script = script_parser.parse_pdf(pdf_path, format_profile=format_profile)
+        return {"ok": True, "script": _script_summary(script)}
     if command == "voices":
         engine_id = payload.get("engine", "mac")
         pdf_path = payload.get("pdfPath")
@@ -716,14 +788,16 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
             ],
         }
         if pdf_path:
-            script = script_parser.parse_pdf(pdf_path)
+            format_profile = _format_profile_from_json(payload.get("formatProfile"))
+            script = script_parser.parse_pdf(pdf_path, format_profile=format_profile)
             assignment = auto_assign(script.characters, voices)
             result["autoAssign"] = assignment.mapping
         return result
     if command == "checkOutputFiles":
         pdf_path = payload["pdfPath"]
         output_dir = payload["outputDir"]
-        script = script_parser.parse_pdf(pdf_path)
+        format_profile = _format_profile_from_json(payload.get("formatProfile"))
+        script = script_parser.parse_pdf(pdf_path, format_profile=format_profile)
         from audio_pipeline import scene_filename
         result: Dict[str, Any] = {}
         for scene in script.scenes:
@@ -741,8 +815,40 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
             "estimate": _estimate_openai(
                 payload["pdfPath"],
                 payload.get("sceneNumbers"),
+                _format_profile_from_json(payload.get("formatProfile")),
             ),
         }
+    if command == "sampleBlocks":
+        pdf_path = payload["pdfPath"]
+        max_pages = payload.get("maxPages", 12)
+        max_blocks = payload.get("maxBlocks", 200)
+        blocks = script_parser.extract_sample_blocks(
+            pdf_path, max_pages=max_pages, max_blocks=max_blocks,
+        )
+        page_count = (max(b.page for b in blocks) + 1) if blocks else 0
+        return {
+            "ok": True,
+            "roles": list(script_parser._BTYPES),
+            "pageCount": page_count,
+            "blocks": [_sample_block_dict(b, i) for i, b in enumerate(blocks)],
+        }
+    if command == "deriveFormatProfile":
+        examples = [
+            script_parser.TaggedExample(
+                role=ex["role"],
+                x0=ex["x0"],
+                x1=ex["x1"],
+                caps_ratio=ex["capsRatio"],
+                is_bold=ex["isBold"],
+                is_italic=ex["isItalic"],
+                text=ex.get("text", ""),
+            )
+            for ex in payload.get("examples", [])
+        ]
+        profile = script_parser.derive_format_profile(
+            examples, source_pdf_identifier=payload.get("pdfPath"),
+        )
+        return {"ok": True, "formatProfile": _format_profile_to_json(profile)}
     if command == "engineStatus":
         return _engine_status()
     if command == "uninstallEngine":
