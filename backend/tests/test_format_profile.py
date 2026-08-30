@@ -27,7 +27,7 @@ import parser as p
 # ---------------------------------------------------------------------------
 
 
-def _block(x0, text, *, page=0, y0=100.0, is_bold=False, is_italic=False, caps_ratio=None):
+def _block(x0, text, *, page=0, y0=100.0, is_bold=False, is_italic=False, caps_ratio=None, width=100.0):
     """Build a minimal TextBlock for unit tests, deriving the boilerplate
     geometry/derived fields from the given text so tests only need to specify
     what's relevant to the behavior under test."""
@@ -35,9 +35,9 @@ def _block(x0, text, *, page=0, y0=100.0, is_bold=False, is_italic=False, caps_r
         alpha = [c for c in text if c.isalpha()]
         caps_ratio = (sum(1 for c in alpha if c.isupper()) / len(alpha)) if alpha else 0.0
     return p.TextBlock(
-        x0=x0, y0=y0, x1=x0 + 100.0, y1=y0 + 12.0, page=page,
+        x0=x0, y0=y0, x1=x0 + width, y1=y0 + 12.0, page=page,
         lines=[[p.TextSpan(text=text, bold=is_bold, italic=is_italic, font="Courier", size=12.0)]],
-        text=text, caps_ratio=caps_ratio, center_x=x0 + 50.0, width=100.0, height=12.0,
+        text=text, caps_ratio=caps_ratio, center_x=x0 + width / 2, width=width, height=12.0,
         line_count=1, char_count=len(text), starts_with_paren=text.startswith("("),
         ends_with_paren=text.endswith(")"), is_italic=is_italic, is_bold=is_bold,
     )
@@ -111,6 +111,15 @@ def test_derive_format_profile_ignores_unknown_role():
     assert profile.roles == {}
 
 
+def test_derive_format_profile_computes_width_hint():
+    examples = [
+        _example("character_cue", 72.0, 72.0 + 39.0, text="David."),
+        _example("character_cue", 70.0, 70.0 + 41.0, text="Miriam."),
+    ]
+    profile = p.derive_format_profile(examples)
+    assert profile.roles["character_cue"].width_hint == pytest.approx(40.0)
+
+
 # ---------------------------------------------------------------------------
 # _classify_block_by_profile — forced-role matching
 # ---------------------------------------------------------------------------
@@ -147,6 +156,37 @@ def test_classify_block_by_profile_style_mismatch_excludes_match():
         "character_cue": p.RoleGeometry(x_min=190.0, x_max=210.0, is_bold=True),
     })
     block = _block(200.0, "JOSH", is_bold=False)
+    assert p._classify_block_by_profile(block, profile) is None
+
+
+def test_classify_block_by_profile_ambiguous_broken_by_width_hint():
+    # Mirrors a real stage-play manuscript: a short "NAME." cue and a full
+    # stage-direction paragraph share the same left margin and are both
+    # bold, so x/caps/bold/italic alone can't tell them apart. width_hint
+    # (derived from each role's own tagged-example width) breaks the tie.
+    profile = p.FormatProfile(roles={
+        "character_cue": p.RoleGeometry(x_min=60.0, x_max=90.0, is_bold=True, width_hint=35.0),
+        "stage_direction": p.RoleGeometry(x_min=60.0, x_max=90.0, is_bold=True, width_hint=280.0),
+    })
+    narrow_block = _block(72.0, "David.", is_bold=True, width=39.0)
+    wide_block = _block(
+        72.0, "Miriam removes scarf, it's bloody and gross under there.",
+        is_bold=True, width=294.0,
+    )
+    assert p._classify_block_by_profile(narrow_block, profile) == "character_cue"
+    assert p._classify_block_by_profile(wide_block, profile) == "stage_direction"
+
+
+def test_classify_block_by_profile_ambiguous_without_width_hint_still_gives_up():
+    # A profile decoded from before width_hint existed (None on every role,
+    # exactly like test_classify_block_by_profile_ambiguous_returns_none)
+    # must keep today's give-up-on-ambiguity behavior — the explicit
+    # backward-compatibility guarantee for already-saved templates.
+    profile = p.FormatProfile(roles={
+        "character_cue": p.RoleGeometry(x_min=60.0, x_max=90.0, is_bold=True),
+        "stage_direction": p.RoleGeometry(x_min=60.0, x_max=90.0, is_bold=True),
+    })
+    block = _block(72.0, "David.", is_bold=True, width=39.0)
     assert p._classify_block_by_profile(block, profile) is None
 
 

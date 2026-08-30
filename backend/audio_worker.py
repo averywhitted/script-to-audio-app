@@ -154,6 +154,7 @@ def _format_profile_to_json(profile: "script_parser.FormatProfile | None") -> Di
                 "capsRatioMin": geo.caps_ratio_min,
                 "isBold": geo.is_bold,
                 "isItalic": geo.is_italic,
+                "widthHint": geo.width_hint,
                 "sampleCount": geo.sample_count,
             }
             for role, geo in profile.roles.items()
@@ -175,6 +176,7 @@ def _format_profile_from_json(data: Dict[str, Any] | None) -> "script_parser.For
             caps_ratio_min=geo.get("capsRatioMin"),
             is_bold=geo.get("isBold"),
             is_italic=geo.get("isItalic"),
+            width_hint=geo.get("widthHint"),
             sample_count=geo.get("sampleCount", 0),
         )
         for role, geo in (data.get("roles") or {}).items()

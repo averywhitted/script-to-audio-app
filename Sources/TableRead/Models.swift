@@ -528,6 +528,10 @@ struct RoleGeometry: Codable, Equatable, Sendable {
     var capsRatioMin: Double?
     var isBold: Bool?
     var isItalic: Bool?
+    /// Mean tagged-example block width for this role — lets the backend break
+    /// ties when x/caps/bold/italic alone match more than one role. nil for
+    /// profiles saved before this field existed.
+    var widthHint: Double? = nil
     var sampleCount: Int
 }
 

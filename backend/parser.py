@@ -719,6 +719,14 @@ class RoleGeometry:
     caps_ratio_min: Optional[float] = None   # None = unconstrained
     is_bold: Optional[bool] = None           # None = don't care; True/False = must match
     is_italic: Optional[bool] = None
+    # Mean block width (x1 - x0) across this role's tagged examples. Used only
+    # to break ties when a block's x/caps/bold/italic match more than one
+    # role — e.g. a stage-play manuscript where a short "NAME." cue and a
+    # full stage-direction paragraph share the same left margin and both
+    # happen to be bold. None (the default for profiles saved before this
+    # field existed) preserves today's behavior: an ambiguous match is left
+    # unresolved rather than guessed at.
+    width_hint: Optional[float] = None
     sample_count: int = 0
 
 
@@ -779,12 +787,14 @@ def derive_format_profile(
             True if all(e.is_italic for e in exs)
             else (False if not any(e.is_italic for e in exs) else None)
         )
+        width_hint = sum(e.x1 - e.x0 for e in exs) / len(exs)
         roles[role] = RoleGeometry(
             x_min=min(xs) - _PROFILE_X_PAD,
             x_max=max(xs) + _PROFILE_X_PAD,
             caps_ratio_min=caps_ratio_min,
             is_bold=is_bold,
             is_italic=is_italic,
+            width_hint=width_hint,
             sample_count=len(exs),
         )
 
@@ -792,7 +802,7 @@ def derive_format_profile(
         print(
             f"[DEBUG] derive_format_profile: {role} -> x=[{geo.x_min:.0f},{geo.x_max:.0f}] "
             f"caps_min={geo.caps_ratio_min} bold={geo.is_bold} italic={geo.is_italic} "
-            f"from {geo.sample_count} example(s)",
+            f"width_hint={geo.width_hint:.0f} from {geo.sample_count} example(s)",
             file=sys.stderr,
         )
     if not roles:
@@ -897,12 +907,28 @@ def _classify_block_by_profile(block: "TextBlock", format_profile: FormatProfile
     """Return a _BTYPES role if exactly one tagged role's geometry+style matches
     this block, else None — ambiguous matches fall through to the normal
     scorer so a profile can never force a classification it isn't confident
-    about."""
+    about.
+
+    Exception: when x/caps/bold/italic alone leave more than one role
+    matching — e.g. a stage-play manuscript where a short "NAME." cue and a
+    full stage-direction paragraph share the same left margin and are both
+    bold — break the tie using each candidate role's tagged-example width
+    (`width_hint`), picking whichever is closest to this block's own width.
+    Only engages when every ambiguous candidate has a width_hint (always
+    true for a freshly-derived profile; a profile saved before this field
+    existed decodes it as None and keeps today's give-up-on-ambiguity
+    behavior unchanged)."""
     matches = [
-        role for role, geo in format_profile.roles.items()
+        (role, geo) for role, geo in format_profile.roles.items()
         if _profile_role_match(block, geo)
     ]
-    return matches[0] if len(matches) == 1 else None
+    if len(matches) == 1:
+        return matches[0][0]
+    if len(matches) > 1 and all(geo.width_hint is not None for _, geo in matches):
+        block_width = block.x1 - block.x0
+        role, _ = min(matches, key=lambda pair: abs(pair[1].width_hint - block_width))
+        return role
+    return None
 
 
 def _apply_format_profile_to_model(
