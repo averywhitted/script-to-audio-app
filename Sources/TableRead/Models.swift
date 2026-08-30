@@ -513,3 +513,69 @@ extension ScriptSummary {
         return copy
     }
 }
+
+// MARK: - Format calibration (per-project parser override)
+//
+// Mirrors backend/parser.py's FormatProfile/RoleGeometry/TaggedExample and
+// audio_worker.py's _format_profile_to_json — field names must match those
+// camelCase keys exactly, since JSONDecoder silently leaves an unmatched
+// Optional field `nil` rather than failing (see FormatProfileTests.swift's
+// fixture-decode test, which guards against that drift).
+
+struct RoleGeometry: Codable, Equatable, Sendable {
+    var xMin: Double
+    var xMax: Double
+    var capsRatioMin: Double?
+    var isBold: Bool?
+    var isItalic: Bool?
+    /// Mean tagged-example block width for this role — lets the backend break
+    /// ties when x/caps/bold/italic alone match more than one role. nil for
+    /// profiles saved before this field existed.
+    var widthHint: Double? = nil
+    var sampleCount: Int
+}
+
+/// Per-project override layer derived from user-tagged sample blocks. `nil`
+/// everywhere it's threaded through reproduces today's fully automatic parse.
+struct FormatProfile: Codable, Equatable, Sendable {
+    var version: Int = 1
+    var roles: [String: RoleGeometry] = [:]
+    var sceneHeadingPattern: String?
+    var overlapMarkerDescription: String?
+    var sourcePdfIdentifier: String?
+}
+
+/// True geometry + style pulled directly from a user-drawn calibration box —
+/// the `analyzeRegion` bridge command's result. Independent of any
+/// pre-extracted block; see backend/parser.py's `analyze_region`.
+struct RegionStyle: Codable, Sendable {
+    var x0: Double
+    var x1: Double
+    var capsRatio: Double
+    var isBold: Bool
+    var isItalic: Bool
+    var text: String
+}
+
+/// One user tag applied in the calibration UI — sent to `deriveFormatProfile`.
+struct TaggedBlockExample: Codable, Sendable {
+    var role: String
+    var x0: Double
+    var x1: Double
+    var capsRatio: Double
+    var isBold: Bool
+    var isItalic: Bool
+    var text: String
+}
+
+extension TaggedBlockExample {
+    init(role: String, region: RegionStyle) {
+        self.role = role
+        self.x0 = region.x0
+        self.x1 = region.x1
+        self.capsRatio = region.capsRatio
+        self.isBold = region.isBold
+        self.isItalic = region.isItalic
+        self.text = region.text
+    }
+}

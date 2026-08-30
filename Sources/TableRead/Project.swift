@@ -15,6 +15,15 @@ struct Project: Codable, Identifiable {
     var userAddedElements: [String: [UserAddedElement]]
     var selectedEngine: String
     var renderedScenes: [Int]
+    /// Per-project parser override, derived from user-tagged sample blocks in
+    /// the format calibration sheet. `nil` (the default) reproduces today's
+    /// fully automatic parse — see FormatCalibrationView.swift.
+    var formatProfile: FormatProfile?
+    /// Whether this project has completed the calibration sheet once (applied
+    /// a profile or explicitly chose automatic detection). `nil`/missing on
+    /// projects saved before this feature shipped is treated as "not yet" so
+    /// they're offered calibration once, the same as any freshly imported script.
+    var formatCalibrationCompleted: Bool?
 
     /// Transient: absolute URL of the project folder on disk. Not persisted.
     var folderURL: URL?
@@ -23,6 +32,7 @@ struct Project: Codable, Identifiable {
         case id, name, createdAt, lastOpenedAt, pdfFilename, scriptTitle
         case voiceAssignment, characterGenderOverrides, corrections
         case sceneTitleOverrides, userAddedElements, selectedEngine, renderedScenes
+        case formatProfile, formatCalibrationCompleted
     }
 
     var pdfURL: URL? {
@@ -53,6 +63,8 @@ extension Project {
             userAddedElements: [:],
             selectedEngine: engine.rawValue,
             renderedScenes: [],
+            formatProfile: nil,
+            formatCalibrationCompleted: false,
             folderURL: folderURL
         )
     }

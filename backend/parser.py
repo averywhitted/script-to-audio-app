@@ -41,8 +41,9 @@ import json
 import logging
 import os
 import re
+import sys
 from collections import Counter, defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import pdfplumber
@@ -691,6 +692,292 @@ def _infer_layout_profile(
 
 
 # ---------------------------------------------------------------------------
+# Format profile — per-project user-calibrated override layer
+# ---------------------------------------------------------------------------
+#
+# A FormatProfile is derived from user-tagged sample blocks in the Swift
+# calibration UI (Sources/TableRead/FormatCalibrationView.swift) and is never
+# read from or merged into the global CONVENTIONS scorer or
+# corrections_config.json — those are shared across every script and guarded
+# by scripts/scorecard.py's locked 7-script corpus. A FormatProfile is instead
+# threaded through parse_pdf() as an optional, per-call argument: it seeds/
+# extends this document's own DocumentModel/LayoutProfile (see
+# _apply_format_profile_to_model) and can force Phase 1's classification for
+# blocks whose geometry+style unambiguously match a tagged role (see
+# _classify_block_by_profile). A role absent from `.roles` leaves that role on
+# today's fully-automatic behavior — a FormatProfile is additive, never a
+# replacement for the automatic pipeline.
+
+_PROFILE_X_PAD = 8.0  # pt — absorbs sub-pixel drift a handful of tagged examples can't reveal
+
+
+@dataclass
+class RoleGeometry:
+    """Geometry + style range for one _BTYPES role, derived from tagged examples."""
+    x_min: float
+    x_max: float
+    caps_ratio_min: Optional[float] = None   # None = unconstrained
+    is_bold: Optional[bool] = None           # None = don't care; True/False = must match
+    is_italic: Optional[bool] = None
+    # Mean block width (x1 - x0) across this role's tagged examples. Used only
+    # to break ties when a block's x/caps/bold/italic match more than one
+    # role — e.g. a stage-play manuscript where a short "NAME." cue and a
+    # full stage-direction paragraph share the same left margin and both
+    # happen to be bold. None (the default for profiles saved before this
+    # field existed) preserves today's behavior: an ambiguous match is left
+    # unresolved rather than guessed at.
+    width_hint: Optional[float] = None
+    sample_count: int = 0
+
+
+@dataclass
+class FormatProfile:
+    """Per-project override layer derived from user-tagged sample blocks."""
+    version: int = 1
+    roles: Dict[str, RoleGeometry] = field(default_factory=dict)
+    scene_heading_pattern: Optional[str] = None
+    overlap_marker_description: Optional[str] = None  # metadata only in v1 — see derive_format_profile
+    source_pdf_identifier: Optional[str] = None
+
+
+@dataclass
+class TaggedExample:
+    """One user-labeled sample block from the calibration UI."""
+    role: str
+    x0: float
+    x1: float
+    caps_ratio: float
+    is_bold: bool
+    is_italic: bool
+    text: str = ""
+
+
+def derive_format_profile(
+    examples: List[TaggedExample], source_pdf_identifier: Optional[str] = None,
+) -> FormatProfile:
+    """Aggregate tagged sample blocks into per-role geometry+style ranges.
+
+    A role with zero tagged examples is simply absent from `.roles` — per-role
+    opt-in, not all-or-nothing. `caps_ratio_min`/`is_bold`/`is_italic` are only
+    set when every example for a role agrees; mixed evidence leaves the
+    constraint unset rather than risk misclassifying a valid block.
+
+    `scene_heading_pattern` stays unset in v1 — synthesizing a reliable regex
+    from free text is out of scope; the role's geometry/style range is still
+    used like any other role, a safe, weaker fallback. `overlap_marker_
+    description` is metadata only in v1, not wired into the existing
+    "/"/"&"/","-separated overlap-splitting logic.
+    """
+    by_role: Dict[str, List[TaggedExample]] = defaultdict(list)
+    for ex in examples:
+        if ex.role in _BTYPES:
+            by_role[ex.role].append(ex)
+
+    roles: Dict[str, RoleGeometry] = {}
+    for role, exs in by_role.items():
+        xs = [e.x0 for e in exs]
+        caps_ratio_min = None
+        if all(e.caps_ratio >= 0.5 for e in exs):
+            caps_ratio_min = max(0.0, min(e.caps_ratio for e in exs) - 0.05)
+        is_bold: Optional[bool] = (
+            True if all(e.is_bold for e in exs)
+            else (False if not any(e.is_bold for e in exs) else None)
+        )
+        is_italic: Optional[bool] = (
+            True if all(e.is_italic for e in exs)
+            else (False if not any(e.is_italic for e in exs) else None)
+        )
+        width_hint = sum(e.x1 - e.x0 for e in exs) / len(exs)
+        roles[role] = RoleGeometry(
+            x_min=min(xs) - _PROFILE_X_PAD,
+            x_max=max(xs) + _PROFILE_X_PAD,
+            caps_ratio_min=caps_ratio_min,
+            is_bold=is_bold,
+            is_italic=is_italic,
+            width_hint=width_hint,
+            sample_count=len(exs),
+        )
+
+    for role, geo in sorted(roles.items()):
+        print(
+            f"[DEBUG] derive_format_profile: {role} -> x=[{geo.x_min:.0f},{geo.x_max:.0f}] "
+            f"caps_min={geo.caps_ratio_min} bold={geo.is_bold} italic={geo.is_italic} "
+            f"width_hint={geo.width_hint:.0f} from {geo.sample_count} example(s)",
+            file=sys.stderr,
+        )
+    if not roles:
+        print("[DEBUG] derive_format_profile: no recognized roles in tagged examples", file=sys.stderr)
+
+    return FormatProfile(roles=roles, source_pdf_identifier=source_pdf_identifier)
+
+
+@dataclass
+class RegionStyle:
+    """True geometry + style pulled directly from a user-drawn calibration
+    box, independent of anything _extract_blocks decided elsewhere on the
+    page. See analyze_region."""
+    x0: float
+    x1: float
+    caps_ratio: float
+    is_bold: bool
+    is_italic: bool
+    text: str
+
+
+def analyze_region(
+    pdf_path: str, page: int, x0: float, y0: float, x1: float, y1: float,
+) -> Optional[RegionStyle]:
+    """Scans the real page content inside a user-drawn rectangle (PDF point
+    space, top-left origin, y-down — same convention _extract_blocks uses)
+    and returns its true geometry + style, independent of whatever the block
+    classifier decided elsewhere on the page. This is what lets a calibration
+    box always reflect ground truth, even where the parser's own segmentation
+    is imperfect.
+
+    Operates on raw PyMuPDF spans (page.get_text("dict")), not on
+    _extract_blocks' TextBlocks — spans carry their own bbox, a finer
+    granularity than any pre-grouped block boundary. A span is "in" the box
+    if its center point falls inside it (robust to a box that's a little
+    larger or smaller than the true text extent). Returns None if nothing
+    qualifies — caller shows an inline "couldn't find text there" message.
+    """
+    import fitz  # PyMuPDF
+
+    with fitz.open(pdf_path) as doc:
+        if not (0 <= page < len(doc)):
+            return None
+        raw = doc[page].get_text("dict")
+
+    spans: List[Tuple[float, float, str, bool, bool]] = []
+    for block in raw["blocks"]:
+        if block["type"] != 0:
+            continue
+        for line in block["lines"]:
+            for span in line["spans"]:
+                sx0, sy0, sx1, sy1 = span["bbox"]
+                cx, cy = (sx0 + sx1) / 2, (sy0 + sy1) / 2
+                if x0 <= cx <= x1 and y0 <= cy <= y1:
+                    spans.append((
+                        sx0, sx1, span["text"],
+                        bool(span["flags"] & (1 << 4)),   # bold
+                        bool(span["flags"] & (1 << 1)),   # italic
+                    ))
+
+    if not spans:
+        print(
+            f"[DEBUG] analyze_region: page {page}, box=({x0:.0f},{y0:.0f})-({x1:.0f},{y1:.0f}) "
+            f"— no text spans found",
+            file=sys.stderr,
+        )
+        return None
+
+    text = "".join(s[2] for s in spans).strip()
+    alpha = [c for c in text if c.isalpha()]
+    caps_ratio = (sum(1 for c in alpha if c.isupper()) / len(alpha)) if alpha else 0.0
+    region = RegionStyle(
+        x0=min(s[0] for s in spans),
+        x1=max(s[1] for s in spans),
+        caps_ratio=caps_ratio,
+        is_bold=all(s[3] for s in spans),
+        is_italic=all(s[4] for s in spans),
+        text=text,
+    )
+    print(
+        f"[DEBUG] analyze_region: page {page} -> x=[{region.x0:.0f},{region.x1:.0f}] "
+        f"caps={region.caps_ratio:.2f} bold={region.is_bold} italic={region.is_italic} "
+        f"text={region.text[:60]!r}",
+        file=sys.stderr,
+    )
+    return region
+
+
+def _profile_role_match(block: "TextBlock", geo: RoleGeometry) -> bool:
+    if not (geo.x_min <= block.x0 <= geo.x_max):
+        return False
+    if geo.caps_ratio_min is not None and block.caps_ratio < geo.caps_ratio_min:
+        return False
+    if geo.is_bold is not None and block.is_bold != geo.is_bold:
+        return False
+    if geo.is_italic is not None and block.is_italic != geo.is_italic:
+        return False
+    return True
+
+
+def _classify_block_by_profile(block: "TextBlock", format_profile: FormatProfile) -> Optional[str]:
+    """Return a _BTYPES role if exactly one tagged role's geometry+style matches
+    this block, else None — ambiguous matches fall through to the normal
+    scorer so a profile can never force a classification it isn't confident
+    about.
+
+    Exception: when x/caps/bold/italic alone leave more than one role
+    matching — e.g. a stage-play manuscript where a short "NAME." cue and a
+    full stage-direction paragraph share the same left margin and are both
+    bold — break the tie using each candidate role's tagged-example width
+    (`width_hint`), picking whichever is closest to this block's own width.
+    Only engages when every ambiguous candidate has a width_hint (always
+    true for a freshly-derived profile; a profile saved before this field
+    existed decodes it as None and keeps today's give-up-on-ambiguity
+    behavior unchanged)."""
+    matches = [
+        (role, geo) for role, geo in format_profile.roles.items()
+        if _profile_role_match(block, geo)
+    ]
+    if len(matches) == 1:
+        return matches[0][0]
+    if len(matches) > 1 and all(geo.width_hint is not None for _, geo in matches):
+        block_width = block.x1 - block.x0
+        role, _ = min(matches, key=lambda pair: abs(pair[1].width_hint - block_width))
+        return role
+    return None
+
+
+def _apply_format_profile_to_model(
+    model: "DocumentModel", format_profile: Optional[FormatProfile],
+) -> "DocumentModel":
+    """Seed/extend cue_columns, dialog_columns, and the LayoutProfile's x-fields
+    from a per-project FormatProfile. This directly targets the failure mode
+    the feature exists to fix: a script where automatic cast-lexicon detection
+    finds zero cast still gets a user-confirmed column injected regardless.
+    Never touches CONVENTIONS or corrections_config.json — this is a per-call,
+    per-document merge, not a global mutation."""
+    if format_profile is None:
+        return model
+    cue_cols, dialog_cols = list(model.cue_columns), list(model.dialog_columns)
+    speaker_x = model.profile.speaker_x
+    dialog_x = model.profile.dialog_x
+    stage_dir_x = model.profile.stage_dir_x
+    cue_geo = format_profile.roles.get("character_cue")
+    if cue_geo is not None:
+        mid = (cue_geo.x_min + cue_geo.x_max) / 2
+        cue_cols = sorted(set(cue_cols) | {mid})
+        speaker_x = mid
+    dialog_geo = format_profile.roles.get("dialog")
+    if dialog_geo is not None:
+        mid = (dialog_geo.x_min + dialog_geo.x_max) / 2
+        dialog_cols = sorted(set(dialog_cols) | {mid})
+        dialog_x = mid
+    sd_geo = format_profile.roles.get("stage_direction")
+    if sd_geo is not None:
+        stage_dir_x = (sd_geo.x_min + sd_geo.x_max) / 2
+    new_layout_profile = replace(
+        model.profile,
+        speaker_x=speaker_x,
+        dialog_x=dialog_x,
+        stage_dir_x=stage_dir_x,
+        is_split_layout=abs(speaker_x - dialog_x) > 30,
+    )
+    print(
+        f"[DEBUG] apply_format_profile_to_model: speaker_x {model.profile.speaker_x:.0f}->{speaker_x:.0f}, "
+        f"dialog_x {model.profile.dialog_x:.0f}->{dialog_x:.0f}, "
+        f"cue_columns={[round(c) for c in cue_cols]}, dialog_columns={[round(c) for c in dialog_cols]}",
+        file=sys.stderr,
+    )
+    return replace(
+        model, profile=new_layout_profile, cue_columns=cue_cols, dialog_columns=dialog_cols,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Document model — the script's own conventions, learned in a first pass
 # ---------------------------------------------------------------------------
 #
@@ -799,7 +1086,11 @@ def _dense_buckets(xs: List[float], total: int) -> List[float]:
     return sorted(float(b) for b, n in counts.items() if n >= threshold)
 
 
-def _build_document_model(blocks: List[TextBlock], page_width: float = 612.0) -> DocumentModel:
+def _build_document_model(
+    blocks: List[TextBlock],
+    page_width: float = 612.0,
+    format_profile: Optional["FormatProfile"] = None,
+) -> DocumentModel:
     """First pass: learn the cast lexicon, cue columns, and dialog columns.
 
     Slash-compound cues ("ADA / TOM / DENISE") are split so each member is counted
@@ -874,7 +1165,7 @@ def _build_document_model(blocks: List[TextBlock], page_width: float = 612.0) ->
         blocks, page_width=page_width,
         exclude_stage_dir_cols=tuple(dialog_columns),
     )
-    return DocumentModel(
+    model = DocumentModel(
         profile=profile,
         cast_lexicon=dict(lexicon),
         cast=cast,
@@ -882,6 +1173,7 @@ def _build_document_model(blocks: List[TextBlock], page_width: float = 612.0) ->
         dialog_columns=dialog_columns,
         furniture=furniture,
     )
+    return _apply_format_profile_to_model(model, format_profile)
 
 
 # ---------------------------------------------------------------------------
@@ -1243,6 +1535,7 @@ def _reorder_columns(blocks: List[TextBlock], model: DocumentModel) -> List[Text
 def _classify_blocks(
     blocks: List[TextBlock],
     model: DocumentModel,
+    format_profile: Optional["FormatProfile"] = None,
 ) -> List[ClassifiedBlock]:
     """Two-phase block classification.
 
@@ -1260,6 +1553,7 @@ def _classify_blocks(
     scored = _score_blocks(blocks, profile)
     result: List[ClassifiedBlock] = []
     pending_speaker: Optional[str] = None
+    profile_override_counts: Counter = Counter()
 
     for sb in scored:
         block = sb.block
@@ -1299,7 +1593,11 @@ def _classify_blocks(
             result.append(ClassifiedBlock(block=block, role="noise"))
             continue
 
-        if _SCENE_HEADING_BLOCK_RE.match(text):
+        profile_scene_heading = bool(
+            format_profile and format_profile.scene_heading_pattern
+            and re.match(format_profile.scene_heading_pattern, text)
+        )
+        if _SCENE_HEADING_BLOCK_RE.match(text) or profile_scene_heading:
             # Reject TOC entries: "SCENE N: long description…"
             colon_pos = text.find(":")
             after_colon = text[colon_pos + 1:].strip() if colon_pos != -1 else ""
@@ -1308,7 +1606,10 @@ def _classify_blocks(
                 continue
             # Long colon suffix → likely a TOC entry; fall through to scorer.
 
-        role = sb.best_type
+        forced_role = _classify_block_by_profile(block, format_profile) if format_profile else None
+        if forced_role is not None:
+            profile_override_counts[forced_role] += 1
+        role = forced_role if forced_role is not None else sb.best_type
 
         if role == "noise":
             result.append(ClassifiedBlock(block=block, role="noise"))
@@ -1393,6 +1694,15 @@ def _classify_blocks(
 
         else:  # stage_direction
             result.append(ClassifiedBlock(block=block, role="stage_direction"))
+
+    if format_profile is not None:
+        total_overrides = sum(profile_override_counts.values())
+        detail = ", ".join(f"{role}={count}" for role, count in sorted(profile_override_counts.items()))
+        print(
+            f"[DEBUG] format_profile: {total_overrides} of {len(blocks)} blocks classified "
+            f"via profile override" + (f" ({detail})" if detail else " — no blocks matched any tagged role's geometry/style"),
+            file=sys.stderr,
+        )
 
     return result
 
@@ -1632,7 +1942,12 @@ def _extract_characters_from_elements(scenes: List[Scene]) -> List[Character]:
 # ---------------------------------------------------------------------------
 
 
-def _block_parse(pdf_path: str, title: str, config: Optional[dict]) -> Script:
+def _block_parse(
+    pdf_path: str,
+    title: str,
+    config: Optional[dict],
+    format_profile: Optional["FormatProfile"] = None,
+) -> Script:
     """Parse a PDF using the block-level PyMuPDF extractor.
 
     This is now the primary parse path on the parser-block-extraction branch.
@@ -1650,7 +1965,8 @@ def _block_parse(pdf_path: str, title: str, config: Optional[dict]) -> Script:
 
     # Learn the document's own conventions (cast lexicon + dense cue/dialog
     # columns); the layout profile is inferred inside, dialog-column-aware.
-    model = _build_document_model(blocks, page_width=page_width)
+    # format_profile (per-project, optional) seeds/extends the learned model.
+    model = _build_document_model(blocks, page_width=page_width, format_profile=format_profile)
     profile = model.profile
     top_cast = sorted(model.cast, key=lambda n: -model.cast_lexicon[n])
     logger.debug(
@@ -1662,7 +1978,7 @@ def _block_parse(pdf_path: str, title: str, config: Optional[dict]) -> Script:
     logger.debug("Document model: %d cast, cue_cols=%s dialog_cols=%s cast=%s",
                  len(model.cast), model.cue_columns, model.dialog_columns, top_cast[:20])
 
-    classified = _classify_blocks(blocks, model)
+    classified = _classify_blocks(blocks, model, format_profile=format_profile)
     result = _build_script_from_blocks(classified, title=title, config=config, cast=model.cast)
     scene_count = len(result.scenes) if result else 0
     print(f"[parser] BLOCK PARSE OK — {len(blocks)} blocks, {scene_count} scenes, "
@@ -2039,7 +2355,7 @@ def _apply_corrections_config(script: Script, config: Dict) -> Script:
     return script
 
 
-def parse_pdf(pdf_path: str) -> Script:
+def parse_pdf(pdf_path: str, format_profile: Optional["FormatProfile"] = None) -> Script:
     """Parse a PDF script into a Script object.
 
     Detection priority:
@@ -2053,6 +2369,11 @@ def parse_pdf(pdf_path: str) -> Script:
     A ScriptSkeleton is built once from the plain-text extraction and passed
     to both the format detector and the format-specific parser, so no step
     needs to rescan the raw lines for universal structural features.
+
+    ``format_profile`` is an optional, per-project override layer (see the
+    "Format profile" section above) derived from user-tagged sample blocks.
+    It is never required — the default ``None`` reproduces today's fully
+    automatic parse.
     """
     title = _derive_title(pdf_path)
 
@@ -2069,7 +2390,7 @@ def parse_pdf(pdf_path: str) -> Script:
         )
 
     # Block-level (PyMuPDF) parse — the only parse path.
-    script = _block_parse(pdf_path, title, config)
+    script = _block_parse(pdf_path, title, config, format_profile=format_profile)
     if script is None:
         raise RuntimeError(
             "No text could be extracted from this PDF. "

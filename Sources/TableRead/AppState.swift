@@ -125,6 +125,16 @@ final class AppState: ObservableObject {
     // Scene title overrides — pdfPath → sceneNumber → custom title
     @Published var sceneTitleOverrides: [String: [Int: String]] = [:]
 
+    // Per-project format calibration override — see FormatCalibrationView.swift.
+    // nil formatProfile reproduces today's fully automatic parse.
+    @Published var formatProfile: FormatProfile?
+    // Whether this project has been through the calibration sheet once
+    // (either a profile was applied, or the user chose automatic detection).
+    @Published var formatCalibrationCompleted: Bool = false
+    // Set true after the first successful parse of a project that hasn't
+    // completed calibration yet; ProjectDashboardView presents the sheet.
+    @Published var showFormatCalibrationSheet: Bool = false
+
     // MARK: – Undo / Redo
     @Published var canUndo = false
     @Published var canRedo = false
@@ -227,7 +237,7 @@ final class AppState: ObservableObject {
 
         Task {
             do {
-                let parsed = try await bridge.parse(pdf: url)
+                let parsed = try await bridge.parse(pdf: url, formatProfile: formatProfile)
                 script = parsed
                 rememberRecentScript(url, title: parsed.title)
                 selectedScenes = Set(parsed.scenes.map(\.number))
@@ -241,12 +251,44 @@ final class AppState: ObservableObject {
                 // navigated away after the last render.
                 checkRenderedScenes()
                 persistProjectIfNeeded()
+                if !formatCalibrationCompleted {
+                    showFormatCalibrationSheet = true
+                }
             } catch {
                 errorMessage = error.localizedDescription
                 status = "Parsing failed."
             }
             isWorking = false
         }
+    }
+
+    // MARK: - Format calibration
+
+    /// Applies a derived or library FormatProfile to the current project and
+    /// re-parses the PDF under it. Marks calibration complete so the sheet
+    /// won't auto-present again for this project.
+    func applyFormatProfile(_ profile: FormatProfile?) {
+        formatCalibrationCompleted = true
+        formatProfile = profile
+        showFormatCalibrationSheet = false
+        persistProjectIfNeeded()
+        if let pdf = selectedPDF {
+            importPDF(pdf)
+        }
+    }
+
+    /// User chose "Use Automatic Detection" — keep today's fully automatic
+    /// parse (already in effect) and never auto-present the sheet again.
+    func skipFormatCalibration() {
+        formatCalibrationCompleted = true
+        showFormatCalibrationSheet = false
+        persistProjectIfNeeded()
+    }
+
+    /// Manually reopens the calibration sheet for a project that already
+    /// completed calibration once ("Recalibrate Format…" in the dashboard toolbar).
+    func startFormatRecalibration() {
+        showFormatCalibrationSheet = true
     }
 
     // MARK: - Voice fetching
@@ -258,7 +300,7 @@ final class AppState: ObservableObject {
         dlog("fetchVoices engine=\(engine.id) pdf=\(pdf?.lastPathComponent ?? "none")")
         Task {
             do {
-                let (list, autoAssign) = try await bridge.voices(engine: engine, pdf: pdf)
+                let (list, autoAssign) = try await bridge.voices(engine: engine, pdf: pdf, formatProfile: formatProfile)
                 // Discard result if the user switched engine while we were fetching.
                 guard selectedEngine == engine else { return }
                 voices = list
@@ -294,7 +336,8 @@ final class AppState: ObservableObject {
             do {
                 openAIEstimate = try await bridge.estimateOpenAI(
                     pdf: pdf,
-                    sceneNumbers: Array(selectedScenes).sorted()
+                    sceneNumbers: Array(selectedScenes).sorted(),
+                    formatProfile: formatProfile
                 )
                 if let estimate = openAIEstimate {
                     status = "\(estimate.requestCount) requests, about \(estimate.durationText) minimum."
@@ -335,7 +378,7 @@ final class AppState: ObservableObject {
         let out = outputDirectory ?? defaultOutputDirectory(for: pdf)
         Task {
             do {
-                let info = try await bridge.checkOutputFiles(pdf: pdf, outputDir: out)
+                let info = try await bridge.checkOutputFiles(pdf: pdf, outputDir: out, formatProfile: formatProfile)
                 let missing = Set(info.compactMap { num, scene in scene.exists ? nil : num })
                 await MainActor.run { sceneFileInfo = info }
                 if missing.isEmpty {
@@ -725,7 +768,8 @@ final class AppState: ObservableObject {
                     assignment: assignment,
                     apiKey: apiKey,
                     userAddedElements: addedElements,
-                    corrections: Array(activeCorrections)
+                    corrections: Array(activeCorrections),
+                    formatProfile: formatProfile
                 ) { [weak self] event in
                     self?.handleGenerationEvent(event)
                 }
@@ -803,6 +847,9 @@ final class AppState: ObservableObject {
         sceneTitleOverrides = [:]
         userAddedElements = [:]
         characterGenderOverrides = [:]
+        formatProfile = nil
+        formatCalibrationCompleted = false
+        showFormatCalibrationSheet = false
         voices = []
         voiceAssignment = [:]
         status = "Choose a PDF script to begin."
@@ -1678,6 +1725,8 @@ extension AppState {
         corrections = project.corrections
         sceneTitleOverrides = project.sceneTitleOverrides
         userAddedElements = project.userAddedElements
+        formatProfile = project.formatProfile
+        formatCalibrationCompleted = project.formatCalibrationCompleted ?? false
         if let engine = EngineKind(rawValue: project.selectedEngine) {
             selectedEngine = engine
         }
@@ -1692,6 +1741,8 @@ extension AppState {
         p.corrections = corrections
         p.sceneTitleOverrides = sceneTitleOverrides
         p.userAddedElements = userAddedElements
+        p.formatProfile = formatProfile
+        p.formatCalibrationCompleted = formatCalibrationCompleted
         p.selectedEngine = selectedEngine.rawValue
         p.renderedScenes = sceneFileInfo.compactMap { num, info in info.exists ? num : nil }.sorted()
         if let title = script?.title, !title.isEmpty { p.scriptTitle = title }

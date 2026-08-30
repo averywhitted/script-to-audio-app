@@ -24,6 +24,18 @@ bash scripts/test.sh swift    # build + XCTest only (~30 s)
 
 The suite is also checked by a Claude PostToolUse hook (`.claude/settings.json`).
 
+**Green tests aren't enough on their own to trust the app runs.** `backend/tests/test_worker_contract.py`
+spawns `audio_worker.py` as a real subprocess (JSON on stdin/stdout, exactly like
+`PythonBridge.swift`) and checks that every `"command": "..."` string Swift can send is
+actually recognized by the worker's dispatch — scraped straight out of `PythonBridge.swift`,
+never hand-duplicated. It runs automatically as part of `bash scripts/test.sh python`, no
+extra command needed. This exists because a Swift-side command with no matching Python
+handler previously shipped past a fully green `scripts/test.sh` and only broke live, in the
+running app. `bash scripts/test.sh swift` also now diffs the app bundle's copied
+`Contents/Resources/backend/*.py` against source after every build, since Xcode's "Copy
+Python Runtime" phase can otherwise skip re-copying a changed `backend/` file on an
+incremental build.
+
 ## Parser change protocol — READ THIS before editing `backend/parser.py`
 
 The parser is governed by a **correctness oracle** so changes are convergent, not
