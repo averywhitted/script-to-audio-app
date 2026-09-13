@@ -499,15 +499,18 @@ struct ProjectGalleryView: View {
             state.errorMessage = "Could not create project folder."
             return
         }
+        // folderURL is always a freshly-created, uniquely-named subfolder (see
+        // ProjectStore.createProject) — never a pre-existing user folder — so
+        // `destination` can never already exist and rollback below can never
+        // touch anything the user didn't create through this app.
         let destination = folderURL.appendingPathComponent(pdfURL.lastPathComponent)
         do {
-            if FileManager.default.fileExists(atPath: destination.path) {
-                try FileManager.default.removeItem(at: destination)
-            }
             try FileManager.default.copyItem(at: pdfURL, to: destination)
         } catch {
             state.errorMessage = "Could not copy PDF into project: \(error.localizedDescription)"
-            try? FileManager.default.removeItem(at: folderURL)
+            if projectStore.isManagedProjectFolder(folderURL) {
+                try? FileManager.default.removeItem(at: folderURL)
+            }
             projectStore.projects.removeAll { $0.id == proj.id }
             return
         }
@@ -1057,7 +1060,7 @@ struct NewProjectSheet: View {
                         VStack(alignment: .leading, spacing: 2) {
                             if let custom = customLocationURL {
                                 Text(custom.lastPathComponent).font(.callout)
-                                Text(custom.deletingLastPathComponent().path)
+                                Text("A new project folder will be created inside this location")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)

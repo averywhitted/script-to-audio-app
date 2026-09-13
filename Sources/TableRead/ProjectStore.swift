@@ -91,13 +91,41 @@ final class ProjectStore: ObservableObject {
 
     // MARK: - Create
 
+    /// `customURL`, when provided (from the "Choose…" save-location picker), is a
+    /// user-owned CONTAINER folder — it may be their Desktop, their Final Draft
+    /// folder, anything full of their own files. We must never treat it as the
+    /// project's own folder: we always create a fresh, uniquely-named subfolder
+    /// inside it and confine everything we do to that subfolder. Never use
+    /// `customURL` (or `projectsBaseURL`) itself as `folderURL`.
     func createProject(name: String, at customURL: URL? = nil, engine: EngineKind = .macOS) throws -> Project {
-        let folderURL = customURL ?? projectsBaseURL.appendingPathComponent(sanitizedName(name))
+        let container = customURL ?? projectsBaseURL
+        let folderURL = uniqueProjectFolder(in: container, named: sanitizedName(name))
         try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
         let project = Project.new(name: name, folderURL: folderURL, engine: engine)
         try saveProject(project)
         projects.insert(project, at: 0)
         return project
+    }
+
+    /// Picks a folder name inside `container` that doesn't already exist, so we
+    /// never create a project "folder" that turns out to be an existing directory
+    /// (and therefore never inherit — or later delete — its existing contents).
+    private func uniqueProjectFolder(in container: URL, named name: String) -> URL {
+        var candidate = container.appendingPathComponent(name)
+        var suffix = 2
+        while FileManager.default.fileExists(atPath: candidate.path) {
+            candidate = container.appendingPathComponent("\(name) \(suffix)")
+            suffix += 1
+        }
+        return candidate
+    }
+
+    /// Safety net for every destructive operation below: only ever delete/trash
+    /// a folder that is actually one of ours (i.e. contains the manifest we write
+    /// on creation). This guards against ever operating on a folder the user
+    /// picked directly, even if a future change reintroduces that mistake.
+    func isManagedProjectFolder(_ url: URL) -> Bool {
+        FileManager.default.fileExists(atPath: url.appendingPathComponent("project.json").path)
     }
 
     // MARK: - Open
@@ -144,7 +172,7 @@ final class ProjectStore: ObservableObject {
     // MARK: - Delete / Restore
 
     func deleteProject(_ project: Project) {
-        guard let folderURL = project.folderURL else { return }
+        guard let folderURL = project.folderURL, isManagedProjectFolder(folderURL) else { return }
         projects.removeAll { $0.id == project.id }
         if currentProject?.id == project.id { currentProject = nil }
         NSWorkspace.shared.recycle([folderURL]) { [weak self] trashedItems, _ in
@@ -198,7 +226,7 @@ final class ProjectStore: ObservableObject {
     }
 
     func archiveProject(_ project: Project) async {
-        guard let folderURL = project.folderURL else { return }
+        guard let folderURL = project.folderURL, isManagedProjectFolder(folderURL) else { return }
         let id = project.id
         let baseURL = projectsBaseURL
         let folderName = folderURL.lastPathComponent
