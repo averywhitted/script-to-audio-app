@@ -48,13 +48,17 @@ final class ProjectStore: ObservableObject {
 
     func loadAllProjects() {
         let fm = FileManager.default
-        guard fm.fileExists(atPath: projectsBaseURL.path) else { return }
         let contents = (try? fm.contentsOfDirectory(
             at: projectsBaseURL, includingPropertiesForKeys: [.isDirectoryKey],
             options: .skipsHiddenFiles
         )) ?? []
+        // Projects created at a custom save location live outside the base
+        // folder, so the scan above can't find them — load those from the
+        // registry. A missing entry (e.g. an unmounted drive) is just skipped.
+        let candidates = contents + externalProjectFolders
         var loaded: [Project] = []
-        for folder in contents {
+        var seenIDs: Set<UUID> = []
+        for folder in candidates {
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: folder.path, isDirectory: &isDir), isDir.boolValue else { continue }
             let manifestURL = folder.appendingPathComponent("project.json")
@@ -62,6 +66,7 @@ final class ProjectStore: ObservableObject {
                   let data = try? Data(contentsOf: manifestURL),
                   var project = try? JSONDecoder.projectDecoder.decode(Project.self, from: data)
             else { continue }
+            guard seenIDs.insert(project.id).inserted else { continue }
             project.folderURL = folder
             // Reconcile stale renderedScenes: if the manifest says nothing is rendered
             // but .m4a files exist, parse their scene numbers and backfill.
@@ -103,8 +108,32 @@ final class ProjectStore: ObservableObject {
         try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
         let project = Project.new(name: name, folderURL: folderURL, engine: engine)
         try saveProject(project)
+        if customURL != nil { registerExternalProjectFolder(folderURL) }
         projects.insert(project, at: 0)
         return project
+    }
+
+    // MARK: - External project registry
+
+    private static let externalFoldersKey = "externalProjectFolders"
+
+    /// Project folders that live outside `projectsBaseURL`.
+    private var externalProjectFolders: [URL] {
+        (UserDefaults.standard.stringArray(forKey: Self.externalFoldersKey) ?? [])
+            .map { URL(fileURLWithPath: $0) }
+    }
+
+    private func registerExternalProjectFolder(_ url: URL) {
+        var paths = UserDefaults.standard.stringArray(forKey: Self.externalFoldersKey) ?? []
+        guard !paths.contains(url.path) else { return }
+        paths.append(url.path)
+        UserDefaults.standard.set(paths, forKey: Self.externalFoldersKey)
+    }
+
+    private func unregisterExternalProjectFolder(_ url: URL) {
+        var paths = UserDefaults.standard.stringArray(forKey: Self.externalFoldersKey) ?? []
+        paths.removeAll { $0 == url.path }
+        UserDefaults.standard.set(paths, forKey: Self.externalFoldersKey)
     }
 
     /// Picks a folder name inside `container` that doesn't already exist, so we
@@ -243,12 +272,16 @@ final class ProjectStore: ObservableObject {
         guard let folderURL = project.folderURL, isManagedProjectFolder(folderURL) else { return }
         let id = project.id
         let baseURL = projectsBaseURL
+        // Zip from the project's own parent, which is not the base folder for
+        // projects created at a custom save location.
+        let parentURL = folderURL.deletingLastPathComponent()
         let folderName = folderURL.lastPathComponent
         let zipFilename = "\(id.uuidString).zip"
         let zipURL = baseURL.appendingPathComponent(zipFilename)
         let metaURL = baseURL.appendingPathComponent("\(id.uuidString).archive-meta.json")
 
         archivingIDs.insert(id)
+        ensureProjectsDirectoryExists()
 
         // Write sidecar meta JSON before zipping so we can show it in the archived list
         let meta = ArchivedProjectMeta(project: project, zipFilename: zipFilename, originalFolderName: folderName)
@@ -261,7 +294,7 @@ final class ProjectStore: ObservableObject {
                 let proc = Process()
                 proc.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
                 proc.arguments = ["-r", zipURL.path, folderName]
-                proc.currentDirectoryURL = baseURL
+                proc.currentDirectoryURL = parentURL
                 try proc.run()
                 proc.waitUntilExit()
                 guard proc.terminationStatus == 0 else {
@@ -288,6 +321,7 @@ final class ProjectStore: ObservableObject {
             // Trash rather than delete: if the archive turns out to be wrong
             // after all, the project is still recoverable.
             try await moveToTrash(folderURL)
+            unregisterExternalProjectFolder(folderURL)
             projects.removeAll { $0.id == id }
             if currentProject?.id == id { currentProject = nil }
             loadArchivedProjects()
