@@ -327,21 +327,42 @@ actor AppUpdater {
 
         let safeNew     = shell(newAppURL.path)
         let safeCurrent = shell(currentApp.path)
+        // Sibling paths on the same volume, so each `mv` is a rename rather than
+        // a copy. The new app is copied in BEFORE the old one is touched: if the
+        // copy fails (full disk, permissions), the installed app is left intact.
+        let safeStaged   = shell(currentApp.path + ".updating")
+        let safePrevious = shell(currentApp.path + ".previous")
 
-        let logPath = UpdateLogger.logURL.path
+        let logPath = shell(UpdateLogger.logURL.path)
         let script = """
         #!/bin/bash
-        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: started, pid=$$" >> \(shell(logPath))
+        log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: $1" >> \(logPath); }
+        log "started, pid=$$"
         sleep 2
-        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: removing old app" >> \(shell(logPath))
-        rm -rf \(safeCurrent) 2>>/tmp/tableread_update_err.txt
-        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: copying new app (exit $?)" >> \(shell(logPath))
-        cp -R \(safeNew) \(safeCurrent) 2>>/tmp/tableread_update_err.txt
-        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: xattr (exit $?)" >> \(shell(logPath))
-        xattr -cr \(safeCurrent) 2>>/tmp/tableread_update_err.txt
-        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: opening new app (exit $?)" >> \(shell(logPath))
+        rm -rf \(safeStaged) \(safePrevious)
+        if ! cp -R \(safeNew) \(safeStaged) 2>>/tmp/tableread_update_err.txt; then
+            log "copy failed; installed app left untouched"
+            rm -rf \(safeStaged)
+            open \(safeCurrent)
+            exit 1
+        fi
+        xattr -cr \(safeStaged) 2>>/tmp/tableread_update_err.txt
+        if ! mv \(safeCurrent) \(safePrevious); then
+            log "could not move old app aside; installed app left untouched"
+            rm -rf \(safeStaged)
+            open \(safeCurrent)
+            exit 1
+        fi
+        if ! mv \(safeStaged) \(safeCurrent); then
+            log "could not move new app into place; restoring old app"
+            mv \(safePrevious) \(safeCurrent)
+            open \(safeCurrent)
+            exit 1
+        fi
+        rm -rf \(safePrevious)
+        log "opening new app"
         open \(safeCurrent)
-        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] script: done (exit $?)" >> \(shell(logPath))
+        log "done (exit $?)"
         """
 
         let scriptURL = FileManager.default.temporaryDirectory
