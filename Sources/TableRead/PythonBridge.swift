@@ -89,19 +89,20 @@ final class PythonBridge {
             fm.fileExists(atPath: url.appendingPathComponent(workerRelative).path)
         }
 
-        // 1. Path baked into Info.plist at build time via $(SRCROOT).
-        //    Points at the developer's source tree, so a build run from Xcode uses
-        //    the LIVE backend (no rebuild needed for parser edits). It MUST be
-        //    validated: on any other machine the developer's path does not exist,
-        //    and trusting it blindly was exactly why a distributed .app could not
-        //    find the worker. When it is invalid we fall through to the bundled copy
-        //    below. (On the dev machine the path is real, so the existence check is
-        //    cheap and needs no access the app does not already have to read scripts.)
+        // 1. Debug builds only: the source tree, baked into Info.plist via the
+        //    TR_REPO_ROOT build setting ($(SRCROOT) in Debug, empty in Release).
+        //    A build run from Xcode then uses the LIVE backend, so parser edits
+        //    need no rebuild. Release builds must never do this: an installed copy
+        //    on the dev machine would silently run whatever branch is checked out
+        //    instead of the code it shipped with, making it impossible to test a
+        //    release. Still validated, in case the tree has moved.
+        #if DEBUG
         if let baked = Bundle.main.infoDictionary?["TRRepoRoot"] as? String,
            !baked.isEmpty {
             let url = URL(fileURLWithPath: baked).standardizedFileURL
             if valid(url) { return url }
         }
+        #endif
 
         // 2. Bundled inside a .app (packaged distribution) — the fallback that makes
         //    distributed builds work on machines without the developer's source tree.

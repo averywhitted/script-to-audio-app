@@ -340,6 +340,7 @@
 				PRODUCT_NAME = TableRead;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+				TR_REPO_ROOT = "$(SRCROOT)";
 			};
 			name = Debug;
 		};
@@ -360,6 +361,7 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DIAGNOSTIC_MENU;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+				TR_REPO_ROOT = "";
 			};
 			name = Release;
 		};
