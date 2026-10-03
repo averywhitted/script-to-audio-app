@@ -4,48 +4,62 @@
     "kind": 1.0,
     "noSpk": 0,
     "scenes": 16,
-    "overlaps": 2
+    "overlaps": 2,
+    "cover": 0.6868512110726643,
+    "dialog": 1156
   },
   "KillFloor": {
     "attrib": 1.0,
     "kind": 1.0,
     "noSpk": 0,
     "scenes": 21,
-    "overlaps": 0
+    "overlaps": 0,
+    "cover": 0.5610432852386238,
+    "dialog": 1802
   },
   "NoneOfUs": {
     "attrib": 1.0,
-    "kind": 0.9314845024469821,
+    "kind": 0.9311475409836065,
     "noSpk": 0,
     "scenes": 10,
-    "overlaps": 0
+    "overlaps": 0,
+    "cover": 0.5691657866948258,
+    "dialog": 947
   },
   "MercuryFur": {
     "attrib": 1.0,
-    "kind": 0.948,
+    "kind": 0.9486324216144096,
     "noSpk": 0,
     "scenes": 24,
-    "overlaps": 0
+    "overlaps": 1,
+    "cover": 0.598989898989899,
+    "dialog": 1980
   },
   "AgainstTheHillside": {
     "attrib": 1.0,
     "kind": 0.9144079885877318,
     "noSpk": 0,
     "scenes": 16,
-    "overlaps": 0
+    "overlaps": 0,
+    "cover": 0.44170890658942796,
+    "dialog": 1381
   },
   "EMMA": {
     "attrib": 0.9540441176470589,
     "kind": 0.8388195232690124,
     "noSpk": 0,
     "scenes": 19,
-    "overlaps": 0
+    "overlaps": 0,
+    "cover": 0.4780316344463972,
+    "dialog": 1138
   },
   "Stereophonic": {
     "attrib": 0.9742319127849356,
     "kind": 0.8253588516746412,
     "noSpk": 0,
     "scenes": 21,
-    "overlaps": 0
+    "overlaps": 2,
+    "cover": 0.5736213757816941,
+    "dialog": 1759
   }
 }

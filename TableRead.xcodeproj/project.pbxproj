@@ -23,7 +23,12 @@
 		AA11BB22CC33DD44EE55FF08 /* PlayerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF07 /* PlayerState.swift */; };
 		AA11BB22CC33DD44EE55FF10 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF09 /* PlayerView.swift */; };
 		AA11BB22CC33DD44EE55FF12 /* ProjectDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF11 /* ProjectDashboardView.swift */; };
+		0539D01B8E71CE0629B56015 /* ScriptClassifier.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 07A4C07E3AA88033B43F834A /* ScriptClassifier.mlmodel */; };
 		F1E2D3C4B5A691827364A502 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E2D3C4B5A691827364A501 /* AppStateTests.swift */; };
+		9F705A4DF27079016CD5E5E2 /* PlayerStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99132911ADE4AE9777AC29C7 /* PlayerStateTests.swift */; };
+		9FABBADCB31A2EC13156324A /* ModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 675CAEFB0921EAE6BFA94328 /* ModelsTests.swift */; };
+		0DB126CA897F9CE911A20517 /* UtilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06987503EC9D49EBE64F858F /* UtilityTests.swift */; };
+		B4946E9B22654BE7D0458664 /* ScriptClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6693B09B9DC340092A9FD5E9 /* ScriptClassifierTests.swift */; };
 		D4E5F6A7B8C9D0E1F2A3B4C5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -58,7 +63,12 @@
 		AA11BB22CC33DD44EE55FF07 /* PlayerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerState.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF09 /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF11 /* ProjectDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDashboardView.swift; sourceTree = "<group>"; };
+		07A4C07E3AA88033B43F834A /* ScriptClassifier.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = ScriptClassifier.mlmodel; sourceTree = "<group>"; };
 		F1E2D3C4B5A691827364A501 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
+		99132911ADE4AE9777AC29C7 /* PlayerStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStateTests.swift; sourceTree = "<group>"; };
+		675CAEFB0921EAE6BFA94328 /* ModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsTests.swift; sourceTree = "<group>"; };
+		06987503EC9D49EBE64F858F /* UtilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtilityTests.swift; sourceTree = "<group>"; };
+		6693B09B9DC340092A9FD5E9 /* ScriptClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptClassifierTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -116,6 +126,7 @@
 				AA11BB22CC33DD44EE55FF07 /* PlayerState.swift */,
 				AA11BB22CC33DD44EE55FF09 /* PlayerView.swift */,
 				AA11BB22CC33DD44EE55FF11 /* ProjectDashboardView.swift */,
+				07A4C07E3AA88033B43F834A /* ScriptClassifier.mlmodel */,
 				36341DE898134A3FA1CB7889 /* SettingsView.swift */,
 				7D155BFB318744F8BE58A6D2 /* TableReadApp.swift */,
 				A5495890743F443FA0E5EA21 /* Views.swift */,
@@ -130,6 +141,10 @@
 			isa = PBXGroup;
 			children = (
 				F1E2D3C4B5A691827364A501 /* AppStateTests.swift */,
+				99132911ADE4AE9777AC29C7 /* PlayerStateTests.swift */,
+				675CAEFB0921EAE6BFA94328 /* ModelsTests.swift */,
+				06987503EC9D49EBE64F858F /* UtilityTests.swift */,
+				6693B09B9DC340092A9FD5E9 /* ScriptClassifierTests.swift */,
 			);
 			name = Tests;
 			path = Tests/TableReadTests;
@@ -258,6 +273,7 @@
 				AA11BB22CC33DD44EE55FF08 /* PlayerState.swift in Sources */,
 				AA11BB22CC33DD44EE55FF10 /* PlayerView.swift in Sources */,
 				AA11BB22CC33DD44EE55FF12 /* ProjectDashboardView.swift in Sources */,
+				0539D01B8E71CE0629B56015 /* ScriptClassifier.mlmodel in Sources */,
 				99848C20CCC945CEAC78167B /* SettingsView.swift in Sources */,
 				B35C2323B3F6473D8E7416F6 /* TableReadApp.swift in Sources */,
 				C2F9AC94D2DB4A77913EB54F /* Views.swift in Sources */,
@@ -269,6 +285,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				F1E2D3C4B5A691827364A502 /* AppStateTests.swift in Sources */,
+				9F705A4DF27079016CD5E5E2 /* PlayerStateTests.swift in Sources */,
+				9FABBADCB31A2EC13156324A /* ModelsTests.swift in Sources */,
+				0DB126CA897F9CE911A20517 /* UtilityTests.swift in Sources */,
+				B4946E9B22654BE7D0458664 /* ScriptClassifierTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

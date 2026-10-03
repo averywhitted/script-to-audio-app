@@ -72,6 +72,12 @@ class Element:
     overlap_texts: Optional[List[str]] = None # per-voice texts (parallel with overlap_cue); None = all voices read .text
     confidence: float = 1.0  # 1.0 = known speaker / strong evidence; <0.7 = flagged for review
     reason: Optional[str] = None  # human-readable why-flagged note shown on the Review ⚠ (None = confident)
+    # Kind confidence is a SEPARATE axis from speaker confidence above. The two
+    # answer different questions — "is this even dialogue?" vs "who says it?" —
+    # and collapsing them into one number loses the distinction the user needs to
+    # act on. 1.0 means "not assessed" (no model loaded / heuristic mode).
+    kind_confidence: float = 1.0
+    kind_reason: Optional[str] = None
 
 
 @dataclass
@@ -896,6 +902,8 @@ class ClassifiedBlock:
     role: str                    # 'speaker_cue' | 'dialog' | 'stage_direction' |
                                  # 'parenthetical' | 'scene_heading' | 'noise'
     speaker: Optional[str] = None  # populated for 'speaker_cue' blocks only
+    kind_confidence: float = 1.0   # ScriptElementClassifier's confidence in the kind
+    kind_reason: Optional[str] = None  # why this kind was flagged, if it was
 
 
 _SCENE_HEADING_BLOCK_RE = re.compile(
@@ -1240,9 +1248,82 @@ def _reorder_columns(blocks: List[TextBlock], model: DocumentModel) -> List[Text
     return ordered
 
 
+PARSER_MODES = ("heuristic", "shadow", "hybrid", "ml")
+DEFAULT_PARSER_MODE = "heuristic"
+
+# Human-readable role names for the kind-confidence note shown in Review.
+_ROLE_LABELS = {
+    "dialog": "dialogue",
+    "stage_direction": "narration",
+    "parenthetical": "an aside",
+    "speaker_cue": "a character cue",
+    "scene_heading": "a scene heading",
+    "noise": "page furniture",
+}
+
+
+def _ml_predictions(
+    blocks: List[TextBlock],
+    model: DocumentModel,
+    parser_mode: str,
+) -> tuple[Optional[List[tuple]], float]:
+    """Run ScriptElementClassifier over the blocks.
+
+    Returns ``(predictions, threshold)`` where predictions is one
+    ``(kind, confidence)`` per block index-aligned with ``blocks`` — the caller
+    must therefore pass blocks AFTER _reorder_columns, since that is the order the
+    model's neighbour features were trained on. Returns ``(None, 0.0)`` when the
+    model is unavailable.
+
+    Any failure degrades to heuristic-only rather than raising: a missing model, a
+    stale feature schema or a malformed export must never stop a user parsing
+    their script.
+    """
+    if parser_mode == "heuristic":
+        return None, 0.0
+    try:
+        import features as _features
+        from element_classifier import ScriptElementClassifier
+    except ImportError as exc:
+        logger.warning("Parser mode %r requested but ML imports failed (%s) — "
+                       "using heuristics", parser_mode, exc)
+        return None, 0.0
+
+    clf = ScriptElementClassifier.load_default(
+        expected_schema=_features.FEATURE_SCHEMA_VERSION)
+    if clf is None:
+        return None, 0.0
+
+    try:
+        page_widths = [b.x1 for b in blocks if b.x1 > 200]
+        page_width = max(page_widths) + 90.0 if page_widths else 612.0
+        ctx = _features.build_document_context(blocks, page_width)
+        doc_stats = _compute_doc_stats(blocks)
+        feats = _features.extract_all(blocks, ctx, model.profile, model, doc_stats)
+        preds = [clf.predict(f.to_vector()) for f in feats]
+    except Exception as exc:  # noqa: BLE001 — never break parsing over the model
+        logger.warning("Element classifier failed (%s) — using heuristics", exc)
+        return None, 0.0
+
+    # The trained threshold comes from the calibration curve, but hybrid mode's
+    # risk appetite is a separate question from "where does confidence start
+    # predicting correctness" — overriding the tuned heuristic needs a higher bar
+    # than flagging a line for a human. TABLEREAD_ML_THRESHOLD allows sweeping it
+    # against the scorecard without retraining.
+    threshold = clf.confidence_threshold or 0.6
+    override = os.environ.get("TABLEREAD_ML_THRESHOLD")
+    if override:
+        try:
+            threshold = float(override)
+        except ValueError:
+            logger.warning("Ignoring non-numeric TABLEREAD_ML_THRESHOLD=%r", override)
+    return preds, threshold
+
+
 def _classify_blocks(
     blocks: List[TextBlock],
     model: DocumentModel,
+    parser_mode: str = DEFAULT_PARSER_MODE,
 ) -> List[ClassifiedBlock]:
     """Two-phase block classification.
 
@@ -1258,12 +1339,15 @@ def _classify_blocks(
     profile = model.profile
     blocks = _reorder_columns(blocks, model)
     scored = _score_blocks(blocks, profile)
+    # Index-aligned with the REORDERED blocks, matching training-time ordering.
+    ml_preds, ml_threshold = _ml_predictions(blocks, model, parser_mode)
     result: List[ClassifiedBlock] = []
     pending_speaker: Optional[str] = None
 
-    for sb in scored:
+    for _idx, sb in enumerate(scored):
         block = sb.block
         text = block.text.strip()
+        ml_kind, ml_conf = (ml_preds[_idx] if ml_preds else (None, 1.0))
 
         # Empty blocks are always noise regardless of score.
         if not text:
@@ -1309,6 +1393,20 @@ def _classify_blocks(
             # Long colon suffix → likely a TOC entry; fall through to scorer.
 
         role = sb.best_type
+
+        # ML consultation. Three distinct behaviours:
+        #   shadow — record the model's confidence, change nothing. Zero risk to
+        #            the scorecard; enough to drive the Review "needs attention"
+        #            flag, whose value was established by the calibration curve.
+        #   hybrid — the model sets the kind only when it is confident; below the
+        #            threshold the tuned heuristic wins and the line is flagged.
+        #   ml     — the model always sets the kind (for A/B measurement).
+        # The Phase-2 repair rules below still run in every mode: they encode
+        # structural invariants (a parenthetical must have balanced parens; dialog
+        # needs a pending speaker) that a probabilistic model should not override.
+        if ml_kind is not None and parser_mode != "shadow":
+            if parser_mode == "ml" or ml_conf >= ml_threshold:
+                role = ml_kind
 
         if role == "noise":
             result.append(ClassifiedBlock(block=block, role="noise"))
@@ -1393,6 +1491,25 @@ def _classify_blocks(
 
         else:  # stage_direction
             result.append(ClassifiedBlock(block=block, role="stage_direction"))
+
+    # Attach the model's kind confidence. Done in one pass afterwards rather than
+    # at each of the ~12 ClassifiedBlock construction sites above, so the
+    # classification logic stays readable and the two concerns stay separable.
+    # The loop appends exactly one ClassifiedBlock per scored block; the length
+    # check makes that assumption explicit rather than silently misaligning
+    # confidences with blocks if it ever stops holding.
+    if ml_preds and len(result) == len(scored):
+        for cb, (kind, conf) in zip(result, ml_preds):
+            cb.kind_confidence = conf
+            if conf < ml_threshold:
+                cb.kind_reason = (
+                    f"Model is unsure this is {_ROLE_LABELS.get(cb.role, cb.role)} "
+                    f"({conf*100:.0f}% confident) — check the type.")
+    elif ml_preds:
+        logger.warning(
+            "Classifier produced %d predictions for %d classified blocks — "
+            "skipping kind confidence rather than misaligning it.",
+            len(ml_preds), len(result))
 
     return result
 
@@ -1573,8 +1690,10 @@ def _build_script_from_blocks(
                 paren, rest = _split_leading_paren(remaining)
                 if paren is None:
                     break
-                current_elements.append(Element(kind="parenthetical",
-                                                 text=paren, speaker=norm_speaker))
+                current_elements.append(Element(
+                    kind="parenthetical", text=paren, speaker=norm_speaker,
+                    kind_confidence=cb.kind_confidence,
+                    kind_reason=cb.kind_reason))
                 remaining = rest
             if remaining:
                 conf, reason = _dialog_confidence(norm_speaker, cast or set())
@@ -1585,6 +1704,8 @@ def _build_script_from_blocks(
                     overlap_cue=overlap_cue,
                     confidence=conf,
                     reason=reason,
+                    kind_confidence=cb.kind_confidence,
+                    kind_reason=cb.kind_reason,
                 ))
 
         elif role == "parenthetical":
@@ -1592,12 +1713,16 @@ def _build_script_from_blocks(
                 kind="parenthetical",
                 text=text,
                 speaker=cb.speaker,
+                kind_confidence=cb.kind_confidence,
+                kind_reason=cb.kind_reason,
             ))
 
         elif role == "stage_direction":
             current_elements.append(Element(
                 kind="stage_direction",
                 text=text,
+                kind_confidence=cb.kind_confidence,
+                kind_reason=cb.kind_reason,
             ))
 
     _flush_scene()
@@ -1632,7 +1757,8 @@ def _extract_characters_from_elements(scenes: List[Scene]) -> List[Character]:
 # ---------------------------------------------------------------------------
 
 
-def _block_parse(pdf_path: str, title: str, config: Optional[dict]) -> Script:
+def _block_parse(pdf_path: str, title: str, config: Optional[dict],
+                 parser_mode: str = DEFAULT_PARSER_MODE) -> Script:
     """Parse a PDF using the block-level PyMuPDF extractor.
 
     This is now the primary parse path on the parser-block-extraction branch.
@@ -1662,7 +1788,7 @@ def _block_parse(pdf_path: str, title: str, config: Optional[dict]) -> Script:
     logger.debug("Document model: %d cast, cue_cols=%s dialog_cols=%s cast=%s",
                  len(model.cast), model.cue_columns, model.dialog_columns, top_cast[:20])
 
-    classified = _classify_blocks(blocks, model)
+    classified = _classify_blocks(blocks, model, parser_mode=parser_mode)
     result = _build_script_from_blocks(classified, title=title, config=config, cast=model.cast)
     scene_count = len(result.scenes) if result else 0
     print(f"[parser] BLOCK PARSE OK — {len(blocks)} blocks, {scene_count} scenes, "
@@ -2039,7 +2165,7 @@ def _apply_corrections_config(script: Script, config: Dict) -> Script:
     return script
 
 
-def parse_pdf(pdf_path: str) -> Script:
+def parse_pdf(pdf_path: str, parser_mode: str = DEFAULT_PARSER_MODE) -> Script:
     """Parse a PDF script into a Script object.
 
     Detection priority:
@@ -2069,7 +2195,7 @@ def parse_pdf(pdf_path: str) -> Script:
         )
 
     # Block-level (PyMuPDF) parse — the only parse path.
-    script = _block_parse(pdf_path, title, config)
+    script = _block_parse(pdf_path, title, config, parser_mode=parser_mode)
     if script is None:
         raise RuntimeError(
             "No text could be extracted from this PDF. "

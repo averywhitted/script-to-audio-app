@@ -1,0 +1,11 @@
+# Training-only dependencies for ScriptElementClassifier.
+#
+# Deliberately NOT in requirements.txt: none of this ships. The parser performs
+# inference through backend/element_classifier.py, which is pure standard library
+# and reads the exported JSON forest in ml/models/. Keeping scikit-learn out of
+# the runtime is what avoids adding ~100 MB (with scipy) to the app bundle's
+# embedded CPython in vendor/python.
+#
+# Install only when retraining:  pip install -r requirements-ml.txt
+scikit-learn>=1.5
+pandas>=2.0

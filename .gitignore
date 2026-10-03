@@ -41,3 +41,6 @@ Sources/TableRead/EmailReporter.swift
 
 # Claude Code internal state
 .claude/worktrees/
+
+# Generated ML training data (regenerate with ml/build_dataset.py)
+ml/data/

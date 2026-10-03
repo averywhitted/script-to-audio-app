@@ -133,8 +133,72 @@ struct SceneElementSummary: Codable, Equatable, Identifiable, Sendable {
     var overlapTexts: [String]?  // per-voice texts (parallel with overlapCue); nil = all voices read .text
     var confidence: Double = 1.0 // parser confidence: 1.0 = known speaker, <0.7 = flagged for review
     var reason: String?          // why the parser flagged this line (shown on the ⚠); nil = confident
+    // Kind confidence is a SEPARATE axis from `confidence` above. That one asks
+    // "who says this line?"; this one asks "is this even dialogue?". They are
+    // produced by different mechanisms (speaker heuristics vs the trained
+    // ScriptElementClassifier) and a line can be confident on one and not the
+    // other, so they are deliberately not collapsed into a single number.
+    // 1.0 means "not assessed" — i.e. the parser ran without the model.
+    var kindConfidence: Double = 1.0
+    var kindReason: String?
+
+    // A `= 1.0` default only applies when code constructs a value directly —
+    // Swift's compiler-synthesized Decodable does NOT fall back to it for a
+    // missing JSON key; it still throws keyNotFound. Any JSON predating this
+    // field (an older cached parse, a saved project, a hand-written test
+    // fixture) would fail to decode at all without this. Caught by
+    // ModelsTests.testDefaultsWhenBackendOmitsKindConfidence before it shipped.
+    init(kind: String, speaker: String? = nil, text: String,
+         overlapCue: [String]? = nil, overlapTexts: [String]? = nil,
+         confidence: Double = 1.0, reason: String? = nil,
+         kindConfidence: Double = 1.0, kindReason: String? = nil) {
+        self.kind = kind
+        self.speaker = speaker
+        self.text = text
+        self.overlapCue = overlapCue
+        self.overlapTexts = overlapTexts
+        self.confidence = confidence
+        self.reason = reason
+        self.kindConfidence = kindConfidence
+        self.kindReason = kindReason
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try c.decode(String.self, forKey: .kind)
+        speaker = try c.decodeIfPresent(String.self, forKey: .speaker)
+        text = try c.decode(String.self, forKey: .text)
+        overlapCue = try c.decodeIfPresent([String].self, forKey: .overlapCue)
+        overlapTexts = try c.decodeIfPresent([String].self, forKey: .overlapTexts)
+        confidence = try c.decodeIfPresent(Double.self, forKey: .confidence) ?? 1.0
+        reason = try c.decodeIfPresent(String.self, forKey: .reason)
+        kindConfidence = try c.decodeIfPresent(Double.self, forKey: .kindConfidence) ?? 1.0
+        kindReason = try c.decodeIfPresent(String.self, forKey: .kindReason)
+    }
 
     var id: String { "\(kind)-\(speaker ?? "narrator")-\(text.prefix(24))" }
+
+    /// True when either axis of parser confidence is low enough to warrant review.
+    ///
+    /// Thresholds live here rather than in the view so the backend and the UI
+    /// cannot drift apart. `speakerConfidenceThreshold` is `<=` deliberately: the
+    /// parser writes exactly 0.7 for single-occurrence speakers
+    /// (`_mark_single_occurrence_confidence`), and the previous strict `< 0.7`
+    /// test in the view meant that entire category of warning never rendered.
+    static let speakerConfidenceThreshold = 0.7
+    static let kindConfidenceThreshold = 0.6
+
+    var needsReview: Bool {
+        confidence <= Self.speakerConfidenceThreshold
+            || kindConfidence < Self.kindConfidenceThreshold
+    }
+
+    /// The note shown on the ⚠, preferring whichever axis is actually uncertain.
+    var reviewReason: String? {
+        if confidence <= Self.speakerConfidenceThreshold, let reason { return reason }
+        if kindConfidence < Self.kindConfidenceThreshold, let kindReason { return kindReason }
+        return reason ?? kindReason
+    }
 
     /// True when this element carries a simultaneous-speech overlap annotation.
     var isOverlap: Bool { (overlapCue?.count ?? 0) >= 2 }

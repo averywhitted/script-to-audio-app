@@ -22,6 +22,27 @@ enum ProjectSortKey: String, CaseIterable {
 
 enum GallerySortOrder { case ascending, descending }
 
+extension EventModifiers {
+    /// Live keyboard modifier state at the moment this is read, via AppKit.
+    ///
+    /// Project selection used to stack three separate `TapGesture().modifiers(.command)`
+    /// / `.modifiers(.shift)` / plain `TapGesture()` recognizers as `.simultaneousGesture`s.
+    /// SwiftUI does not treat a modifier-qualified tap as exclusive of the unqualified one,
+    /// so a Cmd+click fired BOTH the `.command` handler (add to selection) and the plain
+    /// handler (exclusive select, clearing everything else) for the same physical click —
+    /// selection could never grow past one item. Reading the actual modifier flags once,
+    /// from a single gesture, has no such race.
+    static var currentKeyModifiers: EventModifiers {
+        let flags = NSEvent.modifierFlags
+        var mods: EventModifiers = []
+        if flags.contains(.command) { mods.insert(.command) }
+        if flags.contains(.shift) { mods.insert(.shift) }
+        if flags.contains(.option) { mods.insert(.option) }
+        if flags.contains(.control) { mods.insert(.control) }
+        return mods
+    }
+}
+
 // MARK: - Frame tracking for rubber-band selection
 
 struct CardFramePreference: PreferenceKey {
@@ -728,15 +749,7 @@ private struct ProjectGridCard: View {
         .simultaneousGesture(
             TapGesture(count: 2).onEnded { onDoubleTap() }
         )
-        .simultaneousGesture(
-            TapGesture().modifiers(.command).onEnded { onTap(.command) }
-        )
-        .simultaneousGesture(
-            TapGesture().modifiers(.shift).onEnded { onTap(.shift) }
-        )
-        .simultaneousGesture(
-            TapGesture().onEnded { onTap([]) }
-        )
+        .onTapGesture { onTap(.currentKeyModifiers) }
     }
 }
 
@@ -851,9 +864,7 @@ private struct ProjectListRow: View {
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
         .simultaneousGesture(TapGesture(count: 2).onEnded { onDoubleTap() })
-        .simultaneousGesture(TapGesture().modifiers(.command).onEnded { onTap(.command) })
-        .simultaneousGesture(TapGesture().modifiers(.shift).onEnded { onTap(.shift) })
-        .simultaneousGesture(TapGesture().onEnded { onTap([]) })
+        .onTapGesture { onTap(.currentKeyModifiers) }
     }
 }
 

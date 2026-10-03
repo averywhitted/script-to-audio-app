@@ -131,6 +131,10 @@ def _script_summary(script: script_parser.Script) -> Dict[str, Any]:
                         "overlapTexts": element.overlap_texts,
                         "confidence": element.confidence,
                         "reason": element.reason,
+                        # Kind confidence is a separate axis from speaker
+                        # confidence: "is this even dialogue?" vs "who says it?".
+                        "kindConfidence": element.kind_confidence,
+                        "kindReason": element.kind_reason,
                     }
                     for element in scene.elements
                     if element.text.strip()
@@ -696,7 +700,14 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
     command = payload.get("command")
     if command == "parse":
         pdf_path = payload["pdfPath"]
-        return {"ok": True, "script": _script_summary(script_parser.parse_pdf(pdf_path))}
+        # "shadow": the trained classifier scores kind_confidence on every element,
+        # but classification itself is still 100% the heuristic parser — this is
+        # the only mode proven safe against the scorecard oracle so far (see
+        # ml/README.md). It is what makes the Review ⚠ show anything at all;
+        # DEFAULT_PARSER_MODE ("heuristic") never calls the model and every
+        # element's kindConfidence stays 1.0 ("not assessed").
+        script = script_parser.parse_pdf(pdf_path, parser_mode="shadow")
+        return {"ok": True, "script": _script_summary(script)}
     if command == "voices":
         engine_id = payload.get("engine", "mac")
         pdf_path = payload.get("pdfPath")

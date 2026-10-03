@@ -30,6 +30,12 @@ Usage:
   python scripts/scorecard.py TheHarvest      # one script
   python scripts/scorecard.py --save          # write current metrics as the watermark
   python scripts/scorecard.py --check         # compare to watermark; exit 1 on regression
+  python scripts/scorecard.py --mode ml --check   # score an alternate parser mode
+                                                  # against the heuristic watermark
+
+The watermark always represents the DEFAULT (heuristic) parser mode, so `--save` is
+refused for any other mode — otherwise an experimental run would silently become the
+baseline everything else is judged against.
 """
 from __future__ import annotations
 
@@ -59,6 +65,17 @@ CASES = [
 _MIN_SIG_LEN = 4  # shorter sigs are too ambiguous to attribute reliably
 # A script regresses if attribution drops by more than this, or noSpk rises.
 _ATTRIB_TOLERANCE = 0.005
+# Coverage is how much of the parser's dialog the oracle can actually check. The
+# sig lookup is order-free, so dropping or re-splitting elements does NOT show up
+# as an attrib/kind regression — it quietly shrinks cover instead. Guarding cover
+# is what makes element loss visible.
+_COVER_TOLERANCE = 0.02
+
+# Metrics persisted in the watermark. "cover"/"dialog" were added after the first
+# watermarks were written, so comparisons tolerate their absence (see _delta).
+_WATERMARK_KEYS = ("attrib", "kind", "noSpk", "scenes", "overlaps", "cover", "dialog")
+
+PARSER_MODES = ("heuristic", "ml", "hybrid")
 
 
 def _sig(text: str) -> str:
@@ -96,7 +113,25 @@ def _lookup(sig: str, table: dict, sigs_by_len_desc: list) -> set | None:
     return None
 
 
-def score_one(name: str, pdf_name: str) -> dict | None:
+def _parse(pdf_path: Path, mode: str | None):
+    """Call parse_pdf, passing ``parser_mode`` only when the parser supports it.
+
+    Phase 0 lands this flag before the parser grows modes, so an explicit
+    --mode request fails loudly rather than silently scoring the heuristic path.
+    """
+    if mode is None:
+        return parse_pdf(str(pdf_path))
+    import inspect
+    if "parser_mode" not in inspect.signature(parse_pdf).parameters:
+        raise SystemExit(
+            f"--mode {mode} requested, but backend/parser.py does not accept a "
+            "'parser_mode' argument yet. Refusing to score, because the run would "
+            f"have silently used the heuristic path and labelled it {mode!r}."
+        )
+    return parse_pdf(str(pdf_path), parser_mode=mode)
+
+
+def score_one(name: str, pdf_name: str, mode: str | None = None) -> dict | None:
     """Return a metrics dict for one script, or None if PDF/reference is missing."""
     pdf_path = PDF_DIR / pdf_name
     ind_path = REF_DIR / f"{name}_independent.json"
@@ -107,7 +142,7 @@ def score_one(name: str, pdf_name: str) -> dict | None:
         ind_ref = json.load(f)
     spk_lookup, kind_lookup, sigs = _build_lookup(ind_ref.get("elements", []))
 
-    script = parse_pdf(str(pdf_path))
+    script = _parse(pdf_path, mode)
     els = [el for scene in script.scenes for el in scene.elements]
 
     dialog = [el for el in els if el.kind == "dialog"]
@@ -145,10 +180,10 @@ def score_one(name: str, pdf_name: str) -> dict | None:
     }
 
 
-def collect() -> dict[str, dict]:
+def collect(mode: str | None = None) -> dict[str, dict]:
     results: dict[str, dict] = {}
     for name, pdf_name in CASES:
-        m = score_one(name, pdf_name)
+        m = score_one(name, pdf_name, mode)
         if m is not None:
             results[name] = m
     return results
@@ -176,14 +211,13 @@ def print_table(results: dict[str, dict]) -> None:
 
 
 def save_watermark(results: dict[str, dict]) -> None:
-    payload = {name: {k: m[k] for k in ("attrib", "kind", "noSpk", "scenes", "overlaps")}
-               for name, m in results.items()}
+    payload = {name: {k: m[k] for k in _WATERMARK_KEYS} for name, m in results.items()}
     with open(WATERMARK_PATH, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
     print(f"\nWatermark saved → {WATERMARK_PATH.name} ({len(payload)} scripts)")
 
 
-def check_watermark(results: dict[str, dict]) -> int:
+def check_watermark(results: dict[str, dict], *, filtered: bool = False) -> int:
     """Compare the current run to the watermark and print the full delta + verdict.
 
     Returns 1 (regression) if any guarded metric dropped beyond tolerance or any
@@ -198,6 +232,9 @@ def check_watermark(results: dict[str, dict]) -> int:
 
     regressions: list[str] = []
     improvements: list[str] = []
+    warnings: list[str] = []
+    stale_metrics = False
+
     for name, m in results.items():
         b = base.get(name)
         if b is None:
@@ -221,10 +258,52 @@ def check_watermark(results: dict[str, dict]) -> int:
             regressions.append(f"  ⬇ {name}: noSpk {b['noSpk']} → {m['noSpk']} (more unattributed dialog)")
         elif m["noSpk"] < b["noSpk"]:
             improvements.append(f"  ⬆ {name}: noSpk {b['noSpk']} → {m['noSpk']} (less unattributed dialog)")
+        # cover — the only signal that catches element loss, because sig lookup
+        # is order-free and silently ignores elements the parser stopped emitting.
+        if "cover" not in b:
+            stale_metrics = True
+        else:
+            dc = m["cover"] - b["cover"]
+            if dc < -_COVER_TOLERANCE:
+                regressions.append(
+                    f"  ⬇ {name}: cover {b['cover']*100:.0f}% → {m['cover']*100:.0f}% "
+                    f"(fewer elements checkable — did element splitting change?)")
+            elif dc > _COVER_TOLERANCE:
+                improvements.append(
+                    f"  ⬆ {name}: cover {b['cover']*100:.0f}% → {m['cover']*100:.0f}%")
+        # overlaps — a drop means simultaneous-speech detections were lost
+        if m["overlaps"] < b["overlaps"]:
+            regressions.append(
+                f"  ⬇ {name}: overlaps {b['overlaps']} → {m['overlaps']} (lost overlap detections)")
+        elif m["overlaps"] > b["overlaps"]:
+            improvements.append(f"  ⬆ {name}: overlaps {b['overlaps']} → {m['overlaps']}")
+        # scenes — legitimately volatile (auto-chunking), but scene numbers are
+        # correction keys, so a silent change breaks saved user corrections.
+        if m["scenes"] != b["scenes"]:
+            warnings.append(f"  • {name}: scenes {b['scenes']} → {m['scenes']} "
+                            f"(scene numbers key user corrections — verify intentional)")
 
+    # A script in the watermark but absent from this run has dropped out of the
+    # oracle entirely (deleted/renamed PDF). Previously invisible. Skipped when a
+    # name filter is active, since the absence is then deliberate.
+    if not filtered:
+        for name in base:
+            if name.startswith("_"):
+                continue
+            if name not in results:
+                regressions.append(
+                    f"  ⬇ {name}: MISSING from this run — PDF or reference gone, "
+                    f"so this script is no longer being checked at all")
+
+    if warnings:
+        print("\nChanged (not blocking):")
+        print("\n".join(warnings))
     if improvements:
         print("\nImprovements vs watermark:")
         print("\n".join(improvements))
+    if stale_metrics:
+        print("\nNote: watermark predates the cover/dialog metrics; those comparisons were\n"
+              "skipped. Run `--save` once on a known-good tree to start guarding them.")
     if regressions:
         print("\n✗ REGRESSION vs watermark:")
         print("\n".join(regressions))
@@ -243,19 +322,53 @@ def main() -> int:
     args = sys.argv[1:]
     do_save = "--save" in args
     do_check = "--check" in args
+
+    mode = None
+    if "--mode" in args:
+        i = args.index("--mode")
+        if i + 1 >= len(args):
+            raise SystemExit(f"--mode requires a value: {'|'.join(PARSER_MODES)}")
+        mode = args[i + 1]
+        if mode not in PARSER_MODES:
+            raise SystemExit(f"Unknown --mode {mode!r}. Expected one of: {'|'.join(PARSER_MODES)}")
+        args = args[:i] + args[i + 2:]
+
     names = [a for a in args if not a.startswith("--")]
 
     global CASES
     if names:
         CASES = [(n, p) for n, p in CASES if n in names]
 
-    results = collect()
+    # `scorecard.py TheHarvest --save` used to rewrite the watermark with ONE
+    # script, silently discarding the other six baselines.
+    if do_save and names:
+        raise SystemExit(
+            "Refusing to --save with a script filter: the watermark would be "
+            "truncated to just "
+            f"{', '.join(names)}, discarding every other script's baseline.\n"
+            "Run `python scripts/scorecard.py --save` with no filter instead.")
+    # The watermark is the heuristic baseline; an experimental mode must never
+    # become the thing future runs are judged against.
+    if do_save and mode not in (None, "heuristic"):
+        raise SystemExit(
+            f"Refusing to --save results from --mode {mode}: the watermark represents "
+            "the default (heuristic) parser. Re-run --save without --mode.")
+
+    if mode:
+        print(f"[scorecard] parser mode: {mode}\n")
+
+    results = collect(mode)
     print_table(results)
 
     if do_save:
         save_watermark(results)
     if do_check:
-        return check_watermark(results)
+        if mode not in (None, "heuristic"):
+            print(f"\n(Comparing --mode {mode} against the heuristic watermark.)")
+        if names:
+            print(f"\n(Filtered to {', '.join(names)} — the drop-out check is skipped; "
+                  "run without a filter before committing.)")
+        return check_watermark(results, filtered=bool(names))
     return 0
 
 

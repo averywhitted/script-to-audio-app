@@ -35,13 +35,23 @@ final class ProjectStore: ObservableObject {
     // MARK: - Init
 
     init() {
+        // `fileExists`/`contentsOfDirectory` under ~/Documents is exactly what macOS's
+        // TCC layer gates — even a plain existence check counts as "accessing the
+        // Documents folder," and this ran unconditionally on every launch, before the
+        // user had done anything. On a fresh install there is nothing to load anyway,
+        // so only touch the filesystem here if a base URL was already established: the
+        // user changed it explicitly (`changeProjectsBaseURL`), or a project was already
+        // created once before (`createProject` persists the default the first time that
+        // happens). Either way, by the time we load, the user has already, deliberately,
+        // put something in that folder — the OS prompt then lands in direct response to
+        // their own action instead of firing before they've touched the app at all.
         if let saved = UserDefaults.standard.string(forKey: "projectsBaseURL") {
             projectsBaseURL = URL(fileURLWithPath: saved)
+            loadAllProjects()
+            loadArchivedProjects()
         } else {
             projectsBaseURL = Self.defaultBaseURL
         }
-        loadAllProjects()
-        loadArchivedProjects()
     }
 
     // MARK: - Load
@@ -97,6 +107,12 @@ final class ProjectStore: ObservableObject {
         let project = Project.new(name: name, folderURL: folderURL, engine: engine)
         try saveProject(project)
         projects.insert(project, at: 0)
+        // First-ever project on the default location: record that the base URL is now
+        // in real use, so future launches know it's safe (and expected) to load from it.
+        // See the comment in init() — this is what turns the eager load back on.
+        if UserDefaults.standard.string(forKey: "projectsBaseURL") == nil {
+            UserDefaults.standard.set(projectsBaseURL.path, forKey: "projectsBaseURL")
+        }
         return project
     }
 

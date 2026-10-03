@@ -14,7 +14,16 @@ ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
 # Gate only changes that can affect parser output.
-if ! git diff --cached --name-only | grep -qE '^backend/parser\.py$|^backend/corrections_config\.json$'; then
+#
+# Matches the whole backend/ Python surface rather than two hardcoded filenames:
+# the old anchored list silently let any NEW parser module (features.py,
+# element_classifier.py, a backend/parser/ package) escape the gate entirely.
+# Model files count too — swapping the .mlmodel changes classification without
+# touching a line of Python.
+# (backend/tests/ is excluded — test code cannot change parser output.)
+if ! git diff --cached --name-only \
+     | grep -vE '^backend/tests/' \
+     | grep -qE '^backend/.*\.(py|json)$|\.mlmodel$'; then
     exit 0
 fi
 

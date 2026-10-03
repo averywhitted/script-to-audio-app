@@ -172,6 +172,20 @@ struct ReviewView: View {
     @EnvironmentObject private var state: AppState
     @StateObject private var selection = ReviewSelectionState()
 
+    /// Lines the parser flagged, excluding any the user has already corrected —
+    /// matching the per-row ⚠, which also hides once a correction exists.
+    private var needsReviewCount: Int {
+        guard let script = state.script, let pdfPath = state.selectedPDF?.path else { return 0 }
+        return script.scenes.reduce(0) { total, scene in
+            total + scene.elements.filter { el in
+                guard el.needsReview else { return false }
+                let key = ParserCorrection.key(pdfIdentifier: pdfPath,
+                                               sceneNumber: scene.number, text: el.text)
+                return state.corrections[key] == nil
+            }.count
+        }
+    }
+
     var body: some View {
         if let script = state.script {
             StepPageFooter(
@@ -188,6 +202,16 @@ struct ReviewView: View {
                         Label("\(script.sceneCount) scenes", systemImage: "film.stack")
                         Label("\(script.characterCount) characters", systemImage: "person.2")
                         Label("\(script.lineCount) lines", systemImage: "text.bubble")
+                        // Lines the parser itself is unsure about. Surfaced as an
+                        // aggregate because a per-row ⚠ is invisible until you
+                        // scroll onto it — this tells you up front whether the
+                        // parse needs attention at all, and how much.
+                        if needsReviewCount > 0 {
+                            Label("\(needsReviewCount) need review", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(AppColors.lowConfidence)
+                                .help("The parser was uncertain about these lines. "
+                                      + "Look for the ⚠ next to a line to see why.")
+                        }
                         Spacer()
                         // Background activity indicator (voice fetching, etc.)
                         if state.isFetchingVoices {
@@ -1826,11 +1850,11 @@ struct SceneElementRow: View {
                                 .frame(width: 5, height: 5)
                                 .help("User correction applied")
                         }
-                        if element.confidence < 0.7 && correction == nil && !isRemoved {
+                        if element.needsReview && correction == nil && !isRemoved {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 9))
                                 .foregroundStyle(AppColors.lowConfidence.opacity(0.75))
-                                .help(element.reason ?? "Parser is uncertain about this line — check the speaker or type")
+                                .help(element.reviewReason ?? "Parser is uncertain about this line — check the speaker or type")
                         }
                         Button { showingEdit = true } label: {
                             Text("Edit")
