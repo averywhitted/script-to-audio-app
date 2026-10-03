@@ -36,8 +36,9 @@ xcuserdata/
 DerivedData/
 .swiftpm/
 
-# Secrets — copy EmailReporter.swift.template → EmailReporter.swift and add your key
-Sources/TableRead/EmailReporter.swift
+# (Feedback reporting no longer needs an embedded credential — see
+#  Sources/TableRead/FeedbackReporter.swift. If you still have a local
+#  EmailReporter.swift from an older checkout, delete it and revoke its token.)
 
 # Claude Code internal state
 .claude/worktrees/

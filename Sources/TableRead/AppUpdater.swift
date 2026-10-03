@@ -86,6 +86,18 @@ actor AppUpdater {
     private let repo      = "script-to-audio-app"
     private let assetName = "TableRead.zip"
 
+    // MARK: — Download source
+
+    /// The asset URL arrives inside API JSON, and whatever it points at gets
+    /// unpacked and executed by `installUpdate`. Restrict it to GitHub's own
+    /// hosts so a tampered or redirected URL cannot aim the self-installer at
+    /// an arbitrary server. An untrusted URL falls back to opening the release
+    /// page, which only ever hands the user a link.
+    static func isTrustedDownloadHost(_ url: URL) -> Bool {
+        guard url.scheme == "https", let host = url.host?.lowercased() else { return false }
+        return host == "github.com" || host.hasSuffix(".githubusercontent.com")
+    }
+
     // MARK: — Version comparison
 
     /// Returns true if `candidate` is a higher version than `current`.
@@ -157,7 +169,8 @@ actor AppUpdater {
         let asset  = assets.first { ($0["name"] as? String) == assetName }
 
         if let downloadStr = asset?["browser_download_url"] as? String,
-           let downloadURL = URL(string: downloadStr) {
+           let downloadURL = URL(string: downloadStr),
+           AppUpdater.isTrustedDownloadHost(downloadURL) {
             return UpdateInfo(
                 version:      tag.trimmingCharacters(in: CharacterSet(charactersIn: "vV")),
                 downloadURL:  downloadURL,
@@ -233,6 +246,26 @@ actor AppUpdater {
         UpdateLogger.log("  currentApp = \(currentApp.path)")
         UpdateLogger.log("  newAppURL  = \(newAppURL.path)")
 
+        // `Bundle.main.bundleURL` returns the *containing directory* when the
+        // executable is not inside a bundle (a bare binary, a `swift build`
+        // product). The script below runs `rm -rf` on this path, so without
+        // this guard an app launched that way would delete the folder it sits
+        // in — a Desktop, a Documents folder, a user's working directory.
+        guard currentApp.pathExtension == "app",
+              FileManager.default.fileExists(
+                  atPath: currentApp.appendingPathComponent("Contents/MacOS").path)
+        else {
+            UpdateLogger.log("  REFUSED: \(currentApp.path) is not an .app bundle")
+            throw UpdateError.notAnAppBundle
+        }
+
+        // Whatever is at `newAppURL` is about to replace the installed app and
+        // be launched, so it must carry a valid signature from the same team as
+        // the running copy. Nothing else establishes that the downloaded zip
+        // came from this project.
+        try verifySignature(of: newAppURL, againstRunning: currentApp)
+        UpdateLogger.log("  signature verified")
+
         let safeNew     = shell(newAppURL.path)
         let safeCurrent = shell(currentApp.path)
 
@@ -298,6 +331,65 @@ actor AppUpdater {
             try await installUpdate(from: copy)
         } catch {
             UpdateLogger.log("testInstall: FAILED — \(error)")
+        }
+    }
+
+    // MARK: — Signature verification
+
+    private struct CommandResult {
+        let status: Int32
+        let output: String
+    }
+
+    private func run(_ executable: String, _ arguments: [String]) throws -> CommandResult {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: executable)
+        proc.arguments = arguments
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        proc.standardError = pipe   // codesign writes its details to stderr
+        try proc.run()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        proc.waitUntilExit()
+        return CommandResult(status: proc.terminationStatus,
+                             output: String(data: data, encoding: .utf8) ?? "")
+    }
+
+    /// Team ID from the bundle's signature, or nil when unsigned / ad-hoc.
+    private func teamIdentifier(of appURL: URL) throws -> String? {
+        let result = try run("/usr/bin/codesign", ["-d", "--verbose=4", appURL.path])
+        guard result.status == 0 else { return nil }
+        for line in result.output.components(separatedBy: "\n") where line.hasPrefix("TeamIdentifier=") {
+            let value = String(line.dropFirst("TeamIdentifier=".count))
+                .trimmingCharacters(in: .whitespaces)
+            return value == "not set" ? nil : value
+        }
+        return nil
+    }
+
+    /// Requires a valid signature on the downloaded bundle, from the same team
+    /// as the running app. An unsigned running copy gives us no trust anchor to
+    /// compare against, so the update is refused rather than taken on faith.
+    private func verifySignature(of newAppURL: URL, againstRunning currentApp: URL) throws {
+        let verify = try run("/usr/bin/codesign", ["--verify", "--strict", "--deep", newAppURL.path])
+        guard verify.status == 0 else {
+            throw UpdateError.signatureVerificationFailed(
+                "the downloaded app's code signature is not valid. "
+                + verify.output.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        guard let expected = try teamIdentifier(of: currentApp) else {
+            throw UpdateError.signatureVerificationFailed(
+                "this copy of TableRead is not signed, so an update cannot be verified. "
+                + "Download the new version from the Releases page instead.")
+        }
+        guard let actual = try teamIdentifier(of: newAppURL) else {
+            throw UpdateError.signatureVerificationFailed(
+                "the downloaded app is not signed.")
+        }
+        guard actual == expected else {
+            throw UpdateError.signatureVerificationFailed(
+                "the downloaded app is signed by a different developer "
+                + "(expected \(expected), found \(actual)).")
         }
     }
 
@@ -369,11 +461,18 @@ private final class DownloadHelper: NSObject, URLSessionDownloadDelegate, @unche
 enum UpdateError: LocalizedError {
     case extractionFailed
     case appBundleNotFound
+    case notAnAppBundle
+    case signatureVerificationFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .extractionFailed:   return "Failed to extract the update archive."
         case .appBundleNotFound:  return "Could not locate TableRead.app inside the downloaded archive."
+        case .notAnAppBundle:
+            return "TableRead is not running from an .app bundle, so it cannot update itself in place. "
+                 + "Download the new version from the Releases page instead."
+        case .signatureVerificationFailed(let reason):
+            return "Update cancelled: \(reason)"
         }
     }
 }

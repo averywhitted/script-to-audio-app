@@ -424,7 +424,7 @@ struct BugReportSheet: View {
     @State private var steps = ""
     @State private var submitState: SubmitState = .idle
 
-    private enum SubmitState: Equatable { case idle, sending, sent, failed(String) }
+    private enum SubmitState: Equatable { case idle, sent, failed(String) }
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
@@ -504,34 +504,34 @@ struct BugReportSheet: View {
             Divider()
 
             // Footer
-            HStack {
-                if case .failed(let msg) = submitState {
-                    Text(msg)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-                if case .sent = submitState {
-                    Label("Sent! Thank you.", systemImage: "checkmark.circle.fill")
-                        .font(.callout)
-                        .foregroundStyle(.green)
-                }
-                Spacer()
-                Button("Cancel") { isPresented = false }
-                    .buttonStyle(.borderless)
+            VStack(spacing: 10) {
+                Text("This opens a prefilled report as \(FeedbackReporter.destinationDescription). Nothing is sent until you review it there and submit it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                Button {
-                    submit()
-                } label: {
-                    if case .sending = submitState {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Text("Send Report")
+                HStack {
+                    if case .failed(let msg) = submitState {
+                        Text(msg)
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
+                    if case .sent = submitState {
+                        Label("Opened in your browser.", systemImage: "checkmark.circle.fill")
+                            .font(.callout)
+                            .foregroundStyle(.green)
+                    }
+                    Spacer()
+                    Button("Cancel") { isPresented = false }
+                        .buttonStyle(.borderless)
+
+                    Button("Review on GitHub…") { submit() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(whatHappened.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                  || submitState == .sent)
+                        .keyboardShortcut(.defaultAction)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(whatHappened.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                          || submitState == .sending || submitState == .sent)
-                .keyboardShortcut(.defaultAction)
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
@@ -552,7 +552,6 @@ struct BugReportSheet: View {
     }
 
     private func submit() {
-        submitState = .sending
         let text = """
         App version: \(appVersion)
         macOS: \(osVersion)
@@ -563,16 +562,15 @@ struct BugReportSheet: View {
         Steps to reproduce:
         \(steps.isEmpty ? "(not provided)" : steps)
         """
-        EmailReporter.send(subject: "Bug report \(appVersion)", text: text, labels: ["bug", "user-report"]) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    submitState = .sent
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { isPresented = false }
-                case .failure(let error):
-                    submitState = .failed(error.localizedDescription)
-                }
-            }
+        if FeedbackReporter.openIssueForm(
+            subject: "Bug report \(appVersion)",
+            body: text,
+            labels: ["bug", "user-report"]
+        ) {
+            submitState = .sent
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { isPresented = false }
+        } else {
+            submitState = .failed("Could not open your browser. Please report it at github.com/averywhitted/script-to-audio-app/issues.")
         }
     }
 }

@@ -19,6 +19,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import threading
 import time
 from dataclasses import dataclass
@@ -181,38 +182,52 @@ class MacSayEngine(TTSEngine):
         # (e.g., --data-format) silently fail on certain macOS versions.
         # If the chosen voice fails (e.g., it isn't installed), fall back
         # to the system default voice rather than failing the whole line.
-        # (Build tag: minimal-say-v3 — visible in error logs to confirm the
-        # running code is up to date.)
-        cmd = ["say", "-v", voice_id, "-o", out_path, text]
-        # 30s timeout per line. If `say` hangs (e.g., Premium voice still
-        # downloading on first use), don't freeze the whole pipeline.
+        #
+        # The text comes from a user-supplied PDF, so it is passed via `-f`
+        # rather than as a positional argument: a line starting with "-o" or
+        # "-f" would otherwise be parsed by `say` as a flag, letting document
+        # content redirect the output path or read an arbitrary file.
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".txt", delete=False, encoding="utf-8"
+        ) as fh:
+            fh.write(text)
+            text_path = fh.name
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True,
-                                    timeout=30)
-        except subprocess.TimeoutExpired:
-            raise RuntimeError(
-                f"say timed out after 30s for voice {voice_id!r}. "
-                f"Premium voices download on first use — try opening "
-                f"System Settings → Accessibility → Spoken Content → "
-                f"System Voice → Manage Voices and pre-download the voices "
-                f"you want to use."
-            )
-        if result.returncode != 0:
-            # Retry without -v in case the voice doesn't exist on this Mac
-            fallback = ["say", "-o", out_path, text]
+            cmd = ["say", "-v", voice_id, "-o", out_path, "-f", text_path]
+            # 30s timeout per line. If `say` hangs (e.g., Premium voice still
+            # downloading on first use), don't freeze the whole pipeline.
             try:
-                result2 = subprocess.run(fallback, capture_output=True,
-                                         text=True, timeout=30)
+                result = subprocess.run(cmd, capture_output=True, text=True,
+                                        timeout=30)
             except subprocess.TimeoutExpired:
                 raise RuntimeError(
-                    f"say (default voice fallback) timed out after 30s."
+                    f"say timed out after 30s for voice {voice_id!r}. "
+                    f"Premium voices download on first use — try opening "
+                    f"System Settings → Accessibility → Spoken Content → "
+                    f"System Voice → Manage Voices and pre-download the voices "
+                    f"you want to use."
                 )
-            if result2.returncode != 0:
-                raise RuntimeError(
-                    f"say failed for voice {voice_id!r}. "
-                    f"stderr: {result.stderr.strip() or '(empty)'}. "
-                    f"Default-voice retry stderr: {result2.stderr.strip() or '(empty)'}"
-                )
+            if result.returncode != 0:
+                # Retry without -v in case the voice doesn't exist on this Mac
+                fallback = ["say", "-o", out_path, "-f", text_path]
+                try:
+                    result2 = subprocess.run(fallback, capture_output=True,
+                                             text=True, timeout=30)
+                except subprocess.TimeoutExpired:
+                    raise RuntimeError(
+                        f"say (default voice fallback) timed out after 30s."
+                    )
+                if result2.returncode != 0:
+                    raise RuntimeError(
+                        f"say failed for voice {voice_id!r}. "
+                        f"stderr: {result.stderr.strip() or '(empty)'}. "
+                        f"Default-voice retry stderr: {result2.stderr.strip() or '(empty)'}"
+                    )
+        finally:
+            try:
+                os.unlink(text_path)
+            except OSError:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +250,8 @@ _KOKORO_CACHE_DIR = Path.home() / ".cache" / "tableread" / "kokoro"
 
 def _download_kokoro_files() -> tuple[str, str]:
     """Download (or return cached) Kokoro ONNX model and voices files."""
+    import shutil as _shutil
+    import urllib.parse
     import urllib.request
 
     _KOKORO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -243,8 +260,19 @@ def _download_kokoro_files() -> tuple[str, str]:
         dest = _KOKORO_CACHE_DIR / filename
         if not dest.exists():
             url = f"{_KOKORO_RELEASE}/{filename}"
+            if urllib.parse.urlparse(url).scheme != "https":
+                raise RuntimeError(f"Refusing to fetch model over non-HTTPS URL: {url}")
             print(f"Downloading {filename} from {url} …", flush=True)
-            urllib.request.urlretrieve(url, dest)
+            # Download to a .part file and rename on success, so an
+            # interrupted transfer is never cached as a complete model.
+            part = dest.with_suffix(dest.suffix + ".part")
+            try:
+                with urllib.request.urlopen(url, timeout=120) as resp, open(part, "wb") as out:
+                    _shutil.copyfileobj(resp, out)
+                part.replace(dest)
+            finally:
+                if part.exists():
+                    part.unlink()
         paths[filename] = str(dest)
     return paths["kokoro-v1.0.int8.onnx"], paths["voices-v1.0.bin"]
 

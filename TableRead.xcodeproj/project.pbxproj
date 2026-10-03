@@ -10,7 +10,7 @@
 		AC01B2C3D4E5F6A7B8C9D0E1 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC01B2C3D4E5F6A7B8C9D0E0 /* AppColors.swift */; };
 		BA5163ABC13B4CA2940F8B2D /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B84164F9A9824BCA8825C794 /* AppState.swift */; };
 		AA11BB22CC33DD44EE55FF67 /* AppUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AppUpdater.swift */; };
-		E1F2A3B4C5D6E7F8A9B0C1D2 /* EmailReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D3 /* EmailReporter.swift */; };
+		E1F2A3B4C5D6E7F8A9B0C1D2 /* FeedbackReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D3 /* FeedbackReporter.swift */; };
 		9CA15D18819C49C0AC3E4ACE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4854471D56F84F88B788AAE0 /* ContentView.swift */; };
 		217332098B654AACA521A8C9 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 399145A8478F43268A04C862 /* Models.swift */; };
 		90D26E52A43047B19520B6C5 /* PythonBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6383B3C07324FDBAD710008 /* PythonBridge.swift */; };
@@ -50,7 +50,7 @@
 		AC01B2C3D4E5F6A7B8C9D0E0 /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
 		B84164F9A9824BCA8825C794 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF66 /* AppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdater.swift; sourceTree = "<group>"; };
-		E1F2A3B4C5D6E7F8A9B0C1D3 /* EmailReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailReporter.swift; sourceTree = "<group>"; };
+		E1F2A3B4C5D6E7F8A9B0C1D3 /* FeedbackReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackReporter.swift; sourceTree = "<group>"; };
 		4854471D56F84F88B788AAE0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		399145A8478F43268A04C862 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		A6383B3C07324FDBAD710008 /* PythonBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PythonBridge.swift; sourceTree = "<group>"; };
@@ -117,7 +117,7 @@
 				B84164F9A9824BCA8825C794 /* AppState.swift */,
 				AA11BB22CC33DD44EE55FF66 /* AppUpdater.swift */,
 				4854471D56F84F88B788AAE0 /* ContentView.swift */,
-				E1F2A3B4C5D6E7F8A9B0C1D3 /* EmailReporter.swift */,
+				E1F2A3B4C5D6E7F8A9B0C1D3 /* FeedbackReporter.swift */,
 				399145A8478F43268A04C862 /* Models.swift */,
 				A6383B3C07324FDBAD710008 /* PythonBridge.swift */,
 				AA11BB22CC33DD44EE55FF01 /* Project.swift */,
@@ -264,7 +264,7 @@
 				BA5163ABC13B4CA2940F8B2D /* AppState.swift in Sources */,
 				AA11BB22CC33DD44EE55FF67 /* AppUpdater.swift in Sources */,
 				9CA15D18819C49C0AC3E4ACE /* ContentView.swift in Sources */,
-				E1F2A3B4C5D6E7F8A9B0C1D2 /* EmailReporter.swift in Sources */,
+				E1F2A3B4C5D6E7F8A9B0C1D2 /* FeedbackReporter.swift in Sources */,
 				217332098B654AACA521A8C9 /* Models.swift in Sources */,
 				90D26E52A43047B19520B6C5 /* PythonBridge.swift in Sources */,
 				AA11BB22CC33DD44EE55FF02 /* Project.swift in Sources */,
