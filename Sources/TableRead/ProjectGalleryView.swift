@@ -56,6 +56,10 @@ struct ProjectGalleryView: View {
     // Rename
     @State private var isRenamingID: UUID? = nil
 
+    // Destructive-action confirmation
+    @State private var isConfirmingDelete = false
+    @State private var isConfirmingArchive = false
+
     // Sort & filter
     @State private var sortKey: ProjectSortKey = .recent
     @State private var sortOrder: GallerySortOrder = .descending
@@ -82,8 +86,8 @@ struct ProjectGalleryView: View {
             if !selectedIDs.isEmpty && !showArchived {
                 ProjectSelectionActionsBar(
                     count: selectedIDs.count,
-                    onArchive: { archiveSelected() },
-                    onDelete: { deleteSelected() },
+                    onArchive: { isConfirmingArchive = true },
+                    onDelete: { isConfirmingDelete = true },
                     onClear: { withAnimation { selectedIDs = [] } }
                 )
                 .padding(.bottom, 16)
@@ -91,6 +95,30 @@ struct ProjectGalleryView: View {
             }
         }
         .animation(.spring(response: 0.3), value: selectedIDs.isEmpty)
+        .confirmationDialog(
+            selectedIDs.count == 1
+                ? "Move this project to the Trash?"
+                : "Move \(selectedIDs.count) projects to the Trash?",
+            isPresented: $isConfirmingDelete,
+            titleVisibility: .visible
+        ) {
+            Button("Move to Trash", role: .destructive) { deleteSelected() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The project folder and any rendered audio go to the Trash. You can put them back from there, or from Recently Deleted.")
+        }
+        .confirmationDialog(
+            selectedIDs.count == 1
+                ? "Archive this project?"
+                : "Archive \(selectedIDs.count) projects?",
+            isPresented: $isConfirmingArchive,
+            titleVisibility: .visible
+        ) {
+            Button("Archive") { archiveSelected() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Each project is zipped, then its folder is moved to the Trash. You can unarchive it later from the Archived tab.")
+        }
         .sheet(isPresented: $isShowingNewProjectSheet) {
             NewProjectSheet { name, customURL in createProject(name: name, at: customURL) }
         }
@@ -499,15 +527,18 @@ struct ProjectGalleryView: View {
             state.errorMessage = "Could not create project folder."
             return
         }
+        // folderURL is always a freshly-created, uniquely-named subfolder (see
+        // ProjectStore.createProject) — never a pre-existing user folder — so
+        // `destination` can never already exist and rollback below can never
+        // touch anything the user didn't create through this app.
         let destination = folderURL.appendingPathComponent(pdfURL.lastPathComponent)
         do {
-            if FileManager.default.fileExists(atPath: destination.path) {
-                try FileManager.default.removeItem(at: destination)
-            }
             try FileManager.default.copyItem(at: pdfURL, to: destination)
         } catch {
             state.errorMessage = "Could not copy PDF into project: \(error.localizedDescription)"
-            try? FileManager.default.removeItem(at: folderURL)
+            if projectStore.isManagedProjectFolder(folderURL) {
+                try? FileManager.default.removeItem(at: folderURL)
+            }
             projectStore.projects.removeAll { $0.id == proj.id }
             return
         }
@@ -1057,7 +1088,7 @@ struct NewProjectSheet: View {
                         VStack(alignment: .leading, spacing: 2) {
                             if let custom = customLocationURL {
                                 Text(custom.lastPathComponent).font(.callout)
-                                Text(custom.deletingLastPathComponent().path)
+                                Text("A new project folder will be created inside this location")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
