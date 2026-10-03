@@ -128,6 +128,20 @@ final class ProjectStore: ObservableObject {
         FileManager.default.fileExists(atPath: url.appendingPathComponent("project.json").path)
     }
 
+    /// Moves `url` to the Trash. Preferred over `removeItem` everywhere a
+    /// project's own files are destroyed, so any mistake stays recoverable.
+    private func moveToTrash(_ url: URL) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            NSWorkspace.shared.recycle([url]) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
     // MARK: - Open
 
     @discardableResult
@@ -254,9 +268,26 @@ final class ProjectStore: ObservableObject {
                     throw NSError(domain: "Archive", code: Int(proc.terminationStatus),
                                   userInfo: [NSLocalizedDescriptionKey: "zip exited with status \(proc.terminationStatus)"])
                 }
+
+                // `zip` can exit 0 and still leave a truncated archive if the
+                // disk filled mid-write. Prove the archive reads back before
+                // the only other copy of the project is thrown away.
+                let test = Process()
+                test.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+                test.arguments = ["-t", zipURL.path]
+                test.standardOutput = FileHandle.nullDevice
+                test.standardError = FileHandle.nullDevice
+                try test.run()
+                test.waitUntilExit()
+                guard test.terminationStatus == 0 else {
+                    throw NSError(domain: "Archive", code: Int(test.terminationStatus),
+                                  userInfo: [NSLocalizedDescriptionKey: "the archive failed its integrity check, so the original was left in place"])
+                }
             }.value
 
-            try FileManager.default.removeItem(at: folderURL)
+            // Trash rather than delete: if the archive turns out to be wrong
+            // after all, the project is still recoverable.
+            try await moveToTrash(folderURL)
             projects.removeAll { $0.id == id }
             if currentProject?.id == id { currentProject = nil }
             loadArchivedProjects()

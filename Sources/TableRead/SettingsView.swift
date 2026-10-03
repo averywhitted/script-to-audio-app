@@ -32,7 +32,7 @@ private struct GeneralSettingsTab: View {
     @State private var contributionState: ContributionState = .idle
     @State private var isCheckingForUpdates = false
 
-    private enum ContributionState { case idle, sending, sent, failed }
+    private enum ContributionState { case idle, sent, failed }
 
     var body: some View {
         Form {
@@ -143,7 +143,7 @@ private struct GeneralSettingsTab: View {
             }
 
             Section {
-                Toggle("Contribute corrections anonymously", isOn: $state.contributeCorrections)
+                Toggle("Offer to contribute corrections", isOn: $state.contributeCorrections)
                 HStack(spacing: 8) {
                     let count = state.corrections.count
                     let unsent = state.corrections.values.filter { !$0.uploaded }.count
@@ -159,9 +159,9 @@ private struct GeneralSettingsTab: View {
                     Spacer()
                     if state.contributeCorrections {
                         Button("Contribute…") { contributeCorrections() }
-                            .disabled(state.corrections.isEmpty || contributionState == .sending)
+                            .disabled(state.corrections.isEmpty)
                         if contributionState == .sent {
-                            Label("Sent", systemImage: "checkmark.circle.fill")
+                            Label("Opened in browser", systemImage: "checkmark.circle.fill")
                                 .foregroundStyle(.green)
                                 .font(.caption)
                         }
@@ -175,7 +175,11 @@ private struct GeneralSettingsTab: View {
             } header: {
                 Text("Parser Corrections")
             } footer: {
-                Text("Corrections you make in the Review step are stored locally. When you're ready, click Contribute to send them anonymously to the developer — they help improve the parser for everyone. Nothing is sent without your action.")
+                Text("""
+                    Corrections you make in the Review step are stored locally and are never sent on their own.
+
+                    Contribute… opens a prefilled report as \(FeedbackReporter.destinationDescription), which you then review and submit yourself. It includes the lines of dialogue the correction applies to, so it will be publicly visible. Your file paths and name are not included. If your script is confidential, use Export… to save the corrections to a file and send them privately instead.
+                    """)
                     .foregroundStyle(.secondary)
             }
         }
@@ -197,7 +201,6 @@ private struct GeneralSettingsTab: View {
     }
 
     private func contributeCorrections() {
-        contributionState = .sending
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         let payload = state.corrections.values.map { $0.anonymized(appVersion: version) }
         let text = payload.map { c in
@@ -212,20 +215,15 @@ private struct GeneralSettingsTab: View {
             .split(separator: "\n", omittingEmptySubsequences: true)
             .joined(separator: "\n")
         }.joined(separator: "\n\n---\n\n")
-        EmailReporter.send(
+        if FeedbackReporter.openIssueForm(
             subject: "Parser corrections v\(version) (\(payload.count) correction\(payload.count == 1 ? "" : "s"))",
-            text: text,
+            body: text,
             labels: ["correction", "user-report"]
-        ) { [self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    for key in state.corrections.keys { state.corrections[key]?.uploaded = true }
-                    contributionState = .sent
-                case .failure:
-                    contributionState = .failed
-                }
-            }
+        ) {
+            for key in state.corrections.keys { state.corrections[key]?.uploaded = true }
+            contributionState = .sent
+        } else {
+            contributionState = .failed
         }
     }
 
