@@ -145,17 +145,75 @@ final class EstimatedSecondsTests: XCTestCase {
 final class SceneElementIDTests: XCTestCase {
 
     func testDuplicateDialogLinesHaveUniqueIDs() {
-        // Same speaker repeating the same short phrase (real Cyrano-style log warning trigger)
-        let elements = [
+        // Same speaker repeating the same short phrase (Cyrano-style). Once the
+        // scene numbers its repeats, every row has its own id, so SwiftUI lists
+        // keyed by id no longer drop or merge them.
+        let elements = SceneSummary.numberingOccurrences([
             SceneElementSummary(kind: "dialog", speaker: "CYRANO", text: "say it"),
             SceneElementSummary(kind: "dialog", speaker: "CYRANO", text: "say it"),
             SceneElementSummary(kind: "dialog", speaker: "CYRANO", text: "say it"),
-        ]
-        // The id property alone may collide — this test documents that fact
-        // and reminds us to use index-based ForEach (not element.id) in the UI.
-        let ids = elements.map(\.id)
-        // All ids are the same here — that's the known issue; ForEach uses .indices instead
-        XCTAssertEqual(Set(ids).count, 1, "id property intentionally not unique — use .indices in ForEach")
+        ])
+        XCTAssertEqual(elements.map(\.occurrence), [0, 1, 2])
+        XCTAssertEqual(Set(elements.map(\.id)).count, 3)
+    }
+}
+
+// MARK: - Corrections on repeated lines (#55)
+
+final class DuplicateLineCorrectionTests: XCTestCase {
+
+    private let pdf = "/tmp/echo.pdf"
+
+    /// LOLA and ELLIOT say the same line, decoded the way a real parse arrives.
+    private func echoScript() throws -> ScriptSummary {
+        let json = """
+        {"title":"Echo","sceneCount":1,"characterCount":0,"characters":[],"lineCount":3,"scenes":[{"number":1,"title":"One","elementCount":3,
+         "elements":[{"kind":"dialog","speaker":"LOLA","text":"I'm looking at you.","confidence":1},
+                     {"kind":"dialog","speaker":"ELLIOT","text":"I'm looking at you.","confidence":1},
+                     {"kind":"stage_direction","text":"They stare.","confidence":1}]}]}
+        """
+        return try JSONDecoder().decode(ScriptSummary.self, from: Data(json.utf8))
+    }
+
+    private func correction(for el: SceneElementSummary, speaker: String) -> ParserCorrection {
+        ParserCorrection(textKey: el.text, pdfIdentifier: pdf, sceneNumber: 1,
+                         originalKind: el.kind, originalSpeaker: el.speaker,
+                         correctedKind: nil, correctedSpeaker: speaker, correctedText: nil,
+                         markedAsNoise: false, timestamp: Date(), contributed: false,
+                         occurrence: el.occurrence)
+    }
+
+    func testDecodingNumbersRepeats() throws {
+        let els = try echoScript().scenes[0].elements
+        XCTAssertEqual(els.map(\.occurrence), [0, 1, 0])
+    }
+
+    func testFirstCopyKeepsTheOldKey() throws {
+        // Corrections saved before #55 were keyed by text alone; they must still
+        // find the first copy of the line.
+        let first = try echoScript().scenes[0].elements[0]
+        XCTAssertEqual(ParserCorrection.key(pdfIdentifier: pdf, sceneNumber: 1, element: first),
+                       "\(pdf)|1|I'm looking at you.")
+    }
+
+    func testCorrectionToSecondCopyLeavesFirstAlone() throws {
+        let script = try echoScript()
+        let second = script.scenes[0].elements[1]
+        let fix = correction(for: second, speaker: "MAX")
+        let applied = script.applying([fix.storageKey: fix], pdfPath: pdf)
+        XCTAssertEqual(applied.scenes[0].elements.map(\.speaker), ["LOLA", "MAX", nil])
+    }
+
+    func testManualOverlapAbsorbsOnlyTheNamedCopy() throws {
+        let script = try echoScript()
+        let els = script.scenes[0].elements
+        var fix = correction(for: els[2], speaker: "NARRATOR")
+        fix.correctedSpeaker = nil
+        fix.manualOverlapPartnerKey = els[1].ref
+        let applied = script.applying([fix.storageKey: fix], pdfPath: pdf)
+        // ELLIOT's copy is absorbed into the pair; LOLA's identical line survives.
+        XCTAssertEqual(applied.scenes[0].elements.map(\.speaker), ["LOLA", nil])
+        XCTAssertEqual(applied.scenes[0].elements[1].overlapCue, ["Narrator", "ELLIOT"])
     }
 }
 

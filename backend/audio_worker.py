@@ -223,7 +223,33 @@ def _build_assignment(payload: Dict[str, Any], script, voices) -> Assignment:
     return auto_assign(script.characters, voices)
 
 
-def _apply_corrections(script, corrections_list: List[Dict[str, Any]]):
+_REF_SEP = "\x1f"
+
+
+def _element_ref(text_prefix: str, occurrence: int) -> str:
+    """A parsed line's identity within its scene: its 60-char text prefix, plus a
+    suffix for the second and later copies of the same text, so two characters
+    saying the same line are told apart (#55). Must match elementRef(text:occurrence:)
+    in Models.swift."""
+    return text_prefix if occurrence == 0 else f"{text_prefix}{_REF_SEP}{occurrence}"
+
+
+def _assign_element_refs(script) -> Dict[int, str]:
+    """Map id(element) -> ref for every parsed element, numbering repeats in
+    scene order. Call once on the fresh parse, before user lines are injected or
+    corrections rewrite any text, so refs match the ones the Review UI saw."""
+    refs: Dict[int, str] = {}
+    for scene in script.scenes:
+        seen: Dict[str, int] = {}
+        for el in scene.elements:
+            prefix = el.text[:60]
+            refs[id(el)] = _element_ref(prefix, seen.get(prefix, 0))
+            seen[prefix] = seen.get(prefix, 0) + 1
+    return refs
+
+
+def _apply_corrections(script, corrections_list: List[Dict[str, Any]],
+                       refs: Dict[int, str] | None = None):
     """Apply user corrections from the Review step to the parsed script in-place.
 
     Handles the following correction types:
@@ -240,33 +266,35 @@ def _apply_corrections(script, corrections_list: List[Dict[str, Any]]):
     """
     if not corrections_list:
         return script
+    if refs is None:
+        refs = _assign_element_refs(script)
 
     corrections_by_key: Dict[tuple, Dict[str, Any]] = {}
     for c in corrections_list:
-        key = (c.get("sceneNumber"), c.get("textPrefix", ""))
-        corrections_by_key[key] = c
+        ref = _element_ref(c.get("textPrefix", ""), int(c.get("occurrence") or 0))
+        corrections_by_key[(c.get("sceneNumber"), ref)] = c
 
     for scene in script.scenes:
-        # Build a text-prefix → element lookup for manual overlap partner resolution.
-        el_by_prefix: Dict[str, Any] = {el.text[:60]: el for el in scene.elements}
+        # Lines the user added have no ref: corrections only ever target parsed lines.
+        el_by_ref: Dict[str, Any] = {refs[id(el)]: el for el in scene.elements if id(el) in refs}
 
-        # Collect text prefixes that will be absorbed as secondaries in a manual overlap.
+        # Collect refs that will be absorbed as secondaries in a manual overlap.
         # Only suppress a secondary when its primary is not itself noise.
-        absorbed_prefixes: set = set()
-        for el in scene.elements:
-            c = corrections_by_key.get((scene.number, el.text[:60]))
+        absorbed_refs: set = set()
+        for ref in el_by_ref:
+            c = corrections_by_key.get((scene.number, ref))
             if c and "manualOverlapPartnerKey" in c and not c.get("markedAsNoise"):
-                absorbed_prefixes.add(c["manualOverlapPartnerKey"])
+                absorbed_refs.add(c["manualOverlapPartnerKey"])
 
         filtered = []
         for el in scene.elements:
-            text_prefix = el.text[:60]
+            ref = refs.get(id(el))
 
             # Skip elements absorbed as the secondary half of a manual overlap pair.
-            if text_prefix in absorbed_prefixes:
+            if ref is not None and ref in absorbed_refs:
                 continue
 
-            c = corrections_by_key.get((scene.number, text_prefix))
+            c = corrections_by_key.get((scene.number, ref)) if ref is not None else None
             if c is None:
                 filtered.append(el)
                 continue
@@ -304,7 +332,7 @@ def _apply_corrections(script, corrections_list: List[Dict[str, Any]]):
             # ── Manual overlap: merge primary + secondary into a simultaneous pair ──
             if "manualOverlapPartnerKey" in c:
                 partner_key = c["manualOverlapPartnerKey"]
-                partner = el_by_prefix.get(partner_key)
+                partner = el_by_ref.get(partner_key)
                 if partner:
                     # Resolve speaker A (the primary element)
                     if "correctedSpeaker" in c:
@@ -334,11 +362,11 @@ def _apply_corrections(script, corrections_list: List[Dict[str, Any]]):
 
 
 def _inject_user_elements(script, user_elements_map: Dict[int, List[Dict[str, Any]]],
-                           warn_fn=None):
+                           warn_fn=None, refs: Dict[int, str] | None = None):
     """Inject user-added elements (from the Review UI) after their anchor elements in-place.
 
     user_elements_map maps scene number → list of addition dicts, each with keys:
-      afterElementTextKey  – first 60 chars of the anchor element's text
+      afterElementTextKey  – the anchor element's ref (see _element_ref)
       speaker              – speaker name, or "" / "Narrator" / "__NARRATOR__" for narrator
       text                 – the new line's text
       kind                 – "dialog" | "stage_direction" | "parenthetical" (default: "dialog")
@@ -348,6 +376,8 @@ def _inject_user_elements(script, user_elements_map: Dict[int, List[Dict[str, An
     """
     from parser import Element as _Element  # avoid circular import at module level
 
+    if refs is None:
+        refs = _assign_element_refs(script)
     total_injected = 0
     for scene in script.scenes:
         additions = user_elements_map.get(scene.number, [])
@@ -364,7 +394,9 @@ def _inject_user_elements(script, user_elements_map: Dict[int, List[Dict[str, An
         new_elements = []
         for el in scene.elements:
             new_elements.append(el)
-            after_key = el.text[:60]
+            after_key = refs.get(id(el))
+            if after_key is None:
+                continue
             for addition in additions_by_key.get(after_key, []):
                 text = (addition.get("text") or "").strip()
                 if not text:
@@ -411,6 +443,9 @@ def _generate(payload: Dict[str, Any]) -> int:
         raise RuntimeError(f"{engine.name} is not available.")
 
     assignment = _build_assignment(payload, script, voices)
+    # Number repeated lines on the fresh parse, before injection or corrections
+    # change any element text, so both match the refs the Review UI used.
+    refs = _assign_element_refs(script)
 
     # Inject user-added elements (from Swift UI) into the parsed scene element lists.
     # Payload key: {"<sceneNumber>": [{"afterElementTextKey", "speaker", "text", "kind"}, ...]}
@@ -425,6 +460,7 @@ def _generate(payload: Dict[str, Any]) -> int:
         _, total_injected = _inject_user_elements(
             script, user_elements_map,
             warn_fn=lambda msg: _emit({"event": "log", "level": "warning", "message": msg}),
+            refs=refs,
         )
         if total_injected > 0:
             _emit({
@@ -434,7 +470,7 @@ def _generate(payload: Dict[str, Any]) -> int:
 
     # Apply user corrections (from Review section) — keyed by sceneNumber + textPrefix.
     corrections_list: List[Dict[str, Any]] = payload.get("corrections") or []
-    _apply_corrections(script, corrections_list)
+    _apply_corrections(script, corrections_list, refs)
 
     _emit({
         "event": "started",

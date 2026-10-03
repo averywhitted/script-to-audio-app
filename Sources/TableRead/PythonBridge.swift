@@ -240,6 +240,7 @@ final class PythonBridge {
                 var dict: [String: Any] = [
                     "sceneNumber": c.sceneNumber,
                     "textPrefix": textPrefix,
+                    "occurrence": c.occurrence ?? 0,
                     "markedAsNoise": c.markedAsNoise,
                 ]
                 if let kind = c.correctedKind { dict["correctedKind"] = kind }
