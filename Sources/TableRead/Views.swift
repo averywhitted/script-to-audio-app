@@ -593,6 +593,21 @@ struct CastView: View {
     }
 }
 
+/// Says plainly that OpenAI voices send script text off the Mac. Scripts are
+/// often unpublished or under NDA, so this appears wherever OpenAI is chosen
+/// or about to be used, not only in Settings.
+struct OpenAIPrivacyNotice: View {
+    static let text = "OpenAI voices are made on OpenAI's servers: the text of every line they read "
+        + "is sent to OpenAI. macOS and Kokoro voices never leave this Mac."
+
+    var body: some View {
+        Label(Self.text, systemImage: "icloud.and.arrow.up")
+            .font(.caption)
+            .foregroundStyle(.orange)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
 struct OpenAISetupPanel: View {
     @EnvironmentObject private var state: AppState
 
@@ -600,6 +615,7 @@ struct OpenAISetupPanel: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("OpenAI Setup")
                 .font(.headline)
+            OpenAIPrivacyNotice()
             SecureField("API key", text: $state.openAIAPIKey)
                 .textFieldStyle(.roundedBorder)
             HStack {
@@ -1156,6 +1172,7 @@ struct GenerateView: View {
                 Spacer()
                 Button("Refresh") { state.refreshOpenAIEstimate() }.font(.callout)
             }
+            OpenAIPrivacyNotice()
             if let estimate = state.openAIEstimate {
                 OpenAIEstimatePanel(estimate: estimate)
             } else {

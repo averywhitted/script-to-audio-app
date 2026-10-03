@@ -263,8 +263,11 @@ private struct EnginesSettingsTab: View {
             } header: {
                 Text("OpenAI TTS")
             } footer: {
-                Text("Your key is stored in Keychain and never sent anywhere except OpenAI's API. Type a new key and click Save to update, or Clear to remove it.")
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    OpenAIPrivacyNotice()
+                    Text("Your key is stored in Keychain and never sent anywhere except OpenAI's API. Type a new key and click Save to update, or Clear to remove it.")
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section {
