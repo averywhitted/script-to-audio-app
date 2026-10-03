@@ -1642,7 +1642,7 @@ extension AppState {
 
         Task {
             do {
-                let appURL = try await AppUpdater.shared.downloadAndExtract(
+                let update = try await AppUpdater.shared.downloadAndExtract(
                     info: info,
                     onProgress: { [weak self] fraction in
                         Task { @MainActor [weak self] in
@@ -1650,11 +1650,11 @@ extension AppState {
                         }
                     }
                 )
-                UpdateLogger.log("downloadAndInstallUpdate: download+extract complete — \(appURL.path)")
+                UpdateLogger.log("downloadAndInstallUpdate: download+extract complete — \(update.appURL.path)")
                 updateDownloadState = .installing
                 try await Task.sleep(nanoseconds: 200_000_000)
                 UpdateLogger.log("downloadAndInstallUpdate: calling installUpdate")
-                try await AppUpdater.shared.installUpdate(from: appURL)
+                try await AppUpdater.shared.installUpdate(update)
                 // App terminates inside installUpdate — we never reach here
                 UpdateLogger.log("downloadAndInstallUpdate: WARNING — reached after installUpdate")
             } catch {

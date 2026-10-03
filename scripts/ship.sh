@@ -76,6 +76,7 @@ step "Creating GitHub Release v$VERSION ($CHANNEL)"
 gh release create "v$VERSION" \
     "$REPO_ROOT/build/TableRead.dmg#TableRead.dmg" \
     "$REPO_ROOT/build/TableRead.zip#TableRead.zip" \
+    "$REPO_ROOT/build/TableRead.zip.sig#TableRead.zip.sig" \
     "$REPO_ROOT/build/TableRead.sha256#TableRead.sha256" \
     --title "$RELEASE_TITLE" \
     --generate-notes \
