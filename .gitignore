@@ -45,5 +45,5 @@ DerivedData/
 
 # Generated answer-key scripts (rebuild with scripts/synth_generate.py)
 Test PDFs/synthetic/
-Test PDFs/reference/real_sample.json
+Test PDFs/reference/real_sample*.json
 Test PDFs/reference/real_sample.tmp
