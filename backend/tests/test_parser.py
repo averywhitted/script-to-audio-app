@@ -569,3 +569,67 @@ def test_beat_inside_a_speech_is_removed_not_read_by_the_character():
         ("PETER", "This happened before. Hold on."),
         ("DIANA", "I said (beat; softer) no."),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Learned direction style: italics mean "direction" only in scripts that use them so
+# ---------------------------------------------------------------------------
+
+def _blk(text, italic=False, x=72.0, y=100.0, page=0):
+    span = p.TextSpan(text=text, bold=False, italic=italic, font="Times", size=12.0)
+    return p._make_text_block([(x, y, x + 300, y + 12, text, [span])], page)
+
+
+def _speech_heavy_script(direction_italic):
+    """40 speeches (name, line) with a direction after each; italics on the
+    directions only when direction_italic is set."""
+    blocks = []
+    for i in range(40):
+        name = "ADA" if i % 2 else "TOM"
+        blocks += [_blk(name), _blk(f"Line number {i} is spoken."),
+                   _blk(f"{name.title()} crosses the room.", italic=direction_italic)]
+    return blocks
+
+
+def test_italic_style_is_learned_only_when_the_script_uses_it():
+    assert p._learn_direction_style(_speech_heavy_script(True), {"ADA", "TOM"}) is True
+    assert p._learn_direction_style(_speech_heavy_script(False), {"ADA", "TOM"}) is False
+
+
+def _classified(role, text, italic=False, speaker=None):
+    return p.ClassifiedBlock(block=_blk(text, italic=italic), role=role, speaker=speaker)
+
+
+def test_italic_line_given_to_the_last_speaker_becomes_a_direction():
+    model = p.DocumentModel(profile=None, cast_lexicon={}, cast={"ADA"}, cue_columns=[],
+                            dialog_columns=[], furniture=set(), italic_means_direction=True)
+    result = [
+        _classified("speaker_cue", "ADA", speaker="ADA"),
+        _classified("dialog", "I knew it.", speaker="ADA"),
+        _classified("dialog", "Erin takes a breath.", italic=True, speaker="ADA"),      # direction
+        _classified("speaker_cue", "ADA", speaker="ADA"),
+        _classified("dialog", "La la la, sung softly.", italic=True, speaker="ADA"),  # opens speech: kept
+        _classified("dialog", "And the second verse.", italic=True, speaker="ADA"),   # continues italic: kept
+        _classified("speaker_cue", "ADA", speaker="ADA"),
+        _classified("dialog", "Fine.", speaker="ADA"),
+        _classified("dialog", "Maria?", italic=True, speaker="ADA"),                    # sounds spoken: kept
+        _classified("dialog", "“There once was a girl”", italic=True, speaker="ADA"),  # quoted: kept
+    ]
+    p._apply_direction_style(result, model)
+    assert [(c.role, c.speaker) for c in result if c.role != "speaker_cue"] == [
+        ("dialog", "ADA"), ("stage_direction", None),
+        ("dialog", "ADA"), ("dialog", "ADA"),
+        ("dialog", "ADA"), ("dialog", "ADA"), ("dialog", "ADA"),
+    ]
+
+
+def test_mostly_italic_block_with_speech_in_it_is_left_alone():
+    model = p.DocumentModel(profile=None, cast_lexicon={}, cast={"ADA"}, cue_columns=[],
+                            dialog_columns=[], furniture=set(), italic_means_direction=True)
+    spans = [p.TextSpan("(deposits his plate on the counter, very slowly)", False, True, "Times", 12.0),
+             p.TextSpan(" Thanks!", False, False, "Times", 12.0)]
+    block = p._make_text_block([(72, 100, 400, 112, "(deposits his plate on the counter, very slowly) Thanks!", spans)], 0)
+    result = [_classified("speaker_cue", "ADA", speaker="ADA"), _classified("dialog", "Hi.", speaker="ADA"),
+              p.ClassifiedBlock(block=block, role="dialog", speaker="ADA")]
+    p._apply_direction_style(result, model)
+    assert result[-1].role == "dialog"

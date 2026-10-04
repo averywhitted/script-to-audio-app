@@ -754,6 +754,8 @@ class DocumentModel:
     furniture: Set[str]            # exact texts that repeat across many pages =
                                    # watermarks / headers / footers / draft stamps /
                                    # (CONTINUED) / OMITTED — page furniture, never voiced
+    italic_means_direction: bool = False  # this script sets its directions in italics
+                                          # (learned: see _learn_direction_style)
 
     def is_cast(self, name: Optional[str]) -> bool:
         return bool(name) and name in self.cast
@@ -881,7 +883,90 @@ def _build_document_model(blocks: List[TextBlock], page_width: float = 612.0) ->
         cue_columns=cue_columns,
         dialog_columns=dialog_columns,
         furniture=furniture,
+        italic_means_direction=_learn_direction_style(blocks, cast),
     )
+
+
+# How clearly a script must separate its styles before one is trusted as its
+# direction marker: italic text at least this many times more common outside
+# speeches than in them, and at least this share of non-speech text italic.
+# Measured on the corpus (Oct 2026): scripts that set directions in italics
+# score 5.6–45; every other script 3.1 or below.
+_STYLE_SEPARATION_MIN = 5.0
+_STYLE_SHARE_MIN = 0.20
+
+
+def _learn_direction_style(blocks: List[TextBlock], cast: Set[str]) -> bool:
+    """Does THIS script set its stage directions in italics?
+
+    Each script marks directions its own way — italics in Against the Hillside,
+    brackets in Mercury Fur, position only in INATH — so no global rule can be
+    right for all of them. The text right after a character's name is almost
+    always dialogue; compare how often it is italic with how often everything
+    else is. Only a strong, clear separation is trusted; otherwise the script
+    keeps the default behaviour.
+    """
+    after_cue, other = [], []
+    after_ids: Set[int] = set()
+    for i, b in enumerate(blocks):
+        name = _cue_candidate_name(b)
+        if name and name in cast and i + 1 < len(blocks):
+            nb = blocks[i + 1]
+            if not nb.starts_with_paren and not _cue_candidate_name(nb):
+                after_cue.append(nb)
+                after_ids.add(id(nb))
+    for b in blocks:
+        if id(b) not in after_ids and b.text.strip() and not _cue_candidate_name(b):
+            other.append(b)
+    if len(after_cue) < 20 or not other:
+        return False
+    p_speech = sum(b.is_italic for b in after_cue) / len(after_cue)
+    p_other = sum(b.is_italic for b in other) / len(other)
+    return p_other >= _STYLE_SHARE_MIN and (p_other + 0.01) / (p_speech + 0.01) >= _STYLE_SEPARATION_MIN
+
+
+# A block counts as set in italics only if nearly all of it is: "(crosses to
+# her) Thanks, Willy!" is mostly italic, but the speech in it is not.
+_ALL_ITALIC = 0.95
+
+
+def _italic_share(block: TextBlock) -> float:
+    total = italic = 0
+    for spans in block.lines:
+        for sp in spans:
+            n = len(sp.text.strip())
+            total += n
+            italic += n if sp.italic else 0
+    return italic / total if total else 0.0
+
+
+def _apply_direction_style(result: List["ClassifiedBlock"], model: DocumentModel) -> None:
+    """In a script that sets directions in italics, an italic block the
+    classifier gave to the last speaker is a direction: read by the narrator.
+
+    Italic text that opens a speech (right after the name) or continues an
+    italic speech stays dialogue — sung lyrics and whole-line emphasis are set
+    in italics too (Stereophonic). Dialogue still carries forward to the last
+    speaker; this only decides whether a line is dialogue at all.
+    """
+    if not model.italic_means_direction:
+        return
+    prev = None  # last block that wasn't noise
+    for cb in result:
+        if cb.role == "noise":
+            continue
+        if cb.role == "dialog" and _italic_share(cb.block) >= _ALL_ITALIC:
+            opens_speech = prev is not None and prev.role == "speaker_cue"
+            continues_italic_speech = (prev is not None and prev.role == "dialog"
+                                       and prev.block.is_italic and prev.speaker == cb.speaker)
+            # Directions describe; they don't ask, exclaim or quote. Italic text
+            # that does is a line being spoken, sung or recited ("Maria?",
+            # "Admit impediments!", a quoted verse).
+            text = cb.block.text.strip()
+            sounds_spoken = text.endswith(("?", "!", "?\u201d", "!\u201d", '?"', '!"')) or text.startswith(("\u201c", '"'))
+            if not (opens_speech or continues_italic_speech or sounds_spoken):
+                cb.role, cb.speaker = "stage_direction", None
+        prev = cb
 
 
 # ---------------------------------------------------------------------------
@@ -1394,6 +1479,7 @@ def _classify_blocks(
         else:  # stage_direction
             result.append(ClassifiedBlock(block=block, role="stage_direction"))
 
+    _apply_direction_style(result, model)
     return result
 
 

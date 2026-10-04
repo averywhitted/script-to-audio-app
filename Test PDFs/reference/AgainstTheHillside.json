@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "Against the Hillside 11.20.17.pdf",
-    "generated": "2026-06-14",
+    "generated": "2026-10-04",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "Against the Hillside",
@@ -49,8 +49,8 @@
           "sig": "Ynvgakq"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Spafh"
         },
         {
@@ -209,8 +209,8 @@
           "sig": "YhIhsymbhLttsbsotyuhLtmsyswbm"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "His"
         },
         {
@@ -419,10 +419,16 @@
           "sig": "IdkIdkBIcfteomSOmoyoWIcfte"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AmSlt"
-        },
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Scene 1 South Waziristan, Pakistan. Evening. Reem and Sayid’s home. Reem, late 20s, enters quietly, nodding, with a finger to her lips. Sayid, 30s, pulls his wife over, kisses her hungrily. Puts his hands all over her. Whispers in her ear. (part 2)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "SAYID",
@@ -439,8 +445,8 @@
           "sig": "RInfy"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Rtts"
         },
         {
@@ -494,8 +500,8 @@
           "sig": "Ik"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -504,8 +510,8 @@
           "sig": "O"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -529,8 +535,8 @@
           "sig": "C"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Srhhohs"
         },
         {
@@ -554,8 +560,8 @@
           "sig": "N"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -609,8 +615,8 @@
           "sig": "IstnwIm"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -619,8 +625,8 @@
           "sig": "IsYhoetmwr"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alm"
         },
         {
@@ -629,8 +635,8 @@
           "sig": "TfRLsPlgsr"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HstlSs"
         },
         {
@@ -659,8 +665,8 @@
           "sig": "BiIawcOitianb(rWwswsSatNbtrAnbSAbcr"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Tht"
         },
         {
@@ -684,8 +690,8 @@
           "sig": "Y"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -861,7 +867,7 @@
       ]
     },
     {
-      "number": 2,
+      "number": 3,
       "title": "Scene 2",
       "elements": [
         {
@@ -990,8 +996,8 @@
           "sig": "Mtc"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ttf"
         },
         {
@@ -1005,8 +1011,8 @@
           "sig": "Sc"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Srasbd"
         },
         {
@@ -1015,8 +1021,8 @@
           "sig": "SwwttIttgiafOsBmn"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HkhaSpa"
         },
         {
@@ -1105,8 +1111,8 @@
           "sig": "Hbkm"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Etab"
         },
         {
@@ -1115,8 +1121,8 @@
           "sig": "SIgtssaIdwytgm"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hda"
         },
         {
@@ -1145,8 +1151,8 @@
           "sig": "YchRYsRiavlw"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -1295,10 +1301,16 @@
           "sig": "TotIwaAtttwctaTsTawIwaWcystwbsa"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
-        },
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Scene 2 (part 2)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "MATT",
@@ -1348,13 +1360,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HtoIhtAm"
-        }
-      ]
-    },
-    {
-      "number": 3,
-      "title": "Scene 2 (part 2)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "ERIN",
@@ -1461,8 +1467,8 @@
           "sig": "WwdbwytTwyh"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -1546,8 +1552,8 @@
           "sig": "Iwrba"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -1571,8 +1577,8 @@
           "sig": "Ty"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "TstAlm"
         },
         {
@@ -1603,7 +1609,7 @@
       ]
     },
     {
-      "number": 4,
+      "number": 5,
       "title": "Scene 3",
       "elements": [
         {
@@ -1642,8 +1648,8 @@
           "sig": "W"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HuF6cihab"
         },
         {
@@ -1707,8 +1713,8 @@
           "sig": "Y"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Rgo"
         },
         {
@@ -1727,8 +1733,8 @@
           "sig": "G"
         },
         {
-          "kind": "dialog",
-          "speaker": "FARID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -1742,8 +1748,8 @@
           "sig": "MAhi"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Rcbiwalbow"
         },
         {
@@ -1812,8 +1818,8 @@
           "sig": "Y"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Rla"
         },
         {
@@ -1847,8 +1853,8 @@
           "sig": "Ttnsabt"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Amosbtm"
         },
         {
@@ -1862,8 +1868,8 @@
           "sig": "Cotb"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Rrwcac"
         },
         {
@@ -1982,8 +1988,8 @@
           "sig": "R"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Sfs"
         },
         {
@@ -2022,8 +2028,8 @@
           "sig": "Lhlhwtl"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alln"
         },
         {
@@ -2079,7 +2085,7 @@
       ]
     },
     {
-      "number": 5,
+      "number": 6,
       "title": "Scene 3 (part 2)",
       "elements": [
         {
@@ -2088,8 +2094,8 @@
           "sig": "DWs"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Snalbatb"
         },
         {
@@ -2273,8 +2279,8 @@
           "sig": "WsltthTowwib"
         },
         {
-          "kind": "dialog",
-          "speaker": "FARID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -2285,7 +2291,7 @@
       ]
     },
     {
-      "number": 6,
+      "number": 7,
       "title": "Scene 4",
       "elements": [
         {
@@ -2354,8 +2360,8 @@
           "sig": "IksIs"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -2379,8 +2385,8 @@
           "sig": "Iwha"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "JeM"
         },
         {
@@ -2404,8 +2410,8 @@
           "sig": "Ys"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -2439,8 +2445,8 @@
           "sig": "N"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -2504,8 +2510,8 @@
           "sig": "Iidnf"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "JhMacoc"
         },
         {
@@ -2519,8 +2525,8 @@
           "sig": "S"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Td"
         },
         {
@@ -2579,8 +2585,8 @@
           "sig": "WadiIcbd"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Jlb"
         },
         {
@@ -2594,8 +2600,8 @@
           "sig": "G"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "JeM"
         },
         {
@@ -2604,8 +2610,8 @@
           "sig": "Ikyfwai"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -2624,8 +2630,8 @@
           "sig": "NocId"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -2659,8 +2665,8 @@
           "sig": "NysisIwytutinthahtYndfae"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -2674,8 +2680,8 @@
           "sig": "Noud"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -2734,8 +2740,8 @@
           "sig": "Te"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Almbtm"
         },
         {
@@ -2749,8 +2755,8 @@
           "sig": "Ys"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -2774,8 +2780,8 @@
           "sig": "Ys"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Altm"
         },
         {
@@ -2789,8 +2795,8 @@
           "sig": "Ys"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -2799,8 +2805,8 @@
           "sig": "Yhagd"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ms"
         },
         {
@@ -2811,7 +2817,7 @@
       ]
     },
     {
-      "number": 7,
+      "number": 8,
       "title": "Scene 5",
       "elements": [
         {
@@ -2940,8 +2946,8 @@
           "sig": "RIwltWwaltr"
         },
         {
-          "kind": "dialog",
-          "speaker": "AHMED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Rst"
         },
         {
@@ -2990,8 +2996,8 @@
           "sig": "Nn"
         },
         {
-          "kind": "dialog",
-          "speaker": "AHMED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Afmmp"
         },
         {
@@ -3010,8 +3016,8 @@
           "sig": "Iirtiyh"
         },
         {
-          "kind": "dialog",
-          "speaker": "AHMED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SuAkotbutt"
         },
         {
@@ -3095,8 +3101,8 @@
           "sig": "SsYdm"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Apagftbalais"
         },
         {
@@ -3120,8 +3126,8 @@
           "sig": "B…"
         },
         {
-          "kind": "dialog",
-          "speaker": "AHMED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alahw"
         },
         {
@@ -3230,8 +3236,8 @@
           "sig": "SwRotmh"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hgahoha"
         },
         {
@@ -3255,8 +3261,8 @@
           "sig": "Yhm"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hlg"
         },
         {
@@ -3275,8 +3281,8 @@
           "sig": "IchIcpyIsIgifaIahw"
         },
         {
-          "kind": "dialog",
-          "speaker": "AHMED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Rda"
         },
         {
@@ -3345,8 +3351,8 @@
           "sig": "LtmIawyShdmasIcBsigootra"
         },
         {
-          "kind": "dialog",
-          "speaker": "AHMED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Sda"
         },
         {
@@ -3355,8 +3361,8 @@
           "sig": "AaIwitbrotnIjwits"
         },
         {
-          "kind": "dialog",
-          "speaker": "AHMED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Slahfalt"
         },
         {
@@ -3405,14 +3411,14 @@
           "sig": "Ng"
         },
         {
-          "kind": "dialog",
-          "speaker": "REEM",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Anae"
         }
       ]
     },
     {
-      "number": 8,
+      "number": 9,
       "title": "Scene 6",
       "elements": [
         {
@@ -3431,8 +3437,8 @@
           "sig": "N"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AsTefaw"
         },
         {
@@ -3466,8 +3472,8 @@
           "sig": "NnTf"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -3506,8 +3512,8 @@
           "sig": "GTg"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Me"
         },
         {
@@ -3536,8 +3542,8 @@
           "sig": "Ys"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "MeA"
         },
         {
@@ -3591,8 +3597,8 @@
           "sig": "Swgs"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Mshh"
         },
         {
@@ -3646,8 +3652,8 @@
           "sig": "Bwmths"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -3726,8 +3732,8 @@
           "sig": "HsgoitmoadaphfathTohsapafSsuatsHisllssrau"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -3781,8 +3787,8 @@
           "sig": "Itm"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -3811,8 +3817,8 @@
           "sig": "YFIetsof"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "As"
         },
         {
@@ -3836,8 +3842,8 @@
           "sig": "KaeoibthfYbswdittAyfwuHefbHyawbysHyctywbyffhHyfftwymBycthttaeAnsg"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Als"
         },
         {
@@ -3846,8 +3852,8 @@
           "sig": "Isgs"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Mluahv"
         },
         {
@@ -3856,8 +3862,8 @@
           "sig": "R"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATT",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Apuht"
         },
         {
@@ -3873,7 +3879,7 @@
       ]
     },
     {
-      "number": 9,
+      "number": 10,
       "title": "Scene 1",
       "elements": [
         {
@@ -3952,8 +3958,8 @@
           "sig": "TaosuPauuoufJbIrthOshatf"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "FsaS"
         },
         {
@@ -4027,8 +4033,8 @@
           "sig": "IcdmIhbdmfmyKtbftsSedIgttsaIwIapalsAedIp"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "FlaSh"
         },
         {
@@ -4112,8 +4118,8 @@
           "sig": "Yasiarawaf"
         },
         {
-          "kind": "dialog",
-          "speaker": "FARID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "S"
         },
         {
@@ -4277,8 +4283,8 @@
           "sig": "Ymms"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -4287,8 +4293,8 @@
           "sig": "IyasSYwnaogohf"
         },
         {
-          "kind": "dialog",
-          "speaker": "FARID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "FlaSs"
         },
         {
@@ -4329,7 +4335,7 @@
       ]
     },
     {
-      "number": 10,
+      "number": 11,
       "title": "Scene 2",
       "elements": [
         {
@@ -4363,8 +4369,8 @@
           "sig": "Waydh"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alm"
         },
         {
@@ -4373,8 +4379,8 @@
           "sig": "IktisIdekiyslh"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Elb"
         },
         {
@@ -4388,8 +4394,8 @@
           "sig": "IktirlIjwtttyahWymiIAyacq"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Edm"
         },
         {
@@ -4398,8 +4404,8 @@
           "sig": "IdrkwetdIwa"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Esb"
         },
         {
@@ -4453,8 +4459,8 @@
           "sig": "Il"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Schaohc"
         },
         {
@@ -4463,8 +4469,8 @@
           "sig": "Dhehts"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "En"
         },
         {
@@ -4483,8 +4489,8 @@
           "sig": "HaDhedawohc"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Eshh"
         },
         {
@@ -4493,8 +4499,8 @@
           "sig": "Ottgaic"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ech"
         },
         {
@@ -4558,8 +4564,8 @@
           "sig": "O"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ald"
         },
         {
@@ -4568,8 +4574,8 @@
           "sig": "Bee"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alu"
         },
         {
@@ -4628,8 +4634,8 @@
           "sig": "Idha"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Albahp"
         },
         {
@@ -4648,8 +4654,8 @@
           "sig": "LATyn"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "An"
         },
         {
@@ -4658,8 +4664,8 @@
           "sig": "WdhamohiWmjiittfwtfgBnwNckhfgt"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Agra"
         },
         {
@@ -4698,8 +4704,8 @@
           "sig": "Ithufmtr"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Adtr"
         },
         {
@@ -4713,8 +4719,8 @@
           "sig": "Oc"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hsa"
         },
         {
@@ -4758,8 +4764,8 @@
           "sig": "LMd"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Agq"
         },
         {
@@ -4768,8 +4774,8 @@
           "sig": "IcgytnotwIs"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ache"
         },
         {
@@ -4828,8 +4834,8 @@
           "sig": "Iwyt"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alahfaw"
         },
         {
@@ -4838,8 +4844,8 @@
           "sig": "O"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Tsfaw"
         },
         {
@@ -4863,8 +4869,8 @@
           "sig": "Yw"
         },
         {
-          "kind": "dialog",
-          "speaker": "ERIN",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Tmottd"
         },
         {
@@ -4895,7 +4901,7 @@
       ]
     },
     {
-      "number": 11,
+      "number": 12,
       "title": "Scene 3",
       "elements": [
         {
@@ -5094,8 +5100,8 @@
           "sig": "Llat"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ssiotb"
         },
         {
@@ -5349,8 +5355,8 @@
           "sig": "Is"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AmMkw"
         },
         {
@@ -5359,8 +5365,8 @@
           "sig": "Itr"
         },
         {
-          "kind": "dialog",
-          "speaker": "MOUSSA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Sl"
         },
         {
@@ -5369,8 +5375,8 @@
           "sig": "YYcs"
         },
         {
-          "kind": "dialog",
-          "speaker": "SAYID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Md"
         },
         {
@@ -5379,8 +5385,8 @@
           "sig": "Dymh"
         },
         {
-          "kind": "dialog",
-          "speaker": "MOUSSA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Slahfalt"
         },
         {
@@ -5399,8 +5405,8 @@
           "sig": "Y"
         },
         {
-          "kind": "dialog",
-          "speaker": "MOUSSA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alm"
         },
         {
@@ -5426,7 +5432,7 @@
       ]
     },
     {
-      "number": 12,
+      "number": 13,
       "title": "Scene 4",
       "elements": [
         {
@@ -5485,8 +5491,8 @@
           "sig": "Yoc"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hsa"
         },
         {
@@ -5515,8 +5521,8 @@
           "sig": "Y"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "JeAwass"
         },
         {
@@ -5535,8 +5541,8 @@
           "sig": "RT"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Jn"
         },
         {
@@ -5555,8 +5561,8 @@
           "sig": "Tg"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AmJd"
         },
         {
@@ -5615,8 +5621,8 @@
           "sig": "Iminofbmo"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ashh"
         },
         {
@@ -5640,8 +5646,8 @@
           "sig": "Rh"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AmJcA"
         },
         {
@@ -5655,8 +5661,8 @@
           "sig": "Yct"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Jn"
         },
         {
@@ -5665,8 +5671,8 @@
           "sig": "H"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Js"
         },
         {
@@ -5720,8 +5726,8 @@
           "sig": "N"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Jda"
         },
         {
@@ -5745,8 +5751,8 @@
           "sig": "NImtbs"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ag"
         },
         {
@@ -5760,8 +5766,8 @@
           "sig": "T"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AmAd"
         },
         {
@@ -5820,8 +5826,8 @@
           "sig": "MIttkmtIdk"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Jd"
         },
         {
@@ -5830,8 +5836,8 @@
           "sig": "DywyktsAF"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Jtat"
         },
         {
@@ -5853,13 +5859,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HdstHphbd"
-        }
-      ]
-    },
-    {
-      "number": 13,
-      "title": "Scene 4 (part 2)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "JARED",
@@ -5881,8 +5881,8 @@
           "sig": "Y"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AmBmd"
         },
         {
@@ -5916,8 +5916,8 @@
           "sig": "Dyri"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Atm"
         },
         {
@@ -5931,8 +5931,8 @@
           "sig": "NrTythmbu"
         },
         {
-          "kind": "dialog",
-          "speaker": "ANTHONY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Jtat"
         },
         {
@@ -5971,8 +5971,8 @@
           "sig": "NIkoeTsttImd"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "An"
         },
         {
@@ -5981,8 +5981,8 @@
           "sig": "NtwiwoKo"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Jda"
         },
         {
@@ -6021,8 +6021,8 @@
           "sig": "BtpitpTlkcluAptpoCAlIhtcWiwbltf"
         },
         {
-          "kind": "dialog",
-          "speaker": "JARED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Acht"
         },
         {
@@ -6127,8 +6127,8 @@
           "sig": "Idsa"
         },
         {
-          "kind": "dialog",
-          "speaker": "FARID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HeA"
         },
         {
@@ -6142,8 +6142,8 @@
           "sig": "IhacimcIkwiintbt"
         },
         {
-          "kind": "dialog",
-          "speaker": "AHMED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alan"
         },
         {
@@ -6172,13 +6172,13 @@
           "sig": "YhttnAfshrAfanaBltHist"
         },
         {
-          "kind": "dialog",
-          "speaker": "FARID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Tsfamlaeo"
         },
         {
-          "kind": "dialog",
-          "speaker": "FARID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Fn"
         },
         {
@@ -6317,8 +6317,8 @@
           "sig": "YWclitmWcstngtytYcsygPwuYwltbwys"
         },
         {
-          "kind": "dialog",
-          "speaker": "AHMED",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Fsihc"
         },
         {
@@ -6357,8 +6357,8 @@
           "sig": "FyTaoWiafabadrIttYatftaygThtycwYcwhnbms"
         },
         {
-          "kind": "dialog",
-          "speaker": "FARID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Amos"
         },
         {
@@ -6377,8 +6377,8 @@
           "sig": "IddhAIInlbii"
         },
         {
-          "kind": "dialog",
-          "speaker": "FARID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Almos"
         },
         {
@@ -6407,8 +6407,8 @@
           "sig": "NAIwsitcIwshwIcdnfh"
         },
         {
-          "kind": "dialog",
-          "speaker": "FARID",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -6483,8 +6483,8 @@
           "sig": "P"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WdluSb"
         },
         {
@@ -6513,8 +6513,8 @@
           "sig": "Ty"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hs"
         },
         {
@@ -6628,8 +6628,8 @@
           "sig": "Titmwswu"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Spibth"
         },
         {
@@ -6653,8 +6653,8 @@
           "sig": "Is"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alm"
         },
         {
@@ -6668,8 +6668,8 @@
           "sig": "YIydm"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -6708,8 +6708,8 @@
           "sig": "Vw"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -6793,8 +6793,8 @@
           "sig": "Ilh"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -6868,8 +6868,8 @@
           "sig": "YfsTwIu"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wbvs"
         },
         {
@@ -6893,8 +6893,8 @@
           "sig": "In"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alm"
         },
         {
@@ -6928,10 +6928,16 @@
           "sig": "Is"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
-        },
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "title": "PART THREE (part 2)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "MATTHEW",
@@ -6978,8 +6984,8 @@
           "sig": "Dssa"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -7031,21 +7037,15 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HlaWeWru"
-        }
-      ]
-    },
-    {
-      "number": 16,
-      "title": "PART THREE (part 2)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "MATTHEW",
           "sig": "SIktsIwvyAiaflIwhapoylimhAItwctsBtmsidbtmIbty"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Almbt"
         },
         {
@@ -7054,8 +7054,8 @@
           "sig": "AIctytyabynIwbIflwatuTalkotBisakot"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wis"
         },
         {
@@ -7104,8 +7104,8 @@
           "sig": "N"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Mis"
         },
         {
@@ -7114,8 +7114,8 @@
           "sig": "AnIwaytsyo"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AmMdm"
         },
         {
@@ -7124,8 +7124,8 @@
           "sig": "MWItthbqe"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -7174,8 +7174,8 @@
           "sig": "BIdkaatwTcigtlamWeIhesyAhgtamatwAwaIstsIdkaIttmiIhapomfThTgh"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wshh"
         },
         {
@@ -7204,8 +7204,8 @@
           "sig": "BywhhYwwhphtBnpibiWabwttwnts"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -7214,8 +7214,8 @@
           "sig": "IdntcyMWYdnamoyfYaawYheyn"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Alm"
         },
         {
@@ -7249,8 +7249,8 @@
           "sig": "Tt"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -7274,8 +7274,8 @@
           "sig": "ItsY"
         },
         {
-          "kind": "dialog",
-          "speaker": "WAHIDA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Am"
         },
         {
@@ -7304,8 +7304,8 @@
           "sig": "Wdht"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Wch"
         },
         {
@@ -7329,8 +7329,8 @@
           "sig": "O"
         },
         {
-          "kind": "dialog",
-          "speaker": "MATTHEW",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hstg"
         },
         {
