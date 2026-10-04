@@ -66,7 +66,10 @@ KINDS = [  # (key, label, help)
 def page_lines(page: fitz.Page) -> list[tuple[str, tuple[float, float, float, float]]]:
     """Non-empty physical lines on a page, in PyMuPDF's order (stable per file)."""
     out = []
-    for block in page.get_text("dict")["blocks"]:
+    # Same text flags as the default "dict" minus image extraction, which is
+    # most of the cost and yields no lines (image blocks are skipped anyway).
+    flags = fitz.TEXTFLAGS_DICT & ~fitz.TEXT_PRESERVE_IMAGES
+    for block in page.get_text("dict", flags=flags)["blocks"]:
         for line in block.get("lines", []):
             text = "".join(s["text"] for s in line["spans"]).strip()
             if text:
@@ -83,9 +86,16 @@ def doc(name: str) -> fitz.Document:
     return fitz.open(PDF_DIR / name)
 
 
+@lru_cache(maxsize=None)
+def lines_of(pdf: str, page: int) -> tuple:
+    """page_lines for one page, read once: extracting a page is slow (~25 ms),
+    and review mode checks every sampled line on each request."""
+    return tuple(page_lines(doc(pdf)[page]))
+
+
 def line_text(item: dict) -> str | None:
     """The text of a sampled line, or None if the PDF no longer matches."""
-    lines = page_lines(doc(item["pdf"])[item["page"]])
+    lines = lines_of(item["pdf"], item["page"])
     if item["line"] >= len(lines):
         return None
     text = lines[item["line"]][0]
@@ -147,7 +157,7 @@ def speaker_names(pdf: str) -> list[str]:
     for pg in d:
         for text in pg.get_text("text").splitlines():   # plain text: fast, positions not needed
             t = re.sub(r"\(.*?\)", "", text).strip().rstrip(":.")
-            if (1 <= len(t) <= 24 and t.upper() == t and re.search(r"[A-Z]", t)
+            if (1 <= len(t) <= 24 and re.fullmatch(r"[A-Z](?:[A-Z .'\-]*[A-Z.])?", t)
                     and len(t.split()) <= 3 and not re.match(r"^(INT|EXT|SCENE|ACT)\b", t)):
                 counts[t] += 1
     return [n for n, c in counts.most_common(15) if c >= 3]
@@ -375,6 +385,8 @@ def main() -> int:
     print("Reading the PDFs once so every line loads instantly...", flush=True)
     for pdf in sorted({it["pdf"] for it in data["items"]}):
         speaker_names(pdf)
+    for it in data["items"]:
+        line_text(it)
     print(f"Open http://localhost:{args.port}  (Ctrl-C to stop; labels are already saved)", flush=True)
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     server.daemon_threads = True
