@@ -45,16 +45,16 @@ run_python() {
     # Correctness oracle: score the live parser against locked ground truth and
     # fail on any regression vs the watermark. This catches "fixed one script,
     # broke another" — which the reference tests (change detectors) cannot.
-    section "Parser correctness scorecard"
-    if "$PYTHON" scripts/scorecard.py --check 2>&1; then
-        ok "Scorecard: no regression vs watermark"
+    section "Parser answer keys"
+    if "$PYTHON" scripts/answer_key.py --check 2>&1; then
+        ok "Answer keys: nothing got worse"
     else
-        fail "Scorecard: REGRESSION vs watermark"
+        fail "Answer keys: something got worse"
     fi
 }
 
 # ── Python fast subset (used by the edit hook during parser work) ──────────────
-# Runs the parser UNIT tests only — skips the slow reference/scorecard pass, which
+# Runs the parser UNIT tests only — skips the slow reference/answer-key pass, which
 # is run explicitly at stage boundaries instead. Keeps the per-edit hook snappy.
 
 run_python_fast() {
