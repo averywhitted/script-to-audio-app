@@ -214,9 +214,15 @@ const history = [];
 const $ = id => document.getElementById(id);
 async function load(to, goingBack) {
   if (state && !state.done && !goingBack && (history.length === 0 || history[history.length - 1] !== state.index)) history.push(state.index);
-  const r = await fetch('/item' + (to === undefined ? '' : '?i=' + to)); state = await r.json();
-  if (state.done) { document.querySelector('main').innerHTML =
-      '<div class="card"><h2>All ' + state.total + ' lines labelled.</h2><p>Run <code>python scripts/real_score.py</code> to score the parser.</p></div>'; return; }
+  let r;
+  try { r = await fetch('/item' + (to === undefined ? '' : '?i=' + to)); }
+  catch (e) { return fail('Can\u2019t reach the labelling server. Is it still running in the terminal?'); }
+  const data = await r.json().catch(() => ({error: 'unreadable reply'}));
+  if (!r.ok || data.error) return fail('The server hit a problem: ' + (data.error || r.status) + '. Your labels so far are saved.');
+  state = data;
+  if (state.done) { document.querySelector('main').innerHTML = '<div class="card"><h2>' +
+      (state.review ? 'All flagged labels checked.' : 'All ' + state.total + ' lines labelled.') +
+      '</h2><p>Run <code>.venv/bin/python scripts/real_score.py</code> to score the parser.</p></div>'; return; }
   idx = state.index; pendingDialog = false; showingPrev = false; $('speakers').hidden = true;
   $('reviewcard').hidden = !state.review; $('reviewmsg').textContent = state.review || '';
   $('line').textContent = state.text; $('where').textContent = state.pdf + ' \\u00b7 page ' + (state.page + 1);
@@ -276,6 +282,10 @@ document.addEventListener('keydown', e => {
   if (pendingDialog && e.key === 'Escape') { pendingDialog = false; $('speakers').hidden = true; return; }
   choose(e.key);
 });
+function fail(msg) {
+  document.querySelector('main').innerHTML = '<div class="card"><h2>Something went wrong</h2><p>' + msg +
+    '</p><p class="muted">Reload the page to try again.</p></div>';
+}
 function togglePrev() {
   if (!state || state.page === 0) return;
   showingPrev = !showingPrev;
@@ -300,12 +310,22 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        with LOCK:
-            self._get()
+        self._guarded(self._get)
 
     def do_POST(self):
+        self._guarded(self._post)
+
+    def _guarded(self, handler) -> None:
+        """Run a request under the lock; a bug answers 500 with the reason
+        instead of dropping the connection and leaving the page blank."""
         with LOCK:
-            self._post()
+            try:
+                handler()
+            except Exception as exc:  # noqa: BLE001
+                import traceback
+                traceback.print_exc()
+                self._send(json.dumps({"error": f"{type(exc).__name__}: {exc}"}).encode(),
+                           "application/json", 500)
 
     def _get(self):
         from urllib.parse import parse_qs, urlparse
@@ -330,8 +350,9 @@ class Handler(BaseHTTPRequestHandler):
                           if needs_review(it) and not it.get("reviewed")), None)
             else:
                 i = next((n for n, it in enumerate(items) if not it["label"]), None)
-                if i is None:
-                    return self._send(json.dumps({"done": True, "total": len(items)}).encode(), "application/json")
+            if i is None:   # nothing left: every line labelled, or every flag checked
+                return self._send(json.dumps({"done": True, "total": len(items), "review": REVIEW}).encode(),
+                                  "application/json")
             it = items[i]
             text = line_text(it) or "(this line no longer matches the PDF; press 0 to skip)"
             page = doc(it["pdf"])[it["page"]]
