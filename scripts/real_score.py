@@ -33,11 +33,12 @@ import label_sample as L  # noqa: E402
 import synth_score as S  # noqa: E402
 
 EXCLUDED = {"mixed", "unsure"}
+UNKNOWN = "?"   # dialogue whose speaker couldn't be seen: scored as "read by some character"
 
 
 def expected(item: dict) -> str:
     if item["label"] == "dialog":
-        return S.norm_speaker(item["speaker"])
+        return UNKNOWN if item["speaker"] == UNKNOWN else S.norm_speaker(item["speaker"])
     if item["label"] in ("stage_direction", "parenthetical"):
         return S.NARRATOR
     return S.SILENT
@@ -71,8 +72,12 @@ def score_pdf(pdf: str, items: list[dict]) -> list[dict]:
     for it in items:
         idx = by_line.get((it["page"], it["line"]), [])
         hits = [found[k] for k in idx if k in found]
-        got = S.SILENT if len(hits) * 2 < max(len(idx), 1) else Counter(v for v, _ in hits).most_common(1)[0][0]
-        rows.append({"item": it, "expected": expected(it), "got": got, "ok": got == expected(it)})
+        if not idx:          # no words (e.g. a lone "..."): nothing to read, nothing to score
+            continue
+        got = S.SILENT if len(hits) * 2 < len(idx) else Counter(v for v, _ in hits).most_common(1)[0][0]
+        exp = expected(it)
+        ok = got not in (S.SILENT, S.NARRATOR) if exp == UNKNOWN else got == exp
+        rows.append({"item": it, "expected": exp, "got": got, "ok": ok})
     return rows
 
 
@@ -86,6 +91,10 @@ def main() -> int:
         return 1
     items = L.load()["items"]
     stale = [it for it in items if it["label"] and L.line_text(it) is None]
+    flagged = [it for it in items if it["label"] and L.needs_review(it) and not it.get("reviewed")]
+    if flagged:
+        print(f"Note: {len(flagged)} labels look like slips and are counted as labelled. "
+              "Confirm or fix them with: python scripts/label_sample.py --review\n")
     usable = [it for it in items if it["label"] and it["label"] not in EXCLUDED and it not in stale]
     by_pdf = defaultdict(list)
     for it in usable:
@@ -115,6 +124,9 @@ def main() -> int:
         for k, (a, b) in sorted(kinds.items(), key=lambda kv: -kv[1][1]):
             print(f"  {k:16} {b:4} lines  {100 * a / b:5.1f}% right")
     left_out = sum(1 for it in items if it["label"] in EXCLUDED)
+    wordless = sum(1 for it in usable if not S.words(L.line_text(it) or ""))
+    if wordless:
+        print(f"{wordless} labelled lines have no words to read (e.g. a lone \"...\") and aren't scored.")
     todo = sum(1 for it in items if not it["label"])
     print(f"\n{left_out} lines marked mixed/can't tell (left out), {todo} not labelled yet, "
           f"{len(stale)} no longer match their PDF.")

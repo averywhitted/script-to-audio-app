@@ -102,6 +102,23 @@ def draw_sample(per_pdf: int) -> dict:
             "items": items}
 
 
+def needs_review(item: dict) -> str | None:
+    """Why a saved label looks like a slip, or None. Shown in --review mode."""
+    if item["label"] != "dialog":
+        return None
+    sp = (item.get("speaker") or "").strip()
+    if not sp or sp.startswith("*") or "PAGE" in sp.upper():
+        return "The speaker is a note, not a name. Use the previous-page view to find who says it."
+    text = line_text(item) or ""
+    norm = lambda t: re.sub(r"\(.*?\)", "", t).strip().rstrip(":.").upper()
+    if norm(text) == norm(sp):
+        return "This line is just the name. If it's the name above a speech, press 4 (character name)."
+    return None
+
+
+REVIEW = False
+
+
 def load() -> dict:
     return json.loads(LABELS.read_text())
 
@@ -143,7 +160,7 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>Label lines</t
  .pagewrap { position:relative; background:#fff; border:1px solid var(--line); align-self:start; }
  .pagewrap img { display:block; width:100%; }
  .box { position:absolute; border:2px solid var(--hi); background:rgba(47,111,221,.12); border-radius:3px; }
- aside { position:sticky; top:16px; align-self:start; }
+ aside { position:sticky; top:16px; align-self:start; max-height:calc(100vh - 32px); overflow-y:auto; }
  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; }
  .text { font:16px ui-monospace, Menlo, monospace; white-space:pre-wrap; }
  .muted { color:var(--muted); font-size:13px; }
@@ -160,23 +177,28 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>Label lines</t
 </style></head><body><main>
  <div class="pagewrap" id="pw"><img id="img" alt="PDF page"><div class="box" id="box"></div></div>
  <aside>
+  <div class="card" id="reviewcard" hidden style="border-color:#d08a1c"><b>Check this one:</b> <span id="reviewmsg"></span></div>
   <div class="card"><div class="bar"><div id="prog"></div></div><p class="muted" id="count"></p>
    <div class="text" id="line"></div><p class="muted" id="where"></p></div>
   <div class="card" id="speakers" hidden><p><b>Who says it?</b> <span class="muted">letter key, or / to type</span></p>
-   <div id="names"></div><input id="other" placeholder="Other name, then Enter"></div>
+   <p class="muted" id="namewarn" hidden style="color:#d08a1c">This line is just a name. If it's the name above a speech, press Esc, then 4.</p>
+   <div id="names"></div><input id="other" placeholder="Other name, then Enter">
+   <button id="unknown"><kbd>?</kbd>Can't see who says it, even on the previous page</button></div>
   <div class="card" id="kinds"></div>
-  <div class="card"><button id="back"><kbd>&larr;</kbd>Back to previous line</button>
+  <div class="card"><button id="prevpage"><kbd>p</kbd>Show the previous page (to find who's speaking)</button>
+   <button id="back"><kbd>&larr;</kbd>Back to previous line</button>
    <p class="muted">Labels save after every choice. You can close this tab and resume later.</p></div>
  </aside></main>
 <script>
 const KINDS = __KINDS__;
-let state = null, idx = 0, pendingDialog = false;
+let state = null, idx = 0, pendingDialog = false, showingPrev = false;
 const $ = id => document.getElementById(id);
 async function load(to) {
   const r = await fetch('/item' + (to === undefined ? '' : '?i=' + to)); state = await r.json();
   if (state.done) { document.querySelector('main').innerHTML =
       '<div class="card"><h2>All ' + state.total + ' lines labelled.</h2><p>Run <code>python scripts/real_score.py</code> to score the parser.</p></div>'; return; }
-  idx = state.index; pendingDialog = false; $('speakers').hidden = true;
+  idx = state.index; pendingDialog = false; showingPrev = false; $('speakers').hidden = true;
+  $('reviewcard').hidden = !state.review; $('reviewmsg').textContent = state.review || '';
   $('line').textContent = state.text; $('where').textContent = state.pdf + ' \\u00b7 page ' + (state.page + 1);
   $('count').textContent = state.labelled + ' of ' + state.total + ' labelled' + (state.label ? ' \\u00b7 this one: ' + state.label + (state.speaker ? ' (' + state.speaker + ')' : '') : '');
   $('prog').style.width = (100 * state.labelled / state.total) + '%';
@@ -187,6 +209,7 @@ async function load(to) {
     box.scrollIntoView({block: 'center', behavior: 'instant'});
   };
   img.src = '/page?pdf=' + encodeURIComponent(state.pdf) + '&p=' + state.page;
+  $('box').hidden = false; $('prevpage').innerHTML = '<kbd>p</kbd>Show the previous page (to find who’s speaking)';
   $('kinds').innerHTML = KINDS.map(k => '<button data-k="' + k[0] + '"><kbd>' + k[0] + '</kbd>' + k[2] + '</button>').join('');
   $('names').innerHTML = state.names.map((n, i) => '<button data-n="' + n + '"><kbd>' + String.fromCharCode(97 + i) + '</kbd>' + n + '</button>').join('');
 }
@@ -196,7 +219,12 @@ async function send(label, speaker) {
 }
 function choose(key) {
   const k = KINDS.find(k => k[0] === key); if (!k) return;
-  if (k[1] === 'dialog') { pendingDialog = true; $('speakers').hidden = false; $('other').value = ''; return; }
+  if (k[1] === 'dialog') {
+    pendingDialog = true; $('speakers').hidden = false; $('other').value = '';
+    const bare = s => s.replace(/\\(.*?\\)/g, '').trim().replace(/[:.]+$/, '').toUpperCase();
+    $('namewarn').hidden = !state.names.some(n => bare(n) === bare(state.text));
+    return;
+  }
   send(k[1]);
 }
 document.addEventListener('click', e => {
@@ -204,15 +232,27 @@ document.addEventListener('click', e => {
   if (b.dataset.k) choose(b.dataset.k);
   if (b.dataset.n) send('dialog', b.dataset.n);
   if (b.id === 'back') load(Math.max(0, idx - 1));
+  if (b.id === 'unknown') send('dialog', '?');
+  if (b.id === 'prevpage') togglePrev();
 });
 document.addEventListener('keydown', e => {
   if (e.target === $('other')) { if (e.key === 'Enter' && $('other').value.trim()) send('dialog', $('other').value.trim().toUpperCase()); if (e.key === 'Escape') $('other').blur(); return; }
   if (e.key === 'ArrowLeft') return load(Math.max(0, idx - 1));
+  if (e.key === 'p') return togglePrev();
+  if (pendingDialog && e.key === '?') return send('dialog', '?');
   if (pendingDialog && /^[a-o]$/.test(e.key)) { const n = state.names[e.key.charCodeAt(0) - 97]; if (n) send('dialog', n); return; }
   if (pendingDialog && e.key === '/') { e.preventDefault(); $('other').focus(); return; }
   if (pendingDialog && e.key === 'Escape') { pendingDialog = false; $('speakers').hidden = true; return; }
   choose(e.key);
 });
+function togglePrev() {
+  if (!state || state.page === 0) return;
+  showingPrev = !showingPrev;
+  $('box').hidden = showingPrev;
+  $('img').src = '/page?pdf=' + encodeURIComponent(state.pdf) + '&p=' + (state.page - (showingPrev ? 1 : 0));
+  $('prevpage').innerHTML = showingPrev ? '<kbd>p</kbd>Back to this line’s page' : '<kbd>p</kbd>Show the previous page (to find who’s speaking)';
+  if (showingPrev) window.scrollTo({top: document.body.scrollHeight});
+}
 load();
 </script></body></html>"""
 
@@ -246,6 +286,9 @@ class Handler(BaseHTTPRequestHandler):
             labelled = sum(1 for it in items if it["label"])
             if "i" in q:
                 i = int(q["i"])
+            elif REVIEW:
+                i = next((n for n, it in enumerate(items)
+                          if needs_review(it) and not it.get("reviewed")), None)
             else:
                 i = next((n for n, it in enumerate(items) if not it["label"]), None)
                 if i is None:
@@ -255,7 +298,8 @@ class Handler(BaseHTTPRequestHandler):
             page = doc(it["pdf"])[it["page"]]
             body = {"index": i, "total": len(items), "labelled": labelled, "text": text,
                     "pdf": it["pdf"], "page": it["page"], "bbox": it["bbox"], "pw": page.rect.width,
-                    "label": it["label"], "speaker": it["speaker"], "names": speaker_names(it["pdf"])}
+                    "label": it["label"], "speaker": it["speaker"], "names": speaker_names(it["pdf"]),
+                    "review": needs_review(it) if REVIEW else None}
             return self._send(json.dumps(body).encode(), "application/json")
         return self._send(b"not found", "text/plain", 404)
 
@@ -270,6 +314,8 @@ class Handler(BaseHTTPRequestHandler):
         it = data["items"][int(msg["index"])]
         it["label"] = msg["label"]
         it["speaker"] = msg.get("speaker") if msg["label"] == "dialog" else None
+        if REVIEW:
+            it["reviewed"] = True
         save(data)
         return self._send(b"ok", "text/plain")
 
@@ -279,7 +325,11 @@ def main() -> int:
     ap.add_argument("--per-pdf", type=int, default=31)
     ap.add_argument("--new", action="store_true", help="discard labels and draw a fresh sample")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--review", action="store_true",
+                    help="show only saved labels that look like slips, to confirm or fix")
     args = ap.parse_args()
+    global REVIEW
+    REVIEW = args.review
     if args.new and LABELS.exists() and any(it["label"] for it in load()["items"]):
         print(f"Refusing to draw a new sample: {LABELS.relative_to(ROOT)} already has labels.\n"
               "Move that file somewhere safe first if you really want to start over.")
@@ -290,6 +340,9 @@ def main() -> int:
     data = load()
     done = sum(1 for it in data["items"] if it["label"])
     print(f"{done} of {len(data['items'])} lines labelled.")
+    if REVIEW:
+        flagged = [it for it in data["items"] if needs_review(it) and not it.get("reviewed")]
+        print(f"Review mode: {len(flagged)} labels to confirm or fix.")
     print("Reading the PDFs once so every line loads instantly...", flush=True)
     for pdf in sorted({it["pdf"] for it in data["items"]}):
         speaker_names(pdf)
