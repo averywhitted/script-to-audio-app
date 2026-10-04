@@ -59,7 +59,7 @@ by the right voice?) on every line, short ones included:
 
 - `python scripts/synth_generate.py` then `python scripts/synth_score.py` — generated scripts in the
   six layout families of the real corpus, answers exact by construction. The scorer is itself tested
-  (`backend/tests/test_synth_score.py`: a perfect parse scores 100%). Baseline 94.8%. Bare
+  (`backend/tests/test_synth_score.py`: a perfect parse scores 100%). Baseline 96.5%; real-PDF sample 96.2%. Bare
   "Beat." / "(pause)" must stay silent (user decision, Oct 2026).
 - `python scripts/label_sample.py` (local labelling page, http://localhost:8765) then
   `python scripts/real_score.py` — a fixed random sample of 31 lines per real PDF, labelled by the

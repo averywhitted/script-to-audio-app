@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "EMMA Script (2).pdf",
-    "generated": "2026-06-15",
+    "generated": "2026-10-04",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "E M M A",
@@ -1185,7 +1185,7 @@
         {
           "kind": "dialog",
           "speaker": "HARRIET",
-          "sig": "OHhh("
+          "sig": "OHhh"
         },
         {
           "kind": "dialog",
@@ -1252,11 +1252,6 @@
           "kind": "dialog",
           "speaker": "HARRIET",
           "sig": "Ppjtm"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "dialog",
@@ -2361,11 +2356,6 @@
           "sig": "TgicpauiauﬂtYatahoritwWcHScPbtachtRM"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
-        },
-        {
           "kind": "parenthetical",
           "speaker": "EMMA",
           "sig": "(gd"
@@ -2459,11 +2449,6 @@
           "kind": "dialog",
           "speaker": "KNIGHTLEY",
           "sig": "—sdbtME"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
         },
         {
           "kind": "stage_direction",
@@ -5575,12 +5560,12 @@
         {
           "kind": "dialog",
           "speaker": "EMMA",
-          "sig": "YYwaaw(W"
+          "sig": "YYwaawW"
         },
         {
           "kind": "dialog",
           "speaker": "FRANK",
-          "sig": "S(WdytMFwoa"
+          "sig": "SWdytMFwoa"
         },
         {
           "kind": "parenthetical",
@@ -5601,11 +5586,6 @@
           "kind": "dialog",
           "speaker": "EMMA",
           "sig": "OC(lcthttdTtld"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "dialog",
@@ -5788,11 +5768,6 @@
           "sig": "WitmwmAhwwgColfppctmabaciew—yaIfAIfiraiarLInauaiamsomsf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
-        },
-        {
           "kind": "dialog",
           "speaker": "EMMA",
           "sig": "—miIhptwIo"
@@ -5861,11 +5836,6 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Iaaar"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "parenthetical",
@@ -6940,11 +6910,6 @@
           "sig": "MKcmhlls"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
-        },
-        {
           "kind": "dialog",
           "speaker": "MRS. WESTON",
           "sig": "Twywi“Vh"
@@ -7654,11 +7619,6 @@
           "kind": "dialog",
           "speaker": "MISS BATES",
           "sig": "OJdsmtbhaMKtIrfnosni—Istthmt(hhtYkrrart"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "dialog",
@@ -8535,11 +8495,6 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "B"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "Wtd"
         },
         {
@@ -8586,11 +8541,6 @@
           "kind": "dialog",
           "speaker": "EMMA",
           "sig": "—Y"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "Lb"
         },
         {
           "kind": "parenthetical",
@@ -9227,11 +9177,6 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HkhIabo"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "parenthetical",

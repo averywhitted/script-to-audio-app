@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "Mercury Fur-13 f Draft-June 10-2013.pdf",
-    "generated": "2026-06-16",
+    "generated": "2026-10-04",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "MERCURY FUR",
@@ -6071,11 +6071,6 @@
           "sig": "YgkhayTPP"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
-        },
-        {
           "kind": "dialog",
           "speaker": "LOLA",
           "sig": "NttsitmrpAhDit"
@@ -11578,11 +11573,6 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "("
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "(efhc"
         },
         {
@@ -12107,11 +12097,6 @@
           "sig": "(ikapTgtkfhSctfbbTlahb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
-        },
-        {
           "kind": "parenthetical",
           "speaker": "DUCHESS",
           "sig": "(c"
@@ -12190,11 +12175,6 @@
           "kind": "dialog",
           "speaker": "DUCHESS",
           "sig": "PP"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "("
         },
         {
           "kind": "dialog",

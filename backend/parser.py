@@ -1872,12 +1872,43 @@ def _mark_single_occurrence_confidence(script: Script) -> None:
                                      "check this is the right character.")
 
 
+# Bare timing beats are never read aloud (user decision, Oct 2026): "Beat.",
+# "PAUSE", "A long pause.", "(beat)". Anything that says more, like
+# "(beat; softer)" or "Silence falls.", is still voiced. The answer-key scorers
+# use the same definition (scripts/synth_score.py: is_timing_beat).
+_BEAT_CORE = r"\s*(?:a\s+)?(?:long\s+|short\s+|brief\s+|tiny\s+)?(?:beat|pause)s?\s*[.!]?\s*"
+_TIMING_BEAT_RE = re.compile(rf"^\(?{_BEAT_CORE}\)?$", re.IGNORECASE)
+_EMBEDDED_BEAT_RE = re.compile(rf"\({_BEAT_CORE}\)", re.IGNORECASE)
+
+
+def _drop_timing_beats(scenes: List[Scene]) -> None:
+    """Remove bare beats/pauses: whole directions and asides that are only a
+    beat, and "(beat)" sitting inside a speech (which the character would
+    otherwise read out). Speeches left empty are dropped."""
+    for scene in scenes:
+        kept: List[Element] = []
+        for el in scene.elements:
+            if el.kind in ("stage_direction", "parenthetical") and _TIMING_BEAT_RE.match(el.text.strip()):
+                continue
+            if el.kind == "dialog" and "(" in el.text:
+                el.text = re.sub(r"\s{2,}", " ", _EMBEDDED_BEAT_RE.sub(" ", el.text)).strip()
+                if el.overlap_texts:
+                    el.overlap_texts = [re.sub(r"\s{2,}", " ", _EMBEDDED_BEAT_RE.sub(" ", t)).strip()
+                                        for t in el.overlap_texts]
+                if not el.text:
+                    continue
+            kept.append(el)
+        scene.elements = kept
+
+
 def _finalise(script: Script) -> Script:
     """Apply post-parse finishing passes in order:
-      1. Auto-chunk over-long scenes that have no structural boundaries.
-      2. Sanitize the character list.
-      3. Flag single-occurrence unknown speakers as uncertain.
+      1. Drop bare timing beats ("Beat.", "(pause)") — never read aloud.
+      2. Auto-chunk over-long scenes that have no structural boundaries.
+      3. Sanitize the character list.
+      4. Flag single-occurrence unknown speakers as uncertain.
     """
+    _drop_timing_beats(script.scenes)
     script.scenes = _auto_chunk_scenes(script.scenes)
     script = _sanitize_characters(script)
     _mark_single_occurrence_confidence(script)

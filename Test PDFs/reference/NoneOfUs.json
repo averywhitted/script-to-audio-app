@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "5.0 None of Us Are Getting Out of This Alive (2).pdf",
-    "generated": "2026-06-15",
+    "generated": "2026-10-04",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "None of Us Are Getting Out of This Alive.",
@@ -2453,12 +2453,12 @@
         {
           "kind": "dialog",
           "speaker": "ELEANOR",
-          "sig": "AyarnHItoayaoattph(Tr"
+          "sig": "AyarnHItoayaoattphTr"
         },
         {
           "kind": "dialog",
           "speaker": "ELEANOR",
-          "sig": "WylionynaitO(NNs"
+          "sig": "WylionynaitONNs"
         },
         {
           "kind": "stage_direction",
@@ -3570,7 +3570,7 @@
         {
           "kind": "dialog",
           "speaker": "AVA",
-          "sig": "NnIf(Sdy/nt-"
+          "sig": "NnIfSdy/nt-"
         },
         {
           "kind": "dialog",
@@ -4464,11 +4464,6 @@
           "sig": "Wdyki"
         },
         {
-          "kind": "parenthetical",
-          "speaker": "ELEANOR",
-          "sig": "("
-        },
-        {
           "kind": "dialog",
           "speaker": "ELEANOR",
           "sig": "IsmiaacpbmcIcbmtdiItaialGroiBiteIfAmtwapomitbomhtsbIcbagmttkTmtijsswoamdct"
@@ -4482,11 +4477,6 @@
           "kind": "dialog",
           "speaker": "ELEANOR",
           "sig": "R"
-        },
-        {
-          "kind": "parenthetical",
-          "speaker": "ELEANOR",
-          "sig": "("
         },
         {
           "kind": "dialog",
@@ -5138,11 +5128,6 @@
           "kind": "dialog",
           "speaker": "AVA",
           "sig": "IdfmIdkhIdfhbItIttIdwtbifliwIntdiotInsiIekwfflIjgsuttfTrataatsTsfiygSIflIhsmottigialmimbwmdAocatIgmpithywsibIttrpihtlwted"
-        },
-        {
-          "kind": "parenthetical",
-          "speaker": "AVA",
-          "sig": "("
         },
         {
           "kind": "dialog",
