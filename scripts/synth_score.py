@@ -7,7 +7,8 @@ actually typeset. The question asked of every unit is the one a listener hears:
 **was it read by the right voice?**
 
   dialogue          -> read by its character
-  stage direction   -> read by the narrator      (parentheticals too)
+  stage direction   -> read by the narrator      (parentheticals too; bare
+                                                  "Beat." / "(pause)" not at all)
   everything else   -> not read at all           (names, headings, page junk,
                                                   title page, cast list)
 
@@ -46,6 +47,16 @@ sys.path.insert(0, str(ROOT / "backend"))
 NARRATOR = "NARRATOR"
 SILENT = "(not read)"
 SILENT_KINDS = {"character_cue", "scene_heading", "transition", "page_furniture", "front_matter"}
+
+# Bare timing beats are never read aloud (decided by the user, Oct 2026): "Beat.",
+# "PAUSE", "A long pause.", "(beat)". Directions that say more than that, like
+# "(beat; softer)" or "Silence falls.", are still read by the narrator.
+_TIMING_BEAT = re.compile(r"^\(?\s*(?:a\s+)?(?:long\s+|short\s+|brief\s+|tiny\s+)?(?:beat|pause)s?\s*[.!]?\s*\)?$",
+                          re.IGNORECASE)
+
+
+def is_timing_beat(text: str) -> bool:
+    return bool(_TIMING_BEAT.match(text.strip()))
 _WORD = re.compile(r"[a-z0-9']+")
 
 
@@ -63,7 +74,7 @@ def expected_voice(unit: dict) -> str:
     if unit["kind"] == "dialog":
         return norm_speaker(unit["speaker"])
     if unit["kind"] in ("stage_direction", "parenthetical"):
-        return NARRATOR
+        return SILENT if is_timing_beat(unit["text"]) else NARRATOR
     return SILENT
 
 
@@ -203,7 +214,8 @@ def score_one(name: str) -> dict:
             label = ("dialogue not read" if got == SILENT else
                      "dialogue read by narrator" if got == NARRATOR else "dialogue, wrong character")
         elif k in ("stage_direction", "parenthetical"):
-            label = "direction not read" if got == SILENT else "direction read by a character"
+            label = ("beat or pause read aloud" if r["expected"] == SILENT else
+                     "direction not read" if got == SILENT else "direction read by a character")
         else:
             label = f"{k.replace('_', ' ')} read aloud"
         errors[label] += 1

@@ -47,7 +47,7 @@ def perfect_parse(truth: dict) -> Script:
     for u in truth["units"]:
         if u["kind"] == "dialog":
             els.append(Element(kind="dialog", text=u["text"], speaker=u["speaker"]))
-        elif u["kind"] in ("stage_direction", "parenthetical"):
+        elif u["kind"] in ("stage_direction", "parenthetical") and not S.is_timing_beat(u["text"]):
             els.append(Element(kind=u["kind"], text=u["text"]))
     return Script(title=truth["title"], scenes=[Scene(number=1, title="All", elements=els)])
 
@@ -59,6 +59,19 @@ def mistakes(truth: dict, script: Script) -> list[tuple[int, str]]:
 def test_perfect_parse_scores_100_percent_in_every_family(truths):
     for name, truth in truths.items():
         assert mistakes(truth, perfect_parse(truth)) == [], name
+
+
+def test_a_bare_beat_read_aloud_is_reported(truths):
+    # The user's rule: "Beat." / "(pause)" are never read. A parse that voices
+    # one, in its real place, must be marked wrong on exactly that unit.
+    truth = truths["centered_parens"]
+    beat = next(u for u in truth["units"] if u["kind"] == "stage_direction" and S.is_timing_beat(u["text"]))
+    voiced = [u for u in truth["units"] if u["kind"] == "dialog" or
+              (u["kind"] in ("stage_direction", "parenthetical") and not S.is_timing_beat(u["text"]))]
+    script = perfect_parse(truth)
+    at = next(i for i, u in enumerate(voiced) if u["id"] > beat["id"])
+    script.scenes[0].elements.insert(at, Element(kind="stage_direction", text=beat["text"]))
+    assert mistakes(truth, script) == [(beat["id"], S.NARRATOR)]
 
 
 def test_merging_a_speakers_consecutive_lines_is_not_penalised(truths):
@@ -79,13 +92,14 @@ def test_each_planted_mistake_is_reported_on_exactly_that_unit(truths):
     units = truth["units"]
     dialog = [u for u in units if u["kind"] == "dialog" and len(u["text"].split()) > 3]
     short = [u for u in units if u["kind"] == "dialog" and len(u["text"].split()) == 1]
-    direction = [u for u in units if u["kind"] == "stage_direction"]
+    direction = [u for u in units if u["kind"] == "stage_direction" and not S.is_timing_beat(u["text"])]
     wrong_speaker, dropped, misread, short_wrong = dialog[5], dialog[9], direction[3], short[2]
 
     script = perfect_parse(truth)
     out = []
-    for el, u in zip(script.scenes[0].elements, [u for u in units if u["kind"] in
-                                                   ("dialog", "stage_direction", "parenthetical")]):
+    voiced = [u for u in units if u["kind"] == "dialog" or
+              (u["kind"] in ("stage_direction", "parenthetical") and not S.is_timing_beat(u["text"]))]
+    for el, u in zip(script.scenes[0].elements, voiced):
         el = copy.copy(el)
         if u is wrong_speaker or u is short_wrong:
             el.speaker = "SOMEONE ELSE"
@@ -104,7 +118,8 @@ def test_each_planted_mistake_is_reported_on_exactly_that_unit(truths):
 def test_a_name_read_aloud_is_reported(truths):
     # A parser that voices a name does so in place, just before the speech.
     truth = truths["screenplay_letter"]
-    voiced = [u for u in truth["units"] if u["kind"] in ("dialog", "stage_direction", "parenthetical")]
+    voiced = [u for u in truth["units"] if u["kind"] == "dialog" or
+              (u["kind"] in ("stage_direction", "parenthetical") and not S.is_timing_beat(u["text"]))]
     script = perfect_parse(truth)
     cue = [u for u in truth["units"] if u["kind"] == "character_cue"][20]
     nxt = next(i for i, u in enumerate(voiced) if u["id"] > cue["id"])

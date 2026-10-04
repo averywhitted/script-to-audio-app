@@ -19,6 +19,7 @@ overall accuracy is pinned within about +-5 points, 95% of the time.
 
 Usage:
   python scripts/label_sample.py            # open http://localhost:8765
+  open http://localhost:8765/#154           # jump straight to one sampled line
   python scripts/label_sample.py --per-pdf 40 --new   # fresh, larger sample (only before labelling)
 """
 from __future__ import annotations
@@ -294,7 +295,8 @@ function togglePrev() {
   $('prevpage').innerHTML = showingPrev ? '<kbd>p</kbd>Back to this line’s page' : '<kbd>p</kbd>Show the previous page (to find who’s speaking)';
   if (showingPrev) window.scrollTo({top: document.body.scrollHeight});
 }
-load();
+// http://localhost:8765/#154 opens line 154 directly (to fix one label).
+load(/^#\d+$/.test(location.hash) ? Number(location.hash.slice(1)) : undefined);
 </script></body></html>"""
 
 

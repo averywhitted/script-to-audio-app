@@ -40,7 +40,7 @@ def expected(item: dict) -> str:
     if item["label"] == "dialog":
         return UNKNOWN if item["speaker"] == UNKNOWN else S.norm_speaker(item["speaker"])
     if item["label"] in ("stage_direction", "parenthetical"):
-        return S.NARRATOR
+        return S.SILENT if S.is_timing_beat(L.line_text(item) or "") else S.NARRATOR
     return S.SILENT
 
 
