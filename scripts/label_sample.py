@@ -31,12 +31,18 @@ import re
 import sys
 from collections import Counter
 from functools import lru_cache
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import fitz  # PyMuPDF
 
 ROOT = Path(__file__).resolve().parent.parent
+# PyMuPDF documents must not be used from two threads at once, and label
+# writes must not interleave. The server is threaded (a single-threaded one
+# stalls whenever the browser holds an idle connection open), so every
+# request takes this lock before touching a PDF or the label file.
+LOCK = threading.Lock()
 PDF_DIR = ROOT / "Test PDFs"
 LABELS = PDF_DIR / "reference" / "real_sample.json"
 SEED = 2026
@@ -186,14 +192,18 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>Label lines</t
    <button id="unknown"><kbd>?</kbd>Can't see who says it, even on the previous page</button></div>
   <div class="card" id="kinds"></div>
   <div class="card"><button id="prevpage"><kbd>p</kbd>Show the previous page (to find who's speaking)</button>
-   <button id="back"><kbd>&larr;</kbd>Back to previous line</button>
+   <button id="back"><kbd>&larr;</kbd>Back to the line before this one</button>
    <p class="muted">Labels save after every choice. You can close this tab and resume later.</p></div>
  </aside></main>
 <script>
 const KINDS = __KINDS__;
-let state = null, idx = 0, pendingDialog = false, showingPrev = false;
+let state = null, idx = 0, pendingDialog = false, showingPrev = false, busy = false;
+// Lines visited, oldest first. Back retraces these; the sample order itself is
+// shuffled across scripts, so "the item before this one" would be unrelated.
+const history = [];
 const $ = id => document.getElementById(id);
-async function load(to) {
+async function load(to, goingBack) {
+  if (state && !state.done && !goingBack && (history.length === 0 || history[history.length - 1] !== state.index)) history.push(state.index);
   const r = await fetch('/item' + (to === undefined ? '' : '?i=' + to)); state = await r.json();
   if (state.done) { document.querySelector('main').innerHTML =
       '<div class="card"><h2>All ' + state.total + ' lines labelled.</h2><p>Run <code>python scripts/real_score.py</code> to score the parser.</p></div>'; return; }
@@ -214,8 +224,17 @@ async function load(to) {
   $('names').innerHTML = state.names.map((n, i) => '<button data-n="' + n + '"><kbd>' + String.fromCharCode(97 + i) + '</kbd>' + n + '</button>').join('');
 }
 async function send(label, speaker) {
-  await fetch('/label', {method: 'POST', body: JSON.stringify({index: idx, label, speaker: speaker || null})});
-  load();
+  if (busy) return;                       // ignore repeat clicks while a save is in flight
+  busy = true; document.body.style.cursor = 'progress';
+  try {
+    const r = await fetch('/label', {method: 'POST', body: JSON.stringify({index: idx, label, speaker: speaker || null})});
+    if (!r.ok) { alert('Could not save that label (' + r.status + '). Please try again.'); return; }
+    await load();
+  } finally { busy = false; document.body.style.cursor = ''; }
+}
+function back() {
+  if (busy || !history.length) return;
+  load(history.pop(), true);
 }
 function choose(key) {
   const k = KINDS.find(k => k[0] === key); if (!k) return;
@@ -223,21 +242,23 @@ function choose(key) {
     pendingDialog = true; $('speakers').hidden = false; $('other').value = '';
     const bare = s => s.replace(/\\(.*?\\)/g, '').trim().replace(/[:.]+$/, '').toUpperCase();
     $('namewarn').hidden = !state.names.some(n => bare(n) === bare(state.text));
+    $('speakers').scrollIntoView({block: 'nearest'});
     return;
   }
   send(k[1]);
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
+  b.blur();   // so a later Space/Enter doesn't press this button again
   if (b.dataset.k) choose(b.dataset.k);
   if (b.dataset.n) send('dialog', b.dataset.n);
-  if (b.id === 'back') load(Math.max(0, idx - 1));
+  if (b.id === 'back') back();
   if (b.id === 'unknown') send('dialog', '?');
   if (b.id === 'prevpage') togglePrev();
 });
 document.addEventListener('keydown', e => {
   if (e.target === $('other')) { if (e.key === 'Enter' && $('other').value.trim()) send('dialog', $('other').value.trim().toUpperCase()); if (e.key === 'Escape') $('other').blur(); return; }
-  if (e.key === 'ArrowLeft') return load(Math.max(0, idx - 1));
+  if (e.key === 'ArrowLeft') return back();
   if (e.key === 'p') return togglePrev();
   if (pendingDialog && e.key === '?') return send('dialog', '?');
   if (pendingDialog && /^[a-o]$/.test(e.key)) { const n = state.names[e.key.charCodeAt(0) - 97]; if (n) send('dialog', n); return; }
@@ -269,6 +290,14 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        with LOCK:
+            self._get()
+
+    def do_POST(self):
+        with LOCK:
+            self._post()
+
+    def _get(self):
         from urllib.parse import parse_qs, urlparse
         url = urlparse(self.path)
         q = {k: v[0] for k, v in parse_qs(url.query).items()}
@@ -303,7 +332,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(json.dumps(body).encode(), "application/json")
         return self._send(b"not found", "text/plain", 404)
 
-    def do_POST(self):
+    def _post(self):
         if self.path != "/label":
             return self._send(b"not found", "text/plain", 404)
         msg = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
@@ -347,8 +376,9 @@ def main() -> int:
     for pdf in sorted({it["pdf"] for it in data["items"]}):
         speaker_names(pdf)
     print(f"Open http://localhost:{args.port}  (Ctrl-C to stop; labels are already saved)", flush=True)
-    # One request at a time: PyMuPDF documents must not be used from two threads.
-    HTTPServer(("127.0.0.1", args.port), Handler).serve_forever()
+    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    server.daemon_threads = True
+    server.serve_forever()
     return 0
 
 
