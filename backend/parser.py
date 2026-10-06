@@ -988,6 +988,8 @@ class _DocStats:
     text_frequency: Dict[str, int]    # {normalised_text: occurrence_count}
     max_x_count: int                  # max value in x_bin_count (for normalisation)
     total_blocks: int
+    body_top: float = 60.0            # where this script's text body starts/ends on the
+    body_bottom: float = 732.0        # page (learned: _body_region); outside = page edge
 
 
 def _compute_doc_stats(blocks: List["TextBlock"]) -> _DocStats:
@@ -1004,13 +1006,40 @@ def _compute_doc_stats(blocks: List["TextBlock"]) -> _DocStats:
     x_caps_avg = {xb: x_caps_sum[xb] / x_count[xb] for xb in x_count}
     max_x = max(x_count.values()) if x_count else 1
 
+    top, bottom = _body_region(blocks)
     return _DocStats(
         x_bin_count=dict(x_count),
         x_bin_caps_avg=x_caps_avg,
         text_frequency=dict(text_freq),
         max_x_count=max_x,
         total_blocks=len(blocks),
+        body_top=top,
+        body_bottom=bottom,
     )
+
+
+_BODY_MARGIN = 6.0    # pt: clearance before text counts as "past the body"
+
+
+def _body_region(blocks: List["TextBlock"]) -> Tuple[float, float]:
+    """Where this script's body text sits on the page, learned from its own
+    dialogue: the text right after character names is never a header or page
+    number, and across a whole script it reaches the top and bottom of the body
+    on every page. Falls back to US Letter margins when there's too little."""
+    ys0, ys1 = [], []
+    for i, b in enumerate(blocks[:-1]):
+        if b.line_count == 1 and _is_speaker_cue_text(b.text):
+            nxt = blocks[i + 1]
+            if nxt.page == b.page and not _is_speaker_cue_text(nxt.text):
+                ys0.append(b.y0)            # the name itself is body text too
+                ys1.append(nxt.y1)
+    if len(ys1) < 20:
+        return 60.0, 732.0
+    ys0.sort()
+    ys1.sort()
+    top = ys0[int(0.01 * len(ys0))]
+    bottom = ys1[min(len(ys1) - 1, int(0.99 * len(ys1)))]
+    return top - _BODY_MARGIN, bottom + _BODY_MARGIN
 
 
 # ---------------------------------------------------------------------------
@@ -1061,7 +1090,7 @@ def _sig_at_speaker_x(b, p, d):   return 1.0 if abs(b.x0 - p.speaker_x) <= _X_TO
 def _sig_at_dialog_x(b, p, d):    return 1.0 if abs(b.x0 - p.dialog_x) <= _X_TOLERANCE else 0.0
 def _sig_at_stage_dir_x(b, p, d):
     return 0.0 if p.stage_dir_x is None else (1.0 if abs(b.x0 - p.stage_dir_x) <= _X_TOLERANCE else 0.0)
-def _sig_near_page_edge_y(b, p, d): return 1.0 if (b.y0 < 60 or b.y1 > 732) else 0.0
+def _sig_near_page_edge_y(b, p, d): return 1.0 if (b.y0 < d.body_top or b.y1 > d.body_bottom) else 0.0
 
 def _sig_speaker_zone(b, p, d):
     # High when block is in a zone that is both high-frequency AND predominantly
@@ -1439,7 +1468,21 @@ def _classify_blocks(
             result.append(ClassifiedBlock(block=block, role="stage_direction"))
 
     _apply_learned_style(result, model)
+    _silence_bare_names(result, model)
     return result
+
+
+def _silence_bare_names(result: List["ClassifiedBlock"], model: DocumentModel) -> None:
+    """A line that is nothing but one of this script's character names is a
+    name label, never narration. Off-column names (the second column of
+    side-by-side or overlapping speech) are kept from taking over the speaker,
+    which used to leave them as 'directions' and have the narrator read
+    "CHARLIE" aloud."""
+    for cb in result:
+        if cb.role == "stage_direction":
+            name = _normalize_speaker(cb.block.text.strip()).rstrip(".:,").strip()
+            if name and name in model.cast:
+                cb.role, cb.speaker = "noise", None
 
 
 # ---------------------------------------------------------------------------
