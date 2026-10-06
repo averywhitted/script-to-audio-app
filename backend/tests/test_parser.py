@@ -674,3 +674,36 @@ def test_name_line_labels_are_learned_from_how_often_the_script_repeats_them():
                                                "Grover again", "Diana again", "Peter again", "Reg again"]] + \
              [cue("DIANA (laughing)") for _ in range(2)]
     assert p._learn_cue_labels(blocks) == {"talkback"}
+
+
+# ---------------------------------------------------------------------------
+# Page geometry is learned per script, not assumed to be US Letter
+# ---------------------------------------------------------------------------
+
+def _at(text, y0, y1, page=0, x=72.0):
+    span = p.TextSpan(text=text, bold=False, italic=False, font="Times", size=12.0)
+    return p._make_text_block([(x, y0, x + 200, y1, text, [span])], page)
+
+
+def test_body_region_is_learned_from_where_the_scripts_dialogue_sits():
+    # A tall page (Letter scaled up): speeches run from y=110 down to y=1180.
+    blocks = []
+    for i in range(30):
+        y = 110 + i * 36
+        blocks += [_at("ADA", y, y + 12, page=i % 5), _at(f"Line {i}.", y + 14, y + 26, page=i % 5)]
+    top, bottom = p._body_region(blocks)
+    assert 90 < top < 110 and 1150 < bottom < 1250     # not the Letter-sized 60..732
+
+
+def test_body_region_falls_back_to_letter_margins_with_too_little_dialogue():
+    assert p._body_region([_at("ADA", 100, 112), _at("Hi.", 114, 126)]) == (60.0, 732.0)
+
+
+def test_a_line_that_is_only_a_characters_name_is_never_narrated():
+    model = p.DocumentModel(profile=None, cast_lexicon={}, cast={"CHARLIE", "HOLLY"}, cue_columns=[],
+                            dialog_columns=[], furniture=set())
+    result = [p.ClassifiedBlock(block=_styled("CHARLIE"), role="stage_direction"),
+              p.ClassifiedBlock(block=_styled("HOLLY:"), role="stage_direction"),
+              p.ClassifiedBlock(block=_styled("Charlie checks the cable."), role="stage_direction")]
+    p._silence_bare_names(result, model)
+    assert [c.role for c in result] == ["noise", "noise", "stage_direction"]

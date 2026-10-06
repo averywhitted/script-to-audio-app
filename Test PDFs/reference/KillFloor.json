@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "Kill Floor (LCT Reading Draft).pdf",
-    "generated": "2026-10-04",
+    "generated": "2026-10-06",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "KILL FLOOR",
@@ -1054,11 +1054,6 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Sghy"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S"
         },
         {
           "kind": "dialog",
@@ -4699,11 +4694,6 @@
           "sig": "Idrh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "R"
-        },
-        {
           "kind": "dialog",
           "speaker": "ANDY",
           "sig": "Ltg“"
@@ -5118,11 +5108,6 @@
           "kind": "dialog",
           "speaker": "ANDY",
           "sig": "H"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "dialog",
@@ -6227,11 +6212,6 @@
           "sig": "lpbatcaBwohe"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
-        },
-        {
           "kind": "dialog",
           "speaker": "ANDY",
           "sig": "SSS"
@@ -6465,11 +6445,6 @@
           "kind": "dialog",
           "speaker": "B",
           "sig": "IsIlB"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "dialog",
@@ -6888,11 +6863,6 @@
           "sig": "Tdtitd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A"
-        },
-        {
           "kind": "dialog",
           "speaker": "B",
           "sig": "Tn"
@@ -6911,11 +6881,6 @@
           "kind": "dialog",
           "speaker": "B",
           "sig": "Irstded"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "A"
         },
         {
           "kind": "dialog",

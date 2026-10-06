@@ -24,6 +24,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Tptpotsoay—"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SbDAmalbWB"
         },
         {
@@ -60,6 +65,11 @@
           "kind": "dialog",
           "speaker": "D A V I D",
           "sig": "MotphahqoscTalooccosbrPpcathtasoAds(iacfwtnbodsoTntbewpTplitsbhaomTiePpcattpabawNiaT"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "1AWATS"
         },
         {
           "kind": "stage_direction",
@@ -117,6 +127,11 @@
           "sig": "CsDcbapntS"
         },
         {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Ont/BD"
+        },
+        {
           "kind": "parenthetical",
           "speaker": "DIANA",
           "sig": "(S"
@@ -139,6 +154,11 @@
         {
           "kind": "dialog",
           "speaker": "DIANA",
+          "sig": "WO/co"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SR"
         },
         {
@@ -417,8 +437,8 @@
           "sig": "NychagtbIwthagtt"
         },
         {
-          "kind": "dialog",
-          "speaker": "DIANA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Sma“fg"
         },
         {
@@ -489,16 +509,6 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "C"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "C"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "Cctc"
         },
         {
@@ -563,6 +573,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "C/"
+        },
+        {
+          "kind": "dialog",
           "speaker": "DIANA",
           "sig": "yjtmtgsits"
         },
@@ -584,7 +599,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "C"
+          "sig": "Hsio"
         }
       ]
     },
@@ -592,11 +607,6 @@
       "number": 2,
       "title": "Act 4 is set in a music studio in Los Angeles, CA (part 2)",
       "elements": [
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "Hsio"
-        },
         {
           "kind": "dialog",
           "speaker": "SIMON",
@@ -655,6 +665,11 @@
         {
           "kind": "dialog",
           "speaker": "GROVER",
+          "sig": "Y"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "HmabtSaD"
         },
         {
@@ -705,6 +720,11 @@
         {
           "kind": "dialog",
           "speaker": "GROVER",
+          "sig": "SV"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "CsG(RV"
         },
         {
@@ -716,6 +736,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "NnIj/"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Nnn"
         },
         {
           "kind": "stage_direction",
@@ -778,6 +803,11 @@
           "sig": "RSPacieot“/s"
         },
         {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "R"
+        },
+        {
           "kind": "parenthetical",
           "speaker": "DIANA",
           "sig": "(h"
@@ -811,6 +841,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "OrrOyIttg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "O"
         },
         {
           "kind": "dialog",
@@ -863,8 +898,18 @@
           "sig": "Tndcitp/ot"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Yo/"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "C("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
           "sig": "“/rDiyf"
         },
         {
@@ -946,6 +991,11 @@
           "kind": "parenthetical",
           "speaker": "GROVER",
           "sig": "(C"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Y"
         },
         {
           "kind": "dialog",
@@ -1091,7 +1141,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hghal"
-        },
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 3)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "HOLLY",
@@ -1274,6 +1330,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "A"
+        },
+        {
+          "kind": "dialog",
           "speaker": "DIANA",
           "sig": "AhbitcHktcmibahwbuc"
         },
@@ -1316,13 +1377,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HpshwtmDgiSHsaettsritkDlatcw"
-        }
-      ]
-    },
-    {
-      "number": 3,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 3)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "DIANA",
@@ -1346,7 +1401,22 @@
         {
           "kind": "dialog",
           "speaker": "DIANA",
+          "sig": "Ms"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
           "sig": "Ftfa"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "U"
         },
         {
           "kind": "dialog",
@@ -1417,6 +1487,16 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Basi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "UIw"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "W"
         },
         {
           "kind": "dialog",
@@ -1547,7 +1627,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TbusbaftwtDthhb"
-        },
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 4)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -1891,7 +1977,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "IwttGa"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "CIwttot"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Is—Ikci"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "et/"
         },
         {
           "kind": "dialog",
@@ -1927,13 +2028,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Sdab"
-        }
-      ]
-    },
-    {
-      "number": 4,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 4)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -1981,32 +2076,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "H"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "R"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "P"
         },
         {
           "kind": "stage_direction",
@@ -2139,6 +2209,16 @@
           "sig": "YtiRIpiotfyT/l"
         },
         {
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "Og"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "Yls"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TtpWhPspltgshvw“ddeWttftastfamai"
@@ -2219,6 +2299,11 @@
           "sig": "Wiwtttftsybi—yktowatwlbwriteah"
         },
         {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "Wo"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "ShsnPpathh"
@@ -2267,7 +2352,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Pafn"
-        },
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 5)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "REG",
@@ -2294,8 +2385,8 @@
           "sig": "Brb"
         },
         {
-          "kind": "dialog",
-          "speaker": "SIMON",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SePtoos"
         },
         {
@@ -2414,6 +2505,11 @@
           "sig": "("
         },
         {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "W"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "GldahpttwsHssthWGlbusiRIHF"
@@ -2524,6 +2620,11 @@
           "sig": "ImotInstdwmhIcjst"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "3"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "WaytattIjbt/si"
@@ -2565,8 +2666,18 @@
         },
         {
           "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "H"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Indmcitpb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "Ss"
         },
         {
           "kind": "stage_direction",
@@ -2702,13 +2813,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Gl"
-        }
-      ]
-    },
-    {
-      "number": 5,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 5)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -2758,6 +2863,21 @@
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "OwDykGJ"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "YIkh/"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "ABS"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Way"
         },
         {
           "kind": "dialog",
@@ -2816,6 +2936,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "Y"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "YaDC"
         },
@@ -2833,7 +2958,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Gtasob"
-        },
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 6)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -2843,6 +2974,11 @@
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "Ywab"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "NIo"
         },
         {
           "kind": "stage_direction",
@@ -2953,6 +3089,11 @@
           "kind": "parenthetical",
           "speaker": "GROVER",
           "sig": "(bhi"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "TSS"
         },
         {
           "kind": "dialog",
@@ -3200,21 +3341,15 @@
           "sig": "Aehac(odOLtaqby"
         },
         {
-          "kind": "dialog",
-          "speaker": "SIMON",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Afosa"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "CaGsalotcotse"
-        }
-      ]
-    },
-    {
-      "number": 6,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 6)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -3271,6 +3406,11 @@
           "sig": "soHnRs"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "4"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "R"
@@ -3291,8 +3431,8 @@
           "sig": "AsdDetsttod"
         },
         {
-          "kind": "dialog",
-          "speaker": "DIANA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Otcic"
         },
         {
@@ -3317,6 +3457,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "Nin"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "DyiitgmtPFgfDSotM/"
         },
@@ -3324,6 +3469,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Cyba/lGTalop"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "A"
         },
         {
           "kind": "stage_direction",
@@ -3379,7 +3529,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "RmitcrRWtb"
-        },
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 7)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -3547,8 +3703,18 @@
         },
         {
           "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Sisottwwwoi1itsiy/f"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "Y/t"
         },
         {
           "kind": "dialog",
@@ -3591,6 +3757,11 @@
           "sig": "CyanlamIn(StadbSiiamkailt"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Sstp"
+        },
+        {
           "kind": "parenthetical",
           "speaker": "DIANA",
           "sig": "("
@@ -3604,6 +3775,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "IwdOalsBwgil"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "4"
         },
         {
           "kind": "stage_direction",
@@ -3636,8 +3812,38 @@
           "sig": "AtIdktrAttabAigItijIWmuak"
         },
         {
-          "kind": "dialog",
-          "speaker": "PETER",
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ss"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ili"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "TaltP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Hmmvat"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "F"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Iall"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "AwlIteotd"
         },
         {
@@ -3646,8 +3852,8 @@
           "sig": "Srajitcr"
         },
         {
-          "kind": "dialog",
-          "speaker": "PETER",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Risatcsih"
         },
         {
@@ -3749,6 +3955,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Acitn"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "Y"
         },
         {
           "kind": "dialog",
@@ -3933,6 +4144,11 @@
         {
           "kind": "dialog",
           "speaker": "REG",
+          "sig": "HP"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REG",
           "sig": "RyktYStHPdwotHPIbgoalbtTbthtteathib"
         },
         {
@@ -3944,13 +4160,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Tctbb"
-        }
-      ]
-    },
-    {
-      "number": 7,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 7)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "REG",
@@ -4040,7 +4250,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hmimb"
-        },
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 8)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "REG",
@@ -4228,6 +4444,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "Yd"
+        },
+        {
+          "kind": "dialog",
           "speaker": "PETER",
           "sig": "Itit"
         },
@@ -4275,6 +4496,11 @@
           "kind": "dialog",
           "speaker": "REG",
           "sig": "LItinri"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "Nsi"
         },
         {
           "kind": "dialog",
@@ -4330,6 +4556,11 @@
           "kind": "parenthetical",
           "speaker": "REG",
           "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "Imm"
         },
         {
           "kind": "dialog",
@@ -4395,13 +4626,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Ahstehnaslihlf"
-        }
-      ]
-    },
-    {
-      "number": 8,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 8)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "PETER",
@@ -4481,7 +4706,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Tlapeo"
-        },
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 9)",
+      "elements": [
         {
           "kind": "parenthetical",
           "speaker": "REG",
@@ -4490,6 +4721,11 @@
         {
           "kind": "dialog",
           "speaker": "REG",
+          "sig": "SiS"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "M"
         },
         {
@@ -4534,6 +4770,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "Ch"
+        },
+        {
+          "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Nych"
         },
@@ -4541,6 +4782,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Coh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "NId"
         },
         {
           "kind": "dialog",
@@ -4648,8 +4894,8 @@
           "sig": "TitmIscmdIamlfaetppc(eihdFTTcbos"
         },
         {
-          "kind": "dialog",
-          "speaker": "HOLLY",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Stabotd"
         },
         {
@@ -4691,6 +4937,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Ttjo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "W"
         },
         {
           "kind": "dialog",
@@ -4744,8 +4995,23 @@
         },
         {
           "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Y—"
+        },
+        {
+          "kind": "dialog",
           "speaker": "DIANA",
           "sig": "WiiIe"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "E"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "R"
         },
         {
           "kind": "dialog",
@@ -4993,6 +5259,11 @@
           "sig": "TalsocawasAdIjwabop"
         },
         {
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "Ikyd"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "GaCwiwRRiwHcahebos"
@@ -5000,8 +5271,8 @@
       ]
     },
     {
-      "number": 9,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 9)",
+      "number": 10,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 10)",
       "elements": [
         {
           "kind": "dialog",
@@ -5062,6 +5333,11 @@
           "kind": "dialog",
           "speaker": "REG",
           "sig": "IPIFOT"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "R"
         },
         {
           "kind": "parenthetical",
@@ -5246,6 +5522,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Iwpm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "SgPalHdn"
         },
         {
@@ -5256,7 +5537,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "RIhaif“"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Wt"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WaadbpSalykwlm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ssf"
         },
         {
           "kind": "parenthetical",
@@ -5302,6 +5598,16 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "IhthiafmtIhtguttInrtmb(CymacottsIchalahIntguti"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "YD"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Tkmoyw"
         },
         {
           "kind": "stage_direction",
@@ -5374,6 +5680,11 @@
           "sig": "(lta"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "W"
+        },
+        {
           "kind": "parenthetical",
           "speaker": "HOLLY",
           "sig": "(sr"
@@ -5436,6 +5747,26 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Lwitw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Btnh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Wgtkod"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Wm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "YcieaCsttm"
         },
         {
@@ -5452,11 +5783,6 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hi"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "H(sr"
         },
         {
           "kind": "stage_direction",
@@ -5496,22 +5822,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P("
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "Iss"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "H("
+          "sig": "Y"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "Y"
+          "sig": "Iwsiwwdtht"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "on"
         },
         {
           "kind": "stage_direction",
@@ -5674,8 +6000,8 @@
           "sig": "MpiIpmbkohaIHNBCWTTIG(Dygwttab/"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HOLLY",
           "sig": "YTUAWOABOAWMABDP"
         },
         {
@@ -5752,6 +6078,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "AtpibatHitopitsrSislacgaRashcRnHgahahlaHtahcocsdtgohkaeitkstd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "2FOM"
         },
         {
           "kind": "stage_direction",
@@ -5896,12 +6227,32 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "AcydtwutitC"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Rdi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "HatdtP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ilt—bcygialmd"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SdalbHlotP"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Obh"
         },
         {
           "kind": "stage_direction",
@@ -5929,6 +6280,11 @@
           "sig": "Smth/o"
         },
         {
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "O/"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Ostsot/d"
@@ -5936,7 +6292,27 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Rr"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "TwIw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "siBBbBbBBbBb"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "BScgi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Yi"
         },
         {
           "kind": "dialog",
@@ -5996,7 +6372,37 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Ninr"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hpdhdfam"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ywtab"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Slhda"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ljr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "O"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "HntS"
         },
         {
           "kind": "stage_direction",
@@ -6041,12 +6447,12 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "S(hh"
+          "sig": "Shtkd"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "Shtkd"
+          "sig": "ShtkdaA"
         },
         {
           "kind": "stage_direction",
@@ -6057,6 +6463,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HftdkttsHptsalbjthi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Tfi"
         },
         {
           "kind": "dialog",
@@ -6104,29 +6515,19 @@
           "sig": "WiwuattyktdttG(Imyyltt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "YIhy"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TgatttpiotsdSp"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "InqscIdlt"
         },
         {
           "kind": "dialog",
@@ -6164,20 +6565,21 @@
           "sig": "AdiapowApOwIeYckctNwceaIccibG(Dfowfi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S"
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Og"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SpHs"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S"
-        },
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 11)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -6192,6 +6594,11 @@
           "kind": "parenthetical",
           "speaker": "SIMON",
           "sig": "(ab"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "OInfoIf"
         },
         {
           "kind": "dialog",
@@ -6211,11 +6618,6 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "S"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "IioIao"
         },
         {
@@ -6226,17 +6628,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "S"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "WmdkWtmdk"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "R"
         },
         {
           "kind": "stage_direction",
@@ -6246,17 +6638,7 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "P"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "Noti"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "S"
         },
         {
           "kind": "stage_direction",
@@ -6276,7 +6658,17 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Nw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "DstlttkiiScblaftdk"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "FAOYFEAEOOYFO"
         },
         {
           "kind": "stage_direction",
@@ -6322,13 +6714,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "ChhttbPrajottb"
-        }
-      ]
-    },
-    {
-      "number": 10,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 10)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -6342,12 +6728,22 @@
         {
           "kind": "dialog",
           "speaker": "GROVER",
+          "sig": "S"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "SsdlujG(Hydot"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SswbhdsfoateGYwlmhts"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Sdabots"
         },
         {
           "kind": "parenthetical",
@@ -6493,6 +6889,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "wtmRNtyIpfsjIdd"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ihmtbm/a"
         },
         {
           "kind": "stage_direction",
@@ -6665,6 +7066,11 @@
           "sig": "RfCchsw"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "h"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "W"
@@ -6763,6 +7169,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "YntpBBdylh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "H"
         },
         {
           "kind": "dialog",
@@ -6888,7 +7299,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Dtotam"
-        },
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 12)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "DIANA",
@@ -6925,16 +7342,15 @@
           "sig": "Igst"
         },
         {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Ikyd"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DcfawHdsfab"
-        }
-      ]
-    },
-    {
-      "number": 11,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 11)",
-      "elements": [
+        },
         {
           "kind": "parenthetical",
           "speaker": "HOLLY",
@@ -6959,6 +7375,11 @@
           "kind": "parenthetical",
           "speaker": "DIANA",
           "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "NIn"
         },
         {
           "kind": "parenthetical",
@@ -6989,6 +7410,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "WIvssIaIwrtbmwflAIgIbtWIfmyaPItIiyr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "R"
         },
         {
           "kind": "dialog",
@@ -7069,6 +7495,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Fmn"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Tsool"
         },
         {
           "kind": "stage_direction",
@@ -7163,11 +7594,6 @@
         {
           "kind": "stage_direction",
           "speaker": null,
-          "sig": "S(ahdk"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
           "sig": "Y"
         },
         {
@@ -7204,6 +7630,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "AtIwttwtasiwdTid2B"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ilib"
         },
         {
           "kind": "stage_direction",
@@ -7333,6 +7764,21 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Iitbl"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Fmn"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Tsool"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "FbsWedlt"
         },
         {
@@ -7376,6 +7822,11 @@
           "sig": "DjslachfScttSwotPchhih"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ig"
+        },
+        {
           "kind": "parenthetical",
           "speaker": "PETER",
           "sig": "(t"
@@ -7384,6 +7835,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "IgbtosmIcdiyngctvdyeigitwAyntdiygbamsopittnl(Btuty"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Srhe"
         },
         {
           "kind": "stage_direction",
@@ -7539,6 +7995,11 @@
           "kind": "parenthetical",
           "speaker": "HOLLY",
           "sig": "(PaD"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "G"
         },
         {
           "kind": "stage_direction",
@@ -7697,6 +8158,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "Nnn"
+        },
+        {
+          "kind": "dialog",
           "speaker": "PETER",
           "sig": "Ff—"
         },
@@ -7768,8 +8234,8 @@
       ]
     },
     {
-      "number": 12,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 12)",
+      "number": 13,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 13)",
       "elements": [
         {
           "kind": "dialog",
@@ -7850,6 +8316,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "BItIwgtowtmbiseaebydYcgiaotwetiflydijatatcglsahisowpoypaytyhacoaMSGailontwactwacbwam"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "W"
         },
         {
           "kind": "dialog",
@@ -7950,6 +8421,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Inr"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "BIt"
         },
         {
           "kind": "dialog",
@@ -8103,6 +8579,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "YId"
+        },
+        {
+          "kind": "dialog",
           "speaker": "DIANA",
           "sig": "OwwaIhtbLosWhatcuwcaa/"
         },
@@ -8215,7 +8696,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SeHpaits"
-        },
+        }
+      ]
+    },
+    {
+      "number": 14,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 14)",
+      "elements": [
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -8244,6 +8731,11 @@
         {
           "kind": "dialog",
           "speaker": "CHARLIE",
+          "sig": "Y"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hlsm"
         },
         {
@@ -8255,13 +8747,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TbildtfPs“"
-        }
-      ]
-    },
-    {
-      "number": 13,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 13)",
-      "elements": [
+        },
         {
           "kind": "parenthetical",
           "speaker": "SIMON",
@@ -8271,6 +8757,21 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Uh"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Itdv"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Stasoc"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Itb"
         },
         {
           "kind": "dialog",
@@ -8318,6 +8819,26 @@
           "sig": "(aln"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Idfs/"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "WiwJutbct"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Way"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Jui"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "IdnIIdtmJmyobP"
@@ -8356,6 +8877,21 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Ttisrbaydni"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ssou"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Idnabct"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Sbufhs"
         },
         {
           "kind": "stage_direction",
@@ -8410,6 +8946,16 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Wwtsr"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Wwww"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WcIfye"
         },
         {
@@ -8450,12 +8996,22 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Ihhaay"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IltsaGmtttmMsisatmp"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TrilatAtwifos"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "BIgmgaIomw"
         },
         {
           "kind": "dialog",
@@ -8486,6 +9042,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "IltbR"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "Ty"
         },
         {
           "kind": "stage_direction",
@@ -8541,6 +9102,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "GslRpiHasdagdDdotPsdasltTadallk"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "3WYWH"
         },
         {
           "kind": "stage_direction",
@@ -8755,6 +9321,16 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Dbtl"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "tvda"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "WdwhtcwEy"
         },
         {
@@ -8830,7 +9406,32 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "Ikyrawm/b"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ynttm"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Yb/P"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "NYnttmOAynttteOoi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ynttteooi"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "nmIntob—"
         },
         {
           "kind": "stage_direction",
@@ -8883,6 +9484,11 @@
           "sig": "Bwcci"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Wwoi"
+        },
+        {
           "kind": "parenthetical",
           "speaker": "DIANA",
           "sig": "(r"
@@ -8926,6 +9532,11 @@
           "kind": "parenthetical",
           "speaker": "PETER",
           "sig": "("
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ayo"
         },
         {
           "kind": "stage_direction",
@@ -8993,6 +9604,11 @@
           "sig": "Wsaybtwii(IgmiHrtAwgftv/"
         },
         {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "N/"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "AtIsytawhocawgstotaigbgo(Ichgawbtnwhij—tnhiwawntai"
@@ -9048,6 +9664,16 @@
           "sig": "DerSdabow"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Os"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Jgmas"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "CwttwvGsth"
@@ -9091,7 +9717,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "StohhtabatwrwitcrDemtdtsntPGpibwtfiTlHstt"
-        },
+        }
+      ]
+    },
+    {
+      "number": 15,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 15)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -9101,6 +9733,16 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Swrtth"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ddfam"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Y"
         },
         {
           "kind": "dialog",
@@ -9123,8 +9765,8 @@
           "sig": "OO"
         },
         {
-          "kind": "dialog",
-          "speaker": "DIANA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "DstetG"
         },
         {
@@ -9151,17 +9793,16 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Settk"
-        }
-      ]
-    },
-    {
-      "number": 14,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 14)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Twg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Y"
         },
         {
           "kind": "dialog",
@@ -9217,6 +9858,16 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Ihtdto"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Ys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "W"
         },
         {
           "kind": "dialog",
@@ -9310,6 +9961,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "JC"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Inttgbwntkttwnthas"
         },
@@ -9365,6 +10021,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "Os"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "IlWayHIsitfMgbtsHl“wuweGdmd"
         },
@@ -9397,6 +10058,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "WgfsocIcttaWbhaafyIhalIhag"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "Yd"
         },
         {
           "kind": "parenthetical",
@@ -9482,6 +10148,16 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Petsrghg"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Jrateotsv"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "ig"
         },
         {
           "kind": "dialog",
@@ -9610,6 +10286,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Ik"
+        },
+        {
+          "kind": "dialog",
           "speaker": "SIMON",
           "sig": "NydYckUyhbyckEIcatABIcnhmkIcIchthm"
         },
@@ -9627,7 +10308,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Cstt"
-        },
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 16)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "SIMON",
@@ -9687,13 +10374,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Rlbotc"
-        }
-      ]
-    },
-    {
-      "number": 15,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 15)",
-      "elements": [
+        },
         {
           "kind": "parenthetical",
           "speaker": "PETER",
@@ -9743,6 +10424,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "DYWYN/B"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "P/"
         },
         {
           "kind": "stage_direction",
@@ -9867,6 +10553,11 @@
         {
           "kind": "dialog",
           "speaker": "HOLLY",
+          "sig": "Omg"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hsl"
         },
         {
@@ -9895,8 +10586,8 @@
           "sig": "HlicastablftiotwtTgofab"
         },
         {
-          "kind": "dialog",
-          "speaker": "SIMON",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ais"
         },
         {
@@ -10065,9 +10756,19 @@
           "sig": "IsatodIwaaYwjdyj"
         },
         {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "IOmNs"
+        },
+        {
           "kind": "parenthetical",
           "speaker": "PETER",
           "sig": "(C"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "SM"
         },
         {
           "kind": "dialog",
@@ -10192,13 +10893,29 @@
         {
           "kind": "dialog",
           "speaker": "REG",
+          "sig": "Ili"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "Oy"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REG",
           "sig": "IlLNThcacPtImsPaIamit"
         },
         {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "GffihCltGws"
-        },
+        }
+      ]
+    },
+    {
+      "number": 17,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 17)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "REG",
@@ -10220,14 +10937,19 @@
           "sig": "IwtbapwIlawlmYcguoapbyceeguolNli(gNe(tiE"
         },
         {
-          "kind": "dialog",
-          "speaker": "REG",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "IgphT"
         },
         {
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "Iggptoi(ssGOwcputotYwcwm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "NIf"
         },
         {
           "kind": "stage_direction",
@@ -10295,20 +11017,24 @@
           "sig": "(c"
         },
         {
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "W"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hlahtboiql"
-        }
-      ]
-    },
-    {
-      "number": 16,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 16)",
-      "elements": [
+        },
         {
           "kind": "parenthetical",
           "speaker": "HOLLY",
           "sig": "(ihjphp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Ys"
         },
         {
           "kind": "dialog",
@@ -10422,6 +11148,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Uu"
+        },
+        {
+          "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "OmGIootmesiaocImt/mi"
         },
@@ -10492,6 +11223,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Tm"
+        },
+        {
+          "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "ttahysMBmtdatwhlathnatm"
         },
@@ -10552,6 +11288,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "N/"
+        },
+        {
+          "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Nco/"
         },
@@ -10559,6 +11300,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "NYdhac"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "W"
         },
         {
           "kind": "dialog",
@@ -10662,6 +11408,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "WwI/"
+        },
+        {
+          "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Byapwyk"
         },
@@ -10669,7 +11420,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Schu"
-        },
+        }
+      ]
+    },
+    {
+      "number": 18,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 18)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -10707,8 +11464,18 @@
         },
         {
           "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "AIntatstItatpCpaIdkastapBpAphcEphiwic"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Oy/"
         },
         {
           "kind": "dialog",
@@ -10747,6 +11514,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Uw"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "NyYP"
         },
@@ -10769,13 +11541,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Gsf"
-        }
-      ]
-    },
-    {
-      "number": 17,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 17)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -10818,6 +11584,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Oco"
+        },
+        {
+          "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Ays"
         },
@@ -10830,6 +11601,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Iby"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Bm"
         },
         {
           "kind": "parenthetical",
@@ -11008,8 +11784,18 @@
         },
         {
           "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Ts"
+        },
+        {
+          "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "IisMtwtssisbbykicfgBtgittcabtibttatstItvsw"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "4GYBR"
         },
         {
           "kind": "stage_direction",
@@ -11054,6 +11840,11 @@
         {
           "kind": "dialog",
           "speaker": "CHARLIE",
+          "sig": "BEoc1"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ghal"
         },
         {
@@ -11102,9 +11893,30 @@
           "sig": "Hs/sCIst"
         },
         {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "SUi"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "IcdttsCputpad"
+        }
+      ]
+    },
+    {
+      "number": 19,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 19)",
+      "elements": [
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Yk"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "UHwaWF"
         },
         {
           "kind": "dialog",
@@ -11125,6 +11937,11 @@
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "DnGItm"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "CHARLIE",
+          "sig": "Y"
         },
         {
           "kind": "dialog",
@@ -11202,6 +12019,16 @@
           "sig": "YItaitodaItWIrh"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Twyta"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "Y"
+        },
+        {
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "Idk"
@@ -11220,6 +12047,11 @@
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "YlmtditfThtmbwcsio"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Ti"
         },
         {
           "kind": "stage_direction",
@@ -11332,9 +12164,24 @@
           "sig": "(q"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "G"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Yct"
+        },
+        {
           "kind": "parenthetical",
           "speaker": "HOLLY",
           "sig": "("
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ik/"
         },
         {
           "kind": "stage_direction",
@@ -11397,6 +12244,21 @@
           "sig": "(H"
         },
         {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Swwys"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HOLLY",
+          "sig": "H"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Wwysb"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "WWw/tC(GqHu"
@@ -11407,8 +12269,8 @@
           "sig": "(hb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "GROVER",
           "sig": "IhHmf"
         },
         {
@@ -11464,6 +12326,11 @@
         {
           "kind": "stage_direction",
           "speaker": null,
+          "sig": "S"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Hdy(IaalCghttu"
         },
         {
@@ -11500,13 +12367,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DTFTDTTSWET/W"
-        }
-      ]
-    },
-    {
-      "number": 18,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 18)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -11516,6 +12377,21 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "YPB"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Ykw/"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "DIANA",
+          "sig": "ND/YKW"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "YIDYCAA"
         },
         {
           "kind": "stage_direction",
@@ -11563,9 +12439,19 @@
           "sig": "GOOMLIDWYI/ML"
         },
         {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "INIYL"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "IaprbyDyktMsic"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "Icsbny"
         },
         {
           "kind": "stage_direction",
@@ -11611,6 +12497,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "IsbyhoIltsyb"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
+          "sig": "YydtA"
         },
         {
           "kind": "dialog",
@@ -11799,6 +12690,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "REG",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
           "speaker": "PETER",
           "sig": "Bisalto"
         },
@@ -11849,6 +12745,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "O"
+        },
+        {
+          "kind": "dialog",
           "speaker": "REG",
           "sig": "MydnabpotasypatiYkwywP(RchwIbbftm"
         },
@@ -11871,7 +12772,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Ssah"
-        },
+        }
+      ]
+    },
+    {
+      "number": 20,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 20)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "SIMON",
@@ -11901,6 +12808,11 @@
           "kind": "parenthetical",
           "speaker": "PETER",
           "sig": "(id"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "PETER",
+          "sig": "‘/w"
         },
         {
           "kind": "dialog",
@@ -12121,13 +13033,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Se"
-        }
-      ]
-    },
-    {
-      "number": 19,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 19)",
-      "elements": [
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -12141,6 +13047,11 @@
         {
           "kind": "dialog",
           "speaker": "PETER",
+          "sig": "Dg"
+        },
+        {
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Ds"
         },
         {
@@ -12174,8 +13085,8 @@
           "sig": "YjtbTa"
         },
         {
-          "kind": "dialog",
-          "speaker": "DIANA",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "Pnhhtq"
         },
         {
@@ -12410,6 +13321,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "REG",
+          "sig": "Wn"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "IjYkdwtgcIwtkfomw"
         },
@@ -12480,6 +13396,11 @@
         },
         {
           "kind": "dialog",
+          "speaker": "REG",
+          "sig": "Wg"
+        },
+        {
+          "kind": "dialog",
           "speaker": "GROVER",
           "sig": "IgIdltwmtIwtkim"
         },
@@ -12492,7 +13413,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Glliaj"
-        },
+        }
+      ]
+    },
+    {
+      "number": 21,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 21)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "GROVER",
@@ -12542,6 +13469,11 @@
           "kind": "parenthetical",
           "speaker": "GROVER",
           "sig": "(o"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Oy"
         },
         {
           "kind": "dialog",
@@ -12597,6 +13529,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Idwtgp"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "REG",
+          "sig": "W"
         },
         {
           "kind": "parenthetical",
@@ -12667,13 +13604,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Eca"
-        }
-      ]
-    },
-    {
-      "number": 20,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 20)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "SIMON",
@@ -12768,6 +13699,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "BIkwawtstNSbIkwtig-"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "SIMON",
+          "sig": "B/"
         },
         {
           "kind": "dialog",
@@ -12978,7 +13914,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "GrotHUoW"
-        },
+        }
+      ]
+    },
+    {
+      "number": 22,
+      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 22)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "DIANA",
@@ -13100,6 +14042,11 @@
           "sig": "(a"
         },
         {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "W"
+        },
+        {
           "kind": "parenthetical",
           "speaker": "DIANA",
           "sig": "("
@@ -13173,13 +14120,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Ss"
-        }
-      ]
-    },
-    {
-      "number": 21,
-      "title": "Act 4 is set in a music studio in Los Angeles, CA (part 21)",
-      "elements": [
+        },
         {
           "kind": "parenthetical",
           "speaker": "GROVER",
@@ -13394,6 +14335,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "WnwtPpfyGecHgvs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "GROVER",
+          "sig": "Pd"
         },
         {
           "kind": "dialog",
