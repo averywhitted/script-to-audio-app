@@ -102,6 +102,11 @@
           "sig": "Gtt/O"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(s“M"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Ttutu"
@@ -112,6 +117,11 @@
           "sig": "CsDcbapntS"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(S"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Witnc"
@@ -120,6 +130,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Tcmb"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -155,6 +170,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Ti"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -282,6 +302,11 @@
           "sig": "IwtJ/TwI"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(dtm"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Wwt"
@@ -357,6 +382,11 @@
           "sig": "Yg"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(ah"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "WIwb/sWdyjcm"
@@ -370,6 +400,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Cstg"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -492,6 +527,11 @@
           "sig": "Og(cH"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(c"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "H"
@@ -525,6 +565,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "yjtmtgsits"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(n"
         },
         {
           "kind": "dialog",
@@ -586,6 +631,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Iwgydt"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -688,6 +738,11 @@
           "sig": "WI/j"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(tt"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "CIjaysrq"
@@ -723,6 +778,11 @@
           "sig": "RSPacieot“/s"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(h"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Wn/adc"
@@ -733,9 +793,19 @@
           "sig": "SIwtasJthfabs—d—Ath/"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "CHARLIE",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "“iyf"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(hlac"
         },
         {
           "kind": "dialog",
@@ -766,6 +836,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "“(catIciwmtsi(cWdytWcti"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(lhc"
         },
         {
           "kind": "dialog",
@@ -808,6 +883,11 @@
           "sig": "WdykoadccIcfaIlitpbatncoiiO"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "BOjatw/"
@@ -843,14 +923,29 @@
           "sig": "Htpytmtgidn/e"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "CHARLIE",
+          "sig": "(G"
+        },
+        {
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "Trharnd"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(ctc"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "W/p"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(C"
         },
         {
           "kind": "dialog",
@@ -891,6 +986,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Gtabdohctfam"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(TRIimN"
         },
         {
           "kind": "dialog",
@@ -946,6 +1046,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "IkWialcIndtbs/b"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(stH"
         },
         {
           "kind": "dialog",
@@ -1038,6 +1143,11 @@
           "sig": "Ibps/wy"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Awrgttat/rn"
@@ -1083,6 +1193,11 @@
           "sig": "Sgtba/s"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(sc"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "It/eshapitrIwgblit"
@@ -1093,9 +1208,19 @@
           "sig": "Or"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(as"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "sheshtolI/dtwshohpbegbotpWntgom"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(S"
         },
         {
           "kind": "dialog",
@@ -1126,6 +1251,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "DmhacIdwbitmoi"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(TR"
         },
         {
           "kind": "dialog",
@@ -1197,6 +1327,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "DbtihTismcMbutht"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(hmb"
         },
         {
           "kind": "dialog",
@@ -1274,6 +1409,11 @@
           "sig": "Tsw"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(w"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Basi"
@@ -1329,6 +1469,11 @@
           "sig": "LIly/pttpop–"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(hb"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "“ymr/"
@@ -1382,6 +1527,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Sgtth"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(hw"
         },
         {
           "kind": "dialog",
@@ -1449,6 +1599,11 @@
           "sig": "P"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(he"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Ogpdsw/ta"
@@ -1497,6 +1652,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "PaGphaah"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(P"
         },
         {
           "kind": "dialog",
@@ -1559,6 +1719,11 @@
           "sig": "Pwo"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(C"
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Cth"
@@ -1589,6 +1754,11 @@
           "sig": "RgvctDaHHroaIufe"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "WtsWeta(aptHHd"
@@ -1612,6 +1782,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Gwtb"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(Cq"
         },
         {
           "kind": "dialog",
@@ -1647,6 +1822,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "APmhwitsrSshotbrchu"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
         },
         {
           "kind": "stage_direction",
@@ -1765,6 +1945,11 @@
           "sig": "Hsjuadasgbaf"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(MP"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "“wnhmfwbtcs"
@@ -1837,6 +2022,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SpafRagitsrwRaDfGwutaooe"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(C"
         },
         {
           "kind": "dialog",
@@ -1919,6 +2109,11 @@
           "sig": "TahntcRhalbwahDidoPPpacahitC"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(C"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Cyptittp"
@@ -1959,6 +2154,11 @@
           "sig": "Pt"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(C"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Cwjhia"
@@ -1967,6 +2167,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "CrttapplsitmotsTlsm"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(fsi"
         },
         {
           "kind": "dialog",
@@ -2032,6 +2237,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Itirg"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -2109,6 +2319,11 @@
           "sig": "Cychfas"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HpItyydhgiyf"
@@ -2117,6 +2332,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Bcyla"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -2149,6 +2369,11 @@
           "sig": "HaDwbaffas"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(s"
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "NrIhatrfyIjwtst"
@@ -2174,14 +2399,29 @@
           "sig": "HinsaGwtioalbGnhsalatstsotVIGO–ih"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Gattvt"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "GldahpttwsHssthWGlbusiRIHF"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -2202,6 +2442,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HgucthfAdGlb"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(h"
         },
         {
           "kind": "dialog",
@@ -2294,6 +2539,11 @@
           "sig": "Wcydt(qdatSlkYadttwyh"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "O"
@@ -2334,6 +2584,11 @@
           "sig": "Satmoi/s"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(dtvab"
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "IdwtgItyIdwatTttryibygstrgkipgsfItym"
@@ -2357,6 +2612,11 @@
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "onAshapogohbSbablsfadsb"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(tvitsr"
         },
         {
           "kind": "dialog",
@@ -2525,6 +2785,11 @@
           "sig": "IcwTJ"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Nw"
@@ -2553,6 +2818,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "YaDC"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "CHARLIE",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -2593,6 +2863,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "WInefTE"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "CHARLIE",
+          "sig": "(hal"
         },
         {
           "kind": "dialog",
@@ -2675,6 +2950,11 @@
           "sig": "Swdyef"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(bhi"
+        },
+        {
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "W"
@@ -2705,6 +2985,11 @@
           "sig": "T"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Trg"
@@ -2713,6 +2998,11 @@
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "LtWoOT"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(ws"
         },
         {
           "kind": "dialog",
@@ -2748,6 +3038,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "IjnafitdIdkaYk"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "CHARLIE",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -2825,6 +3120,11 @@
           "sig": "Nnttfttt"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Ms"
@@ -2838,6 +3138,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DstatpoiacsoeeagsSaltP–wllhmbit"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(e"
         },
         {
           "kind": "dialog",
@@ -2858,6 +3163,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hlidalaels"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -2936,6 +3246,11 @@
           "sig": "Ayo"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "YaycOcIoIshfy"
@@ -2961,6 +3276,11 @@
           "sig": "R"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(u"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "O"
@@ -2974,6 +3294,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Otcic"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(C"
         },
         {
           "kind": "dialog",
@@ -3066,6 +3391,11 @@
           "sig": "Shfams"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(httR"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Thtctbkbtwiw"
@@ -3084,6 +3414,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "UnPDpdtnSstabawitcrDhfamtwtPPlufhmSllsjcifasBs"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -3141,6 +3476,11 @@
           "sig": "Wdysitmln"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Ystbsitr"
@@ -3156,9 +3496,19 @@
           "sig": "Ito"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(l"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "SamiIoIf"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(hc"
         },
         {
           "kind": "dialog",
@@ -3239,6 +3589,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "CyanlamIn(StadbSiiamkailt"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "stage_direction",
@@ -3356,6 +3711,11 @@
           "sig": "YmhaDHp(iajrp&fiOySarttEEH(weanRHsRsotpLhb"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(g"
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "OyYilf"
@@ -3379,6 +3739,11 @@
           "kind": "dialog",
           "speaker": "REG",
           "sig": "IjfalutwItIgacitn"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(hv"
         },
         {
           "kind": "dialog",
@@ -3406,6 +3771,11 @@
           "sig": "SltjhitRRtatptSTptjbaf"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "SIbtWiwctbtMay"
@@ -3414,6 +3784,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Ydtibtmp"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -3441,6 +3816,11 @@
           "sig": "Igcyuandwhafpmgacog"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "Ng"
@@ -3451,6 +3831,11 @@
           "sig": "ANgIynWywR"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(s"
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "Yo"
@@ -3459,6 +3844,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Rtatglit"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(P"
         },
         {
           "kind": "dialog",
@@ -3572,6 +3962,11 @@
           "sig": "Y"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(P"
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "Dytii"
@@ -3612,6 +4007,11 @@
           "sig": "TtdTtbSotdotbStmai"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(l"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "WS"
@@ -3620,6 +4020,11 @@
           "kind": "dialog",
           "speaker": "REG",
           "sig": "AtawgAWORSSiagtahhBFN"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -3702,6 +4107,11 @@
           "sig": "NsJab"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "IltujyfdImiInba"
@@ -3752,6 +4162,11 @@
           "sig": "OmwftMbc"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(a"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Yb"
@@ -3792,6 +4207,11 @@
           "sig": "Wwaywyb"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "BIwoIttmafr(lGtpissWygts"
@@ -3815,6 +4235,11 @@
           "kind": "dialog",
           "speaker": "REG",
           "sig": "TIntIhtbastbaOsTvdPnecdtTtalowaalos"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -3902,9 +4327,19 @@
           "sig": "SwdytydIym"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "YiymaydWypmitlbWaystyam"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -4033,6 +4468,11 @@
           "sig": "Ww(haftthal"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "Sisi"
@@ -4041,6 +4481,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Tlapeo"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(l"
         },
         {
           "kind": "dialog",
@@ -4058,9 +4503,19 @@
           "sig": "HwitrphcdcotfDsl"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(fe"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Wayd"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(e"
         },
         {
           "kind": "dialog",
@@ -4108,6 +4563,11 @@
           "sig": "Ych"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "A"
@@ -4123,9 +4583,19 @@
           "sig": "O"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(a"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "O"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(otD"
         },
         {
           "kind": "dialog",
@@ -4201,6 +4671,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "WIw/algWht"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -4358,6 +4833,11 @@
           "sig": "NiooIgIbac"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Ybac"
@@ -4428,6 +4908,11 @@
           "sig": "Ic(WdyhttdttYbacWihlshaddyhttbreIscbyAawgbdiawaway"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(Aa"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "“dYltlma“d"
@@ -4443,6 +4928,11 @@
           "sig": "“ww"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(ha"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "SwitcaY/s"
@@ -4456,6 +4946,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Wc"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(h"
         },
         {
           "kind": "dialog",
@@ -4569,14 +5064,29 @@
           "sig": "IPIFOT"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(u"
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "IDNTYNYWTOIWUANYLTHRYHAS"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "OIhas/Ootiyhmafo"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(h"
         },
         {
           "kind": "dialog",
@@ -4602,6 +5112,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "RCom"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
         },
         {
           "kind": "stage_direction",
@@ -4639,6 +5154,11 @@
           "sig": "SaHDeitsrgthmsafamotahas"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Dths"
@@ -4669,6 +5189,11 @@
           "sig": "IktbhvfCyjttbalbnhat"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Ybn"
@@ -4679,6 +5204,11 @@
           "sig": "RgttsrSlachhs"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "CHARLIE",
+          "sig": "(H"
+        },
+        {
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "Msgac"
@@ -4687,6 +5217,11 @@
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "SwitsrasahdCSliCInacgPIcnliacIctthpInstIvYhmoIcoItomsIaggIwdyf"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -4704,6 +5239,11 @@
           "sig": "DghalGhtEsatiPs"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(hg"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SgPalHdn"
@@ -4717,6 +5257,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "WaadbpSalykwlm"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(r"
         },
         {
           "kind": "stage_direction",
@@ -4799,6 +5344,11 @@
           "sig": "Ogtwigsw“SwpodHwdytswpod"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(db"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "W"
@@ -4809,9 +5359,24 @@
           "sig": "Yo"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DIlo"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(lta"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(sr"
         },
         {
           "kind": "stage_direction",
@@ -5094,6 +5659,11 @@
           "sig": "WdifrtyItifo"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "IdbcIdciybptBAIsYJG(OIsbmv"
@@ -5107,6 +5677,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "YTUAWOABOAWMABDP"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(rt"
         },
         {
           "kind": "dialog",
@@ -5124,9 +5699,19 @@
           "sig": "Ids/a"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(tlt"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Yboyv"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(S"
         },
         {
           "kind": "stage_direction",
@@ -5137,6 +5722,16 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Wyp"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(ufhs"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(w"
         },
         {
           "kind": "dialog",
@@ -5237,6 +5832,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "ooml"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(H"
         },
         {
           "kind": "stage_direction",
@@ -5382,6 +5982,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Sta"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(S"
         },
         {
           "kind": "stage_direction",
@@ -5579,6 +6184,16 @@
           "sig": "Ssufhdk"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(ad"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(ab"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "IigGO"
@@ -5602,6 +6217,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "IioIao"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(q"
         },
         {
           "kind": "stage_direction",
@@ -5649,6 +6269,11 @@
           "sig": "HltrAa1s"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(noip"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DstlttkiiScblaftdk"
@@ -5682,6 +6307,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HisoabaffafRftamasac"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(C"
         },
         {
           "kind": "dialog",
@@ -5720,9 +6350,19 @@
           "sig": "SswbhdsfoateGYwlmhts"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(P"
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "IsftmaIc"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -5793,6 +6433,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Rmatswhh"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(cR"
         },
         {
           "kind": "dialog",
@@ -5950,6 +6595,11 @@
           "sig": "Snikyis"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(th"
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "Y"
@@ -6080,6 +6730,11 @@
           "sig": "YwtldomlYbycld/Ij"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(d"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Oty/"
@@ -6088,6 +6743,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "IjhtmmyamsIdjywtnOyhaniyf"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(s"
         },
         {
           "kind": "dialog",
@@ -6113,6 +6773,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Icdt"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(r"
         },
         {
           "kind": "dialog",
@@ -6148,6 +6813,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Bfwm"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -6266,6 +6936,11 @@
       "title": "Act 4 is set in a music studio in Los Angeles, CA (part 11)",
       "elements": [
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Ikwyt"
@@ -6279,6 +6954,16 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Yya"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(c"
         },
         {
           "kind": "dialog",
@@ -6319,6 +7004,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "IpeictmpIuttiyilisjfowisbotBnltii"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -6436,6 +7126,11 @@
           "sig": "PdmmihhHifhgvfAab"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(tb"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "SRaCrSetsrsbi"
@@ -6541,6 +7236,11 @@
           "sig": "YbsIysaBtwcoa"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(hh"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "NN(spTaam"
@@ -6556,9 +7256,19 @@
           "sig": "O"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(D"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Ayspot(HItoHnagbok"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(a"
         },
         {
           "kind": "stage_direction",
@@ -6666,6 +7376,11 @@
           "sig": "DjslachfScttSwotPchhih"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(t"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "IgbtosmIcdiyngctvdyeigitwAyntdiygbamsopittnl(Btuty"
@@ -6711,6 +7426,11 @@
           "sig": "HaRestm"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(AF"
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "“cc/a"
@@ -6731,6 +7451,11 @@
           "sig": "Ni“/a"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(hp"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "“"
@@ -6741,9 +7466,19 @@
           "sig": "Pphgaecr"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(wh"
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "Oritwyt"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -6786,6 +7521,11 @@
           "sig": "DhbsattwtsawhtaaacRaHfkthhsa"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "Ywg"
@@ -6794,6 +7534,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Tgtc"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(PaD"
         },
         {
           "kind": "stage_direction",
@@ -7032,6 +7777,11 @@
           "sig": "Ob—gfthIlcIlwygltLayfYrmoMmdItyaMwIws"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "YM"
@@ -7085,6 +7835,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "mtIcntyotIwtaty/"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(sit"
         },
         {
           "kind": "dialog",
@@ -7177,6 +7932,11 @@
           "sig": "jysNPysbwsIwAymtmaIwtsatwwhTdgutgtgyynofs"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Yr"
@@ -7200,6 +7960,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "BteiItyramylfstpaaItcty"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(oi"
         },
         {
           "kind": "dialog",
@@ -7247,6 +8012,11 @@
           "sig": "Bydpyshay—ychkabtwbtttoykly"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(balh"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Tm"
@@ -7260,6 +8030,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "IdkItmddagj"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(thwtt"
         },
         {
           "kind": "dialog",
@@ -7282,6 +8057,11 @@
           "sig": "Wttcybtabttndf/"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "P"
@@ -7295,6 +8075,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "YiiiihfhpyaBaeoywegitwnbyflaftwystmeSb—"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(tsbmh"
         },
         {
           "kind": "dialog",
@@ -7370,6 +8155,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Wayt"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -7473,6 +8263,11 @@
       "title": "Act 4 is set in a music studio in Los Angeles, CA (part 13)",
       "elements": [
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(G"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Uh"
@@ -7516,6 +8311,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Igsasilafdgpiu"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(aln"
         },
         {
           "kind": "dialog",
@@ -7708,6 +8508,11 @@
           "sig": "Tfg"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(lk"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "YYGY"
@@ -7721,6 +8526,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Isfg"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(eifah"
         },
         {
           "kind": "dialog",
@@ -7773,6 +8583,11 @@
           "sig": "Weygib/bbP(YdaGst"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TteoEFimhSftgIdecWdysrmKicayWdwhtcwEygirifo–"
@@ -7816,6 +8631,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "WG(HNIwjstcygttmtmbIcgootvatIcciwtE"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(G"
         },
         {
           "kind": "dialog",
@@ -7873,6 +8693,11 @@
           "sig": "WtC"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(r"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "WIttsi(ImIsaamIsiIttsi"
@@ -7891,6 +8716,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Ihthtn(JgmasGr"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(P"
         },
         {
           "kind": "dialog",
@@ -8013,6 +8843,11 @@
           "sig": "N"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(f"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Wtwdyctycapf/m"
@@ -8028,6 +8863,11 @@
           "sig": "itmoowdyctIptfa"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(t"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Twwwhtc"
@@ -8041,6 +8881,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Bwcci"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(r"
         },
         {
           "kind": "stage_direction",
@@ -8078,9 +8923,19 @@
           "sig": "Whhtsssbstb"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "IhtlofmbycYancolofmaPAifrb(IgmiHorOS/j"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(au"
         },
         {
           "kind": "stage_direction",
@@ -8091,6 +8946,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Tiat"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(q"
         },
         {
           "kind": "stage_direction",
@@ -8163,6 +9023,11 @@
           "sig": "YchywPNwt"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "O"
@@ -8193,9 +9058,19 @@
           "sig": "TteoEFimhSftgIdecWdysrmKicayWdwhtcwEygirifoyIipminp"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(P"
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Wdyt"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(s"
         },
         {
           "kind": "dialog",
@@ -8352,6 +9227,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Idli"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -8519,9 +9399,19 @@
           "sig": "WgfsocIcttaWbhaafyIhalIhag"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "P"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "CHARLIE",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -8629,6 +9519,11 @@
           "sig": "PgatusrtgCrt"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(a"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "“d“d"
@@ -8664,6 +9559,16 @@
           "sig": "PstptgpOwHaShasadotsitcr"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Ylk"
@@ -8687,6 +9592,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "Idwtgii"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -8784,6 +9694,11 @@
       "number": 15,
       "title": "Act 4 is set in a music studio in Los Angeles, CA (part 15)",
       "elements": [
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
         {
           "kind": "stage_direction",
           "speaker": null,
@@ -8885,6 +9800,11 @@
           "sig": "YTHTETBTP(stcdJdiom"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(G"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "FaYfYFGTFOOHYF"
@@ -8955,6 +9875,11 @@
           "sig": "YtifLat"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(cota"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "OmgYb"
@@ -8978,6 +9903,11 @@
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "IdwwgdHabbgiPafn"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(tol"
         },
         {
           "kind": "dialog",
@@ -9055,6 +9985,11 @@
           "sig": "OwnndBiags"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(bdi"
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "GSwbfd"
@@ -9078,6 +10013,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "CsttTgdReitkaDaS"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(S"
         },
         {
           "kind": "dialog",
@@ -9123,6 +10063,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "IsatodIwaaYwjdyj"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(C"
         },
         {
           "kind": "dialog",
@@ -9200,9 +10145,19 @@
           "sig": "Hsmw/"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "CHARLIE",
+          "sig": "(ht"
+        },
+        {
           "kind": "dialog",
           "speaker": "CHARLIE",
           "sig": "JliV/"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(ht"
         },
         {
           "kind": "dialog",
@@ -9290,6 +10245,11 @@
           "sig": "HhbotwsdohcSlaboi"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(R"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "IhfyInbIwytbhr"
@@ -9330,6 +10290,11 @@
           "sig": "NnnIdwtht(matfwhhTmsIwthNsspooab"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(c"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hlahtboiql"
@@ -9340,6 +10305,11 @@
       "number": 16,
       "title": "Act 4 is set in a music studio in Los Angeles, CA (part 16)",
       "elements": [
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(ihjphp"
+        },
         {
           "kind": "dialog",
           "speaker": "REG",
@@ -9359,6 +10329,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "IdbciIabu"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -9384,6 +10359,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Gtsiitfm"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -9551,6 +10531,11 @@
           "sig": "P"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "N"
@@ -9579,6 +10564,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Bymsu"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(ah"
         },
         {
           "kind": "dialog",
@@ -9659,6 +10649,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "YtwIl"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(al"
         },
         {
           "kind": "dialog",
@@ -9837,6 +10832,11 @@
           "sig": "Iby"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(hite"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Hyebil"
@@ -9887,6 +10887,11 @@
           "sig": "TswJCaDmlispsfhsioass"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Sw"
@@ -9912,6 +10917,11 @@
           "sig": "IdtJC"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(S"
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Dyfh"
@@ -9925,6 +10935,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "YfhSsltnb"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(S"
         },
         {
           "kind": "dialog",
@@ -9960,6 +10975,11 @@
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "AttostIfrwwwts"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(ftj"
         },
         {
           "kind": "dialog",
@@ -10010,6 +11030,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Twfbldi"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "CHARLIE",
+          "sig": "(G"
         },
         {
           "kind": "dialog",
@@ -10207,6 +11232,11 @@
           "sig": "Tnda"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(h"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "WaIsttf"
@@ -10230,6 +11260,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Cyst/"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(otshd"
         },
         {
           "kind": "dialog",
@@ -10292,6 +11327,16 @@
           "sig": "Hdheanstsa"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(q"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DeFtmtsu/e"
@@ -10332,14 +11377,34 @@
           "sig": "YgmaFH"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(cr"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(h"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hs(shs"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(H"
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "WWw/tC(GqHu"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(hb"
         },
         {
           "kind": "stage_direction",
@@ -10372,6 +11437,11 @@
           "sig": "If"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Ijwsa"
@@ -10385,6 +11455,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TOwtcotm(Hgmhn"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(hb"
         },
         {
           "kind": "stage_direction",
@@ -10461,6 +11536,16 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Hphscatdhab"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(G"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(Paas"
         },
         {
           "kind": "stage_direction",
@@ -10543,6 +11628,11 @@
           "sig": "CsttNmYchapd"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "(p"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Tom"
@@ -10553,9 +11643,19 @@
           "sig": "JLjkg"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(tD"
+        },
+        {
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Alvap/"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "stage_direction",
@@ -10578,9 +11678,19 @@
           "sig": "Tl"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Wntdsatbp"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(hw"
         },
         {
           "kind": "dialog",
@@ -10608,6 +11718,11 @@
           "sig": "Tl"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "F"
@@ -10621,6 +11736,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "WdylaiT/i"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(Rp"
         },
         {
           "kind": "dialog",
@@ -10738,6 +11858,11 @@
           "sig": "Rl"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(S"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "SwdytIbr"
@@ -10763,9 +11888,19 @@
           "sig": "GewCSphagos"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(hp"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "YkIkRfmyMmyYdkRtwIkhIktttbytBydauwRicfIdIkhallt(shdPlahLPmIbcYmywtbtpotr"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(id"
         },
         {
           "kind": "dialog",
@@ -10888,6 +12023,11 @@
           "sig": "O/"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(h"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "YcsttmnatptyNw"
@@ -10898,14 +12038,29 @@
           "sig": "Yr"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "IakmftrWcyahhIw"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "SIMON",
+          "sig": "(y"
+        },
+        {
           "kind": "dialog",
           "speaker": "SIMON",
           "sig": "YsuP"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(h"
         },
         {
           "kind": "dialog",
@@ -10979,6 +12134,11 @@
           "sig": "DeSsPattl"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Ds"
@@ -11039,14 +12199,29 @@
           "sig": "Nyn"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(s"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Iwkafpta"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(t"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Imysm"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(v"
         },
         {
           "kind": "dialog",
@@ -11104,6 +12279,11 @@
           "sig": "DtohsHhisHeaarShhhHkhh"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(r"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "IdhafAInhtYwrYwramfIdhcrIncoiIaIacbIafole(dvsbihnmwId"
@@ -11117,6 +12297,11 @@
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "SymfSI"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(pdii"
         },
         {
           "kind": "dialog",
@@ -11214,6 +12399,11 @@
           "sig": "Ayh"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "UIdkiIgtf"
@@ -11239,9 +12429,19 @@
           "sig": "Wdywtgb"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(lu"
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "BIwtdagjmIm(Wayda"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(s"
         },
         {
           "kind": "dialog",
@@ -11269,6 +12469,11 @@
           "sig": "BsIjtisAtwowtNTWaynYselYjhagthGYgptbapwPOtaYsbatet"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(s"
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Intg"
@@ -11292,6 +12497,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Waytam"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -11329,6 +12539,11 @@
           "sig": "YsiyctsIac"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(o"
+        },
+        {
           "kind": "dialog",
           "speaker": "REG",
           "sig": "Oyccj"
@@ -11337,6 +12552,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "NoifsRTjthc"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -11354,9 +12574,19 @@
           "sig": "Tsaswtsl"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(hw"
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Wgthtm"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "REG",
+          "sig": "(l"
         },
         {
           "kind": "dialog",
@@ -11369,6 +12599,11 @@
           "sig": "Idwtgp"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "WBiadTw"
@@ -11377,6 +12612,11 @@
           "kind": "dialog",
           "speaker": "REG",
           "sig": "WIfdEsIsdilaflaIcsc"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -11397,6 +12637,11 @@
           "kind": "dialog",
           "speaker": "REG",
           "sig": "HwttgsTbsoaItbtliingWifoswmntoeftftiiaawawmrticAwmll"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(rq"
         },
         {
           "kind": "dialog",
@@ -11580,9 +12825,19 @@
           "sig": "I/j"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "PETER",
+          "sig": "(D"
+        },
+        {
           "kind": "dialog",
           "speaker": "PETER",
           "sig": "Itwywtd"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -11770,9 +13025,19 @@
           "sig": "IcyM/wc"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "HOLLY",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "HOLLY",
           "sig": "Isyiafd"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(abc"
         },
         {
           "kind": "dialog",
@@ -11788,6 +13053,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "DstfamSnGTleHstlitsretcr"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(h"
         },
         {
           "kind": "dialog",
@@ -11825,6 +13095,16 @@
           "sig": "HAyNTwysttm"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(a"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Gn"
@@ -11838,6 +13118,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "DgtsiiyhoDtiootp(laiAbInltb"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -11858,6 +13143,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "If"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
         },
         {
           "kind": "dialog",
@@ -11891,6 +13181,11 @@
       "title": "Act 4 is set in a music studio in Los Angeles, CA (part 21)",
       "elements": [
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "RIdmt/oyj"
@@ -11909,6 +13204,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "I/d"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(a"
         },
         {
           "kind": "dialog",
@@ -11934,6 +13234,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "ImmpOapl"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(khtr"
         },
         {
           "kind": "dialog",
@@ -11976,6 +13281,11 @@
           "sig": "IdaawHaO"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "R"
@@ -11984,6 +13294,11 @@
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Y"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "DIANA",
+          "sig": "(d"
         },
         {
           "kind": "dialog",
@@ -12004,6 +13319,11 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Dmlhlwakatia"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(fSS"
         },
         {
           "kind": "dialog",
@@ -12051,6 +13371,11 @@
           "sig": "D(Obwakt"
         },
         {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "("
+        },
+        {
           "kind": "dialog",
           "speaker": "GROVER",
           "sig": "Yd"
@@ -12094,6 +13419,11 @@
           "kind": "dialog",
           "speaker": "DIANA",
           "sig": "Ywwmtmc"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "GROVER",
+          "sig": "(vs"
         },
         {
           "kind": "dialog",

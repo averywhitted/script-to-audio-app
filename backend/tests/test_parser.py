@@ -653,3 +653,24 @@ def test_learner_never_gives_a_line_to_a_speaker_from_another_scene():
                p.ClassifiedBlock(block=_styled("Nobody has spoken in this scene yet."), role="stage_direction")]
     p._apply_learned_style(result, _model())
     assert result[-1].role == "stage_direction"
+
+
+def test_direction_on_the_name_line_is_an_aside_but_labels_stay_silent():
+    labels = {"talkback"}
+    assert p._name_line_aside("NADIA (laughing)", labels) == "(laughing)"
+    assert p._name_line_aside("SIMON (to Grover)", labels) == "(to Grover)"
+    assert p._name_line_aside("GROVER (talkback)", labels) is None      # this script's recurring label
+    assert p._name_line_aside("JOHN (V.O.)", labels) is None            # screenplay extension, in capitals
+    assert p._name_line_aside("JOHN (CONT'D)", labels) is None
+
+
+def test_name_line_labels_are_learned_from_how_often_the_script_repeats_them():
+    def cue(text):
+        b = _styled(text)
+        b.is_cue_with_inline_paren = True
+        return b
+    blocks = [cue("GROVER (talkback)") for _ in range(6)] + \
+             [cue(f"SIMON (to {n})") for n in ["Grover", "Diana", "Peter", "Reg", "Holly", "Charlie",
+                                               "Grover again", "Diana again", "Peter again", "Reg again"]] + \
+             [cue("DIANA (laughing)") for _ in range(2)]
+    assert p._learn_cue_labels(blocks) == {"talkback"}
