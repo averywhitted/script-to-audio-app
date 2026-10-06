@@ -42,6 +42,9 @@ struct ProjectDashboardView: View {
             }
         }
         .environmentObject(playerState)
+        .sheet(isPresented: $state.showFormatCalibrationSheet) {
+            FormatCalibrationSheet()
+        }
     }
 }
 
@@ -108,6 +111,18 @@ private struct DashboardTopBar: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 7).padding(.vertical, 3)
                 .background(.secondary.opacity(0.12), in: Capsule())
+
+            if state.script != nil {
+                Button {
+                    state.startFormatRecalibration()
+                } label: {
+                    Image(systemName: "textformat.size")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(state.formatProfile != nil ? "Recalibrate Format…" : "Calibrate Format…")
+            }
 
             Button {
                 NotificationCenter.default.post(name: .showBugReport, object: nil)

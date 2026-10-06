@@ -6,13 +6,21 @@ import UserNotifications
 struct TableReadApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var state = AppState()
-    @StateObject private var projectStore = ProjectStore()
+    @StateObject private var projectStore: ProjectStore
+    @StateObject private var templateLibrary: FormatTemplateLibrary
+
+    init() {
+        let store = ProjectStore()
+        _projectStore = StateObject(wrappedValue: store)
+        _templateLibrary = StateObject(wrappedValue: FormatTemplateLibrary(baseURLProvider: { store.projectsBaseURL }))
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(state)
                 .environmentObject(projectStore)
+                .environmentObject(templateLibrary)
                 .frame(minWidth: 1040, minHeight: 680)
                 .task {
                     state.projectStore = projectStore
@@ -20,6 +28,7 @@ struct TableReadApp: App {
                 }
         }
         .windowStyle(.titleBar)
+        .defaultSize(width: 1440, height: 900)
         .commands {
             CommandGroup(replacing: .undoRedo) {
                 Button("Undo") { state.undo() }
@@ -169,6 +178,7 @@ struct TableReadApp: App {
             SettingsView()
                 .environmentObject(state)
                 .environmentObject(projectStore)
+                .environmentObject(templateLibrary)
         }
     }
 }
