@@ -707,3 +707,12 @@ def test_a_line_that_is_only_a_characters_name_is_never_narrated():
               p.ClassifiedBlock(block=_styled("Charlie checks the cable."), role="stage_direction")]
     p._silence_bare_names(result, model)
     assert [c.role for c in result] == ["noise", "noise", "stage_direction"]
+
+
+def test_continued_name_line_is_split_off_and_its_marker_kept_silent():
+    assert p._continued_cue_name("MICHAELA (cont.)") == "MICHAELA"
+    assert p._continued_cue_name("TOILET (cont’d)") == "TOILET"
+    assert p._continued_cue_name("BEN (CONT'D)") == "BEN"
+    assert p._continued_cue_name("ADA (continued)") == "ADA"
+    assert p._continued_cue_name("ADA (laughing)") is None       # a direction, handled elsewhere
+    assert p._continued_cue_name("Ada said (cont.)") is None     # not a name line

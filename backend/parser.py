@@ -494,7 +494,18 @@ def _split_raw_block(raw_block: dict, page_num: int) -> List[TextBlock]:
     result: List[TextBlock] = []
     for run in sub_runs:
         first_text = run[0][4]
-        if len(run) > 1 and _is_speaker_cue_text(first_text):
+        continued = _continued_cue_name(first_text)
+        if len(run) > 1 and continued:
+            # "ADA (cont.)" + speech: the name line carries a continuation
+            # marker. Split it off like any name line and keep the marker
+            # silent, so the character doesn't read "ADA (cont.)" aloud.
+            cue = _make_text_block([run[0]], page_num)
+            cue.text = continued
+            result.append(cue)
+            tail = _make_text_block(run[1:], page_num)
+            tail.is_split_continuation = True
+            result.append(tail)
+        elif len(run) > 1 and _is_speaker_cue_text(first_text):
             # Split speaker cue from following content.
             result.append(_make_text_block([run[0]], page_num))
             tail = _make_text_block(run[1:], page_num)
@@ -514,6 +525,18 @@ def _split_raw_block(raw_block: dict, page_num: int) -> List[TextBlock]:
         else:
             result.append(_make_text_block(run, page_num))
     return result
+
+
+_CONTINUED_CUE_RE = re.compile(r"^(.+?)\s*\(\s*(?:cont(?:inued|['\u2019]?d|\.)?)\s*\)\s*:?\s*$", re.IGNORECASE)
+
+
+def _continued_cue_name(text: str) -> Optional[str]:
+    """'ADA (cont.)' / 'TOILET (cont\u2019d)' / 'BEN (CONTINUED)' -> the name, if
+    the part before the marker is itself a name line; else None."""
+    m = _CONTINUED_CUE_RE.match(text.strip())
+    if m and _is_speaker_cue_text(m.group(1)):
+        return m.group(1).strip()
+    return None
 
 
 def _is_speaker_cue_text(text: str) -> bool:
