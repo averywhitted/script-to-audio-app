@@ -429,6 +429,67 @@ class TestInjectUserElements:
 # 3. Render graph: _build_render_chunks voice routing
 # ===========================================================================
 
+class TestDuplicateLines:
+    """Two characters saying the same line must stay separate (#55)."""
+
+    @staticmethod
+    def _echo_script() -> p.Script:
+        return p.Script(title="Echo", scenes=[p.Scene(number=1, title="One", elements=[
+            p.Element(kind="dialog", speaker="LOLA", text="I'm looking at you."),
+            p.Element(kind="dialog", speaker="ELLIOT", text="I'm looking at you."),
+            p.Element(kind="stage_direction", text="They stare."),
+        ])])
+
+    def test_correction_to_second_copy_leaves_first_alone(self):
+        script = self._echo_script()
+        aw._apply_corrections(script, [{"sceneNumber": 1, "textPrefix": "I'm looking at you.",
+                                        "occurrence": 1, "correctedSpeaker": "MAX",
+                                        "markedAsNoise": False}])
+        speakers = [e.speaker for e in script.scenes[0].elements]
+        assert speakers == ["LOLA", "MAX", None]
+
+    def test_legacy_correction_without_occurrence_targets_first_copy(self):
+        script = self._echo_script()
+        aw._apply_corrections(script, [{"sceneNumber": 1, "textPrefix": "I'm looking at you.",
+                                        "markedAsNoise": True}])
+        els = script.scenes[0].elements
+        assert [e.speaker for e in els] == ["ELLIOT", None]
+
+    def test_manual_overlap_absorbs_only_the_named_copy(self):
+        script = p.Script(title="Echo", scenes=[p.Scene(number=1, title="One", elements=[
+            p.Element(kind="dialog", speaker="LOLA", text="Hello."),
+            p.Element(kind="dialog", speaker="ELLIOT", text="Again."),
+            p.Element(kind="dialog", speaker="MAX", text="Again."),
+        ])])
+        aw._apply_corrections(script, [{"sceneNumber": 1, "textPrefix": "Hello.",
+                                        "manualOverlapPartnerKey": aw._element_ref("Again.", 1),
+                                        "markedAsNoise": False}])
+        els = script.scenes[0].elements
+        assert [e.speaker for e in els] == ["LOLA", "ELLIOT"]
+        assert els[0].overlap_cue == ["LOLA", "MAX"]
+
+    def test_added_line_follows_the_named_copy(self):
+        script = self._echo_script()
+        aw._inject_user_elements(script, {1: [{"afterElementTextKey": aw._element_ref("I'm looking at you.", 1),
+                                               "speaker": "LOLA", "text": "Stop it.", "kind": "dialog"}]})
+        texts = [e.text for e in script.scenes[0].elements]
+        assert texts == ["I'm looking at you.", "I'm looking at you.", "Stop it.", "They stare."]
+
+    def test_refs_survive_injection_before_corrections(self):
+        # _generate injects user lines first, then applies corrections, using refs
+        # taken from the fresh parse. An added line repeating a parsed line's text
+        # must not shift which parsed line a correction lands on.
+        script = self._echo_script()
+        refs = aw._assign_element_refs(script)
+        aw._inject_user_elements(script, {1: [{"afterElementTextKey": "I'm looking at you.",
+                                               "speaker": "MAX", "text": "I'm looking at you.",
+                                               "kind": "dialog"}]}, refs=refs)
+        aw._apply_corrections(script, [{"sceneNumber": 1, "textPrefix": "I'm looking at you.",
+                                        "occurrence": 1, "correctedSpeaker": "BOB",
+                                        "markedAsNoise": False}], refs)
+        assert [e.speaker for e in script.scenes[0].elements] == ["LOLA", "MAX", "BOB", None]
+
+
 class TestRenderChunks:
 
     def test_dialog_uses_character_voice(self):

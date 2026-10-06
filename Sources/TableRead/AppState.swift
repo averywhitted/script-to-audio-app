@@ -1061,12 +1061,7 @@ final class AppState: ObservableObject {
 extension AppState {
     func saveCorrection(_ correction: ParserCorrection) {
         pushUndoIfNeeded()
-        let k = ParserCorrection.key(
-            pdfIdentifier: correction.pdfIdentifier,
-            sceneNumber: correction.sceneNumber,
-            text: correction.textKey
-        )
-        corrections[k] = correction
+        corrections[correction.storageKey] = correction
         Self.persistCorrections(corrections)
         markSceneDirtyIfRendered(correction.sceneNumber)
         persistProjectIfNeeded()
@@ -1076,9 +1071,10 @@ extension AppState {
         }
     }
 
-    func deleteCorrection(pdfPath: String, sceneNumber: Int, textKey: String) {
+    func deleteCorrection(pdfPath: String, sceneNumber: Int, textKey: String, occurrence: Int = 0) {
         pushUndoIfNeeded()
-        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: textKey)
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: textKey,
+                                     occurrence: occurrence)
         corrections.removeValue(forKey: k)
         Self.persistCorrections(corrections)
         markSceneDirtyIfRendered(sceneNumber)
@@ -1359,7 +1355,7 @@ extension AppState {
         undoPushSuppressCount += 1
         pushUndoSnapshot()
         defer { undoPushSuppressCount -= 1 }
-        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: element)
         let existing = corrections[k]
         saveCorrection(ParserCorrection(
             textKey: element.text, pdfIdentifier: pdfPath, sceneNumber: sceneNumber,
@@ -1367,11 +1363,11 @@ extension AppState {
             correctedKind: existing?.correctedKind, correctedSpeaker: existing?.correctedSpeaker,
             correctedText: existing?.correctedText,
             markedAsNoise: true, isSplit: true,
-            timestamp: Date(), contributed: contributeCorrections
+            timestamp: Date(), contributed: contributeCorrections, occurrence: element.occurrence
         ))
         let cue   = existing?.correctedOverlapSpeakers ?? element.overlapCue ?? []
         let texts = existing?.correctedOverlapTexts    ?? element.overlapTexts ?? Array(repeating: element.text, count: cue.count)
-        let afterKey = String(element.text.prefix(60))
+        let afterKey = element.ref
         for (i, speaker) in cue.enumerated() {
             guard keepVoiceIndex == nil || i == keepVoiceIndex else { continue }
             let text = texts.indices.contains(i) ? texts[i] : element.text
@@ -1390,7 +1386,7 @@ extension AppState {
     /// removedVoiceIndex encoding: 0 = left only, 1 = right only, 2 = both removed.
     func markOverlapVoiceAsRemoved(element: SceneElementSummary, voiceIndex: Int,
                                     sceneNumber: Int, pdfPath: String) {
-        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: element)
         let existing = corrections[k]
 
         // Compute new removedVoiceIndex — upgrade to 2 when the other side is already gone.
@@ -1411,7 +1407,7 @@ extension AppState {
             correctedOverlapSpeakers: existing?.correctedOverlapSpeakers,
             markedAsNoise: false, isSplit: false,
             removedVoiceIndex: newRemovedIdx,
-            timestamp: Date(), contributed: contributeCorrections
+            timestamp: Date(), contributed: contributeCorrections, occurrence: element.occurrence
         ))
     }
 
@@ -1419,7 +1415,7 @@ extension AppState {
     /// Pass `voiceIndex` 0 (left) or 1 (right) to restore only that side.
     func restoreOverlapVoice(element: SceneElementSummary, voiceIndex: Int,
                              sceneNumber: Int, pdfPath: String) {
-        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: element)
         guard var existing = corrections[k], existing.removedVoiceIndex != nil else { return }
         pushUndoSnapshot()
 
@@ -1453,7 +1449,7 @@ extension AppState {
     /// Restores a parser-detected overlap that was split via `splitParserOverlap`.
     /// Clears the noise/split correction and removes the user-added fragments created by the split.
     func relinkParserOverlap(element: SceneElementSummary, sceneNumber: Int, pdfPath: String) {
-        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: element)
         guard var existing = corrections[k], existing.isSplit else { return }
         pushUndoSnapshot()
         existing.markedAsNoise = false
@@ -1462,7 +1458,7 @@ extension AppState {
         corrections[k] = existing
         Self.persistCorrections(corrections)
 
-        let afterKey = String(element.text.prefix(60))
+        let afterKey = element.ref
         let addKey = addedKey(pdfPath: pdfPath, sceneNumber: sceneNumber)
         userAddedElements[addKey]?.removeAll { $0.isSplitFragment && $0.afterElementTextKey == afterKey }
         if userAddedElements[addKey]?.isEmpty == true { userAddedElements.removeValue(forKey: addKey) }
@@ -1511,7 +1507,7 @@ extension AppState {
         // Only suppress when primary is not noise.
         var secondaryKeys = Set<String>()
         for el in scene.elements {
-            let corrKey = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+            let corrKey = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, element: el)
             let fix = corrections[corrKey]
             if fix?.markedAsNoise == true { continue }
             if let partnerKey = fix?.manualOverlapPartnerKey {
@@ -1519,21 +1515,21 @@ extension AppState {
             }
         }
         let elementByKey = Dictionary(
-            scene.elements.map { (String($0.text.prefix(60)), $0) },
+            scene.elements.map { ($0.ref, $0) },
             uniquingKeysWith: { first, _ in first }
         )
 
         var result: [MergedSceneElement] = []
         for element in scene.elements.prefix(limit) {
-            let textKey = String(element.text.prefix(60))
+            let textKey = element.ref
             if secondaryKeys.contains(textKey) { continue }
 
-            let corrKey = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: element.text)
+            let corrKey = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, element: element)
             if let partnerKey = corrections[corrKey]?.manualOverlapPartnerKey,
                let secondary = elementByKey[partnerKey] {
                 result.append(.manualOverlap(element, secondary))
                 // Emit user-added elements after the overlap (from both keys, merged and sorted)
-                let bucket = (addedByKey[textKey] ?? []) + (addedByKey[String(secondary.text.prefix(60))] ?? [])
+                let bucket = (addedByKey[textKey] ?? []) + (addedByKey[secondary.ref] ?? [])
                 for addedEl in bucket.sorted(by: { $0.timestamp < $1.timestamp }) {
                     result.append(.added(addedEl))
                 }
@@ -1549,11 +1545,12 @@ extension AppState {
         return result
     }
 
-    func makeSimultaneous(primaryText: String, secondaryText: String, sceneNumber: Int, pdfPath: String) {
-        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: primaryText)
+    func makeSimultaneous(primary: SceneElementSummary, secondary: SceneElementSummary,
+                          sceneNumber: Int, pdfPath: String) {
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: primary)
         let existing = corrections[k]
         saveCorrection(ParserCorrection(
-            textKey: primaryText,
+            textKey: primary.text,
             pdfIdentifier: pdfPath,
             sceneNumber: sceneNumber,
             originalKind: existing?.originalKind ?? "dialog",
@@ -1565,12 +1562,13 @@ extension AppState {
             markedAsNoise: existing?.markedAsNoise ?? false,
             timestamp: Date(),
             contributed: contributeCorrections,
-            manualOverlapPartnerKey: String(secondaryText.prefix(60))
+            manualOverlapPartnerKey: secondary.ref,
+            occurrence: primary.occurrence
         ))
     }
 
-    func breakSimultaneous(primaryText: String, sceneNumber: Int, pdfPath: String) {
-        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: primaryText)
+    func breakSimultaneous(primary: SceneElementSummary, sceneNumber: Int, pdfPath: String) {
+        let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: primary)
         guard let existing = corrections[k] else { return }
         let stillHasOtherData = existing.correctedKind != nil || existing.correctedSpeaker != nil
             || existing.correctedText != nil || existing.correctedOverlapTexts != nil
@@ -1589,10 +1587,11 @@ extension AppState {
                 markedAsNoise: existing.markedAsNoise,
                 timestamp: Date(),
                 contributed: contributeCorrections,
-                manualOverlapPartnerKey: nil
+                manualOverlapPartnerKey: nil, occurrence: existing.occurrence
             ))
         } else {
-            deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: primaryText)
+            deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: primary.text,
+                             occurrence: primary.occurrence)
         }
     }
 

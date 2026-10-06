@@ -125,6 +125,42 @@ struct SceneSummary: Codable, Equatable, Identifiable, Sendable {
     var id: Int { number }
 }
 
+extension SceneSummary {
+    // Decoding numbers repeated lines as it goes, so every path that loads a
+    // parse (fresh from Python, or a saved project) gets `occurrence` filled in.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        number = try c.decode(Int.self, forKey: .number)
+        title = try c.decode(String.self, forKey: .title)
+        elementCount = try c.decode(Int.self, forKey: .elementCount)
+        elements = SceneSummary.numberingOccurrences(
+            try c.decode([SceneElementSummary].self, forKey: .elements))
+    }
+
+    /// Sets each element's `occurrence`: how many earlier elements in the scene
+    /// share its 60-character text prefix. Two characters saying the same line
+    /// get 0 and 1, so a correction to one never lands on the other (#55).
+    static func numberingOccurrences(_ elements: [SceneElementSummary]) -> [SceneElementSummary] {
+        var seen: [String: Int] = [:]
+        return elements.map { el in
+            var numbered = el
+            let prefix = String(el.text.prefix(60))
+            numbered.occurrence = seen[prefix, default: 0]
+            seen[prefix, default: 0] += 1
+            return numbered
+        }
+    }
+}
+
+/// Identifies a parsed line within its scene: its 60-character text prefix,
+/// plus a suffix for the second and later copies of the same text. The first
+/// copy's ref is the bare prefix, so keys saved before duplicates were told
+/// apart still find their line. Must match `_element_ref` in audio_worker.py.
+func elementRef(text: String, occurrence: Int) -> String {
+    let prefix = String(text.prefix(60))
+    return occurrence == 0 ? prefix : "\(prefix)\u{1F}\(occurrence)"
+}
+
 struct SceneElementSummary: Codable, Equatable, Identifiable, Sendable {
     var kind: String
     var speaker: String?
@@ -133,8 +169,18 @@ struct SceneElementSummary: Codable, Equatable, Identifiable, Sendable {
     var overlapTexts: [String]?  // per-voice texts (parallel with overlapCue); nil = all voices read .text
     var confidence: Double = 1.0 // parser confidence: 1.0 = known speaker, <0.7 = flagged for review
     var reason: String?          // why the parser flagged this line (shown on the ⚠); nil = confident
+    /// Earlier lines in the scene with the same text prefix (see
+    /// `SceneSummary.numberingOccurrences`). Derived on decode, never encoded.
+    var occurrence: Int = 0
 
-    var id: String { "\(kind)-\(speaker ?? "narrator")-\(text.prefix(24))" }
+    private enum CodingKeys: String, CodingKey {
+        case kind, speaker, text, overlapCue, overlapTexts, confidence, reason
+    }
+
+    /// Stable identity of this line within its scene; see `elementRef`.
+    var ref: String { elementRef(text: text, occurrence: occurrence) }
+
+    var id: String { "\(kind)-\(speaker ?? "narrator")-\(ref)" }
 
     /// True when this element carries a simultaneous-speech overlap annotation.
     var isOverlap: Bool { (overlapCue?.count ?? 0) >= 2 }
@@ -332,7 +378,8 @@ struct UserAddedElement: Codable, Equatable, Identifiable, Sendable {
     var id: UUID = UUID()
     var pdfPath: String
     var sceneNumber: Int
-    /// `element.text.prefix(60)` of the parsed element this line follows.
+    /// `ref` of the parsed element this line follows (its text prefix, plus an
+    /// occurrence suffix when the scene repeats that text).
     var afterElementTextKey: String
     var speaker: String       // empty string = narrator
     var text: String
@@ -381,7 +428,10 @@ struct ParserCorrection: Codable, Equatable, Sendable {
     var timestamp: Date
     var contributed: Bool             // user opted to share this correction
     var uploaded: Bool = false        // true once successfully POSTed to the corrections endpoint
-    var manualOverlapPartnerKey: String? = nil // text.prefix(60) of element to pair as simultaneous
+    var manualOverlapPartnerKey: String? = nil // `ref` of the element to pair as simultaneous
+    /// Which copy of a repeated line this corrects (`SceneElementSummary.occurrence`).
+    /// nil in corrections saved before #55, which meant the first copy.
+    var occurrence: Int? = nil
 }
 
 /// Privacy-safe version of ParserCorrection for upload — no file paths or personal identifiers.
@@ -417,8 +467,17 @@ extension ParserCorrection {
 
 extension ParserCorrection {
     /// Key used to look up a correction for a given element.
-    static func key(pdfIdentifier: String, sceneNumber: Int, text: String) -> String {
-        "\(pdfIdentifier)|\(sceneNumber)|\(String(text.prefix(60)))"
+    static func key(pdfIdentifier: String, sceneNumber: Int, text: String, occurrence: Int = 0) -> String {
+        "\(pdfIdentifier)|\(sceneNumber)|\(elementRef(text: text, occurrence: occurrence))"
+    }
+
+    static func key(pdfIdentifier: String, sceneNumber: Int, element: SceneElementSummary) -> String {
+        key(pdfIdentifier: pdfIdentifier, sceneNumber: sceneNumber, text: element.text, occurrence: element.occurrence)
+    }
+
+    /// This correction's own key, as stored in `AppState.corrections`.
+    var storageKey: String {
+        Self.key(pdfIdentifier: pdfIdentifier, sceneNumber: sceneNumber, text: textKey, occurrence: occurrence ?? 0)
     }
 }
 
@@ -433,7 +492,7 @@ extension ScriptSummary {
             // Only suppress secondary when primary is not itself noise.
             var secondaryKeys = Set<String>()
             for el in scene.elements {
-                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, element: el)
                 let fix = corrections[k]
                 if fix?.markedAsNoise == true { continue }
                 if let partnerKey = fix?.manualOverlapPartnerKey {
@@ -441,13 +500,13 @@ extension ScriptSummary {
                 }
             }
             let elementByKey = Dictionary(
-                scene.elements.map { (String($0.text.prefix(60)), $0) },
+                scene.elements.map { ($0.ref, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
 
             sc.elements = scene.elements.compactMap { el in
-                if secondaryKeys.contains(String(el.text.prefix(60))) { return nil }
-                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+                if secondaryKeys.contains(el.ref) { return nil }
+                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, element: el)
                 let fix = corrections[k]
                 if fix?.markedAsNoise == true { return nil }
                 var updated = el
@@ -496,7 +555,7 @@ extension ScriptSummary {
                 // Merge with manual overlap partner
                 if let partnerKey = fix?.manualOverlapPartnerKey,
                    let secondary = elementByKey[partnerKey] {
-                    let secK = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: secondary.text)
+                    let secK = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, element: secondary)
                     let secFix = corrections[secK]
                     let speakerA = fix?.correctedSpeaker.map { $0.isEmpty ? "Narrator" : $0 } ?? el.speaker ?? "Narrator"
                     let speakerB = secFix?.correctedSpeaker.map { $0.isEmpty ? "Narrator" : $0 } ?? secondary.speaker ?? "Narrator"

@@ -419,7 +419,7 @@ struct SceneReviewRow: View {
                     ForEach(merged) { item in
                         switch item {
                         case .parsed(let element):
-                            let eKey = String(element.text.prefix(60))
+                            let eKey = element.ref
                             let elementIsActive: Bool = {
                                 guard let info = activeInfo, info.sceneNumber == scene.number else { return false }
                                 return element.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -448,7 +448,7 @@ struct SceneReviewRow: View {
                             }
                             .id("el-\(scene.number)-\(eKey)")
                         case .manualOverlap(let primary, let secondary):
-                            let pKey = String(primary.text.prefix(60))
+                            let pKey = primary.ref
                             ManualOverlapRow(
                                 primary: primary,
                                 secondary: secondary,
@@ -459,7 +459,7 @@ struct SceneReviewRow: View {
                                 onToggleSelect: { toggleElement(pKey) }
                             ) {
                                 state.addElement(
-                                    afterTextKey: String(secondary.text.prefix(60)),
+                                    afterTextKey: secondary.ref,
                                     speaker: primary.kind == "dialog" ? (primary.speaker ?? "") : "",
                                     kind: "dialog",
                                     sceneNumber: scene.number,
@@ -1595,7 +1595,7 @@ struct SceneElementRow: View {
 
     var body: some View {
         let correctionKey = ParserCorrection.key(
-            pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+            pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: element)
         let correction = state.corrections[correctionKey]
         let isRemoved = correction?.markedAsNoise == true
         let effectiveKind = correction?.correctedKind ?? element.kind
@@ -1908,7 +1908,7 @@ private struct ElementRemoveRestoreButton: View {
 
     var body: some View {
         Button {
-            let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+            let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: element)
             let existing = state.corrections[k]
             if isRemoved {
                 if let e = existing, e.correctedKind != nil || e.correctedSpeaker != nil || e.correctedText != nil || e.manualOverlapPartnerKey != nil {
@@ -1918,10 +1918,11 @@ private struct ElementRemoveRestoreButton: View {
                         correctedKind: e.correctedKind, correctedSpeaker: e.correctedSpeaker,
                         correctedText: e.correctedText, markedAsNoise: false,
                         timestamp: Date(), contributed: state.contributeCorrections,
-                        manualOverlapPartnerKey: e.manualOverlapPartnerKey
+                        manualOverlapPartnerKey: e.manualOverlapPartnerKey, occurrence: e.occurrence
                     ))
                 } else {
-                    state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: element.text)
+                    state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: element.text,
+                                          occurrence: element.occurrence)
                 }
             } else {
                 state.saveCorrection(ParserCorrection(
@@ -1930,7 +1931,7 @@ private struct ElementRemoveRestoreButton: View {
                     correctedKind: existing?.correctedKind, correctedSpeaker: existing?.correctedSpeaker,
                     correctedText: existing?.correctedText, markedAsNoise: true,
                     timestamp: Date(), contributed: state.contributeCorrections,
-                    manualOverlapPartnerKey: nil  // removing clears any manual overlap link
+                    manualOverlapPartnerKey: nil  // removing clears any manual overlap link, occurrence: element.occurrence
                 ))
             }
         } label: {
@@ -1964,8 +1965,8 @@ private struct ManualOverlapRow: View {
     @State private var showingEditSecondary = false
 
     var body: some View {
-        let pk = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: primary.text)
-        let sk = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: secondary.text)
+        let pk = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: primary)
+        let sk = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: secondary)
         let pCorr = state.corrections[pk]
         let sCorr = state.corrections[sk]
         let pRemoved = pCorr?.markedAsNoise == true
@@ -2025,7 +2026,7 @@ private struct ManualOverlapRow: View {
                             }
                             .buttonStyle(.plain)
                             Button {
-                                state.breakSimultaneous(primaryText: primary.text, sceneNumber: sceneNumber, pdfPath: pdfPath)
+                                state.breakSimultaneous(primary: primary, sceneNumber: sceneNumber, pdfPath: pdfPath)
                             } label: {
                                 Label("Unlink", systemImage: "link.badge.minus")
                                     .font(.system(size: 10, weight: .medium))
@@ -2123,10 +2124,11 @@ private struct ManualOverlapRow: View {
                     originalKind: e.originalKind, originalSpeaker: e.originalSpeaker,
                     correctedKind: e.correctedKind, correctedSpeaker: e.correctedSpeaker,
                     correctedText: e.correctedText, markedAsNoise: false,
-                    timestamp: Date(), contributed: state.contributeCorrections
+                    timestamp: Date(), contributed: state.contributeCorrections, occurrence: e.occurrence
                 ))
             } else {
-                state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: el.text)
+                state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: el.text,
+                                      occurrence: el.occurrence)
             }
         } else {
             // Mark as noise
@@ -2135,11 +2137,11 @@ private struct ManualOverlapRow: View {
                 originalKind: el.kind, originalSpeaker: el.speaker,
                 correctedKind: correction?.correctedKind, correctedSpeaker: correction?.correctedSpeaker,
                 correctedText: correction?.correctedText, markedAsNoise: true,
-                timestamp: Date(), contributed: state.contributeCorrections
+                timestamp: Date(), contributed: state.contributeCorrections, occurrence: el.occurrence
             ))
             // If removing primary, also clear the link so secondary becomes solo
             if isPrimary {
-                state.breakSimultaneous(primaryText: primary.text, sceneNumber: sceneNumber, pdfPath: pdfPath)
+                state.breakSimultaneous(primary: primary, sceneNumber: sceneNumber, pdfPath: pdfPath)
             }
             // If removing secondary, primary keeps its link; secondary shows as removed-within-overlap
         }
@@ -2161,7 +2163,7 @@ struct SelectionActionsBar: View {
     @State private var pickerSpeaker: String = ""
 
     private var selectedElements: [SceneElementSummary] {
-        scene.elements.filter { selectedKeys.contains(String($0.text.prefix(60))) }
+        scene.elements.filter { selectedKeys.contains($0.ref) }
     }
 
     private var selectedAddedElements: [UserAddedElement] {
@@ -2175,7 +2177,7 @@ struct SelectionActionsBar: View {
     private var canMakeSimultaneous: Bool {
         guard selectedAddedIds.isEmpty, selectedKeys.count == 2 else { return false }
         let els = selectedElements.filter { el in
-            let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+            let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, element: el)
             let fix = state.corrections[k]
             // Use corrected kind so lines edited to/from dialog are handled correctly.
             let effectiveKind = fix?.correctedKind ?? el.kind
@@ -2200,14 +2202,14 @@ struct SelectionActionsBar: View {
             // Remove
             Button {
                 for el in selectedElements {
-                    let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+                    let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, element: el)
                     let e = state.corrections[k]
                     state.saveCorrection(ParserCorrection(
                         textKey: el.text, pdfIdentifier: pdfPath, sceneNumber: scene.number,
                         originalKind: el.kind, originalSpeaker: el.speaker,
                         correctedKind: e?.correctedKind, correctedSpeaker: e?.correctedSpeaker,
                         correctedText: e?.correctedText, markedAsNoise: true,
-                        timestamp: Date(), contributed: state.contributeCorrections
+                        timestamp: Date(), contributed: state.contributeCorrections, occurrence: el.occurrence
                     ))
                 }
                 for el in selectedAddedElements {
@@ -2230,7 +2232,7 @@ struct SelectionActionsBar: View {
                     let pair = selectedElements.filter { $0.kind == "dialog" && !$0.isOverlap }
                     guard pair.count == 2 else { return }
                     // Document order: pair[0] comes first in scene.elements
-                    state.makeSimultaneous(primaryText: pair[0].text, secondaryText: pair[1].text,
+                    state.makeSimultaneous(primary: pair[0], secondary: pair[1],
                                           sceneNumber: scene.number, pdfPath: pdfPath)
                     onClearSelection()
                 } label: {
@@ -2268,7 +2270,7 @@ struct SelectionActionsBar: View {
                         .frame(minWidth: 160)
                         Button("Apply to \(totalDialogCount) line\(totalDialogCount == 1 ? "" : "s")") {
                             for el in dialogSelected {
-                                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, text: el.text)
+                                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: scene.number, element: el)
                                 let e = state.corrections[k]
                                 state.saveCorrection(ParserCorrection(
                                     textKey: el.text, pdfIdentifier: pdfPath, sceneNumber: scene.number,
@@ -2276,7 +2278,7 @@ struct SelectionActionsBar: View {
                                     correctedKind: e?.correctedKind, correctedSpeaker: pickerSpeaker,
                                     correctedText: e?.correctedText, markedAsNoise: e?.markedAsNoise ?? false,
                                     timestamp: Date(), contributed: state.contributeCorrections,
-                                    manualOverlapPartnerKey: e?.manualOverlapPartnerKey
+                                    manualOverlapPartnerKey: e?.manualOverlapPartnerKey, occurrence: el.occurrence
                                 ))
                             }
                             for el in addedDialogSelected {
@@ -2602,7 +2604,7 @@ private struct OverlapVoiceEditPopover: View {
     @State private var editedText: String = ""
 
     private var correctionKey: String {
-        ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+        ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: element)
     }
 
     private var speakerOptions: [String] {
@@ -2678,7 +2680,7 @@ private struct OverlapVoiceEditPopover: View {
             correctedOverlapSpeakers: newSpeakers,
             markedAsNoise: existing?.markedAsNoise ?? false,
             timestamp: Date(), contributed: state.contributeCorrections,
-            manualOverlapPartnerKey: existing?.manualOverlapPartnerKey
+            manualOverlapPartnerKey: existing?.manualOverlapPartnerKey, occurrence: element.occurrence
         ))
     }
 }
@@ -2811,10 +2813,11 @@ private struct ElementCorrectionPopover: View {
 
             // Actions
             HStack {
-                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+                let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: element)
                 if state.corrections[k] != nil {
                     Button("Undo Changes") {
-                        state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: element.text)
+                        state.deleteCorrection(pdfPath: pdfPath, sceneNumber: sceneNumber, textKey: element.text,
+                                          occurrence: element.occurrence)
                         dismiss()
                     }
                     .foregroundStyle(.red)
@@ -2845,7 +2848,7 @@ private struct ElementCorrectionPopover: View {
                         correctedOverlapTexts: overlapChanged ? newOT : nil,
                         markedAsNoise: markAsNoise,
                         timestamp: Date(),
-                        contributed: state.contributeCorrections
+                        contributed: state.contributeCorrections, occurrence: element.occurrence
                     )
                     state.saveCorrection(correction)
                     dismiss()
@@ -2858,7 +2861,7 @@ private struct ElementCorrectionPopover: View {
         .frame(width: element.hasSplitText ? 520 : 340)
         .onAppear {
             // Pre-populate from any existing correction for this element
-            let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, text: element.text)
+            let k = ParserCorrection.key(pdfIdentifier: pdfPath, sceneNumber: sceneNumber, element: element)
             if let existing = state.corrections[k] {
                 if let kind = existing.correctedKind { selectedKind = kind }
                 if let speaker = existing.correctedSpeaker { speakerText = speaker }
