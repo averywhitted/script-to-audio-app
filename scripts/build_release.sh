@@ -260,6 +260,21 @@ ZIP_PATH="$BUILD_DIR/TableRead.zip"
 ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
 ok "Zip: $ZIP_PATH"
 
+# ── UPDATE SIGNATURE ──────────────────────────────────────────────────────────
+# The in-app updater refuses any TableRead.zip without a valid Ed25519
+# signature (TableRead.zip.sig) from the key whose public half is compiled into
+# the app. The private key is in this Mac's Keychain (scripts/update_signing.swift).
+step "Signing zip for in-app updater"
+SIGNER="$REPO_ROOT/scripts/update_signing.swift"
+EMBEDDED_KEY="$(sed -n 's/.*static let updatePublicKey = "\(.*\)".*/\1/p' "$REPO_ROOT/Sources/TableRead/AppUpdater.swift")"
+KEYCHAIN_KEY="$(xcrun swift "$SIGNER" public-key)" \
+    || fail "No update signing key in the Keychain. Restore it, or run: xcrun swift scripts/update_signing.swift keygen"
+[[ "$EMBEDDED_KEY" == "$KEYCHAIN_KEY" ]] \
+    || fail "Keychain signing key does not match AppUpdater.updatePublicKey — users could not install this update"
+SIG_PATH="$BUILD_DIR/TableRead.zip.sig"
+xcrun swift "$SIGNER" sign "$ZIP_PATH" > "$SIG_PATH" || fail "Signing failed"
+ok "Signature: $SIG_PATH"
+
 # ── CHECKSUM ─────────────────────────────────────────────────────────────────
 step "Generating checksums"
 CHECKSUM_FILE="$BUILD_DIR/TableRead.sha256"
@@ -274,6 +289,7 @@ echo -e "${GREEN}═════════════════════
 echo ""
 echo "  DMG:       $DMG_PATH"
 echo "  Zip:       $ZIP_PATH"
+echo "  Signature: $SIG_PATH"
 echo "  Checksums: $CHECKSUM_FILE"
 echo ""
 if ! $NOTARIZE; then

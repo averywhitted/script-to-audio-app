@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import CryptoKit
 
 // MARK: - Update logger
 
@@ -66,6 +67,17 @@ struct UpdateInfo: Sendable, Equatable {
     let releaseNotes: String
     /// True when downloadURL points to an actual zip asset (vs. the release page)
     let hasZipAsset: Bool
+    /// URL of the zip's detached Ed25519 signature (`TableRead.zip.sig`).
+    /// A release without one is offered as a manual download only.
+    var signatureURL: URL? = nil
+}
+
+/// An extracted update whose archive passed the Ed25519 signature check.
+/// Only `AppUpdater` can create one, so `installUpdate` can't be handed an
+/// app that skipped verification.
+struct VerifiedUpdate: Sendable {
+    let appURL: URL
+    fileprivate init(appURL: URL) { self.appURL = appURL }
 }
 
 enum UpdateDownloadState: Equatable, Sendable {
@@ -85,6 +97,24 @@ actor AppUpdater {
     private let owner     = "averywhitted"
     private let repo      = "script-to-audio-app"
     private let assetName = "TableRead.zip"
+    private let signatureAssetName = "TableRead.zip.sig"
+
+    /// Ed25519 public key for update archives. The matching private key lives
+    /// in the release machine's Keychain; see scripts/update_signing.swift.
+    /// This is the trust anchor for in-app updates — release builds are
+    /// ad-hoc signed, so there is no Apple Team ID to check against (#58).
+    static let updatePublicKey = "VVVOeTsKN4JVSQ5oGhu2DcXpNOq8l7SqZcP8IGuoOGw="
+
+    /// True when `signature` (base64) is a valid signature of `data` by the
+    /// holder of `updatePublicKey`.
+    static func isValidUpdateSignature(_ signature: String, for data: Data,
+                                       publicKey: String = updatePublicKey) -> Bool {
+        guard let keyData = Data(base64Encoded: publicKey),
+              let key = try? Curve25519.Signing.PublicKey(rawRepresentation: keyData),
+              let sigData = Data(base64Encoded: signature.trimmingCharacters(in: .whitespacesAndNewlines))
+        else { return false }
+        return key.isValidSignature(sigData, for: data)
+    }
 
     // MARK: — Download source
 
@@ -166,17 +196,26 @@ actor AppUpdater {
 
         let notes  = (release["body"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let assets = release["assets"] as? [[String: Any]] ?? []
-        let asset  = assets.first { ($0["name"] as? String) == assetName }
+        func assetURL(named name: String) -> URL? {
+            guard let asset = assets.first(where: { ($0["name"] as? String) == name }),
+                  let str = asset["browser_download_url"] as? String,
+                  let url = URL(string: str),
+                  AppUpdater.isTrustedDownloadHost(url)
+            else { return nil }
+            return url
+        }
 
-        if let downloadStr = asset?["browser_download_url"] as? String,
-           let downloadURL = URL(string: downloadStr),
-           AppUpdater.isTrustedDownloadHost(downloadURL) {
+        // In-app install needs both the zip and its signature; a release
+        // missing either is offered as a manual download from the release page.
+        if let downloadURL = assetURL(named: assetName),
+           let signatureURL = assetURL(named: signatureAssetName) {
             return UpdateInfo(
                 version:      tag.trimmingCharacters(in: CharacterSet(charactersIn: "vV")),
                 downloadURL:  downloadURL,
                 htmlURL:      htmlURL,
                 releaseNotes: notes,
-                hasZipAsset:  true
+                hasZipAsset:  true,
+                signatureURL: signatureURL
             )
         } else {
             return UpdateInfo(
@@ -191,12 +230,24 @@ actor AppUpdater {
 
     // MARK: — Download & extract
 
-    /// Downloads the zip asset and extracts it to a temp directory.
-    /// Returns the URL of the extracted `TableRead.app`.
+    /// Downloads the zip asset, verifies its Ed25519 signature, and extracts it
+    /// to a temp directory. Nothing is unpacked until the signature checks out.
     func downloadAndExtract(
         info: UpdateInfo,
         onProgress: @escaping @Sendable (Double) -> Void
-    ) async throws -> URL {
+    ) async throws -> VerifiedUpdate {
+        guard let signatureURL = info.signatureURL,
+              AppUpdater.isTrustedDownloadHost(signatureURL) else {
+            throw UpdateError.signatureVerificationFailed("this release has no update signature.")
+        }
+        var sigReq = URLRequest(url: signatureURL, timeoutInterval: 30)
+        sigReq.setValue("TableRead/\(currentVersion)", forHTTPHeaderField: "User-Agent")
+        let (sigData, sigResponse) = try await URLSession.shared.data(for: sigReq)
+        guard (sigResponse as? HTTPURLResponse)?.statusCode == 200,
+              let signature = String(data: sigData, encoding: .utf8) else {
+            throw UpdateError.signatureVerificationFailed("the update signature could not be downloaded.")
+        }
+
         let tmpDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("TableReadUpdate_\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
@@ -216,6 +267,15 @@ actor AppUpdater {
             session.downloadTask(with: info.downloadURL).resume()
         }
 
+        // --- Verify ---
+        guard let zipData = FileManager.default.contents(atPath: destZipURL.path),
+              AppUpdater.isValidUpdateSignature(signature, for: zipData) else {
+            UpdateLogger.log("downloadAndExtract: REFUSED — signature does not match")
+            throw UpdateError.signatureVerificationFailed(
+                "the download's signature does not match. It may be corrupted or not from this project.")
+        }
+        UpdateLogger.log("downloadAndExtract: archive signature verified")
+
         // --- Unzip ---
         let unzip = Process()
         unzip.launchPath  = "/usr/bin/unzip"
@@ -233,14 +293,15 @@ actor AppUpdater {
         guard let appURL = items.first(where: { $0.pathExtension == "app" }) else {
             throw UpdateError.appBundleNotFound
         }
-        return appURL
+        return VerifiedUpdate(appURL: appURL)
     }
 
     // MARK: — Install
 
-    /// Replaces the current running bundle with `newAppURL` via a detached helper script,
-    /// then terminates this instance.
-    func installUpdate(from newAppURL: URL) async throws {
+    /// Replaces the current running bundle with the verified update via a
+    /// detached helper script, then terminates this instance.
+    func installUpdate(_ update: VerifiedUpdate) async throws {
+        let newAppURL = update.appURL
         let currentApp = Bundle.main.bundleURL
         UpdateLogger.log("installUpdate: begin")
         UpdateLogger.log("  currentApp = \(currentApp.path)")
@@ -259,12 +320,10 @@ actor AppUpdater {
             throw UpdateError.notAnAppBundle
         }
 
-        // Whatever is at `newAppURL` is about to replace the installed app and
-        // be launched, so it must carry a valid signature from the same team as
-        // the running copy. Nothing else establishes that the downloaded zip
-        // came from this project.
+        // Provenance was established by the archive's Ed25519 signature
+        // (`VerifiedUpdate`). This adds the code-signature checks on top.
         try verifySignature(of: newAppURL, againstRunning: currentApp)
-        UpdateLogger.log("  signature verified")
+        UpdateLogger.log("  code signature verified")
 
         let safeNew     = shell(newAppURL.path)
         let safeCurrent = shell(currentApp.path)
@@ -328,7 +387,7 @@ actor AppUpdater {
             UpdateLogger.log("testInstall: copying bundle to \(copy.path)")
             try FileManager.default.copyItem(at: src, to: copy)
             UpdateLogger.log("testInstall: copy done, calling installUpdate")
-            try await installUpdate(from: copy)
+            try await installUpdate(VerifiedUpdate(appURL: copy))
         } catch {
             UpdateLogger.log("testInstall: FAILED — \(error)")
         }
@@ -367,9 +426,10 @@ actor AppUpdater {
         return nil
     }
 
-    /// Requires a valid signature on the downloaded bundle, from the same team
-    /// as the running app. An unsigned running copy gives us no trust anchor to
-    /// compare against, so the update is refused rather than taken on faith.
+    /// Requires an intact code signature on the downloaded bundle. When the
+    /// running app carries a Team ID (Developer ID signed, #8), the update must
+    /// carry the same one. Ad-hoc builds have no Team ID; for those the
+    /// archive's Ed25519 signature is the trust anchor, checked before unzip.
     private func verifySignature(of newAppURL: URL, againstRunning currentApp: URL) throws {
         let verify = try run("/usr/bin/codesign", ["--verify", "--strict", "--deep", newAppURL.path])
         guard verify.status == 0 else {
@@ -377,11 +437,7 @@ actor AppUpdater {
                 "the downloaded app's code signature is not valid. "
                 + verify.output.trimmingCharacters(in: .whitespacesAndNewlines))
         }
-        guard let expected = try teamIdentifier(of: currentApp) else {
-            throw UpdateError.signatureVerificationFailed(
-                "this copy of TableRead is not signed, so an update cannot be verified. "
-                + "Download the new version from the Releases page instead.")
-        }
+        guard let expected = try teamIdentifier(of: currentApp) else { return }
         guard let actual = try teamIdentifier(of: newAppURL) else {
             throw UpdateError.signatureVerificationFailed(
                 "the downloaded app is not signed.")

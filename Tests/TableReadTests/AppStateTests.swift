@@ -1,4 +1,5 @@
 import XCTest
+import CryptoKit
 @testable import TableRead
 
 // MARK: - Navigation logic
@@ -155,5 +156,46 @@ final class SceneElementIDTests: XCTestCase {
         let ids = elements.map(\.id)
         // All ids are the same here — that's the known issue; ForEach uses .indices instead
         XCTAssertEqual(Set(ids).count, 1, "id property intentionally not unique — use .indices in ForEach")
+    }
+}
+
+// MARK: - Update signature verification
+
+final class UpdateSignatureTests: XCTestCase {
+
+    private let key = Curve25519.Signing.PrivateKey()
+    private let archive = Data("TableRead.zip contents".utf8)
+
+    private var publicKey: String { key.publicKey.rawRepresentation.base64EncodedString() }
+
+    private func sign(_ data: Data) throws -> String {
+        try key.signature(for: data).base64EncodedString()
+    }
+
+    func testEmbeddedPublicKeyIsWellFormed() throws {
+        let raw = try XCTUnwrap(Data(base64Encoded: AppUpdater.updatePublicKey))
+        XCTAssertNoThrow(try Curve25519.Signing.PublicKey(rawRepresentation: raw))
+    }
+
+    func testValidSignatureAccepted() throws {
+        let sig = try sign(archive) + "\n"   // as written by update_signing.swift
+        XCTAssertTrue(AppUpdater.isValidUpdateSignature(sig, for: archive, publicKey: publicKey))
+    }
+
+    func testTamperedArchiveRejected() throws {
+        let sig = try sign(archive)
+        var tampered = archive
+        tampered[0] ^= 1
+        XCTAssertFalse(AppUpdater.isValidUpdateSignature(sig, for: tampered, publicKey: publicKey))
+    }
+
+    func testOtherKeyRejected() throws {
+        let sig = try Curve25519.Signing.PrivateKey().signature(for: archive).base64EncodedString()
+        XCTAssertFalse(AppUpdater.isValidUpdateSignature(sig, for: archive, publicKey: publicKey))
+    }
+
+    func testGarbageSignatureRejected() {
+        XCTAssertFalse(AppUpdater.isValidUpdateSignature("not base64!", for: archive, publicKey: publicKey))
+        XCTAssertFalse(AppUpdater.isValidUpdateSignature("", for: archive, publicKey: publicKey))
     }
 }
