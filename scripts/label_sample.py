@@ -296,7 +296,7 @@ function togglePrev() {
   if (showingPrev) window.scrollTo({top: document.body.scrollHeight});
 }
 // http://localhost:8765/#154 opens line 154 directly (to fix one label).
-load(/^#\d+$/.test(location.hash) ? Number(location.hash.slice(1)) : undefined);
+load(/^#\\d+$/.test(location.hash) ? Number(location.hash.slice(1)) : undefined);
 </script></body></html>"""
 
 

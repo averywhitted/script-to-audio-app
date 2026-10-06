@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "Kill Floor (LCT Reading Draft).pdf",
-    "generated": "2026-06-14",
+    "generated": "2026-10-04",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "KILL FLOOR",
@@ -7181,11 +7181,6 @@
           "kind": "dialog",
           "speaker": "B",
           "sig": "Na"
-        },
-        {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "B"
         },
         {
           "kind": "parenthetical",

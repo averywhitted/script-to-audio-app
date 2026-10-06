@@ -538,3 +538,34 @@ def _play_lines_with_cast(**kwargs):
 # _try_spatial_parse — graceful failure on missing/corrupt PDF
 # ---------------------------------------------------------------------------
 
+
+
+# ---------------------------------------------------------------------------
+# Bare timing beats are never read aloud (user decision, Oct 2026)
+# ---------------------------------------------------------------------------
+
+def test_bare_beats_are_dropped_and_richer_directions_kept():
+    scene = p.Scene(number=1, title="One", elements=[
+        p.Element(kind="stage_direction", text="Beat."),
+        p.Element(kind="stage_direction", text="A long pause."),
+        p.Element(kind="parenthetical", text="(pause)", speaker="ADA"),
+        p.Element(kind="parenthetical", text="(BEAT)", speaker="ADA"),
+        p.Element(kind="parenthetical", text="(beat; softer)", speaker="ADA"),
+        p.Element(kind="stage_direction", text="Silence."),
+        p.Element(kind="stage_direction", text="A beat, then she goes."),
+    ])
+    p._drop_timing_beats([scene])
+    assert [e.text for e in scene.elements] == ["(beat; softer)", "Silence.", "A beat, then she goes."]
+
+
+def test_beat_inside_a_speech_is_removed_not_read_by_the_character():
+    scene = p.Scene(number=1, title="One", elements=[
+        p.Element(kind="dialog", text="This happened before. (BEAT) Hold on.", speaker="PETER"),
+        p.Element(kind="dialog", text="(beat)", speaker="PETER"),
+        p.Element(kind="dialog", text="I said (beat; softer) no.", speaker="DIANA"),
+    ])
+    p._drop_timing_beats([scene])
+    assert [(e.speaker, e.text) for e in scene.elements] == [
+        ("PETER", "This happened before. Hold on."),
+        ("DIANA", "I said (beat; softer) no."),
+    ]
