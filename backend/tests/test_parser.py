@@ -636,3 +636,20 @@ def test_speech_after_a_leading_aside_is_judged_on_the_speech():
                                     role="dialog", speaker="ADA"))
     p._apply_learned_style(result, _model())
     assert result[-1].role == "dialog"
+
+
+def test_learner_returns_narrated_lines_that_look_like_this_scripts_dialogue():
+    # Directions are italic in this script; one plain line the classifier gave
+    # the narrator looks like dialogue, so it goes to the character speaking.
+    result = _scene({"italic": True})
+    result.insert(2, p.ClassifiedBlock(block=_styled("No, wait, I said that wrong!"), role="stage_direction"))
+    p._apply_learned_style(result, _model())
+    assert (result[2].role, result[2].speaker) == ("dialog", result[0].speaker)
+
+
+def test_learner_never_gives_a_line_to_a_speaker_from_another_scene():
+    result = _scene({"italic": True})
+    result += [p.ClassifiedBlock(block=_styled("SCENE 2"), role="scene_heading"),
+               p.ClassifiedBlock(block=_styled("Nobody has spoken in this scene yet."), role="stage_direction")]
+    p._apply_learned_style(result, _model())
+    assert result[-1].role == "stage_direction"

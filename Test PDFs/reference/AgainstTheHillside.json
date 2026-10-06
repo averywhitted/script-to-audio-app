@@ -6518,9 +6518,14 @@
           "sig": "Hs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(hhGtmy"
+          "kind": "parenthetical",
+          "speaker": "WAHIDA",
+          "sig": "(hh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "WAHIDA",
+          "sig": "Gtmy"
         },
         {
           "kind": "parenthetical",

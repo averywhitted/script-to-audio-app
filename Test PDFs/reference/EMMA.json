@@ -12,6 +12,7 @@
     "HARRIET",
     "MR. WOODHOUSE",
     "MRS. WESTON",
+    "SERVANT",
     "MR. ELTON",
     "MR. WESTON",
     "THE COMPANY",
@@ -127,13 +128,13 @@
           "sig": "EYcjhafaotﬁpMn"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "—dy"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "—tsfo(citswh"
         },
         {
@@ -162,8 +163,8 @@
           "sig": "Ybyseiys"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "—"
         },
         {
@@ -282,18 +283,18 @@
           "sig": "—MBastyayapthawactwc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "PiaoB"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "Piatw"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "GG"
         },
         {
@@ -352,8 +353,8 @@
           "sig": "MBastd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "O"
         },
         {
@@ -462,9 +463,14 @@
           "sig": "MEDyhabtdwyt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(sfamNaId"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(sfam"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "NaId"
         },
         {
           "kind": "stage_direction",
@@ -613,13 +619,13 @@
           "sig": "Giefo(ehasctdWaysrtmd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "IapaPP"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. WOODHOUSE",
           "sig": "Wdtm"
         },
         {
@@ -633,8 +639,8 @@
           "sig": "—Eydmma"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "H"
         },
         {
@@ -658,8 +664,8 @@
           "sig": "—liipMT"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "MWnP"
         },
         {
@@ -733,8 +739,8 @@
           "sig": "EN"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "Pivw"
         },
         {
@@ -788,8 +794,8 @@
           "sig": "Ashe"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "SERVANT",
           "sig": "AMSihM"
         },
         {
@@ -808,9 +814,14 @@
           "sig": "MWhafbIistt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(heaElMGHd"
+          "kind": "parenthetical",
+          "speaker": "MRS. WESTON",
+          "sig": "(heaEl"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
+          "sig": "MGHd"
         },
         {
           "kind": "stage_direction",
@@ -833,9 +844,14 @@
           "sig": "—imp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(bttgtppoNMWammkhachtp"
+          "kind": "parenthetical",
+          "speaker": "HARRIET",
+          "sig": "(bttgtppo"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HARRIET",
+          "sig": "NMWammkhachtp"
         },
         {
           "kind": "stage_direction",
@@ -933,13 +949,18 @@
           "sig": "TshrEttgtthssvoaaafshfaawahasqc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(hN"
+          "kind": "parenthetical",
+          "speaker": "HARRIET",
+          "sig": "(h"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
+          "sig": "N"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "MS(tastfsosayar"
         },
         {
@@ -968,8 +989,8 @@
           "sig": "/yaslalaIhhsmaykIsbcaramagiyIafbuOIrsg"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "S(nbsttsdafapyf"
         },
         {
@@ -1076,15 +1097,21 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "EiqslcoHlptHgtrasgac"
-        },
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "SCENE 2: A VISITOR AT HARTFIELD (part 2)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "EMMA",
           "sig": "AwaeaiiHAabtoopDya"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "PY"
         },
         {
@@ -1093,8 +1120,8 @@
           "sig": "G(ghacIiattcoe"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "EI"
         },
         {
@@ -1103,13 +1130,13 @@
           "sig": "G(gacIiapopfof"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "FOc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "SgH(gavBcIitmttm"
         },
         {
@@ -1213,40 +1240,39 @@
           "sig": "Sw"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "W"
-        }
-      ]
-    },
-    {
-      "number": 3,
-      "title": "SCENE 2: A VISITOR AT HARTFIELD (part 2)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "EMMA",
           "sig": "OHMpbl"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "Wii"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "N"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "WaIal"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(tabtaiafsNnIsni"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(tabtaiafs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "NnIsni"
         },
         {
           "kind": "dialog",
@@ -1259,8 +1285,8 @@
           "sig": "HiamiashmasoAidnthaTWMtds"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "Tsh"
         },
         {
@@ -1349,8 +1375,8 @@
           "sig": "At"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "AtLHL"
         },
         {
@@ -1374,13 +1400,13 @@
           "sig": "HmotcabotgRMhTistlis"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "O"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Y"
         },
         {
@@ -1404,9 +1430,13 @@
           "sig": "TbtHagwyaILptsod(uttsmawgoapAtmwmfopeacttoamoolituwWmamfouFouSiwmH"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "Fou"
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "Fou",
+          "overlap_cue": [
+            "EMMA",
+            "HARRIET"
+          ]
         },
         {
           "kind": "stage_direction",
@@ -1494,14 +1524,19 @@
           "sig": "HhasmHAmAsapntutcwcWedtwmhbsswbhesoedsgaacl"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": ".n"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(E"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "E"
         },
         {
           "kind": "dialog",
@@ -1519,14 +1554,18 @@
           "sig": "ShotbtH"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "OU(ttc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "Fou"
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "Fou",
+          "overlap_cue": [
+            "EMMA",
+            "HARRIET"
+          ]
         },
         {
           "kind": "dialog",
@@ -1595,8 +1634,8 @@
           "sig": "DnsdItwwlsIhtchlhfasﬂ"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "OnIrt"
         },
         {
@@ -1615,9 +1654,14 @@
           "sig": "MWinwMSaissyaaubtymc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(eImyi(fgah"
+          "kind": "parenthetical",
+          "speaker": "HARRIET",
+          "sig": "(e"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HARRIET",
+          "sig": "Imyi(fgah"
         },
         {
           "kind": "dialog",
@@ -1785,14 +1829,24 @@
           "sig": "“ﬁwdtpokLoteOtlae"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(triH"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(tri"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(EH"
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "H"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HARRIET",
+          "sig": "(E"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HARRIET",
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -1800,14 +1854,24 @@
           "sig": "“vommswbBhttmots"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(triO"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(tri"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(EO"
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "O"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "HARRIET",
+          "sig": "(E"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HARRIET",
+          "sig": "O"
         },
         {
           "kind": "dialog",
@@ -1900,8 +1964,8 @@
           "sig": "MWlmttthieaia"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Wc"
         },
         {
@@ -1925,8 +1989,8 @@
           "sig": "Httthpdimasotc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "HTmh"
         },
         {
@@ -1940,13 +2004,13 @@
           "sig": "LIhtsmhobtktcs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "/"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. ELTON",
           "sig": "B"
         },
         {
@@ -2040,13 +2104,13 @@
           "sig": "THtWdhs“ﬁwdtpokTi"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "—"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "“ocAt“vommswbBhttmots"
         },
         {
@@ -2065,8 +2129,8 @@
           "sig": "STaiS"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "Twmng"
         },
         {
@@ -2080,13 +2144,13 @@
           "sig": "SSC—iacotN"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "H"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "Sp"
         },
         {
@@ -2105,8 +2169,8 @@
           "sig": "NntmlIhafya"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "O"
         },
         {
@@ -2175,9 +2239,14 @@
           "sig": "HtpmimhilPfyhdhoohwHcyehntsiﬁtwhhAa(daioasoﬁchhﬂadoomhoomwooibtbiab(m“coohh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(aEdpdhAIatcoot"
+          "kind": "parenthetical",
+          "speaker": "HARRIET",
+          "sig": "(aEdpdh"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HARRIET",
+          "sig": "AIatcoot"
         },
         {
           "kind": "dialog",
@@ -2190,9 +2259,14 @@
           "sig": "Wmdwhts"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(ts“hoﬁbaOoibooisoamhaaao(ﬂd&“"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(ts“hoﬁba"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "Ooibooisoamhaaao(ﬂd&“"
         },
         {
           "kind": "parenthetical",
@@ -2215,13 +2289,13 @@
           "sig": "IntHIok"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "—m"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "SERVANT",
           "sig": "MKM"
         },
         {
@@ -2296,8 +2370,8 @@
           "sig": "Tpmctmwtiecotiow(rstbitcIstfsmrMHShpftbathachmoiche"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "M(sahA"
         },
         {
@@ -2306,13 +2380,13 @@
           "sig": "Aswdyhtsat"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": ".fab"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "EwiWwy"
         },
         {
@@ -2336,9 +2410,14 @@
           "sig": "YatufthbsMSotp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(sawhhoicSWsIumethaf"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(sawhhoic"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "SWsIumethaf"
         },
         {
           "kind": "dialog",
@@ -2431,9 +2510,14 @@
           "sig": "—aoftwyt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(aftf.ay"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(aftf"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": ".ay"
         },
         {
           "kind": "stage_direction",
@@ -2451,13 +2535,13 @@
           "sig": "—sdbtME"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "E"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "H"
         },
         {
@@ -2471,13 +2555,13 @@
           "sig": "Oshhma"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "DbrA(aakhh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "OI"
         },
         {
@@ -2601,8 +2685,8 @@
           "sig": "Kphadamass"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "H"
         },
         {
@@ -2737,8 +2821,8 @@
           "sig": "FCthmns"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "M"
         },
         {
@@ -2747,9 +2831,14 @@
           "sig": "BahdMWfhutcfFFwabhromgitAsianaob"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "parenthetical",
+          "speaker": "HARRIET",
           "sig": "(bfasma"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HARRIET",
+          "sig": "—"
         },
         {
           "kind": "dialog",
@@ -2757,9 +2846,14 @@
           "sig": "/baociFisatvhfBewHmFhiaa"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "parenthetical",
+          "speaker": "HARRIET",
           "sig": "(bfasma"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HARRIET",
+          "sig": "/"
         },
         {
           "kind": "dialog",
@@ -2772,13 +2866,13 @@
           "sig": "Hchh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "EyE"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "W"
         },
         {
@@ -3043,8 +3137,8 @@
           "sig": "TcbtcfdWeMWoAhe"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "P"
         },
         {
@@ -3093,8 +3187,8 @@
           "sig": "/wdstdboMAslhatsad"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "ME"
         },
         {
@@ -3183,13 +3277,13 @@
           "sig": "YcemntsiﬁtMWwmhAa(dsvoEoamhib"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "HOIIIHWAH"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. ELTON",
           "sig": "Hw"
         },
         {
@@ -3198,13 +3292,13 @@
           "sig": "IastmcsbtiomTttysimamtsfasmaaIhwyptMS"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. ELTON",
           "sig": "WSMS"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Y"
         },
         {
@@ -3213,8 +3307,8 @@
           "sig": "WcetoMSwMWinOmjskMcgvDyftmgmhstlhmflm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "—"
         },
         {
@@ -3329,8 +3423,8 @@
           "sig": "MKsihs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "E"
         },
         {
@@ -3339,8 +3433,8 @@
           "sig": "Ismfemdteba"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "E"
         },
         {
@@ -3544,13 +3638,13 @@
           "sig": "Iasswbb/(ptwmwa/(MpmHwapasdItiItﬂP(acviyc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. WOODHOUSE",
           "sig": "Oc(bttowtﬂiabsw(IwhCbus"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "NPIboy"
         },
         {
@@ -3579,8 +3673,8 @@
           "sig": "WcebaffhptMEENnIgteuaomwnfanf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "H"
         },
         {
@@ -3594,8 +3688,8 @@
           "sig": "Ada"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "H"
         },
         {
@@ -3815,8 +3909,8 @@
           "sig": "Tolkraksu"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "M"
         },
         {
@@ -3915,9 +4009,14 @@
           "sig": "/JJJJJJJ"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(iCWNasahsttrabchn"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(i"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "CWNasahsttrabchn"
         },
         {
           "kind": "dialog",
@@ -3935,9 +4034,14 @@
           "sig": "IsyavstﬁJbitcMW"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(sA"
+          "kind": "parenthetical",
+          "speaker": "JANE",
+          "sig": "(s"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "JANE",
+          "sig": "A"
         },
         {
           "kind": "dialog",
@@ -3945,8 +4049,8 @@
           "sig": "Wasthhbo"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "JANE",
           "sig": "A"
         },
         {
@@ -4210,9 +4314,14 @@
           "sig": "TpobsuF"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(tahsM("
+          "kind": "parenthetical",
+          "speaker": "MRS. BATES",
+          "sig": "(tahs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MRS. BATES",
+          "sig": "M("
         },
         {
           "kind": "stage_direction",
@@ -4240,9 +4349,14 @@
           "sig": "Wnbpots"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(boMBhsiobgMfhtmsmMaaeooyllIflabca(boMBhtpobiobsg"
+          "kind": "parenthetical",
+          "speaker": "FRANK",
+          "sig": "(boMBhsiobg"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "FRANK",
+          "sig": "MfhtmsmMaaeooyllIflabca(boMBhtpobiobsg"
         },
         {
           "kind": "stage_direction",
@@ -4250,8 +4364,8 @@
           "sig": "OITSMMH"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "FWIHB"
         },
         {
@@ -4328,7 +4442,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "HbsoHh"
-        },
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "title": "SCENE 9: VISITING THE BATES (part 2)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "FRANK",
@@ -4340,8 +4460,8 @@
           "sig": "Terowagtt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. WESTON",
           "sig": "EF"
         },
         {
@@ -4355,8 +4475,8 @@
           "sig": "Isttaapc(lataBFdyswalith"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. WESTON",
           "sig": "Wytwb"
         },
         {
@@ -4365,8 +4485,8 @@
           "sig": "Jheawtsb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "MnJF"
         },
         {
@@ -4395,8 +4515,8 @@
           "sig": "F"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "JANE",
           "sig": "N"
         },
         {
@@ -4415,16 +4535,10 @@
           "sig": "IdtsWiyMFwwretDoW"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "WSw"
-        }
-      ]
-    },
-    {
-      "number": 10,
-      "title": "SCENE 9: VISITING THE BATES (part 2)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "FRANK",
@@ -4541,8 +4655,8 @@
           "sig": "NssYsfma"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "FRANK",
           "sig": "Idts"
         },
         {
@@ -4681,8 +4795,8 @@
           "sig": "MWdhwciimis"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Isiui"
         },
         {
@@ -4696,8 +4810,8 @@
           "sig": "EEAattpe"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "FRANK",
           "sig": "F"
         },
         {
@@ -4706,8 +4820,8 @@
           "sig": "OwotsomIatdltwseanoitrcvs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "W"
         },
         {
@@ -4716,8 +4830,8 @@
           "sig": "OMEhfhawiBAhtstpahshuiat"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "W"
         },
         {
@@ -4817,8 +4931,8 @@
           "sig": "PEkyaudMEcbts"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "YP(dMEc"
         },
         {
@@ -4827,9 +4941,14 @@
           "sig": "TotbWiichy"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(MWs—gutiyW(daioMEcsttgbifhs"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(MWs"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "—gutiyW(daioMEcsttgbifhs"
         },
         {
           "kind": "stage_direction",
@@ -4837,8 +4956,8 @@
           "sig": "MWshf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "B"
         },
         {
@@ -4942,13 +5061,13 @@
           "sig": "—EHIktyajtmaa"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Ah"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "MW"
         },
         {
@@ -4967,9 +5086,14 @@
           "sig": "—bmbp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(rasbtaasTtfGst"
+          "kind": "parenthetical",
+          "speaker": "MRS. WESTON",
+          "sig": "(rasbtaas"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
+          "sig": "TtfGst"
         },
         {
           "kind": "stage_direction",
@@ -4982,13 +5106,13 @@
           "sig": "AwmIhbplfttyEwhntyhsraguom"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "O"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Guom"
         },
         {
@@ -4997,13 +5121,13 @@
           "sig": "AcditmoHS"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "N"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "CD"
         },
         {
@@ -5107,8 +5231,8 @@
           "sig": "YSISISISISISISIS"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "C"
         },
         {
@@ -5147,8 +5271,8 @@
           "sig": "YtYT(KMKoty(EAysitcaytcayatMRM"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "/"
         },
         {
@@ -5162,8 +5286,8 @@
           "sig": "MKdhovotMEcMWwohwtn"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "N"
         },
         {
@@ -5243,8 +5367,8 @@
           "sig": "B(bSaaTwiipatscal(iiqho/Atsbtsoet"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. ELTON",
           "sig": "B(c"
         },
         {
@@ -5253,8 +5377,8 @@
           "sig": "NetigIavs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. ELTON",
           "sig": "S(c"
         },
         {
@@ -5268,8 +5392,8 @@
           "sig": "Heiasp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. ELTON",
           "sig": "P(ctlOMEhSya(catemof"
         },
         {
@@ -5363,24 +5487,34 @@
           "sig": "(lasKhs"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "WcbbhbabFaMKMKaJFbasFaKKFK"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "Ayar"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(slhAttialpudRtidyssltmtte(lattsio"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(sl"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(hH"
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "hAttialpudRtidyssltmtte(lattsio"
+        },
+        {
+          "kind": "parenthetical",
+          "speaker": "MRS. WESTON",
+          "sig": "(h"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
+          "sig": "H"
         },
         {
           "kind": "dialog",
@@ -5528,8 +5662,8 @@
           "sig": "AssmMBms"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "—byp"
         },
         {
@@ -5658,8 +5792,8 @@
           "sig": "EiwJaKaFhprwFsaJaKastFma"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "EAyar"
         },
         {
@@ -5668,8 +5802,8 @@
           "sig": "Woectbta"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "W"
         },
         {
@@ -5698,8 +5832,8 @@
           "sig": "RoctEsbhahaewb"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. ELTON",
           "sig": "OMEcatemom"
         },
         {
@@ -5801,7 +5935,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "Elatadae"
-        },
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "title": "SCENE 11: AN OVERHEATED PARTY (part 2)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "EMMA",
@@ -5833,8 +5973,8 @@
           "sig": "Ysyar"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "JANE",
           "sig": "Iaaar"
         },
         {
@@ -5858,8 +5998,8 @@
           "sig": "WWmyaaW"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Iwow"
         },
         {
@@ -5868,8 +6008,8 @@
           "sig": "WWwWhybst"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "/t"
         },
         {
@@ -5893,8 +6033,8 @@
           "sig": "Bycitw"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "JANE",
           "sig": "NIitr"
         },
         {
@@ -5988,8 +6128,8 @@
           "sig": "WkwiiJFimWcWcebroiath"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "B"
         },
         {
@@ -5998,8 +6138,8 @@
           "sig": "IttIsummtappAbptgalccimcc(tHaDdadsdMSP"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "OYYr(FmhatEM"
         },
         {
@@ -6043,8 +6183,8 @@
           "sig": "Ycsh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "Wsdy"
         },
         {
@@ -6200,7 +6340,7 @@
       ]
     },
     {
-      "number": 13,
+      "number": 14,
       "title": "SCENE 1: EMMA WORKS III",
       "elements": [
         {
@@ -6209,8 +6349,8 @@
           "sig": "EsdhotgPRMphuahhoTstaaEwttaTtt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "HaHA"
         },
         {
@@ -6219,8 +6359,8 @@
           "sig": "ScHoaetatdtspesh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "A"
         },
         {
@@ -6329,13 +6469,13 @@
           "sig": "Hayfd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "—i"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Wysd"
         },
         {
@@ -6344,8 +6484,8 @@
           "sig": "—cYsrhbeTwTpTwtTwa"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "O"
         },
         {
@@ -6364,8 +6504,8 @@
           "sig": "IhbhvfIwthfMEfslIaﬁbtbIcamh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Tiac"
         },
         {
@@ -6464,8 +6604,8 @@
           "sig": "NIcstwasmm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Uy"
         },
         {
@@ -6499,8 +6639,8 @@
           "sig": "IartlmlabdymgwIaso"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. WOODHOUSE",
           "sig": "NThmy"
         },
         {
@@ -6509,8 +6649,8 @@
           "sig": "Dyctfhatpp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. WOODHOUSE",
           "sig": "Antc"
         },
         {
@@ -6524,8 +6664,8 @@
           "sig": "yEdytIawth"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. WOODHOUSE",
           "sig": "Pl"
         },
         {
@@ -6634,8 +6774,8 @@
           "sig": "SkHHcgtdhd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "MGHd"
         },
         {
@@ -6661,7 +6801,7 @@
       ]
     },
     {
-      "number": 14,
+      "number": 15,
       "title": "SCENE 2: AN OVERHEATED PARTY II",
       "elements": [
         {
@@ -6730,9 +6870,14 @@
           "sig": "(hcy"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(M("
+          "kind": "parenthetical",
+          "speaker": "MRS. BATES",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MRS. BATES",
+          "sig": "M("
         },
         {
           "kind": "stage_direction",
@@ -6755,8 +6900,8 @@
           "sig": "IhyrsdfmFgwntnfaa"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "Md"
         },
         {
@@ -6765,8 +6910,8 @@
           "sig": "HwnruIieewitc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "D"
         },
         {
@@ -6785,8 +6930,8 @@
           "sig": "YsmtlwomF"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "I"
         },
         {
@@ -6795,8 +6940,8 @@
           "sig": "YssMWIstwoMFesiqf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "JANE",
           "sig": "Nitss"
         },
         {
@@ -6890,13 +7035,13 @@
           "sig": "AyIttmbtc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Wdym"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "OhMK"
         },
         {
@@ -6915,8 +7060,8 @@
           "sig": "Twywi“Vh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "TyEYl"
         },
         {
@@ -7050,8 +7195,8 @@
           "sig": "MSMIhtpotnd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "OMN(hfamcym(hM(ghaptPaty"
         },
         {
@@ -7065,9 +7210,14 @@
           "sig": "HlhoTdfgTldhetialitmaFCawJF"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(tchiwﬂMCImnmmc"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(tchiwﬂ"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "MCImnmmc"
         },
         {
           "kind": "stage_direction",
@@ -7110,8 +7260,8 @@
           "sig": "MK"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "JANE",
           "sig": "MK"
         },
         {
@@ -7190,9 +7340,14 @@
           "sig": "YNmfhit—Iwsdhmeos"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(YsIhn(gatastHwidwKamatsb"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "YsIhn(gatastHwidwKamatsb"
         },
         {
           "kind": "dialog",
@@ -7200,9 +7355,14 @@
           "sig": "IkIsoar"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(N"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "N"
         },
         {
           "kind": "dialog",
@@ -7218,7 +7378,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "TdmeTcpc"
-        },
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "title": "SCENE 2: AN OVERHEATED PARTY II (part 2)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "FRANK",
@@ -7230,8 +7396,8 @@
           "sig": "HkhhsGljaHaMKrKcta"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "PMF"
         },
         {
@@ -7240,8 +7406,8 @@
           "sig": "JrtanEaFbctqKeFstJ"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "FRANK",
           "sig": "MF"
         },
         {
@@ -7323,13 +7489,7 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "MKirpih"
-        }
-      ]
-    },
-    {
-      "number": 15,
-      "title": "SCENE 2: AN OVERHEATED PARTY II (part 2)",
-      "elements": [
+        },
         {
           "kind": "dialog",
           "speaker": "EMMA",
@@ -7346,9 +7506,14 @@
           "sig": "EsiiotJe"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(rtposbH"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(rtposb"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "H"
         },
         {
           "kind": "stage_direction",
@@ -7361,13 +7526,13 @@
           "sig": "WiwwMF(isaiwrIhhp"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "WoCyd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "W"
         },
         {
@@ -7401,13 +7566,13 @@
           "sig": "—iIaIdswnc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Bydwt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "Dywmt"
         },
         {
@@ -7416,9 +7581,14 @@
           "sig": "Dywmtwyt"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "parenthetical",
+          "speaker": "KNIGHTLEY",
           "sig": "(c"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
+          "sig": "—"
         },
         {
           "kind": "stage_direction",
@@ -7511,23 +7681,23 @@
           "sig": "F"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "F"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "ISH"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "MT"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "YMF"
         },
         {
@@ -7571,9 +7741,14 @@
           "sig": "Tomiit"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(M("
+          "kind": "parenthetical",
+          "speaker": "MRS. BATES",
+          "sig": "("
+        },
+        {
+          "kind": "dialog",
+          "speaker": "MRS. BATES",
+          "sig": "M("
         },
         {
           "kind": "dialog",
@@ -7656,8 +7831,8 @@
           "sig": "IaswoFtJFtwmhhifomaskofeIdheIandyegtMB"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "Ibyp"
         },
         {
@@ -7666,8 +7841,8 @@
           "sig": "ObstHcystasacwyllsvviHcyawshwnechoalstdtmoaehtbttool"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "MW"
         },
         {
@@ -7686,8 +7861,8 @@
           "sig": "Sssrtwrhgsaisah"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "E"
         },
         {
@@ -7698,7 +7873,7 @@
       ]
     },
     {
-      "number": 16,
+      "number": 17,
       "title": "SCENE 3: RATHER MORE THAN",
       "elements": [
         {
@@ -7767,8 +7942,8 @@
           "sig": "—MBpIcataBswnbipaywSipshsftcswbtaincswsmHsssycnyc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "I/"
         },
         {
@@ -7777,8 +7952,8 @@
           "sig": "/Shkysywacshgyatashﬂyfbymwiht"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "P"
         },
         {
@@ -7792,8 +7967,8 @@
           "sig": "WdYedwytbwivnoﬂwFCotdMFswwymrfbmoUtya"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "W"
         },
         {
@@ -7892,8 +8067,8 @@
           "sig": "TstaEisbuiHbsabﬁSrasnasvuath"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MR. ELTON",
           "sig": "H"
         },
         {
@@ -7902,14 +8077,14 @@
           "sig": "TbncbuytAwymgmFhlboypYmft"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. ELTON",
           "sig": ".stoIdgaa(OoihdanvohcSdcirTtbmofoME(sobch"
         }
       ]
     },
     {
-      "number": 17,
+      "number": 18,
       "title": "SCENE 4: HARRIET REVEALS",
       "elements": [
         {
@@ -7978,8 +8153,8 @@
           "sig": "—bFCbpJBF"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "JF"
         },
         {
@@ -8018,8 +8193,8 @@
           "sig": "(aFemof"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "GG"
         },
         {
@@ -8038,8 +8213,8 @@
           "sig": "EIasss"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "ss"
         },
         {
@@ -8048,8 +8223,8 @@
           "sig": "Ways"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Ways"
         },
         {
@@ -8123,8 +8298,8 @@
           "sig": "hitmJiinsfftta(foufou/fo"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "E"
         },
         {
@@ -8133,13 +8308,13 @@
           "sig": "IhneebilwMFC"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "W"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "N(iP"
         },
         {
@@ -8158,8 +8333,8 @@
           "sig": "OFCTﬂtoftss"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "P"
         },
         {
@@ -8168,8 +8343,8 @@
           "sig": "PEIdwatIofcahIwubIbtahlya"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "Wdym"
         },
         {
@@ -8263,8 +8438,8 @@
           "sig": "tbpijatcDykMBokamnWJwkamn(abihmJWathafc"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "/"
         },
         {
@@ -8308,13 +8483,13 @@
           "sig": "NRsmftEvdthdwmwIwaatbabsagrIcdamh"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "MK"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "MKIYR"
         },
         {
@@ -8328,8 +8503,8 @@
           "sig": "AEhJ"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "GGH"
         },
         {
@@ -8386,7 +8561,13 @@
           "kind": "stage_direction",
           "speaker": null,
           "sig": "(bfboE"
-        },
+        }
+      ]
+    },
+    {
+      "number": 19,
+      "title": "SCENE 4: HARRIET REVEALS (part 2)",
+      "elements": [
         {
           "kind": "dialog",
           "speaker": "HARRIET",
@@ -8413,8 +8594,8 @@
           "sig": "E"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "Oln"
         },
         {
@@ -8433,13 +8614,18 @@
           "sig": "R"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(outH(sotlttbbita"
+          "kind": "parenthetical",
+          "speaker": "HARRIET",
+          "sig": "("
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
+          "sig": "outH(sotlttbbita"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "ctYC"
         },
         {
@@ -8458,13 +8644,13 @@
           "sig": "K"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "Wn"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "B"
         },
         {
@@ -8493,8 +8679,8 @@
           "sig": "SWetd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Wtd"
         },
         {
@@ -8508,8 +8694,8 @@
           "sig": "—syEtmogdhtpAIdtMKhapfmhalamscatmsk"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "—dm"
         },
         {
@@ -8583,8 +8769,8 @@
           "sig": "TooyerkolwMMaythoomsaaywaftltmaIwftcy"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "E"
         },
         {
@@ -8593,8 +8779,8 @@
           "sig": "YsjiIestyH"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "F"
         },
         {
@@ -8603,8 +8789,8 @@
           "sig": "YsfelIegy"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "D"
         },
         {
@@ -8613,8 +8799,8 @@
           "sig": "Ysnltmcea"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "HARRIET",
           "sig": "A"
         },
         {
@@ -8633,8 +8819,8 @@
           "sig": "YarEtInstywthEaISmumomacWIWfwRIL"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "H"
         },
         {
@@ -8688,8 +8874,8 @@
           "sig": "HaKKaH(MHKIiuIMtJFotssnBHCMAOTBHCMAAANNTIREamhohoIaGtMKMNMHOJOAOWITBEBHCOM."
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "OysOatcptIaMilwGKIBILWHSTBTWHWTOCAIMSDSASM"
         },
         {
@@ -8705,7 +8891,7 @@
       ]
     },
     {
-      "number": 18,
+      "number": 20,
       "title": "SCENE 5: MRS. WESTON AND THE",
       "elements": [
         {
@@ -8764,8 +8950,8 @@
           "sig": "AnIaaiIeagimaatIetwpapmeitve"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "Ik"
         },
         {
@@ -8774,13 +8960,13 @@
           "sig": "—eiataabmcaIdkwtd"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "Ik"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "—dyk"
         },
         {
@@ -8789,13 +8975,13 @@
           "sig": "Mmoo"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "R"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "N"
         },
         {
@@ -8829,9 +9015,14 @@
           "sig": "Ayabwbtm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
-          "sig": "(rP"
+          "kind": "parenthetical",
+          "speaker": "EMMA",
+          "sig": "(r"
+        },
+        {
+          "kind": "dialog",
+          "speaker": "EMMA",
+          "sig": "P"
         },
         {
           "kind": "dialog",
@@ -8959,8 +9150,8 @@
           "sig": "(mavnvsg"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Wyw"
         },
         {
@@ -8969,8 +9160,8 @@
           "sig": "(ii"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "Iw"
         },
         {
@@ -8999,8 +9190,8 @@
           "sig": "MKhpmtyncowat"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "PE"
         },
         {
@@ -9109,8 +9300,8 @@
           "sig": "WwyssfFCE"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Yﬁ"
         },
         {
@@ -9129,8 +9320,8 @@
           "sig": "MtmsIftIwqmilwswIfmoaaooof"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "No"
         },
         {
@@ -9206,7 +9397,7 @@
       ]
     },
     {
-      "number": 19,
+      "number": 21,
       "title": "SCENE 6: A COUNTRY WEDDING II",
       "elements": [
         {
@@ -9230,23 +9421,23 @@
           "sig": "BIalpIanlealatImn"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "YE"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "Imn"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "Cyat"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "EMMA",
           "sig": "KAe"
         },
         {
@@ -9400,8 +9591,8 @@
           "sig": "PPsmhbSstabowtm"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. WESTON",
           "sig": "EdtLE"
         },
         {
@@ -9475,8 +9666,8 @@
           "sig": "MBmachg"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. BATES",
           "sig": "M("
         },
         {
@@ -9485,8 +9676,8 @@
           "sig": "AwmMWKhpttsch"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "Hsn"
         },
         {
@@ -9495,18 +9686,18 @@
           "sig": "MBYamtr"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "MGTDN"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MISS BATES",
           "sig": "MOM"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "MRS. BATES",
           "sig": "M("
         },
         {
@@ -9535,8 +9726,8 @@
           "sig": "Sttbthmacf"
         },
         {
-          "kind": "stage_direction",
-          "speaker": null,
+          "kind": "dialog",
+          "speaker": "KNIGHTLEY",
           "sig": "Aywb"
         },
         {
