@@ -447,7 +447,11 @@ def _extract_blocks(pdf_path: str) -> List[TextBlock]:
     result: List[TextBlock] = []
     with fitz.open(pdf_path) as doc:
         for page_num, page in enumerate(doc):
-            raw_blocks = page.get_text("dict")["blocks"]
+            # Default "dict" flags minus image extraction: images are skipped
+            # below anyway, and extracting them made some scripts take over a
+            # minute to parse (Stereophonic: 73 s). Text output is identical.
+            raw_blocks = page.get_text(
+                "dict", flags=fitz.TEXTFLAGS_DICT & ~fitz.TEXT_PRESERVE_IMAGES)["blocks"]
             for raw_block in raw_blocks:
                 if raw_block["type"] != 0:
                     continue  # skip image/drawing blocks
