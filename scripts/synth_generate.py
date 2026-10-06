@@ -220,6 +220,10 @@ class Style:
     scale: float = 1.0
     italic_sd: bool = False
     paren_sd: bool = False       # stage directions wrapped in brackets
+    # Conventions no part of the parser mentions, for testing whether it learns
+    # a script's own style rather than following rules: "bold", "small"
+    # (smaller type) or "sans" (a different typeface from the dialogue).
+    sd_style: str = ""
     sd_x: float = 0.0            # set per family below
     columns: int = 1
 
@@ -253,6 +257,7 @@ class Typesetter:
         reg, ita, bold = FONTS[style.font]
         self.f_reg, self.f_ita, self.f_bold = reg, ita, bold
         self.lh = style.size * (1.0 if style.font == "courier" else 1.2)
+        self.size_now = style.size   # type size being set (directions may differ)
         pw, ph = style.page
         self.top, self.bottom = 72.0, ph - 72.0
         if style.columns == 2:
@@ -288,7 +293,7 @@ class Typesetter:
         raise ValueError(st.family)
 
     def _w(self, text: str, font: str) -> float:
-        return fitz.get_text_length(text, fontname=font, fontsize=self.st.size)
+        return fitz.get_text_length(text, fontname=font, fontsize=self.size_now)
 
     def _wrap(self, text: str, width: float, font: str) -> list[str]:
         lines, cur = [], ""
@@ -348,7 +353,7 @@ class Typesetter:
         self._advance()          # a unit that crosses a page simply flows on
         s = self.st.scale
         cx = self.col_lefts[self.col] + x
-        self.page.insert_text((cx * s, self.y * s), text, fontname=font, fontsize=self.st.size * s)
+        self.page.insert_text((cx * s, self.y * s), text, fontname=font, fontsize=self.size_now * s)
         self._record(unit, text)
         self.y += self.lh
 
@@ -401,7 +406,14 @@ class Typesetter:
         if self.st.paren_sd:
             text = f"({text})"
         font = self.f_ita if self.st.italic_sd else self.f_reg
+        if self.st.sd_style == "bold":
+            font = self.f_bold
+        elif self.st.sd_style == "sans":
+            font = FONTS["helvetica" if self.st.font != "helvetica" else "times"][0]
+        elif self.st.sd_style == "small":
+            self.size_now = round(self.st.size * 0.83, 1)
         self._block(L.sd_x, L.sd_w, text, font, "stage_direction")
+        self.size_now = self.st.size
         self._gap()
 
     def cue_line(self, b: Beat) -> None:
@@ -542,6 +554,12 @@ def standard_styles() -> list[tuple[str, Style]]:
         ("two_column_wide", Style("two_column", page=LANDSCAPE, italic_sd=True, columns=2,
                                   scale=1000 / 792, size=11)),
         ("inline_name_times", Style("inline_name", italic_sd=True, paren_sd=True)),
+        # Unseen conventions: directions sit exactly where dialogue does and are
+        # marked only by a style the parser has never been told about.
+        ("unseen_bold", Style("stage_left", sd_style="bold", sd_x=72)),
+        ("unseen_small", Style("stage_left", sd_style="small", sd_x=72)),
+        ("unseen_sans", Style("stage_left", sd_style="sans", sd_x=72)),
+        ("unseen_bold_centered", Style("stage_centered", sd_style="bold", sd_x=72)),
         ("inline_name_courier", Style("inline_name", font="courier", sd_x=72)),
     ]
 

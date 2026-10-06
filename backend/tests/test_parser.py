@@ -569,3 +569,70 @@ def test_beat_inside_a_speech_is_removed_not_read_by_the_character():
         ("PETER", "This happened before. Hold on."),
         ("DIANA", "I said (beat; softer) no."),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Learned style: the script's own dialogue (text after a name) is the example;
+# what else it contains is learned per script. No convention is named in code.
+# ---------------------------------------------------------------------------
+
+def _styled(text, *, bold=False, italic=False, size=12.0, font="Times", spans=True):
+    sp = [p.TextSpan(text=text, bold=bold, italic=italic, font=font, size=size)] if spans else []
+    return p._make_text_block([(72, 100, 400, 112, text, sp)], 0)
+
+
+def _scene(direction_look, n=40):
+    """n speeches, each: name, a first line, a second line, then a direction
+    the classifier wrongly gave to the speaker (it sits where dialogue does)."""
+    out = []
+    ends = [".", "?", "!", "."]                         # real dialogue mixes its punctuation
+    for i in range(n):
+        who = "ADA" if i % 2 else "TOM"
+        out += [p.ClassifiedBlock(block=_styled(who), role="speaker_cue", speaker=who),
+                p.ClassifiedBlock(block=_styled(f"First thing {i} said here{ends[i % 4]}"),
+                                  role="dialog", speaker=who),
+                p.ClassifiedBlock(block=_styled(f"And then more {i}{ends[(i + 1) % 4]}"),
+                                  role="dialog", speaker=who),
+                p.ClassifiedBlock(block=_styled(f"{who.title()} crosses to the window.", **direction_look),
+                                  role="dialog", speaker=who)]
+    return out
+
+
+def _model():
+    return p.DocumentModel(profile=None, cast_lexicon={}, cast={"ADA", "TOM"}, cue_columns=[],
+                           dialog_columns=[], furniture=set())
+
+
+@pytest.mark.parametrize("look", [{"bold": True}, {"italic": True}, {"size": 9.5}, {"font": "Helvetica"}])
+def test_learner_finds_whatever_marks_this_scripts_directions(look):
+    result = _scene(look)
+    p._apply_learned_style(result, _model())
+    roles = [cb.role for cb in result if cb.role != "speaker_cue"]
+    assert roles.count("stage_direction") == 40          # every direction found
+    assert roles.count("dialog") == 80                   # no speech moved
+
+
+def test_learner_changes_nothing_when_directions_look_like_dialogue():
+    result = _scene({})                                   # no distinguishing style at all
+    p._apply_learned_style(result, _model())
+    assert all(cb.role in ("speaker_cue", "dialog") for cb in result)
+
+
+def test_unmeasurable_type_is_not_evidence():
+    result = _scene({"bold": True})
+    result.append(p.ClassifiedBlock(block=_styled("Split-off speech.", spans=False), role="dialog", speaker="ADA"))
+    p._apply_learned_style(result, _model())
+    assert result[-1].role == "dialog"
+
+
+def test_speech_after_a_leading_aside_is_judged_on_the_speech():
+    # In a script whose directions are bracketed, "(Slight pause.) Do you?" is
+    # an aside plus speech, not a direction.
+    result = _scene({}, n=40)
+    for cb in result:
+        if cb.block.text.endswith("window."):
+            cb.block = _styled(f"({cb.block.text})")
+    result.append(p.ClassifiedBlock(block=_styled("(Slight pause.) Do you remember parking?"),
+                                    role="dialog", speaker="ADA"))
+    p._apply_learned_style(result, _model())
+    assert result[-1].role == "dialog"
