@@ -759,6 +759,8 @@ class DocumentModel:
     furniture: Set[str]            # exact texts that repeat across many pages =
                                    # watermarks / headers / footers / draft stamps /
                                    # (CONTINUED) / OMITTED — page furniture, never voiced
+    cue_labels: Set[str] = field(default_factory=set)  # name-line brackets this script uses
+                                                       # as labels, not directions
 
     def is_cast(self, name: Optional[str]) -> bool:
         return bool(name) and name in self.cast
@@ -886,7 +888,42 @@ def _build_document_model(blocks: List[TextBlock], page_width: float = 612.0) ->
         cue_columns=cue_columns,
         dialog_columns=dialog_columns,
         furniture=furniture,
+        cue_labels=_learn_cue_labels(blocks),
     )
+
+
+_NAME_LINE_BRACKET_RE = re.compile(r"\(([^)]*)\)")
+# A bracket on a name line is a label (silent) rather than a direction when the
+# script repeats it heavily: at least this many times and this share of all
+# its name-line brackets. Directions are varied (None of Us: 48 brackets, all
+# different); labels recur (Stereophonic: "talkback" 42 of 308).
+_LABEL_MIN_COUNT = 5
+_LABEL_MIN_SHARE = 0.10
+
+
+def _learn_cue_labels(blocks: List[TextBlock]) -> Set[str]:
+    counts: Counter = Counter()
+    for b in blocks:
+        if b.is_cue_with_inline_paren:
+            m = _NAME_LINE_BRACKET_RE.search(b.text)
+            if m:
+                counts[m.group(1).strip().lower()] += 1
+    total = sum(counts.values())
+    return {c for c, n in counts.items() if n >= _LABEL_MIN_COUNT and n >= _LABEL_MIN_SHARE * total}
+
+
+def _name_line_aside(text: str, labels: Set[str]) -> Optional[str]:
+    """The direction on a name line ("NADIA (laughing)" -> "(laughing)"), or
+    None when the bracket is a label: written in capitals like a screenplay
+    extension ("(V.O.)", "(CONT'D)") or one this script repeats heavily."""
+    m = _NAME_LINE_BRACKET_RE.search(text)
+    if not m:
+        return None
+    content = m.group(1).strip()
+    letters = [c for c in content if c.isalpha()]
+    if not letters or all(c.isupper() for c in letters) or content.lower() in labels:
+        return None
+    return f"({content})"
 
 
 # ---------------------------------------------------------------------------
@@ -901,6 +938,8 @@ class ClassifiedBlock:
     role: str                    # 'speaker_cue' | 'dialog' | 'stage_direction' |
                                  # 'parenthetical' | 'scene_heading' | 'noise'
     speaker: Optional[str] = None  # populated for 'speaker_cue' blocks only
+    aside: Optional[str] = None    # 'speaker_cue' only: a direction written on the name
+                                   # line ("NADIA (laughing)"), read by the narrator
 
 
 _SCENE_HEADING_BLOCK_RE = re.compile(
@@ -1291,8 +1330,8 @@ def _classify_blocks(
             speaker = _normalize_speaker(text).rstrip(".:,")
             if speaker:
                 pending_speaker = speaker
-                result.append(ClassifiedBlock(block=block, role="speaker_cue",
-                                              speaker=speaker))
+                result.append(ClassifiedBlock(block=block, role="speaker_cue", speaker=speaker,
+                                              aside=_name_line_aside(text, model.cue_labels)))
             else:
                 result.append(ClassifiedBlock(block=block, role="noise"))
             continue
@@ -1744,6 +1783,10 @@ def _build_script_from_blocks(
 
         if role == "speaker_cue":
             # Speaker cues do not become elements; they set context for dialog.
+            # A direction written on the name line becomes an aside before the speech.
+            if cb.aside:
+                current_elements.append(Element(kind="parenthetical", text=cb.aside,
+                                                speaker=_normalize_speaker(cb.speaker or "")))
             continue
 
         text = cb.block.text.strip()
