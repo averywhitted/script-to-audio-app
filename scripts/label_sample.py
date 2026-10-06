@@ -20,6 +20,7 @@ overall accuracy is pinned within about +-5 points, 95% of the time.
 Usage:
   python scripts/label_sample.py            # open http://localhost:8765
   open http://localhost:8765/#154           # jump straight to one sampled line
+  python scripts/label_sample.py --sample exam   # the held-out final exam
   python scripts/label_sample.py --per-pdf 40 --new   # fresh, larger sample (only before labelling)
 """
 from __future__ import annotations
@@ -46,6 +47,16 @@ ROOT = Path(__file__).resolve().parent.parent
 LOCK = threading.Lock()
 PDF_DIR = ROOT / "Test PDFs"
 LABELS = PDF_DIR / "reference" / "real_sample.json"
+# The final exam: a second, independent sample (different seed, no line shared
+# with the first) labelled only after the parser work it judges is done, so
+# nothing was ever tuned against it. Select with --sample exam.
+SAMPLES = {"main": ("real_sample.json", 2026), "exam": ("real_sample.exam.json", 2027)}
+
+
+def use_sample(name: str) -> None:
+    global LABELS, SEED
+    filename, SEED = SAMPLES[name]
+    LABELS = PDF_DIR / "reference" / filename
 SEED = 2026
 
 KINDS = [  # (key, label, help)
@@ -103,12 +114,15 @@ def line_text(item: dict) -> str | None:
     return text if fingerprint(text) == item["sha1"] else None
 
 
-def draw_sample(per_pdf: int) -> dict:
+def draw_sample(per_pdf: int, exclude: set | None = None) -> dict:
+    """`exclude`: (pdf, page, line) positions already in another sample."""
     rng = random.Random(SEED)
     items = []
+    exclude = exclude or set()
     for pdf in sorted(p.name for p in PDF_DIR.glob("*.pdf")):
         d = doc(pdf)
-        every = [(pg, i, t, bb) for pg in range(len(d)) for i, (t, bb) in enumerate(page_lines(d[pg]))]
+        every = [(pg, i, t, bb) for pg in range(len(d)) for i, (t, bb) in enumerate(page_lines(d[pg]))
+                 if (pdf, pg, i) not in exclude]
         for pg, i, t, bb in rng.sample(every, min(per_pdf, len(every))):
             items.append({"pdf": pdf, "page": pg, "line": i, "bbox": [round(v, 1) for v in bb],
                           "sha1": fingerprint(t), "label": None, "speaker": None})
@@ -389,15 +403,23 @@ def main() -> int:
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--review", action="store_true",
                     help="show only saved labels that look like slips, to confirm or fix")
+    ap.add_argument("--sample", choices=sorted(SAMPLES), default="main",
+                    help="'exam' = the held-out final-exam sample")
     args = ap.parse_args()
     global REVIEW
     REVIEW = args.review
+    use_sample(args.sample)
     if args.new and LABELS.exists() and any(it["label"] for it in load()["items"]):
         print(f"Refusing to draw a new sample: {LABELS.relative_to(ROOT)} already has labels.\n"
               "Move that file somewhere safe first if you really want to start over.")
         return 1
     if args.new or not LABELS.exists():
-        save(draw_sample(args.per_pdf))
+        others = set()
+        for name, (filename, _) in SAMPLES.items():
+            path = PDF_DIR / "reference" / filename
+            if name != args.sample and path.exists():
+                others |= {(it["pdf"], it["page"], it["line"]) for it in json.loads(path.read_text())["items"]}
+        save(draw_sample(args.per_pdf, exclude=others))
         print(f"Drew a new sample: {args.per_pdf} lines from each PDF.")
     data = load()
     done = sum(1 for it in data["items"] if it["label"])

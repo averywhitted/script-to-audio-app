@@ -41,7 +41,9 @@ tell "better" from "worse"; this is that way. Follow it for ANY change to `backe
    - **Real PDFs** (`label_sample.py` → `real_score.py`): 403 lines (31 per PDF) hand-labelled by
      the user; 95% range about ±2.5 pts. Local only (`real_sample*.json` is gitignored: it names
      the PDFs). Use it as the **judge**, not as design input — don't build fixes around the
-     specific sampled lines. A fresh held-out sample is the final exam for big changes.
+     specific sampled lines. A fresh held-out sample is the final exam for big changes:
+     `--sample exam` (403 lines, drawn Oct 2026, none shared with the first sample; label it only once the
+     work it judges is done).
 3. **The rule:** nothing that was right may go wrong — no generated unit, no labelled real line —
    unless we've reviewed it together and accepted it with `python scripts/answer_key.py --save`.
    Then `python scripts/generate_reference.py <ChangedName>` and use the diff of
@@ -55,8 +57,8 @@ Enforcement: the pre-commit hook (`scripts/git-hooks/pre-commit`, active via
 `answer_key.py --check` whenever parser files are staged.
 
 Decisions on record: bare timing beats ("Beat.", "PAUSE", "(beat)") are never read aloud; real
-dialogue always carries forward to the last speaker. Baselines (Oct 2026): generated 96.5%, real
-sample 96.2%.
+dialogue always carries forward to the last speaker. Baselines (Oct 6 2026, after the style learner, page body and name-line
+fixes): generated 99.4%, real sample 98.5%.
 
 Legacy: `scripts/scorecard.py` and `Test PDFs/reference/*_independent.json` were the previous oracle.
 Their "ground truth" was produced by per-script rules (not checked by a person) and only about half
