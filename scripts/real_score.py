@@ -14,6 +14,7 @@ the time.
 
 Usage:
   python scripts/real_score.py
+  python scripts/real_score.py --sample exam   # the held-out final exam
   python scripts/real_score.py --errors 5     # plus examples of the mistakes
 """
 from __future__ import annotations
@@ -84,7 +85,10 @@ def score_pdf(pdf: str, items: list[dict]) -> list[dict]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--errors", type=int, default=0)
+    ap.add_argument("--sample", choices=sorted(L.SAMPLES), default="main",
+                    help="'exam' = the held-out final-exam sample")
     args = ap.parse_args()
+    L.use_sample(args.sample)
     logging.disable(logging.CRITICAL)
     if not L.LABELS.exists():
         print("No labels yet. Run: python scripts/label_sample.py")
