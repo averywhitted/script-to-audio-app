@@ -13,14 +13,17 @@ actually typeset. The question asked of every unit is the one a listener hears:
                                                   title page, cast list)
 
 Matching is exact, not guessed. The parser never invents text, so every word it
-outputs comes from somewhere in the typeset stream. Each output element is
-placed, in order, as the tightest run of typeset words that spells it (see
-`align`), so a repeated word — a line ending "...Nadia?" right before the name
-NADIA — is credited to the unit it actually belongs to. Each typeset word is
-then either found, with the voice and kind the parser gave it, or missing. A
-unit counts as read by voice V when most of its words were found and most of
-those were given voice V. Every unit is scored, short lines included: there is
-no minimum length and no lookup by fingerprint.
+outputs comes from somewhere in the typeset stream. Output elements are placed
+in two phases (see `align`): first long elements whose exact wording occurs only
+once (unambiguous anchors), then every other element in the gap between its
+placed neighbours, as the tightest run of typeset words that spells it. So a
+repeated word -- a line ending "...Nadia?" right before the name NADIA -- is
+credited to the unit it belongs to, and one ambiguous short line can't drag the
+rest out of place. Each typeset word is then either found, with the voice and
+kind the parser gave it, or missing. A unit counts as read by voice V when most
+of its words were found and most of those were given voice V. Every unit is
+scored, short lines included: there is no minimum length and no lookup by
+fingerprint.
 
 The scorer is itself tested (backend/tests/test_synth_score.py): a perfect parse
 of every generated script must score exactly 100%.
@@ -33,6 +36,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import bisect
 import json
 import logging
 import re
@@ -94,7 +98,6 @@ def output_elements(script) -> list[tuple[list[str], str, str]]:
     return out
 
 
-WINDOW = 600   # how far ahead of the last placed element to look for the next one
 MAX_GAP = 12   # most typeset words an element may skip between two of its own words
                # (dropped page numbers, a (MORE), a name merged out of the text)
 
@@ -120,40 +123,101 @@ def _fit(t_words: list[str], used: list[bool], start: int, ws: list[str]) -> tup
     return placed, skipped, at
 
 
+ANCHOR_MIN_WORDS = 6   # an element this long whose exact wording occurs once is an anchor
+
+
+def _best_fit(t_words, used, pos_of, ws, lo, hi):
+    """Best placement of `ws` starting within [lo, hi): most words spelled, then
+    fewest typeset words skipped, then earliest."""
+    best = None
+    starts = pos_of.get(ws[0], [])
+    for st in starts[bisect.bisect_left(starts, lo):bisect.bisect_left(starts, hi)]:
+        if used[st]:
+            continue
+        placed, skipped, at = _fit(t_words, used, st, ws)
+        key = (placed, -skipped)
+        if best is None or key > best[0]:
+            best = (key, at)
+            if placed == len(ws) and skipped == 0:
+                break
+    return best
+
+
+def _increasing(cands: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Longest run of (output index, position) pairs whose positions increase
+    with output order: anchors that contradict the reading order are dropped."""
+    tails: list[int] = []
+    tail_at: list[int] = []
+    back = [-1] * len(cands)
+    for i, (_, pos) in enumerate(cands):
+        j = bisect.bisect_left(tails, pos)
+        if j == len(tails):
+            tails.append(pos)
+            tail_at.append(i)
+        else:
+            tails[j] = pos
+            tail_at[j] = i
+        back[i] = tail_at[j - 1] if j else -1
+    out, i = [], tail_at[-1] if tail_at else -1
+    while i != -1:
+        out.append(cands[i])
+        i = back[i]
+    return out[::-1]
+
+
 def align(t_words: list[str], elements: list[tuple[list[str], str, str]]) -> dict[int, tuple[str, str]]:
     """Map typeset word index -> (voice, kind) for every word the parser read.
 
-    Elements are placed in output order. For each, every occurrence of its first
-    word within WINDOW of the last placement is tried as a start, and the
-    placement that spells the most of the element with the fewest skipped
-    typeset words wins (earliest on ties). Contiguity is what resolves repeated
-    words correctly. An element that fits nowhere in the window (text the parser
-    read out of order) is placed anywhere in the stream by the same rule.
+    Two phases, so one ambiguous short line can't drag the rest out of place:
+      1. Anchors: elements of ANCHOR_MIN_WORDS+ words whose exact wording occurs
+         exactly once in the typeset text, kept only where they agree with the
+         output's reading order.
+      2. Every other element, in output order, is placed in the gap between its
+         nearest placed neighbours: the placement that spells the most of it with
+         the fewest skipped typeset words wins (contiguity resolves repeated
+         words). An element that fits nowhere in its gap (text read out of
+         order) is placed anywhere by the same rule, without constraining others.
     """
     used = [False] * len(t_words)
     found: dict[int, tuple[str, str]] = {}
-    cursor = 0
-    for ws, voice, kind in elements:
-        best = None
-        for scope in (range(cursor, min(len(t_words), cursor + WINDOW)), range(len(t_words))):
-            for st in scope:
-                if used[st] or t_words[st] != ws[0]:
-                    continue
-                placed, skipped, at = _fit(t_words, used, st, ws)
-                key = (placed, -skipped)
-                if best is None or key > best[0]:
-                    best = (key, at)
-                    if placed == len(ws) and skipped == 0:
-                        break
-            if best and best[0][0] * 2 >= len(ws):
-                break
-        if not best:
+    pos_of: dict[str, list[int]] = defaultdict(list)
+    for i, w in enumerate(t_words):
+        pos_of[w].append(i)
+    span: list[tuple[int, int] | None] = [None] * len(elements)
+
+    cands = []
+    for k, (ws, _, _) in enumerate(elements):
+        if len(ws) >= ANCHOR_MIN_WORDS:
+            occ = [st for st in pos_of.get(ws[0], []) if t_words[st:st + len(ws)] == ws]
+            if len(occ) == 1:
+                cands.append((k, occ[0]))
+    for k, st in _increasing(cands):
+        ws, voice, kind = elements[k]
+        if any(used[st:st + len(ws)]):
+            continue
+        for j in range(st, st + len(ws)):
+            used[j] = True
+            found[j] = (voice, kind)
+        span[k] = (st, st + len(ws))
+
+    for k, (ws, voice, kind) in enumerate(elements):
+        if span[k] is not None:
+            continue
+        lo = next((span[j][1] for j in range(k - 1, -1, -1) if span[j]), 0)
+        hi = next((span[j][0] for j in range(k + 1, len(elements)) if span[j]), len(t_words))
+        best = _best_fit(t_words, used, pos_of, ws, lo, max(hi, lo + 1))
+        in_order = best is not None and best[0][0] * 2 >= len(ws)
+        if not in_order:
+            anywhere = _best_fit(t_words, used, pos_of, ws, 0, len(t_words))
+            if anywhere and (best is None or anywhere[0] > best[0]):
+                best = anywhere
+        if not best or not best[1]:
             continue
         for j in best[1]:
             used[j] = True
             found[j] = (voice, kind)
-        if best[1]:
-            cursor = max(cursor, best[1][-1] + 1) if best[1][0] >= cursor else cursor
+        if in_order:
+            span[k] = (best[1][0], best[1][-1] + 1)
     return found
 
 
