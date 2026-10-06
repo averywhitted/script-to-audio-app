@@ -1506,9 +1506,16 @@ def _apply_learned_style(result: List["ClassifiedBlock"], model: DocumentModel) 
     learned = _learn_style(result, model)
     if learned is None:
         return
-    for cb, lr in zip(learned["pool"], learned["evidence"]):
-        if cb.role == "dialog" and lr >= math.log(_STYLE_OVERRIDE_LR):
+    sure = math.log(_STYLE_OVERRIDE_LR)
+    for cb, lr, speaker in zip(learned["pool"], learned["evidence"], learned["speaker"]):
+        if cb.role == "dialog" and lr >= sure:
+            # Looks like this script's directions, not its dialogue.
             cb.role, cb.speaker = "stage_direction", None
+        elif cb.role == "stage_direction" and lr <= -sure and speaker:
+            # The reverse: given to the narrator, but looks like this script's
+            # dialogue, inside a scene where a character is speaking. It goes
+            # to that character, exactly as carry-forward would have.
+            cb.role, cb.speaker = "dialog", speaker
 
 
 def _learn_style(result: List["ClassifiedBlock"], model: DocumentModel) -> Optional[dict]:
@@ -1517,15 +1524,22 @@ def _learn_style(result: List["ClassifiedBlock"], model: DocumentModel) -> Optio
     has too few named speeches to learn from)."""
     page_width = model.profile.page_width if model.profile else 612.0
     # The script's own examples of dialogue: the first text after each name.
-    anchors, pool, prev = [], [], None
+    # For every other block, note who is speaking at that point in the scene
+    # (the last name since the scene began), if anyone.
+    anchors, pool, pool_speaker, prev, speaking = [], [], [], None, None
     for cb in result:
         if cb.role == "noise":
             continue
-        if cb.role in ("dialog", "stage_direction", "parenthetical"):
+        if cb.role == "scene_heading":
+            speaking = None
+        elif cb.role == "speaker_cue":
+            speaking = cb.speaker
+        elif cb.role in ("dialog", "stage_direction", "parenthetical"):
             if cb.role == "dialog" and prev is not None and prev.role == "speaker_cue":
                 anchors.append(cb)
             else:
                 pool.append(cb)
+                pool_speaker.append(speaking)
         prev = cb
     if len(anchors) < _STYLE_MIN_ANCHORS or not pool:
         return None
@@ -1574,7 +1588,7 @@ def _learn_style(result: List["ClassifiedBlock"], model: DocumentModel) -> Optio
 
     evidence = [loglik(dir_t, f) - loglik(dialog_t, f) for f in pool_f]   # log likelihood ratio
     return {"pool": pool, "resp": resp, "prior": prior, "dialog": dialog_t, "direction": dir_t,
-            "features": feats, "evidence": evidence}
+            "features": feats, "evidence": evidence, "speaker": pool_speaker}
 
 
 # ---------------------------------------------------------------------------
