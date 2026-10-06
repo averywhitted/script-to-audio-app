@@ -1,7 +1,7 @@
 {
   "_meta": {
     "source_pdf": "EMMA Script (2).pdf",
-    "generated": "2026-10-04",
+    "generated": "2026-10-06",
     "note": "Auto-generated. Reviewed and corrected by hand before locking as ground truth."
   },
   "title": "E M M A",
@@ -7918,8 +7918,8 @@
           "sig": "AU"
         },
         {
-          "kind": "dialog",
-          "speaker": "MRS. ELTON",
+          "kind": "stage_direction",
+          "speaker": null,
           "sig": "M"
         },
         {

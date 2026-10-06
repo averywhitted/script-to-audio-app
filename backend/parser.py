@@ -40,6 +40,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import math
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -1394,7 +1395,182 @@ def _classify_blocks(
         else:  # stage_direction
             result.append(ClassifiedBlock(block=block, role="stage_direction"))
 
+    _apply_learned_style(result, model)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Learned style: what THIS script's dialogue and directions look like
+# ---------------------------------------------------------------------------
+#
+# Every script marks its stage directions its own way — italics, brackets, a
+# different indent, bold, smaller type, another typeface — and no fixed rule
+# can know which. So nothing here names a convention. Each block is described
+# by the same general features; the script supplies its own examples of
+# dialogue (the text right after a character's name); and a two-part mixture
+# model learns, for this script alone, what everything else that isn't
+# dialogue looks like. Features that don't separate the two in this script
+# end up carrying no weight. A line the classifier gave to the last speaker is
+# handed to the narrator only when it is much more like this script's
+# directions than its dialogue.
+
+_STYLE_MIN_ANCHORS = 20     # too few named speeches to learn this script's dialogue from
+_STYLE_EM_ROUNDS = 30
+_STYLE_SMOOTHING = 1.0      # Laplace smoothing per feature value
+# A line moves from a character to the narrator only when its OWN look is at
+# least this many times more typical of the script's directions than of its
+# dialogue (odds 19:1, i.e. 95% at even odds). The script-wide share of
+# directions is used to fit the model but never to decide a line: it once made
+# plain dialogue in Stereophonic "probably a direction" purely because most of
+# that script's other text is.
+_STYLE_OVERRIDE_LR = 19.0
+_UNKNOWN = "?"              # a feature that couldn't be measured; ignored by the model
+
+
+def _style_features(block: TextBlock, page_width: float) -> Tuple[str, ...]:
+    """General, document-relative description of a block's look. Nothing here
+    says which look means what; that is learned per script.
+
+    A block that opens with a bracketed aside and goes on ("(Slight pause.)
+    Do you remember?") is two things: the aside is narration either way, and
+    the question is whether the rest is speech. So it is described by the
+    part after the aside — its type, punctuation and capitals."""
+    # Peel leading asides exactly as script assembly does (it strips them all).
+    text = rest = block.text.strip()
+    while rest.startswith("("):
+        lead, after = _split_leading_paren(rest)
+        if lead is None or not after.strip():
+            break
+        rest = after.strip()
+    if not rest.strip():
+        rest = text
+    skip = len(text) - len(rest)        # characters of leading asides to leave out
+
+    total = ital = bold = 0
+    fonts: Counter = Counter()
+    sizes: Counter = Counter()
+    seen = 0
+    for spans in block.lines:
+        for sp in spans:
+            for ch in sp.text:
+                seen += 1
+                if seen <= skip or ch.isspace():
+                    continue
+                total += 1
+                ital += sp.italic
+                bold += sp.bold
+                family = re.sub(r"[-,]?(Bold|Italic|Oblique|BoldItalic|BoldOblique|Regular|Roman|MT|PS)+$",
+                                "", sp.font, flags=re.IGNORECASE)
+                fonts[family] += 1
+                sizes[round(sp.size * 2) / 2] += 1
+    text = rest.strip()
+    starts_paren, ends_paren = text.startswith("("), text.endswith(")")
+    caps_ratio = (sum(c.isupper() for c in text if c.isalpha()) /
+                  max(1, sum(c.isalpha() for c in text)))
+
+    # Blocks the parser builds itself (text split off after a bracketed
+    # direction) carry no type information; "?" marks it unknown, and unknown
+    # features count neither way.
+    def share(k: int) -> str:
+        if not total:
+            return _UNKNOWN
+        r = k / total
+        return "all" if r >= 0.95 else "some" if r > 0.05 else "none"
+
+    end = text[-1:] if text[-1:] in "?!.," else "other"
+    if text.endswith(("?\u201d", '?"')):
+        end = "?"
+    elif text.endswith(("!\u201d", '!"')):
+        end = "!"
+    paren = "both" if starts_paren and ends_paren else "open" if starts_paren else "none"
+    caps = "high" if caps_ratio >= 0.8 else "mid" if caps_ratio >= 0.3 else "low"
+    quoted = text[:1] in ("\u201c", '"')
+    return (
+        f"x{round(block.x0 / max(page_width, 1) * 50)}",      # position, 2% of page width
+        f"it:{share(ital)}" if total else _UNKNOWN,
+        f"bd:{share(bold)}" if total else _UNKNOWN,
+        f"font:{fonts.most_common(1)[0][0]}" if fonts else _UNKNOWN,
+        f"size:{sizes.most_common(1)[0][0]}" if sizes else _UNKNOWN,
+        f"paren:{paren}",
+        f"end:{end}",
+        f"quote:{quoted}",
+        f"caps:{caps}",
+    )
+
+
+def _apply_learned_style(result: List["ClassifiedBlock"], model: DocumentModel) -> None:
+    learned = _learn_style(result, model)
+    if learned is None:
+        return
+    for cb, lr in zip(learned["pool"], learned["evidence"]):
+        if cb.role == "dialog" and lr >= math.log(_STYLE_OVERRIDE_LR):
+            cb.role, cb.speaker = "stage_direction", None
+
+
+def _learn_style(result: List["ClassifiedBlock"], model: DocumentModel) -> Optional[dict]:
+    """Fit this script's style model. Returns the learned tables and, for each
+    non-anchor block, the probability it is a direction (None if the script
+    has too few named speeches to learn from)."""
+    page_width = model.profile.page_width if model.profile else 612.0
+    # The script's own examples of dialogue: the first text after each name.
+    anchors, pool, prev = [], [], None
+    for cb in result:
+        if cb.role == "noise":
+            continue
+        if cb.role in ("dialog", "stage_direction", "parenthetical"):
+            if cb.role == "dialog" and prev is not None and prev.role == "speaker_cue":
+                anchors.append(cb)
+            else:
+                pool.append(cb)
+        prev = cb
+    if len(anchors) < _STYLE_MIN_ANCHORS or not pool:
+        return None
+
+    feats = {id(cb): _style_features(cb.block, page_width) for cb in anchors + pool}
+    n_feat = len(next(iter(feats.values())))
+    values: List[Set[str]] = [set() for _ in range(n_feat)]
+    for f in feats.values():
+        for k, v in enumerate(f):
+            values[k].add(v)
+
+    def table(weighted: List[Tuple[Tuple[str, ...], float]]) -> List[Dict[str, float]]:
+        tot = sum(w for _, w in weighted)
+        out = []
+        for k in range(n_feat):
+            counts: Dict[str, float] = defaultdict(float)
+            known = 0.0
+            for f, w in weighted:
+                if f[k] != _UNKNOWN:
+                    counts[f[k]] += w
+                    known += w
+            vals = values[k] - {_UNKNOWN}
+            denom = known + _STYLE_SMOOTHING * max(len(vals), 1)
+            out.append({v: (counts[v] + _STYLE_SMOOTHING) / denom for v in vals})
+        return out
+
+    def loglik(t: List[Dict[str, float]], f: Tuple[str, ...]) -> float:
+        return sum(math.log(t[k][v]) for k, v in enumerate(f) if v != _UNKNOWN)
+
+    # Dialogue: fixed, from the anchors. Directions: learned from the pool by
+    # EM, starting from "everything in the pool is equally likely to be either".
+    dialog_t = table([(feats[id(cb)], 1.0) for cb in anchors])
+    pool_f = [feats[id(cb)] for cb in pool]
+    resp = [0.5] * len(pool_f)
+    prior = 0.5
+    for _ in range(_STYLE_EM_ROUNDS):
+        dir_t = table(list(zip(pool_f, resp)))
+        new = []
+        for f in pool_f:
+            a = math.log(prior) + loglik(dir_t, f)
+            b = math.log(1 - prior) + loglik(dialog_t, f)
+            m = max(a, b)
+            new.append(math.exp(a - m) / (math.exp(a - m) + math.exp(b - m)))
+        resp = new
+        prior = min(max(sum(resp) / len(resp), 0.01), 0.99)
+
+    evidence = [loglik(dir_t, f) - loglik(dialog_t, f) for f in pool_f]   # log likelihood ratio
+    return {"pool": pool, "resp": resp, "prior": prior, "dialog": dialog_t, "direction": dir_t,
+            "features": feats, "evidence": evidence}
 
 
 # ---------------------------------------------------------------------------
