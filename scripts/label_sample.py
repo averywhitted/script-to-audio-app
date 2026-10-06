@@ -1,0 +1,421 @@
+#!/usr/bin/env python3
+"""label_sample.py — label a random sample of real script lines, quickly.
+
+The second half of the parser's answer key. Generated scripts (synth_*.py) give
+exact answers but can't show every quirk of real PDFs; this measures the
+parser on the real ones. A fixed random sample of lines is drawn — the same
+number from each PDF in "Test PDFs/", so every script counts equally — and you
+label each line in a local web page: the line is highlighted on its real page,
+you press a number for what it is and, for dialogue, a letter for who says it.
+The parser's own answer is never shown, so it can't sway you.
+
+Labels are saved to Test PDFs/reference/real_sample.json after every keypress.
+They are stored by PDF, page and line position plus a fingerprint of the text,
+never the text itself, so the file can be committed without publishing any
+script. `real_score.py` scores the parser against them.
+
+Statistics: with 31 lines from each of 13 scripts (403 in all), the parser's
+overall accuracy is pinned within about +-5 points, 95% of the time.
+
+Usage:
+  python scripts/label_sample.py            # open http://localhost:8765
+  open http://localhost:8765/#154           # jump straight to one sampled line
+  python scripts/label_sample.py --per-pdf 40 --new   # fresh, larger sample (only before labelling)
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import random
+import re
+import sys
+from collections import Counter
+from functools import lru_cache
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+import fitz  # PyMuPDF
+
+ROOT = Path(__file__).resolve().parent.parent
+# PyMuPDF documents must not be used from two threads at once, and label
+# writes must not interleave. The server is threaded (a single-threaded one
+# stalls whenever the browser holds an idle connection open), so every
+# request takes this lock before touching a PDF or the label file.
+LOCK = threading.Lock()
+PDF_DIR = ROOT / "Test PDFs"
+LABELS = PDF_DIR / "reference" / "real_sample.json"
+SEED = 2026
+
+KINDS = [  # (key, label, help)
+    ("1", "dialog", "Dialogue: spoken by a character"),
+    ("2", "stage_direction", "Stage direction / action: read by the narrator"),
+    ("3", "parenthetical", "Aside: bracketed direction like (beat), (to JOHN)"),
+    ("4", "character_cue", "Character name above or before a speech"),
+    ("5", "scene_heading", "Scene / act heading"),
+    ("6", "page_furniture", "Page junk: page number, header, title page, cast list, notes"),
+    ("7", "mixed", "Mixed: more than one of the above on this line"),
+    ("0", "unsure", "Can't tell"),
+]
+
+
+# ---------------------------------------------------------------------------
+# Lines
+# ---------------------------------------------------------------------------
+
+def page_lines(page: fitz.Page) -> list[tuple[str, tuple[float, float, float, float]]]:
+    """Non-empty physical lines on a page, in PyMuPDF's order (stable per file)."""
+    out = []
+    # Same text flags as the default "dict" minus image extraction, which is
+    # most of the cost and yields no lines (image blocks are skipped anyway).
+    flags = fitz.TEXTFLAGS_DICT & ~fitz.TEXT_PRESERVE_IMAGES
+    for block in page.get_text("dict", flags=flags)["blocks"]:
+        for line in block.get("lines", []):
+            text = "".join(s["text"] for s in line["spans"]).strip()
+            if text:
+                out.append((text, tuple(line["bbox"])))
+    return out
+
+
+def fingerprint(text: str) -> str:
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
+
+
+@lru_cache(maxsize=None)
+def doc(name: str) -> fitz.Document:
+    return fitz.open(PDF_DIR / name)
+
+
+@lru_cache(maxsize=None)
+def lines_of(pdf: str, page: int) -> tuple:
+    """page_lines for one page, read once: extracting a page is slow (~25 ms),
+    and review mode checks every sampled line on each request."""
+    return tuple(page_lines(doc(pdf)[page]))
+
+
+def line_text(item: dict) -> str | None:
+    """The text of a sampled line, or None if the PDF no longer matches."""
+    lines = lines_of(item["pdf"], item["page"])
+    if item["line"] >= len(lines):
+        return None
+    text = lines[item["line"]][0]
+    return text if fingerprint(text) == item["sha1"] else None
+
+
+def draw_sample(per_pdf: int) -> dict:
+    rng = random.Random(SEED)
+    items = []
+    for pdf in sorted(p.name for p in PDF_DIR.glob("*.pdf")):
+        d = doc(pdf)
+        every = [(pg, i, t, bb) for pg in range(len(d)) for i, (t, bb) in enumerate(page_lines(d[pg]))]
+        for pg, i, t, bb in rng.sample(every, min(per_pdf, len(every))):
+            items.append({"pdf": pdf, "page": pg, "line": i, "bbox": [round(v, 1) for v in bb],
+                          "sha1": fingerprint(t), "label": None, "speaker": None})
+    rng.shuffle(items)  # mix scripts so fatigue doesn't land on one of them
+    return {"_meta": {"seed": SEED, "per_pdf": per_pdf,
+                      "about": "Hand labels for a random sample of real PDF lines. "
+                               "Positions and fingerprints only; no script text."},
+            "items": items}
+
+
+def needs_review(item: dict) -> str | None:
+    """Why a saved label looks like a slip, or None. Shown in --review mode."""
+    if item["label"] != "dialog":
+        return None
+    sp = (item.get("speaker") or "").strip()
+    if not sp or sp.startswith("*") or "PAGE" in sp.upper():
+        return "The speaker is a note, not a name. Use the previous-page view to find who says it."
+    text = line_text(item) or ""
+    norm = lambda t: re.sub(r"\(.*?\)", "", t).strip().rstrip(":.").upper()
+    if norm(text) == norm(sp):
+        return "This line is just the name. If it's the name above a speech, press 4 (character name)."
+    return None
+
+
+REVIEW = False
+
+
+def load() -> dict:
+    return json.loads(LABELS.read_text())
+
+
+def save(data: dict) -> None:
+    tmp = LABELS.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=1))
+    tmp.replace(LABELS)
+
+
+@lru_cache(maxsize=None)
+def speaker_names(pdf: str) -> list[str]:
+    """Names to offer for dialogue: short ALL-CAPS lines that recur in the PDF.
+
+    Found independently of the parser, so offering them shows nothing of its
+    answer; they only save typing. Any other name can be typed in.
+    """
+    counts: Counter = Counter()
+    d = doc(pdf)
+    for pg in d:
+        for text in pg.get_text("text").splitlines():   # plain text: fast, positions not needed
+            t = re.sub(r"\(.*?\)", "", text).strip().rstrip(":.")
+            if (1 <= len(t) <= 24 and re.fullmatch(r"[A-Z](?:[A-Z .'\-]*[A-Z.])?", t)
+                    and len(t.split()) <= 3 and not re.match(r"^(INT|EXT|SCENE|ACT)\b", t)):
+                counts[t] += 1
+    return [n for n, c in counts.most_common(15) if c >= 3]
+
+
+# ---------------------------------------------------------------------------
+# Web page
+# ---------------------------------------------------------------------------
+
+PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>Label lines</title>
+<style>
+ :root { --bg:#f6f5f2; --fg:#1d1d1b; --muted:#6b6b66; --line:#d8d6cf; --hi:#2f6fdd; --card:#fff; }
+ @media (prefers-color-scheme: dark) { :root { --bg:#1b1b1a; --fg:#ecebe6; --muted:#a3a29b; --line:#3a3936; --card:#252523; } }
+ body { margin:0; font:15px -apple-system, system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+ main { display:grid; grid-template-columns: minmax(0,1fr) 360px; gap:20px; padding:16px; max-width:1300px; margin:auto; }
+ .pagewrap { position:relative; background:#fff; border:1px solid var(--line); align-self:start; }
+ .pagewrap img { display:block; width:100%; }
+ .box { position:absolute; border:2px solid var(--hi); background:rgba(47,111,221,.12); border-radius:3px; }
+ aside { position:sticky; top:16px; align-self:start; max-height:calc(100vh - 32px); overflow-y:auto; }
+ .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; }
+ .text { font:16px ui-monospace, Menlo, monospace; white-space:pre-wrap; }
+ .muted { color:var(--muted); font-size:13px; }
+ button { font:inherit; width:100%; text-align:left; padding:7px 10px; margin:3px 0; border:1px solid var(--line);
+          border-radius:7px; background:var(--card); color:var(--fg); cursor:pointer; }
+ button:hover { border-color:var(--hi); }
+ kbd { display:inline-block; min-width:18px; text-align:center; font:12px ui-monospace, monospace; border:1px solid var(--line);
+       border-radius:4px; padding:0 4px; margin-right:8px; }
+ .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; }
+ .bar div { height:100%; width:0; background:var(--hi); }
+ input { font:inherit; width:100%; box-sizing:border-box; padding:7px; border:1px solid var(--line); border-radius:7px;
+         background:var(--card); color:var(--fg); }
+ @media (max-width: 800px) { main { grid-template-columns: 1fr; } aside { position:static; } }
+</style></head><body><main>
+ <div class="pagewrap" id="pw"><img id="img" alt="PDF page"><div class="box" id="box"></div></div>
+ <aside>
+  <div class="card" id="reviewcard" hidden style="border-color:#d08a1c"><b>Check this one:</b> <span id="reviewmsg"></span></div>
+  <div class="card"><div class="bar"><div id="prog"></div></div><p class="muted" id="count"></p>
+   <div class="text" id="line"></div><p class="muted" id="where"></p></div>
+  <div class="card" id="speakers" hidden><p><b>Who says it?</b> <span class="muted">letter key, or / to type</span></p>
+   <p class="muted" id="namewarn" hidden style="color:#d08a1c">This line is just a name. If it's the name above a speech, press Esc, then 4.</p>
+   <div id="names"></div><input id="other" placeholder="Other name, then Enter">
+   <button id="unknown"><kbd>?</kbd>Can't see who says it, even on the previous page</button></div>
+  <div class="card" id="kinds"></div>
+  <div class="card"><button id="prevpage"><kbd>p</kbd>Show the previous page (to find who's speaking)</button>
+   <button id="back"><kbd>&larr;</kbd>Back to the line before this one</button>
+   <p class="muted">Labels save after every choice. You can close this tab and resume later.</p></div>
+ </aside></main>
+<script>
+const KINDS = __KINDS__;
+let state = null, idx = 0, pendingDialog = false, showingPrev = false, busy = false;
+// Lines visited, oldest first. Back retraces these; the sample order itself is
+// shuffled across scripts, so "the item before this one" would be unrelated.
+const history = [];
+const $ = id => document.getElementById(id);
+async function load(to, goingBack) {
+  if (state && !state.done && !goingBack && (history.length === 0 || history[history.length - 1] !== state.index)) history.push(state.index);
+  let r;
+  try { r = await fetch('/item' + (to === undefined ? '' : '?i=' + to)); }
+  catch (e) { return fail('Can\u2019t reach the labelling server. Is it still running in the terminal?'); }
+  const data = await r.json().catch(() => ({error: 'unreadable reply'}));
+  if (!r.ok || data.error) return fail('The server hit a problem: ' + (data.error || r.status) + '. Your labels so far are saved.');
+  state = data;
+  if (state.done) { document.querySelector('main').innerHTML = '<div class="card"><h2>' +
+      (state.review ? 'All flagged labels checked.' : 'All ' + state.total + ' lines labelled.') +
+      '</h2><p>Run <code>.venv/bin/python scripts/real_score.py</code> to score the parser.</p></div>'; return; }
+  idx = state.index; pendingDialog = false; showingPrev = false; $('speakers').hidden = true;
+  $('reviewcard').hidden = !state.review; $('reviewmsg').textContent = state.review || '';
+  $('line').textContent = state.text; $('where').textContent = state.pdf + ' \\u00b7 page ' + (state.page + 1);
+  $('count').textContent = state.labelled + ' of ' + state.total + ' labelled' + (state.label ? ' \\u00b7 this one: ' + state.label + (state.speaker ? ' (' + state.speaker + ')' : '') : '');
+  $('prog').style.width = (100 * state.labelled / state.total) + '%';
+  const img = $('img'); img.onload = () => {
+    const s = img.clientWidth / state.pw, b = state.bbox, box = $('box');
+    box.style.left = (b[0] * s - 4) + 'px'; box.style.top = (b[1] * s - 3) + 'px';
+    box.style.width = ((b[2] - b[0]) * s + 8) + 'px'; box.style.height = ((b[3] - b[1]) * s + 6) + 'px';
+    box.scrollIntoView({block: 'center', behavior: 'instant'});
+  };
+  img.src = '/page?pdf=' + encodeURIComponent(state.pdf) + '&p=' + state.page;
+  $('box').hidden = false; $('prevpage').innerHTML = '<kbd>p</kbd>Show the previous page (to find who’s speaking)';
+  $('kinds').innerHTML = KINDS.map(k => '<button data-k="' + k[0] + '"><kbd>' + k[0] + '</kbd>' + k[2] + '</button>').join('');
+  $('names').innerHTML = state.names.map((n, i) => '<button data-n="' + n + '"><kbd>' + String.fromCharCode(97 + i) + '</kbd>' + n + '</button>').join('');
+}
+async function send(label, speaker) {
+  if (busy) return;                       // ignore repeat clicks while a save is in flight
+  busy = true; document.body.style.cursor = 'progress';
+  try {
+    const r = await fetch('/label', {method: 'POST', body: JSON.stringify({index: idx, label, speaker: speaker || null})});
+    if (!r.ok) { alert('Could not save that label (' + r.status + '). Please try again.'); return; }
+    await load();
+  } finally { busy = false; document.body.style.cursor = ''; }
+}
+function back() {
+  if (busy || !history.length) return;
+  load(history.pop(), true);
+}
+function choose(key) {
+  const k = KINDS.find(k => k[0] === key); if (!k) return;
+  if (k[1] === 'dialog') {
+    pendingDialog = true; $('speakers').hidden = false; $('other').value = '';
+    const bare = s => s.replace(/\\(.*?\\)/g, '').trim().replace(/[:.]+$/, '').toUpperCase();
+    $('namewarn').hidden = !state.names.some(n => bare(n) === bare(state.text));
+    $('speakers').scrollIntoView({block: 'nearest'});
+    return;
+  }
+  send(k[1]);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  b.blur();   // so a later Space/Enter doesn't press this button again
+  if (b.dataset.k) choose(b.dataset.k);
+  if (b.dataset.n) send('dialog', b.dataset.n);
+  if (b.id === 'back') back();
+  if (b.id === 'unknown') send('dialog', '?');
+  if (b.id === 'prevpage') togglePrev();
+});
+document.addEventListener('keydown', e => {
+  if (e.target === $('other')) { if (e.key === 'Enter' && $('other').value.trim()) send('dialog', $('other').value.trim().toUpperCase()); if (e.key === 'Escape') $('other').blur(); return; }
+  if (e.key === 'ArrowLeft') return back();
+  if (e.key === 'p') return togglePrev();
+  if (pendingDialog && e.key === '?') return send('dialog', '?');
+  if (pendingDialog && /^[a-o]$/.test(e.key)) { const n = state.names[e.key.charCodeAt(0) - 97]; if (n) send('dialog', n); return; }
+  if (pendingDialog && e.key === '/') { e.preventDefault(); $('other').focus(); return; }
+  if (pendingDialog && e.key === 'Escape') { pendingDialog = false; $('speakers').hidden = true; return; }
+  choose(e.key);
+});
+function fail(msg) {
+  document.querySelector('main').innerHTML = '<div class="card"><h2>Something went wrong</h2><p>' + msg +
+    '</p><p class="muted">Reload the page to try again.</p></div>';
+}
+function togglePrev() {
+  if (!state || state.page === 0) return;
+  showingPrev = !showingPrev;
+  $('box').hidden = showingPrev;
+  $('img').src = '/page?pdf=' + encodeURIComponent(state.pdf) + '&p=' + (state.page - (showingPrev ? 1 : 0));
+  $('prevpage').innerHTML = showingPrev ? '<kbd>p</kbd>Back to this line’s page' : '<kbd>p</kbd>Show the previous page (to find who’s speaking)';
+  if (showingPrev) window.scrollTo({top: document.body.scrollHeight});
+}
+// http://localhost:8765/#154 opens line 154 directly (to fix one label).
+load(/^#\d+$/.test(location.hash) ? Number(location.hash.slice(1)) : undefined);
+</script></body></html>"""
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *args):  # keep the terminal quiet
+        pass
+
+    def _send(self, body: bytes, ctype: str, code: int = 200) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        self._guarded(self._get)
+
+    def do_POST(self):
+        self._guarded(self._post)
+
+    def _guarded(self, handler) -> None:
+        """Run a request under the lock; a bug answers 500 with the reason
+        instead of dropping the connection and leaving the page blank."""
+        with LOCK:
+            try:
+                handler()
+            except Exception as exc:  # noqa: BLE001
+                import traceback
+                traceback.print_exc()
+                self._send(json.dumps({"error": f"{type(exc).__name__}: {exc}"}).encode(),
+                           "application/json", 500)
+
+    def _get(self):
+        from urllib.parse import parse_qs, urlparse
+        url = urlparse(self.path)
+        q = {k: v[0] for k, v in parse_qs(url.query).items()}
+        if url.path == "/":
+            html = PAGE.replace("__KINDS__", json.dumps(KINDS))
+            return self._send(html.encode(), "text/html; charset=utf-8")
+        if url.path == "/page":
+            if q.get("pdf") not in {p.name for p in PDF_DIR.glob("*.pdf")}:
+                return self._send(b"no", "text/plain", 404)
+            pix = doc(q["pdf"])[int(q["p"])].get_pixmap(dpi=110)
+            return self._send(pix.tobytes("png"), "image/png")
+        if url.path == "/item":
+            data = load()
+            items = data["items"]
+            labelled = sum(1 for it in items if it["label"])
+            if "i" in q:
+                i = int(q["i"])
+            elif REVIEW:
+                i = next((n for n, it in enumerate(items)
+                          if needs_review(it) and not it.get("reviewed")), None)
+            else:
+                i = next((n for n, it in enumerate(items) if not it["label"]), None)
+            if i is None:   # nothing left: every line labelled, or every flag checked
+                return self._send(json.dumps({"done": True, "total": len(items), "review": REVIEW}).encode(),
+                                  "application/json")
+            it = items[i]
+            text = line_text(it) or "(this line no longer matches the PDF; press 0 to skip)"
+            page = doc(it["pdf"])[it["page"]]
+            body = {"index": i, "total": len(items), "labelled": labelled, "text": text,
+                    "pdf": it["pdf"], "page": it["page"], "bbox": it["bbox"], "pw": page.rect.width,
+                    "label": it["label"], "speaker": it["speaker"], "names": speaker_names(it["pdf"]),
+                    "review": needs_review(it) if REVIEW else None}
+            return self._send(json.dumps(body).encode(), "application/json")
+        return self._send(b"not found", "text/plain", 404)
+
+    def _post(self):
+        if self.path != "/label":
+            return self._send(b"not found", "text/plain", 404)
+        msg = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        valid = {k[1] for k in KINDS}
+        if msg.get("label") not in valid:
+            return self._send(b"bad label", "text/plain", 400)
+        data = load()
+        it = data["items"][int(msg["index"])]
+        it["label"] = msg["label"]
+        it["speaker"] = msg.get("speaker") if msg["label"] == "dialog" else None
+        if REVIEW:
+            it["reviewed"] = True
+        save(data)
+        return self._send(b"ok", "text/plain")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--per-pdf", type=int, default=31)
+    ap.add_argument("--new", action="store_true", help="discard labels and draw a fresh sample")
+    ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--review", action="store_true",
+                    help="show only saved labels that look like slips, to confirm or fix")
+    args = ap.parse_args()
+    global REVIEW
+    REVIEW = args.review
+    if args.new and LABELS.exists() and any(it["label"] for it in load()["items"]):
+        print(f"Refusing to draw a new sample: {LABELS.relative_to(ROOT)} already has labels.\n"
+              "Move that file somewhere safe first if you really want to start over.")
+        return 1
+    if args.new or not LABELS.exists():
+        save(draw_sample(args.per_pdf))
+        print(f"Drew a new sample: {args.per_pdf} lines from each PDF.")
+    data = load()
+    done = sum(1 for it in data["items"] if it["label"])
+    print(f"{done} of {len(data['items'])} lines labelled.")
+    if REVIEW:
+        flagged = [it for it in data["items"] if needs_review(it) and not it.get("reviewed")]
+        print(f"Review mode: {len(flagged)} labels to confirm or fix.")
+    print("Reading the PDFs once so every line loads instantly...", flush=True)
+    for pdf in sorted({it["pdf"] for it in data["items"]}):
+        speaker_names(pdf)
+    for it in data["items"]:
+        line_text(it)
+    print(f"Open http://localhost:{args.port}  (Ctrl-C to stop; labels are already saved)", flush=True)
+    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    server.daemon_threads = True
+    server.serve_forever()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -52,6 +52,20 @@ Enforcement: a git pre-commit hook (`scripts/git-hooks/pre-commit`, active via
 `git config core.hooksPath scripts/git-hooks` — **re-run once after cloning**) blocks any commit
 that regresses the scorecard when parser files are staged.
 
+**Answer key (Oct 2026) — the real measure of correctness.** The `*_independent.json` "ground
+truth" below was produced by per-script rules, not checked by a person, and the scorecard only
+checks about half of each script. Two newer tools measure what a listener hears (was each line read
+by the right voice?) on every line, short ones included:
+
+- `python scripts/synth_generate.py` then `python scripts/synth_score.py` — generated scripts in the
+  six layout families of the real corpus, answers exact by construction. The scorer is itself tested
+  (`backend/tests/test_synth_score.py`: a perfect parse scores 100%). Baseline 94.8%. Bare
+  "Beat." / "(pause)" must stay silent (user decision, Oct 2026).
+- `python scripts/label_sample.py` (local labelling page, http://localhost:8765) then
+  `python scripts/real_score.py` — a fixed random sample of 31 lines per real PDF, labelled by the
+  user; reports accuracy with a 95% range. Labels stay local (`real_sample.json` is gitignored: it
+  names the PDFs).
+
 Ground truth: `Test PDFs/reference/*_independent.json` (locked, parser-independent — the oracle).
 `{Name}.json` are parser-generated regression baselines (change-detectors; regenerate after
 intentional improvements). See memory `parser_audit_root_cause.md` for the full history.
