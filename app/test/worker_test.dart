@@ -75,6 +75,20 @@ print(json.dumps([f"Scene_{i+1:02d}_{_sanitize_filename_part(t)}.m4a" for i, t i
     expect(events, contains('cueMap'));
     final name = AppState.sceneFilename(scene.number, scene.title);
     expect(File('$out/$name').existsSync(), isTrue, reason: 'rendered $name');
-    expect(File('$out/${name.replaceAll('.m4a', '.cues.json')}').existsSync(), isTrue);
+    final cueFile = File('$out/${name.replaceAll('.m4a', '.cues.json')}');
+    expect(cueFile.existsSync(), isTrue);
+    // Every cue names its line with the same ref the app uses, one cue per
+    // line, in order, with no overlapping times.
+    final cues = ((jsonDecode(cueFile.readAsStringSync()) as Map)['cues'] as List).map((e) => SceneCue.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+    final refs = {for (final el in scene.elements) el.ref};
+    expect(cues, isNotEmpty);
+    for (final c in cues) {
+      expect(c.ref, isNotNull, reason: c.text);
+      expect(refs, contains(c.ref));
+    }
+    expect(cues.map((c) => c.ref).toSet().length, cues.length);
+    for (var i = 1; i < cues.length; i++) {
+      expect(cues[i].startTime, greaterThanOrEqualTo(cues[i - 1].endTime));
+    }
   }, skip: skip, timeout: const Timeout(Duration(minutes: 5)));
 }

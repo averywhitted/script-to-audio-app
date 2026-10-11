@@ -629,8 +629,14 @@ class _GeneralTabState extends State<_GeneralTab> {
       children: [
         _Section(
           header: 'Script Display',
-          footer: 'Each character gets their own highlighter color on their name in the script, the scene list and the Cast tab. Turn it off for plain gray name tags.',
+          footer: 'Text size: also View → Bigger Text (⌘+), Smaller Text (⌘−), Actual Size (⌘0). Highlight colors: each character gets their own highlighter color on their name. Turn it off for plain names.',
           children: [
+            Row(
+              children: [
+                Expanded(child: Text('Text size', style: TextStyles.ui(t))),
+                Segmented(labels: AppState.textSizeLabels, selected: app.textSize, onChanged: app.setTextSize, small: true),
+              ],
+            ),
             _toggleLine(t, 'Character highlight colors', app.characterColors, app.setCharacterColors),
             Row(
               children: [

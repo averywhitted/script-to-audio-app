@@ -38,7 +38,13 @@
       "2026-10-11 (round 2): Cast, Render and search sit in a toolbar under the title bar, on the left.",
       "2026-10-11 (round 2): Clicking BETA opens Settings → About.",
       "2026-10-11 (round 2): Report a Bug's button is 'Submit on GitHub'; the report opens on GitHub and is sent from there (a GitHub account is needed).",
-      "2026-10-11 (round 2): Projects: a click opens a project; the checkbox selects (clicks then add to the selection). Rename is in the selection bar (one selected), the right-click menu and the ⋯ button (Open, Rename…, Archive, Delete…)."
+      "2026-10-11 (round 2): Projects: a click opens a project; the checkbox selects (clicks then add to the selection). Rename is in the selection bar (one selected), the right-click menu and the ⋯ button (Open, Rename…, Archive, Delete…).",
+      "2026-10-11 (round 3): The app options cluster is always in the far top-right corner, on every screen.",
+      "2026-10-11 (round 3): Hovering a line gives it a faint wash, so it's clear which line the floating actions belong to.",
+      "2026-10-11 (round 3): An unsure line shows a handwritten 'who's speaking?' tag beside the name (tooltip: the parser's reason). Clicking it opens the speaker menu; picking anyone, even the same name, confirms the line. Confirming the same speaker is not an edit.",
+      "2026-10-11 (round 3): The Render progress card follows light/dark like everything else (no permanently dark 'booth').",
+      "2026-10-11 (round 3): Text size for the script: Settings → General → Script Display (Small, Medium (default), Large, Extra Large) and View → Bigger Text ⌘+, Smaller Text ⌘−, Actual Size ⌘0.",
+      "2026-10-11 (round 3): Export Audio… copies the rendered .m4a files (no cue maps) into a new '<project> Audio' folder the user picks: toolbar Export button, Script → Export Audio… (⇧⌘E), and the Projects ⋯/right-click menu."
     ]
   },
   "rules": {

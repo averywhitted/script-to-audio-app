@@ -383,9 +383,11 @@ class Project {
     required this.selectedEngine,
     required this.renderedScenes,
     Map<int, String>? renderFingerprints,
+    Set<String>? checkedLines,
     this.folderPath,
     this.extra = const {},
-  }) : renderFingerprints = renderFingerprints ?? {};
+  }) : renderFingerprints = renderFingerprints ?? {},
+       checkedLines = checkedLines ?? {};
 
   final String id;
   String name;
@@ -404,6 +406,10 @@ class Project {
   /// Scene number → fingerprint of the scene's edits when it was last rendered.
   /// A scene needs re-rendering only while its current fingerprint differs.
   Map<int, String> renderFingerprints;
+
+  /// Lines the parser was unsure about that the user confirmed as they are
+  /// ("<scene>|<elementRef>"). Not an edit: no re-render needed.
+  Set<String> checkedLines;
 
   /// Absolute path of the project folder. Not saved.
   String? folderPath;
@@ -447,6 +453,7 @@ class Project {
     'userAddedElements',
     'selectedEngine',
     'renderFingerprints',
+    'checkedLines',
     'renderedScenes',
   };
 
@@ -487,6 +494,7 @@ class Project {
       selectedEngine: j['selectedEngine'] as String? ?? 'macOS',
       renderedScenes: ((j['renderedScenes'] as List?) ?? const []).map((e) => (e as num).toInt()).toList(),
       renderFingerprints: intKeyed(j['renderFingerprints']),
+      checkedLines: {for (final e in (j['checkedLines'] as List?) ?? const []) '$e'},
       folderPath: folderPath,
       extra: Map.fromEntries(j.entries.where((e) => !_known.contains(e.key))),
     );
@@ -504,6 +512,7 @@ class Project {
       'pdfFilename': pdfFilename,
       'renderedScenes': renderedScenes,
       if (renderFingerprints.isNotEmpty) 'renderFingerprints': renderFingerprints.map((n, f) => MapEntry('$n', f)),
+      if (checkedLines.isNotEmpty) 'checkedLines': (checkedLines.toList()..sort()),
       'sceneTitleOverrides': sceneTitleOverrides.map((k, v) => MapEntry(k, v.map((n, t) => MapEntry('$n', t)))),
       'scriptTitle': scriptTitle,
       'selectedEngine': selectedEngine,
@@ -578,8 +587,12 @@ class GenerationEvent {
 }
 
 class SceneCue {
-  SceneCue({required this.index, required this.kind, required this.speaker, required this.text, required this.startTime, required this.endTime});
+  SceneCue({required this.index, required this.kind, required this.speaker, required this.text, required this.startTime, required this.endTime, this.ref});
   final int index;
+
+  /// The line's stable id (element ref, or "added:<id>"); null in cue maps
+  /// written before Oct 2026.
+  final String? ref;
   final String kind;
   final String speaker; // "__NARRATOR__" for narration; slash-joined for overlaps
   final String text;
@@ -593,6 +606,7 @@ class SceneCue {
     text: j['text'] as String? ?? '',
     startTime: (j['startTime'] as num).toDouble(),
     endTime: (j['endTime'] as num).toDouble(),
+    ref: j['ref'] as String?,
   );
 }
 

@@ -405,11 +405,15 @@ def _inject_user_elements(script, user_elements_map: Dict[int, List[Dict[str, An
                 # Map empty string, "Narrator", or "__NARRATOR__" to None (narrator voice).
                 narrator_values = {"", "Narrator", "__NARRATOR__"}
                 speaker = None if raw_speaker in narrator_values else raw_speaker
-                new_elements.append(_Element(
+                added = _Element(
                     kind=addition.get("kind", "dialog"),
                     speaker=speaker,
                     text=text,
-                ))
+                )
+                new_elements.append(added)
+                # Cue maps name added lines "added:<id>" so the player finds them.
+                if addition.get("id"):
+                    refs[id(added)] = "added:" + str(addition["id"])
                 matched_keys.add(after_key)
                 total_injected += 1
         scene.elements = new_elements
@@ -505,6 +509,7 @@ def _generate(payload: Dict[str, Any]) -> int:
         progress_cb=progress_cb,
         scene_filter=scene_numbers,
         cue_cb=cue_cb,
+        refs=refs,
     )
     _emit({
         "event": "done",

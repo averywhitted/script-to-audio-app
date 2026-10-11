@@ -66,7 +66,11 @@ class _Booth extends StatelessWidget {
     final app = context.watch<AppState>();
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: t.booth, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: t.booth,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: t.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -81,7 +85,7 @@ class _Booth extends StatelessWidget {
                     value: app.generationProgress == 0 ? null : app.generationProgress,
                     minHeight: 5,
                     color: t.accent,
-                    backgroundColor: Colors.white.withValues(alpha: 0.14),
+                    backgroundColor: t.ctrl,
                   ),
                 ),
               ),
@@ -139,7 +143,7 @@ class _Booth extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 1),
                       child: Text(
                         '${l.timestampString}  ${l.text}',
-                        style: TextStyles.script(t, size: 10.5, color: l.style == LogStyle.error ? const Color(0xFFFF8F7E) : t.boothSub),
+                        style: TextStyles.script(t, size: 10.5, color: l.style == LogStyle.error ? t.danger : t.boothSub),
                       ),
                     ),
                 ],
@@ -160,7 +164,7 @@ class _BoothButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    final fg = danger ? const Color(0xFFFF9A8F) : t.boothInk;
+    final fg = danger ? t.danger : t.boothInk;
     return Hover(
       cursor: SystemMouseCursors.click,
       builder: (context, h) => GestureDetector(
@@ -168,9 +172,9 @@ class _BoothButton extends StatelessWidget {
         child: Container(
           height: 28,
           decoration: BoxDecoration(
-            color: danger ? Colors.transparent : Colors.white.withValues(alpha: h ? 0.2 : 0.12),
+            color: danger ? (h ? t.dangerSoft : Colors.transparent) : Color.alphaBlend(t.ink.withValues(alpha: h ? 0.06 : 0), t.ctrl),
             borderRadius: BorderRadius.circular(7),
-            border: danger ? Border.all(color: const Color(0x99FF7A6E)) : null,
+            border: danger ? Border.all(color: t.danger.withValues(alpha: 0.6)) : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

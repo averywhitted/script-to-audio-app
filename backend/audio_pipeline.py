@@ -48,6 +48,7 @@ PCM_CHANNELS = 1
 PAUSE_BETWEEN_DIALOG_SAME_SPEAKER = 0.25
 PAUSE_BETWEEN_DIALOG_DIFFERENT_SPEAKER = 0.45
 PAUSE_AROUND_STAGE_DIRECTION = 0.7
+PAUSE_BETWEEN_NARRATION_PARAGRAPHS = 0.45
 PAUSE_AROUND_PARENTHETICAL = 0.35
 PAUSE_AT_SCENE_START = 1.0
 PAUSE_AT_SCENE_END = 1.5
@@ -80,6 +81,9 @@ class CueEntry:
     text: str
     start_time: float
     end_time: float
+    # The line's stable id (the app's element ref, or "added:<id>"), so the
+    # player can find the exact row without matching text.
+    ref: Optional[str] = None
 
 
 @dataclass
@@ -247,6 +251,7 @@ def _write_cue_map(path: str, scene: Scene, cues: List[CueEntry], total_frames: 
                 "text": c.text,
                 "startTime": c.start_time,
                 "endTime": c.end_time,
+                **({"ref": c.ref} if c.ref is not None else {}),
             }
             for c in cues
         ],
@@ -273,6 +278,7 @@ def generate_scene(
     total_scenes: int = 1,
     cancel_check: Optional[Callable[[], bool]] = None,
     cue_cb: Optional[Callable[[int, str], None]] = None,
+    refs: Optional[dict] = None,
 ) -> Optional[str]:
     """Render one scene to a single M4A file. Returns the output path, or
     None if the scene had no audible content (and therefore no file).
@@ -391,37 +397,20 @@ def generate_scene(
             if audio_end_frames > audio_start_frames:
                 audio_start = audio_start_frames / PCM_SAMPLE_RATE
                 audio_end = audio_end_frames / PCM_SAMPLE_RATE
-                chunk_elements = elements[chunk.start_index : chunk.end_index + 1]
-                if len(chunk_elements) == 1:
-                    el = chunk_elements[0]
-                    speaker = (
-                        "/".join(el.overlap_cue)
-                        if el.overlap_cue and len(el.overlap_cue) >= 2
-                        else (el.speaker or NARRATOR_KEY)
-                    )
-                    cue_entries.append(CueEntry(
-                        index=cue_idx, kind=el.kind, speaker=speaker,
-                        text=el.text.strip(),
-                        start_time=round(audio_start, 4), end_time=round(audio_end, 4),
-                    ))
-                    cue_idx += 1
-                else:
-                    # Multi-element merged chunk: distribute time proportionally by char count
-                    texts = [e.text.strip() for e in chunk_elements]
-                    total_chars = sum(len(t) for t in texts) or 1
-                    audio_duration = audio_end - audio_start
-                    t = audio_start
-                    for j, el in enumerate(chunk_elements):
-                        frac = len(texts[j]) / total_chars
-                        end_t = round(t + frac * audio_duration, 4)
-                        cue_entries.append(CueEntry(
-                            index=cue_idx, kind=el.kind,
-                            speaker=el.speaker or NARRATOR_KEY,
-                            text=texts[j],
-                            start_time=round(t, 4), end_time=end_t,
-                        ))
-                        t = end_t
-                        cue_idx += 1
+                # One element per chunk, so these times are exact.
+                el = elements[chunk.start_index]
+                speaker = (
+                    "/".join(el.overlap_cue)
+                    if el.overlap_cue and len(el.overlap_cue) >= 2
+                    else (el.speaker or NARRATOR_KEY)
+                )
+                cue_entries.append(CueEntry(
+                    index=cue_idx, kind=el.kind, speaker=speaker,
+                    text=el.text.strip(),
+                    start_time=round(audio_start, 4), end_time=round(audio_end, 4),
+                    ref=(refs or {}).get(id(el)),
+                ))
+                cue_idx += 1
 
             previous_speaker = first_el.speaker
             previous_kind = first_el.kind
@@ -467,6 +456,8 @@ def generate_scene(
 def _transition_pause(prev_kind, prev_speaker, current_el: Element) -> float:
     if prev_kind is None:
         return 0.0
+    if current_el.kind == "stage_direction" and prev_kind == "stage_direction":
+        return PAUSE_BETWEEN_NARRATION_PARAGRAPHS
     if current_el.kind == "stage_direction" or prev_kind == "stage_direction":
         return PAUSE_AROUND_STAGE_DIRECTION
     if current_el.kind == "parenthetical" or prev_kind == "parenthetical":
@@ -495,8 +486,6 @@ def _text_for_element(el: Element) -> str:
     return el.text.strip()
 
 
-MAX_TTS_CHUNK_CHARS = 2500
-
 
 def _build_render_chunks(elements: List[Element], assignment: Assignment) -> List[RenderChunk]:
     chunks: List[RenderChunk] = []
@@ -513,34 +502,18 @@ def _build_render_chunks(elements: List[Element], assignment: Assignment) -> Lis
             overlap_voices = [assignment.voice_for(name) for name in el.overlap_cue]
             overlap_texts = el.overlap_texts  # per-voice texts; None = chorus mode
 
-        if chunks and _can_merge_chunk(chunks[-1], el, voice_id, text):
-            chunks[-1].end_index = i
-            chunks[-1].text = chunks[-1].text.rstrip() + "\n\n" + text
-        else:
-            chunks.append(RenderChunk(
-                start_index=i,
-                end_index=i,
-                kind=el.kind,
-                speaker=el.speaker,
-                voice_id=voice_id,
-                text=text,
-                overlap_voices=overlap_voices,
-                overlap_texts=overlap_texts,
-            ))
+        # One chunk per line (never merged), so each cue's time is exact.
+        chunks.append(RenderChunk(
+            start_index=i,
+            end_index=i,
+            kind=el.kind,
+            speaker=el.speaker,
+            voice_id=voice_id,
+            text=text,
+            overlap_voices=overlap_voices,
+            overlap_texts=overlap_texts,
+        ))
     return chunks
-
-
-def _can_merge_chunk(chunk: RenderChunk, el: Element, voice_id: str, text: str) -> bool:
-    # Never merge overlap chunks — each simultaneous-speech line is self-contained.
-    if chunk.overlap_voices is not None or el.overlap_cue:
-        return False
-    if chunk.voice_id != voice_id:
-        return False
-    if chunk.kind != el.kind or chunk.speaker != el.speaker:
-        return False
-    if el.kind not in {"dialog", "stage_direction"}:
-        return False
-    return len(chunk.text) + len(text) + 2 <= MAX_TTS_CHUNK_CHARS
 
 
 def _synthesize_into(
@@ -635,6 +608,7 @@ def generate_script(
     cancel_check: Optional[Callable[[], bool]] = None,
     scene_filter: Optional[List[int]] = None,  # only render scenes whose .number is in this list
     cue_cb: Optional[Callable[[int, str], None]] = None,  # (scene_number, cue_path)
+    refs: Optional[dict] = None,  # id(element) -> stable line id, copied into the cue map
 ) -> GenerationResult:
     os.makedirs(output_dir, exist_ok=True)
     result = GenerationResult(output_dir=output_dir)
@@ -664,6 +638,7 @@ def generate_script(
                     total_scenes=len(target_scenes),
                     cancel_check=cancel_check,
                     cue_cb=_scene_cue_cb,
+                    refs=refs,
                 )
                 if path:
                     result.files.append(path)

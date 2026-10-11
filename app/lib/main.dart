@@ -9,6 +9,7 @@ import 'state/player_state.dart';
 import 'theme/tokens.dart';
 import 'ui/cast_dialog.dart';
 import 'ui/dashboard.dart';
+import 'ui/export.dart';
 import 'ui/gallery.dart';
 import 'ui/log_dialog.dart';
 import 'ui/render_dialog.dart';
@@ -157,6 +158,30 @@ class _AppShellState extends State<AppShell> {
           ],
         ),
         PlatformMenu(
+          label: 'View',
+          menus: [
+            PlatformMenuItemGroup(
+              members: [
+                PlatformMenuItem(
+                  label: 'Bigger Text',
+                  shortcut: const SingleActivator(LogicalKeyboardKey.equal, meta: true),
+                  onSelected: app.textSize < AppState.textSizeLabels.length - 1 ? app.biggerText : null,
+                ),
+                PlatformMenuItem(
+                  label: 'Smaller Text',
+                  shortcut: const SingleActivator(LogicalKeyboardKey.minus, meta: true),
+                  onSelected: app.textSize > 0 ? app.smallerText : null,
+                ),
+                PlatformMenuItem(
+                  label: 'Actual Size',
+                  shortcut: const SingleActivator(LogicalKeyboardKey.digit0, meta: true),
+                  onSelected: () => app.setTextSize(AppState.defaultTextSize),
+                ),
+              ],
+            ),
+          ],
+        ),
+        PlatformMenu(
           label: 'Script',
           menus: [
             PlatformMenuItemGroup(
@@ -201,6 +226,17 @@ class _AppShellState extends State<AppShell> {
                           showRenderSheet(context);
                           app.selectMissingScenes();
                         }
+                      : null,
+                ),
+              ],
+            ),
+            PlatformMenuItemGroup(
+              members: [
+                PlatformMenuItem(
+                  label: 'Export Audio…',
+                  shortcut: const SingleActivator(LogicalKeyboardKey.keyE, meta: true, shift: true),
+                  onSelected: inProject && app.hasRenderedAudio
+                      ? () => exportAudio(context, sourceFolder: app.outputDirectory ?? store.currentProject!.folderPath!, projectName: store.currentProject!.name)
                       : null,
                 ),
               ],

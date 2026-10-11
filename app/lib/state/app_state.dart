@@ -95,6 +95,23 @@ class AppState extends ChangeNotifier {
 
   /// Fingerprint of each rendered scene's edits at render time (saved in project.json).
   Map<int, String> renderFingerprints = {};
+
+  /// Unsure lines the user confirmed as they are ("<scene>|<elementRef>").
+  Set<String> checkedLines = {};
+  bool isChecked(int sceneNumber, SceneElement el) => checkedLines.contains('$sceneNumber|${el.ref}');
+
+  /// Confirms who says an unsure line. The same speaker is recorded as
+  /// checked (not an edit); a different one is a correction.
+  void confirmSpeaker(int sceneNumber, SceneElement el, String speaker, {required String text, required bool removed}) {
+    final same = (speaker == 'Narrator' ? '' : speaker) == (el.kind == 'dialog' ? (el.speaker ?? '') : '');
+    if (same) {
+      checkedLines.add('$sceneNumber|${el.ref}');
+      persistProject();
+      notifyListeners();
+    } else {
+      correctLine(sceneNumber, el, kind: speaker == 'Narrator' ? el.kind : 'dialog', speaker: speaker, text: text, removed: removed);
+    }
+  }
   Map<int, String> _renderingFingerprints = {};
   final Set<int> _provisionalFingerprints = {};
   String? backgroundRenderProjectId;
@@ -129,10 +146,27 @@ class AppState extends ChangeNotifier {
   final ValueNotifier<String?> sheetRequest = ValueNotifier(null);
 
   List<Scene> get scenes => script?.scenes ?? const [];
+  bool get hasRenderedAudio => sceneFileInfo.values.any((i) => i.exists);
   List<String> get allSpeakers => ['Narrator', ...?script?.characters.map((c) => c.name)];
   String? get currentProjectFolder => store.currentProject?.folderPath;
 
   bool characterColors = true;
+
+  /// Script text size (Settings → General, View menu ⌘+ / ⌘− / ⌘0).
+  static const textSizeLabels = ['Small', 'Medium', 'Large', 'Extra Large'];
+  static const _textSizeScales = [1.0, 1.15, 1.3, 1.5];
+  static const defaultTextSize = 1;
+  int textSize = defaultTextSize;
+  double get scriptTextScale => _textSizeScales[textSize];
+
+  void setTextSize(int v) {
+    textSize = v.clamp(0, textSizeLabels.length - 1);
+    settings.setString('scriptTextSize', '$textSize');
+    notifyListeners();
+  }
+
+  void biggerText() => setTextSize(textSize + 1);
+  void smallerText() => setTextSize(textSize - 1);
 
   void setCharacterColors(bool v) {
     characterColors = v;
@@ -144,6 +178,7 @@ class AppState extends ChangeNotifier {
   void _loadSettings() {
     characterColors = settings.getBool('characterHighlightColors', fallback: true);
     characterColorsEnabled = characterColors;
+    textSize = (int.tryParse(settings.getString('scriptTextSize') ?? '') ?? defaultTextSize).clamp(0, textSizeLabels.length - 1);
     autoOpenFinderAfterRender = settings.getBool('autoOpenFinderAfterRender');
     contributeCorrections = settings.getBool('contributeCorrections');
     notifyOnSceneComplete = settings.getBool('notifyOnSceneComplete');
@@ -225,6 +260,7 @@ class AppState extends ChangeNotifier {
     userAddedElements = {for (final e in p.userAddedElements.entries) e.key: List.of(e.value)};
     selectedEngine = EngineKind.fromId(p.selectedEngine) ?? EngineKind.macOS;
     renderFingerprints = Map.of(p.renderFingerprints);
+    checkedLines = Set.of(p.checkedLines);
     castPending = p.voiceAssignment.isEmpty && !settings.getBool('castConfirmed.${p.id}');
     final pdf = p.pdfPath;
     if (pdf != null) importPDF(pdf);
@@ -237,6 +273,7 @@ class AppState extends ChangeNotifier {
     sceneTitleOverrides = {};
     userAddedElements = {};
     characterGenderOverrides = {};
+    checkedLines = {};
     voices = [];
     voiceAssignment = {};
     selectedScenes = {};
@@ -262,6 +299,7 @@ class AppState extends ChangeNotifier {
     p.sceneTitleOverrides = {for (final e in sceneTitleOverrides.entries) e.key: Map.of(e.value)};
     p.userAddedElements = {for (final e in userAddedElements.entries) e.key: List.of(e.value)};
     p.selectedEngine = selectedEngine.id;
+    p.checkedLines = Set.of(checkedLines);
     p.renderedScenes = [
       for (final e in sceneFileInfo.entries)
         if (e.value.exists) e.key,
@@ -609,6 +647,26 @@ class AppState extends ChangeNotifier {
   // ---------------------------------------------------------------------------
   // Rendering
   // ---------------------------------------------------------------------------
+
+  /// Copies a project's rendered scene audio (.m4a only, no cue maps) into a
+  /// new folder "<name> Audio" inside [destination]. Returns the new folder
+  /// and how many files were copied.
+  static Future<(String, int)> exportAudio({required String sourceFolder, required String projectName, required String destination}) async {
+    final files =
+        Directory(sourceFolder).listSync().whereType<File>().where((f) => f.path.toLowerCase().endsWith('.m4a')).toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
+    if (files.isEmpty) throw StateError('No rendered audio to export yet.');
+    final safe = projectName.replaceAll(RegExp(r'[/:]'), '-').trim();
+    var folder = '$destination/${safe.isEmpty ? 'Table Read' : safe} Audio';
+    for (var i = 2; Directory(folder).existsSync() || File(folder).existsSync(); i++) {
+      folder = '$destination/${safe.isEmpty ? 'Table Read' : safe} Audio $i';
+    }
+    Directory(folder).createSync(recursive: true);
+    for (final f in files) {
+      await f.copy('$folder/${f.uri.pathSegments.last}');
+    }
+    return (folder, files.length);
+  }
 
   String defaultOutputDirectory(String pdf) {
     final folder = currentProjectFolder;

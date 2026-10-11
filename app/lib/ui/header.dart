@@ -36,9 +36,16 @@ class AppHeader extends StatelessWidget {
         ),
         child: Row(
           children: [
-            ...leading,
-            if (tools.isNotEmpty) ...[const SizedBox(width: 16), ...tools],
-            const Spacer(),
+            // The left side fills the bar, so the options always sit in the
+            // far top-right corner (a title can't push them inward).
+            Expanded(
+              child: Row(
+                children: [
+                  ...leading,
+                  if (tools.isNotEmpty) ...[const SizedBox(width: 16), ...tools],
+                ],
+              ),
+            ),
             const AppOptions(),
           ],
         ),

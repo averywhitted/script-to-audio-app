@@ -15,6 +15,7 @@ import '../state/player_state.dart';
 import '../theme/tokens.dart';
 import 'cast_dialog.dart';
 import 'empty_art.dart';
+import 'export.dart';
 import 'header.dart';
 import 'playback_bar.dart';
 import 'popovers.dart';
@@ -167,6 +168,83 @@ String? voicedText(AppState app, Scene scene, MergedElement m) {
   }
 }
 
+/// A row's stable id, the same one the worker writes into the cue map.
+String rowRef(MergedElement m) => switch (m) {
+  ParsedItem(:final element) => element.ref,
+  ManualOverlapItem(:final primary) => primary.ref,
+  AddedItem(:final element) => 'added:${element.id}',
+};
+
+/// For each cue, the row it voices (-1 when none). Cues name their line
+/// (`ref`), so the match is exact; old cue maps without refs, or a ref that
+/// isn't on screen, fall back to matching words, in order, between the rows
+/// already matched on either side, so a repeated line can't light up the
+/// wrong copy.
+List<int> matchCuesToRows(List<String?> rowRefs, List<String?> rowTexts, List<String?> cueRefs, List<String> cueTexts) {
+  final out = List<int>.filled(cueRefs.length, -1);
+  final taken = List<bool>.filled(rowRefs.length, false);
+  final byRef = <String, int>{};
+  for (var i = 0; i < rowRefs.length; i++) {
+    final r = rowRefs[i];
+    if (r != null) byRef.putIfAbsent(r, () => i);
+  }
+  for (var c = 0; c < cueRefs.length; c++) {
+    final r = cueRefs[c];
+    final row = r == null ? null : byRef[r];
+    if (row != null && !taken[row]) {
+      out[c] = row;
+      taken[row] = true;
+    }
+  }
+  // Words, in order, within the gap between ref-matched neighbours.
+  var lastRow = -1;
+  for (var c = 0; c < out.length; c++) {
+    if (out[c] >= 0) {
+      lastRow = out[c];
+      continue;
+    }
+    var hi = rowRefs.length;
+    for (var d = c + 1; d < out.length; d++) {
+      if (out[d] >= 0) {
+        hi = out[d];
+        break;
+      }
+    }
+    final want = cueTexts[c].trim();
+    for (var i = lastRow + 1; i < hi; i++) {
+      if (!taken[i] && rowTexts[i]?.trim() == want) {
+        out[c] = i;
+        taken[i] = true;
+        lastRow = i;
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/// Rows ↔ cues for one scene.
+class CueRowMap {
+  CueRowMap(AppState app, Scene scene, List<MergedElement> rows, List<SceneCue> cues)
+    : _rowForCue = matchCuesToRows(
+        [for (final m in rows) rowRef(m)],
+        [for (final m in rows) voicedText(app, scene, m)],
+        [for (final c in cues) c.ref],
+        [for (final c in cues) c.text],
+      );
+  final List<int> _rowForCue;
+  late final Map<int, int> _cueForRow = {
+    for (var c = 0; c < _rowForCue.length; c++)
+      if (_rowForCue[c] >= 0) _rowForCue[c]: c,
+  };
+
+  /// The row voiced by cue [cue], or -1.
+  int rowForCue(int cue) => cue >= 0 && cue < _rowForCue.length ? _rowForCue[cue] : -1;
+
+  /// The cue that voices row [row], or -1.
+  int cueForRow(int row) => _cueForRow[row] ?? -1;
+}
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
   @override
@@ -277,8 +355,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final scene = app.scenes.where((s) => s.number == cur.sceneNumber).firstOrNull;
     if (scene == null) return null;
     final merged = app.mergedElements(scene);
-    final rowTexts = [for (final m in merged) voicedText(app, scene, m)];
-    final cueTexts = [for (final c in player.cues) c.text];
+    final map = CueRowMap(app, scene, merged, player.cues);
     double? start, end;
     for (var i = 0; i < merged.length; i++) {
       final m = merged[i];
@@ -288,7 +365,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         AddedItem(:final element) => selection.addedIds.contains(element.id),
       };
       if (!picked) continue;
-      final ci = cueIndexForRow(rowTexts, cueTexts, i);
+      final ci = map.cueForRow(i);
       if (ci < 0) continue;
       final c = player.cues[ci];
       start = start == null ? c.startTime : (c.startTime < start ? c.startTime : start);
@@ -402,6 +479,18 @@ class _ToolBar extends StatelessWidget {
               badge: edited > 0 ? '$edited edited' : null,
               onTap: app.script == null ? null : () => showRenderSheet(context),
             ),
+          const SizedBox(width: 6),
+          ToolButton(
+            icon: Icons.ios_share_rounded,
+            label: 'Export',
+            tooltip: app.hasRenderedAudio ? 'Copy the rendered audio to a folder (⇧⌘E)' : 'Render a scene first',
+            onTap: app.hasRenderedAudio
+                ? () {
+                    final store = context.read<ProjectStore>();
+                    exportAudio(context, sourceFolder: app.outputDirectory ?? store.currentProject!.folderPath!, projectName: store.currentProject!.name);
+                  }
+                : null,
+          ),
           Container(width: 1, height: 20, margin: const EdgeInsets.symmetric(horizontal: 12), color: t.rule),
           _SearchField(focus: searchFocus),
         ],
@@ -444,6 +533,10 @@ class _SearchFieldState extends State<_SearchField> {
         child: TextField(
           controller: ctl,
           focusNode: widget.focus,
+          // Fill the 30 px box exactly, the same height as the buttons beside it.
+          expands: true,
+          maxLines: null,
+          textAlignVertical: TextAlignVertical.center,
           // Clicking anywhere else hands the keyboard back to playback (Space).
           onTapOutside: (_) => widget.focus.unfocus(),
           onChanged: search.setQuery,
@@ -488,7 +581,7 @@ class _SearchFieldState extends State<_SearchField> {
                 : null,
             filled: true,
             fillColor: t.sheet,
-            contentPadding: const EdgeInsets.symmetric(vertical: 7),
+            contentPadding: EdgeInsets.zero,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: t.border),
@@ -560,7 +653,7 @@ class _ScriptAreaState extends State<ScriptArea> {
     final s = app.script?.scenes.where((x) => x.number == n).firstOrNull;
     if (s == null) return;
     final merged = app.mergedElements(s);
-    final row = activeRowIndex([for (final m in merged) voicedText(app, s, m)], [for (final c in player.cues) c.text], player.currentCueIndex);
+    final row = CueRowMap(app, s, merged, player.cues).rowForCue(player.currentCueIndex);
     final needAll = row >= _Lines.initialLimit;
     WidgetsBinding.instance.addPostFrameCallback((_) => view.open(n, all: needAll));
     _scrollTo(_activeLineKey);
@@ -607,42 +700,46 @@ class _ScriptAreaState extends State<ScriptArea> {
           child: Scrollbar(
             controller: _scroll,
             // Every scene is built (not a lazy list) so playback and search
-            // can scroll to a line in any scene.
-            child: SingleChildScrollView(
-              controller: _scroll,
-              padding: EdgeInsets.fromLTRB(24, 18, 24, sel.isEmpty ? 24 : 88),
-              child: Column(
-                children: [
-                  for (final s in script.scenes)
-                    Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1080),
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 200),
-                            opacity: activeScene != null && activeScene != s.number ? 0.55 : 1,
-                            child: SceneCard(
-                              scene: s,
-                              expanded: view.expanded.contains(s.number),
-                              showAll: view.showAll.contains(s.number),
-                              activeLineKey: activeScene == s.number ? _activeLineKey : null,
-                              searchQuery: search.query.trim().length >= 2 ? search.query.trim() : '',
-                              matchCount: hits.where((h) => h.sceneNumber == s.number).length,
-                              currentHitRow: currentHit?.sceneNumber == s.number ? currentHit!.row : null,
-                              hitKey: _hitKey,
-                              onToggleExpand: () {
-                                if (view.expanded.contains(s.number) && sel.sceneNumber == s.number) sel.clear();
-                                view.toggle(s.number);
-                              },
-                              onToggleShowAll: () => view.toggleShowAll(s.number),
+            // can scroll to a line in any scene. Script text follows the
+            // Text Size setting.
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(app.scriptTextScale)),
+              child: SingleChildScrollView(
+                controller: _scroll,
+                padding: EdgeInsets.fromLTRB(24, 18, 24, sel.isEmpty ? 24 : 88),
+                child: Column(
+                  children: [
+                    for (final s in script.scenes)
+                      Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1080),
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 200),
+                              opacity: activeScene != null && activeScene != s.number ? 0.55 : 1,
+                              child: SceneCard(
+                                scene: s,
+                                expanded: view.expanded.contains(s.number),
+                                showAll: view.showAll.contains(s.number),
+                                activeLineKey: activeScene == s.number ? _activeLineKey : null,
+                                searchQuery: search.query.trim().length >= 2 ? search.query.trim() : '',
+                                matchCount: hits.where((h) => h.sceneNumber == s.number).length,
+                                currentHitRow: currentHit?.sceneNumber == s.number ? currentHit!.row : null,
+                                hitKey: _hitKey,
+                                onToggleExpand: () {
+                                  if (view.expanded.contains(s.number) && sel.sceneNumber == s.number) sel.clear();
+                                  view.toggle(s.number);
+                                },
+                                onToggleShowAll: () => view.toggleShowAll(s.number),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  _StatsFooter(script: script),
-                ],
+                    _StatsFooter(script: script),
+                  ],
+                ),
               ),
             ),
           ),
@@ -994,15 +1091,15 @@ class _Lines extends StatelessWidget {
     final total = scene.elements.length;
     final limit = showAll ? total : initialLimit;
     final merged = app.mergedElements(scene, limit: limit);
-    final rowTexts = [for (final m in merged) voicedText(app, scene, m)];
     final playingHere = player.currentScene?.sceneNumber == scene.number;
-    final activeRow = playingHere ? activeRowIndex(rowTexts, [for (final c in player.cues) c.text], player.currentCueIndex) : -1;
-    // Cue texts of this scene's audio, if it is rendered (for play-from-line).
+    // This scene's audio, if rendered. Rows are matched to its cues on the
+    // full row list (the visible rows are a prefix of it).
     final sceneItem = player.scenes.where((s) => s.sceneNumber == scene.number).firstOrNull;
-    final cueTexts = sceneItem == null ? const <String>[] : [for (final c in sceneItem.cues) c.text];
+    final map = sceneItem == null ? null : CueRowMap(app, scene, showAll ? merged : app.mergedElements(scene), sceneItem.cues);
+    final activeRow = playingHere && map != null ? map.rowForCue(player.currentCueIndex) : -1;
 
     RowContext ctxFor(int i) {
-      final ci = sceneItem == null ? -1 : cueIndexForRow(rowTexts, cueTexts, i);
+      final ci = map?.cueForRow(i) ?? -1;
       return RowContext(
         active: i == activeRow,
         onPlay: ci < 0 ? null : () => player.playFrom(scene.number, ci),
@@ -1053,26 +1150,6 @@ class _Lines extends StatelessWidget {
   }
 }
 
-/// Index of the cue a row is voiced in: the row is the k-th row with its words,
-/// so its cue is the k-th cue with them. -1 when the row isn't voiced.
-int cueIndexForRow(List<String?> rowTexts, List<String> cueTexts, int row) {
-  if (row < 0 || row >= rowTexts.length) return -1;
-  final want = rowTexts[row]?.trim();
-  if (want == null || want.isEmpty) return -1;
-  var k = 0;
-  for (var i = 0; i < row; i++) {
-    if (rowTexts[i]?.trim() == want) k++;
-  }
-  var seen = 0;
-  for (var i = 0; i < cueTexts.length; i++) {
-    if (cueTexts[i].trim() == want) {
-      if (seen == k) return i;
-      seen++;
-    }
-  }
-  return -1;
-}
-
 /// Text with search matches highlighted.
 TextSpan highlightSpan(String text, String query, TextStyle style, Color hit) {
   if (query.isEmpty) return TextSpan(text: text, style: style);
@@ -1100,6 +1177,48 @@ TextSpan highlightSpan(String text, String query, TextStyle style, Color hit) {
 /// Opens the speaker menu from a name tag; returns the picked name.
 Future<String?> pickSpeaker(BuildContext anchor, AppState app, String current) =>
     showAnchoredMenu<String>(anchor, [for (final n in app.allSpeakers) MenuItemSpec(n, titleCaseName(n), checked: n == current)]);
+
+/// On a line the parser wasn't sure about: a handwritten "who's speaking?"
+/// note. Clicking it opens the speaker menu; picking anyone, even the same
+/// name, confirms the line and the note goes away.
+class CheckSpeakerTag extends StatelessWidget {
+  const CheckSpeakerTag({super.key, required this.reason, required this.current, required this.onPick});
+  final String? reason;
+  final String current;
+  final ValueChanged<String> onPick;
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final app = context.watch<AppState>();
+    final why = reason ?? "Table Read isn't sure who says this line.";
+    return Tooltip(
+      message: '$why\nClick to choose the speaker. Picking one (even the same) marks the line as checked.',
+      child: Builder(
+        builder: (ctx) => Hover(
+          cursor: SystemMouseCursors.click,
+          builder: (context, h) => GestureDetector(
+            onTap: () async {
+              final picked = await pickSpeaker(ctx, app, current);
+              if (picked != null) onPick(picked);
+            },
+            child: Transform.rotate(
+              angle: -0.03,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(6, 1, 7, 2),
+                decoration: BoxDecoration(
+                  color: h ? t.warnSoft : t.warnSoft.withValues(alpha: t.warnSoft.a * 0.6),
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: t.warn.withValues(alpha: 0.7), width: 1.2),
+                ),
+                child: Text("who's speaking?", style: TextStyles.hand(t, size: 15, color: t.warn)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// A name tag you can click to change who says the line.
 class SpeakerTag extends StatelessWidget {
@@ -1133,26 +1252,6 @@ class SpeakerTag extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Line rows
 // ---------------------------------------------------------------------------
-
-/// Index of the playing row. The cue at [cueIndex] is the k-th cue with its
-/// words; the playing row is the k-th row with the same words. Rows with null
-/// text (removed lines) never match. Returns -1 when nothing matches.
-int activeRowIndex(List<String?> rowTexts, List<String> cueTexts, int cueIndex) {
-  if (cueIndex < 0 || cueIndex >= cueTexts.length) return -1;
-  final want = cueTexts[cueIndex].trim();
-  var k = 0;
-  for (var i = 0; i < cueIndex; i++) {
-    if (cueTexts[i].trim() == want) k++;
-  }
-  var seen = 0;
-  for (var i = 0; i < rowTexts.length; i++) {
-    if (rowTexts[i]?.trim() == want) {
-      if (seen == k) return i;
-      seen++;
-    }
-  }
-  return -1;
-}
 
 /// Replaces letters with underscores, keeping spaces and punctuation (Block My Lines).
 String blockText(String s) => s.replaceAll(RegExp(r'\p{L}|\p{N}', unicode: true), '_');
@@ -1191,9 +1290,21 @@ class _Gutter extends StatelessWidget {
 /// actions float over the row's top-right corner so they take no layout space
 /// and the line stays centered.
 class _RowShell extends StatelessWidget {
-  const _RowShell({required this.child, required this.selected, required this.active, required this.onHover, this.hit = false, this.actions});
+  const _RowShell({
+    required this.child,
+    required this.selected,
+    required this.active,
+    required this.onHover,
+    this.hit = false,
+    this.actions,
+    this.hover = false,
+  });
   final Widget child;
   final bool selected, active, hit;
+
+  /// Under the pointer (rows with floating actions are hovered when they show them).
+  final bool hover;
+  bool get hovered => hover || actions != null;
   final ValueChanged<bool> onHover;
   final List<Widget>? actions;
   @override
@@ -1206,7 +1317,13 @@ class _RowShell extends StatelessWidget {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: active ? t.accentSoft : (selected ? t.accentSoft.withValues(alpha: t.accentSoft.a * 0.7) : Colors.transparent),
+              color: active
+                  ? t.accentSoft
+                  : selected
+                  ? t.accentSoft.withValues(alpha: t.accentSoft.a * 0.7)
+                  // A faint wash under the pointer, so it's clear which line
+                  // the actions belong to.
+                  : (hovered ? t.ink.withValues(alpha: t.dark ? 0.045 : 0.035) : Colors.transparent),
               border: Border(left: BorderSide(color: active || hit ? t.accent : Colors.transparent, width: 3)),
             ),
             padding: const EdgeInsets.fromLTRB(0, 5, 0, 5),
@@ -1303,7 +1420,7 @@ class _LineRowState extends State<LineRow> {
     final isDialog = kind == 'dialog' && speaker != 'Narrator';
     final mine = isDialog && player.myRole.isNotEmpty && player.isMyLine(speaker);
     final shownText = mine && player.blockMyLines ? blockText(text) : text;
-    final flagged = el.confidence < 0.7 && fix == null && !removed;
+    final flagged = el.confidence < 0.7 && fix == null && !removed && !app.isChecked(n, el);
     final selected = sel.sceneNumber == n && sel.refs.contains(el.ref);
 
     final textStyle = TextStyles.script(
@@ -1317,12 +1434,32 @@ class _LineRowState extends State<LineRow> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(
-                  child: SpeakerTag(
-                    speaker,
-                    strike: removed,
-                    onPick: (sp) => app.correctLine(n, el, kind: 'dialog', speaker: sp, text: text, removed: removed),
-                  ),
+                // Name centered over the dialogue; an unsure line's tag sits
+                // to its right without pushing it off center.
+                Row(
+                  children: [
+                    const Expanded(child: SizedBox()),
+                    SpeakerTag(
+                      speaker,
+                      strike: removed,
+                      onPick: (sp) => app.correctLine(n, el, kind: 'dialog', speaker: sp, text: text, removed: removed),
+                    ),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: flagged
+                            ? Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: CheckSpeakerTag(
+                                  reason: el.reason,
+                                  current: speaker,
+                                  onPick: (sp) => app.confirmSpeaker(n, el, sp, text: text, removed: removed),
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 _Playable(
@@ -1332,7 +1469,21 @@ class _LineRowState extends State<LineRow> {
               ],
             ),
           )
-        : _Playable(onPlay: widget.rc.onPlay, child: Text.rich(highlightSpan(shownText, widget.rc.query, textStyle, t.accentSoft)));
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (flagged)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: CheckSpeakerTag(
+                    reason: el.reason,
+                    current: 'Narrator',
+                    onPick: (sp) => app.confirmSpeaker(n, el, sp, text: text, removed: removed),
+                  ),
+                ),
+              _Playable(onPlay: widget.rc.onPlay, child: Text.rich(highlightSpan(shownText, widget.rc.query, textStyle, t.accentSoft))),
+            ],
+          );
 
     return _RowShell(
       selected: selected,
@@ -1385,11 +1536,6 @@ class _LineRowState extends State<LineRow> {
                   Tooltip(
                     message: 'User correction applied',
                     child: Icon(Icons.check_rounded, size: 15, color: t.accent),
-                  ),
-                if (flagged)
-                  Tooltip(
-                    message: el.reason ?? 'Parser is uncertain about this line — check the speaker or type',
-                    child: Text('?', style: TextStyles.hand(t, size: 22, color: t.warn).copyWith(height: 0.9)),
                   ),
               ],
             ),
@@ -1517,6 +1663,7 @@ class _SimultaneousRowState extends State<SimultaneousRow> {
       active: widget.rc.active,
       hit: widget.rc.currentHit,
       onHover: (v) => setState(() => hover = v),
+      hover: hover,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1641,6 +1788,7 @@ class _ManualPairRowState extends State<ManualPairRow> {
       active: widget.rc.active,
       hit: widget.rc.currentHit,
       onHover: (v) => setState(() => hover = v),
+      hover: hover,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

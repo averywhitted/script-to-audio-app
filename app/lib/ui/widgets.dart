@@ -353,7 +353,6 @@ Future<T?> showMenuAt<T>(BuildContext context, Offset globalPosition, List<MenuI
 }
 
 Future<T?> _showMenu<T>(BuildContext anchorContext, RelativeRect rect, double minWidth, List<MenuItemSpec<T>> items) {
-  final t = Tokens.of(anchorContext);
   return showMenu<T>(
     context: anchorContext,
     position: rect,
@@ -363,23 +362,33 @@ Future<T?> _showMenu<T>(BuildContext anchorContext, RelativeRect rect, double mi
         if (it.divider)
           const PopupMenuDivider(height: 9)
         else if (it.header)
-          PopupMenuItem<T>(enabled: false, height: 24, child: Text(it.label.toUpperCase(), style: TextStyles.label(t)))
+          PopupMenuItem<T>(
+            enabled: false,
+            height: 24,
+            child: Builder(builder: (c) => Text(it.label.toUpperCase(), style: TextStyles.label(Tokens.of(c)))),
+          )
         else
           PopupMenuItem<T>(
             value: it.value,
             enabled: it.enabled,
             height: 30,
-            child: Row(
-              children: [
-                SizedBox(width: 18, child: it.checked ? Icon(Icons.check_rounded, size: 14, color: t.accent) : null),
-                Expanded(
-                  child: Text(
-                    it.label,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyles.ui(t, color: it.enabled ? t.ink : t.faint),
-                  ),
-                ),
-              ],
+            // Colors read inside the menu, so it follows a light/dark switch.
+            child: Builder(
+              builder: (c) {
+                final t = Tokens.of(c);
+                return Row(
+                  children: [
+                    SizedBox(width: 18, child: it.checked ? Icon(Icons.check_rounded, size: 14, color: t.accent) : null),
+                    Expanded(
+                      child: Text(
+                        it.label,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyles.ui(t, color: it.enabled ? t.ink : t.faint),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
     ],
@@ -742,31 +751,36 @@ Future<T?> showPopover<T>(BuildContext anchorContext, WidgetBuilder builder, {do
 
 /// Mac-style sheet: slides down from the top of the window over a dimmed backdrop.
 Future<T?> showSheet<T>(BuildContext context, WidgetBuilder builder, {double width = 480, bool dismissible = true}) {
-  final t = Tokens.of(context);
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: dismissible,
     barrierLabel: 'Close',
-    barrierColor: Colors.black.withValues(alpha: t.dark ? 0.45 : 0.22),
+    // Fixed when the sheet opens, so one shade that works in both appearances.
+    barrierColor: Colors.black.withValues(alpha: 0.32),
     transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (ctx, a, b) => Align(
-      alignment: const Alignment(0, -0.35),
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          width: width,
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height - 80),
-          decoration: BoxDecoration(
-            color: t.dark ? const Color(0xFF242422) : t.bg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: t.border),
-            boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 40, offset: Offset(0, 18))],
+    // Colors are read inside the page, so an open sheet follows a light/dark
+    // switch in macOS.
+    pageBuilder: (ctx, a, b) {
+      final t = Tokens.of(ctx);
+      return Align(
+        alignment: const Alignment(0, -0.35),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: width,
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height - 80),
+            decoration: BoxDecoration(
+              color: t.dark ? const Color(0xFF242422) : t.bg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: t.border),
+              boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 40, offset: Offset(0, 18))],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Builder(builder: builder),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Builder(builder: builder),
         ),
-      ),
-    ),
+      );
+    },
     transitionBuilder: (ctx, a, b, child) => FadeTransition(
       opacity: a,
       child: SlideTransition(
@@ -779,26 +793,30 @@ Future<T?> showSheet<T>(BuildContext context, WidgetBuilder builder, {double wid
 
 /// In-window confirmation (replaces macOS confirmation dialogs).
 Future<String?> showConfirm(BuildContext context, {required String title, String? message, required List<(String, BtnKind)> buttons}) {
-  final t = Tokens.of(context);
   return showSheet<String>(
     context,
-    (ctx) => Padding(
-      padding: const EdgeInsets.fromLTRB(24, 22, 24, 18),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: TextStyles.ui(t, size: 15, weight: FontWeight.w700)),
-          if (message != null) ...[const SizedBox(height: 8), Text(message, style: TextStyles.ui(t, color: t.ink2, height: 1.45))],
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+    (ctx) => Builder(
+      builder: (ctx) {
+        final t = Tokens.of(ctx);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final (label, kind) in buttons) ...[const SizedBox(width: 8), Btn(label, kind: kind, onPressed: () => Navigator.of(ctx).pop(label))],
+              Text(title, style: TextStyles.ui(t, size: 15, weight: FontWeight.w700)),
+              if (message != null) ...[const SizedBox(height: 8), Text(message, style: TextStyles.ui(t, color: t.ink2, height: 1.45))],
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  for (final (label, kind) in buttons) ...[const SizedBox(width: 8), Btn(label, kind: kind, onPressed: () => Navigator.of(ctx).pop(label))],
+                ],
+              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     ),
     width: 420,
   );

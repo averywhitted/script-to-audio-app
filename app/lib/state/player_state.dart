@@ -39,7 +39,8 @@ class RehearsalPlayer extends ChangeNotifier {
     if (existing != null) return existing;
     final p = AudioPlayer();
     _p = p;
-    _posSub = p.positionStream.listen(_tick);
+    // Frequent position updates keep the line highlight within ~0.1 s of the voice.
+    _posSub = p.createPositionStream(steps: 2000, minPeriod: const Duration(milliseconds: 40), maxPeriod: const Duration(milliseconds: 100)).listen(_tick);
     _stateSub = p.playerStateStream.listen((s) {
       if (s.processingState == ProcessingState.completed && isPlaying) _sceneEnded();
     });
@@ -159,6 +160,7 @@ class RehearsalPlayer extends ChangeNotifier {
     if (changed && loopMode == LoopMode.lines) loopMode = LoopMode.off;
     _updateCue();
     notifyListeners();
+    _expectSeek(startAt);
     if (audioEnabled) {
       try {
         await _player.setFilePath(scenes[index].audioPath);
@@ -215,8 +217,19 @@ class RehearsalPlayer extends ChangeNotifier {
     notifyListeners();
   }
 
+  // After a seek (or loading a file) the audio plugin keeps reporting the old
+  // position for a moment. Until a position near the target arrives, those
+  // reports are ignored so the highlight doesn't jump back to the old line.
+  double? _seekTarget;
+  DateTime _seekDeadline = DateTime.fromMillisecondsSinceEpoch(0);
+  void _expectSeek(double t) {
+    _seekTarget = t;
+    _seekDeadline = DateTime.now().add(const Duration(milliseconds: 1500));
+  }
+
   void seek(double t) {
     final clamped = t.clamp(0.0, duration > 0 ? duration : t);
+    _expectSeek(clamped);
     if (audioEnabled) _player.seek(Duration(milliseconds: (clamped * 1000).round()));
     currentTime = clamped;
     waitingAtCue = null;
@@ -316,7 +329,13 @@ class RehearsalPlayer extends ChangeNotifier {
 
   void _tick(Duration pos) {
     if (waitingAtCue != null) return;
-    currentTime = pos.inMilliseconds / 1000;
+    final t = pos.inMilliseconds / 1000;
+    final target = _seekTarget;
+    if (target != null) {
+      if ((t - target).abs() > 0.3 && DateTime.now().isBefore(_seekDeadline)) return;
+      _seekTarget = null;
+    }
+    currentTime = t;
     final before = currentCueIndex;
     _updateCue();
     if (isPlaying && loopMode == LoopMode.lines && loopEnd > loopStart && currentTime >= loopEnd) {
@@ -371,21 +390,7 @@ class RehearsalPlayer extends ChangeNotifier {
       currentCueIndex = -1;
       return;
     }
-    var lo = 0, hi = cues.length - 1, found = -1;
-    while (lo <= hi) {
-      final mid = (lo + hi) ~/ 2;
-      final c = cues[mid];
-      if (c.startTime <= currentTime && currentTime < c.endTime) {
-        found = mid;
-        break;
-      } else if (c.endTime <= currentTime) {
-        lo = mid + 1;
-      } else {
-        hi = mid - 1;
-      }
-    }
-    if (found == -1) found = cues.lastIndexWhere((c) => c.startTime <= currentTime);
-    currentCueIndex = found;
+    currentCueIndex = cueIndexAt(cues, currentTime);
   }
 
   @override
@@ -395,4 +400,23 @@ class RehearsalPlayer extends ChangeNotifier {
     _p?.dispose();
     super.dispose();
   }
+}
+
+/// The cue playing at [t]: the last cue that has started. Between lines (the
+/// pause) the previous line stays lit. A small tolerance absorbs seeks that
+/// land a hair before a line's start, which would otherwise light the line
+/// before it.
+int cueIndexAt(List<SceneCue> cues, double t) {
+  const tolerance = 0.03;
+  var lo = 0, hi = cues.length - 1, found = -1;
+  while (lo <= hi) {
+    final mid = (lo + hi) ~/ 2;
+    if (cues[mid].startTime <= t + tolerance) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return found;
 }

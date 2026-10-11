@@ -146,7 +146,7 @@ class PythonBridge {
       final els = userAddedElements['$pdfPath|$n'] ?? const [];
       final list = [
         for (final el in els)
-          if (el.text.trim().isNotEmpty) {'afterElementTextKey': el.afterElementTextKey, 'speaker': el.speaker, 'text': el.text, 'kind': el.kind},
+          if (el.text.trim().isNotEmpty) {'id': el.id, 'afterElementTextKey': el.afterElementTextKey, 'speaker': el.speaker, 'text': el.text, 'kind': el.kind},
       ];
       if (list.isNotEmpty) byScene['$n'] = list;
     }

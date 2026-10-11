@@ -12,6 +12,7 @@ import '../services/project_store.dart';
 import '../state/app_state.dart';
 import '../theme/tokens.dart';
 import 'empty_art.dart';
+import 'export.dart';
 import 'header.dart';
 import 'sheets.dart';
 import 'widgets.dart';
@@ -132,12 +133,13 @@ class _GalleryScreenState extends State<GalleryScreen> {
   });
 
   Future<void> _projectMenu(Project p, Offset pos) async {
-    final pick = await showMenuAt<String>(context, pos, const [
-      MenuItemSpec('open', 'Open'),
-      MenuItemSpec('rename', 'Rename…'),
-      MenuItemSpec.divider(),
-      MenuItemSpec('archive', 'Archive'),
-      MenuItemSpec('delete', 'Delete…'),
+    final pick = await showMenuAt<String>(context, pos, [
+      const MenuItemSpec('open', 'Open'),
+      const MenuItemSpec('rename', 'Rename…'),
+      MenuItemSpec('export', 'Export Audio…', enabled: p.renderedScenes.isNotEmpty && p.folderPath != null),
+      const MenuItemSpec.divider(),
+      const MenuItemSpec('archive', 'Archive'),
+      const MenuItemSpec('delete', 'Delete…'),
     ]);
     if (!mounted) return;
     switch (pick) {
@@ -145,6 +147,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
         _open(p);
       case 'rename':
         _rename(p);
+      case 'export':
+        exportAudio(context, sourceFolder: p.folderPath!, projectName: p.name);
       case 'archive':
         _confirmArchive([p]);
       case 'delete':

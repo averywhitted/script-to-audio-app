@@ -10,7 +10,8 @@ import 'package:table_read/models/models.dart';
 import 'package:table_read/services/project_store.dart';
 import 'package:table_read/services/settings.dart';
 import 'package:table_read/state/app_state.dart';
-import 'package:table_read/ui/dashboard.dart' show activeRowIndex;
+import 'package:table_read/state/player_state.dart' show cueIndexAt;
+import 'package:table_read/ui/dashboard.dart' show matchCuesToRows;
 
 const pdf = '/tmp/echo.pdf';
 
@@ -206,6 +207,41 @@ void main() {
     });
   });
 
+  group('unsure lines', () {
+    test('confirming the same speaker marks the line checked without an edit', () async {
+      final app = await makeApp();
+      final el = app.scenes.first.elements.first;
+      app.confirmSpeaker(1, el, 'LOLA', text: el.text, removed: false);
+      expect(app.isChecked(1, el), isTrue);
+      expect(app.correctionFor(1, el), isNull, reason: 'not an edit, so no re-render');
+      // A different speaker is a real correction.
+      final other = app.scenes.first.elements[1];
+      app.confirmSpeaker(1, other, 'LOLA', text: other.text, removed: false);
+      expect(app.correctionFor(1, other)?.correctedSpeaker, 'LOLA');
+    });
+
+    test('checked lines survive a save and load', () {
+      final p = Project.fromJson({'id': 'A', 'name': 'P', 'createdAt': '2026-01-01T00:00:00Z', 'lastOpenedAt': '2026-01-01T00:00:00Z'});
+      p.checkedLines = {'2|Hello'};
+      expect(Project.fromJson(jsonDecode(jsonEncode(p.toJson())) as Map<String, dynamic>).checkedLines, {'2|Hello'});
+    });
+  });
+
+  test('export audio copies only the .m4a files, into a new folder each time', () async {
+    final src = Directory.systemTemp.createTempSync('tr_export_src');
+    final dest = Directory.systemTemp.createTempSync('tr_export_dest');
+    File('${src.path}/Scene_01_One.m4a').writeAsStringSync('a');
+    File('${src.path}/Scene_01_One.cues.json').writeAsStringSync('{}');
+    File('${src.path}/Scene_02_Two.m4a').writeAsStringSync('b');
+    File('${src.path}/project.json').writeAsStringSync('{}');
+    final (folder, count) = await AppState.exportAudio(sourceFolder: src.path, projectName: 'My/Play', destination: dest.path);
+    expect(count, 2);
+    expect(folder, '${dest.path}/My-Play Audio');
+    expect(Directory(folder).listSync().map((e) => e.uri.pathSegments.last).toList()..sort(), ['Scene_01_One.m4a', 'Scene_02_Two.m4a']);
+    final (again, _) = await AppState.exportAudio(sourceFolder: src.path, projectName: 'My/Play', destination: dest.path);
+    expect(again, '${dest.path}/My-Play Audio 2');
+  });
+
   test('version comparison', () {
     expect(AppState.isNewer('v0.2.1', '0.2.0-preview'), isTrue);
     expect(AppState.isNewer('v0.1.8', '0.2.0-preview'), isFalse);
@@ -213,19 +249,44 @@ void main() {
   });
 
   group('playing line', () {
+    // Old cue maps (no refs): matched by words, in order.
+    List<int> byText(List<String?> rows, List<String> cues) =>
+        matchCuesToRows([for (final _ in rows) null], rows, [for (final _ in cues) null], cues);
+
     test('a repeated line lights up only the copy being played', () {
       final rows = ["I'm looking at you.", "I'm looking at you.", 'They stare.'];
-      final cues = ["I'm looking at you.", "I'm looking at you.", 'They stare.'];
-      expect(activeRowIndex(rows, cues, 0), 0);
-      expect(activeRowIndex(rows, cues, 1), 1);
-      expect(activeRowIndex(rows, cues, 2), 2);
+      expect(byText(rows, ["I'm looking at you.", "I'm looking at you.", 'They stare.']), [0, 1, 2]);
     });
 
     test('removed rows are skipped; added rows count', () {
-      final rows = ['A.', null, 'B.', 'A.'];
-      final cues = ['A.', 'B.', 'A.'];
-      expect(activeRowIndex(rows, cues, 2), 3);
-      expect(activeRowIndex(rows, cues, -1), -1);
+      expect(byText(['A.', null, 'B.', 'A.'], ['A.', 'B.', 'A.']), [0, 2, 3]);
+    });
+
+    test('cue refs match rows exactly, even when the words differ or repeat', () {
+      // Row 1 was skipped by the voice; row 3 repeats row 0's words.
+      final rowRefs = ['a', 'b', 'c', 'd'];
+      final rowTexts = ['Yes.', 'Beat.', 'No.', 'Yes.'];
+      final cueRefs = ['a', 'c', 'd'];
+      final cueTexts = ['Yes.', 'No (edited).', 'Yes.'];
+      expect(matchCuesToRows(rowRefs, rowTexts, cueRefs, cueTexts), [0, 2, 3]);
+    });
+
+    test('a cue without a known ref is matched by words only between its neighbours', () {
+      // The middle cue's ref is unknown; its words appear twice, but only the
+      // copy between rows 0 and 3 is eligible.
+      final rowRefs = ['a', 'x', 'y', 'd', 'z'];
+      final rowTexts = ['One.', 'Two.', 'Mid.', 'Four.', 'Mid.'];
+      final m = matchCuesToRows(rowRefs, rowTexts, ['a', 'gone', 'd', 'gone2'], ['One.', 'Mid.', 'Four.', 'Mid.']);
+      expect(m, [0, 2, 3, 4]);
+    });
+
+    test('cueIndexAt: a seek landing just before a line still lights that line', () {
+      SceneCue c(double s, double e) => SceneCue(index: 0, kind: 'dialog', speaker: 'A', text: '', startTime: s, endTime: e);
+      final cues = [c(1, 2), c(2.5, 4), c(4.4, 6)];
+      expect(cueIndexAt(cues, 0.5), -1); // title / lead-in
+      expect(cueIndexAt(cues, 2.4995), 1); // seek rounding
+      expect(cueIndexAt(cues, 2.2), 0); // pause after line 0: line 0 stays lit
+      expect(cueIndexAt(cues, 5), 2);
     });
   });
 
