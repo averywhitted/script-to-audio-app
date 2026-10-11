@@ -293,10 +293,7 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  static bool _textFieldFocused() {
-    final f = FocusManager.instance.primaryFocus;
-    return f?.context?.widget is EditableText;
-  }
+  static bool _textFieldFocused() => isTextInputFocused();
 }
 
 class _GalleryWithPlayerReset extends StatelessWidget {

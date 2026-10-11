@@ -935,3 +935,12 @@ class _ClickTargetState extends State<ClickTarget> {
     child: widget.child,
   );
 }
+
+/// True while the keyboard belongs to a text field (search, rename, line
+/// edits), so app shortcuts like Space and ⌘Z leave typing alone. The focused
+/// node sits on a Focus widget inside the field, so look upward for it.
+bool isTextInputFocused() {
+  final ctx = FocusManager.instance.primaryFocus?.context;
+  if (ctx == null) return false;
+  return ctx.widget is EditableText || ctx.findAncestorWidgetOfExactType<EditableText>() != null;
+}

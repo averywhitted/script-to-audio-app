@@ -114,8 +114,16 @@ class PythonBridge {
     await _request({'command': 'uninstallEngine', 'engine': engine.id});
   }
 
-  Future<String> previewVoice(EngineKind engine, String voiceId, {String? apiKey}) async {
-    final r = await _request({'command': 'previewVoice', 'engine': engine.id, 'voiceId': voiceId, if (apiKey != null && apiKey.isNotEmpty) 'apiKey': apiKey});
+  /// [text]: a line to read (the character's own first line); null reads the
+  /// voice's standard introduction.
+  Future<String> previewVoice(EngineKind engine, String voiceId, {String? apiKey, String? text}) async {
+    final r = await _request({
+      'command': 'previewVoice',
+      'engine': engine.id,
+      'voiceId': voiceId,
+      if (apiKey != null && apiKey.isNotEmpty) 'apiKey': apiKey,
+      if (text != null && text.trim().isNotEmpty) 'text': text,
+    });
     final path = r['path'] as String?;
     if (path == null) throw WorkerException(r['error'] as String? ?? 'Could not prepare voice preview.');
     return path;

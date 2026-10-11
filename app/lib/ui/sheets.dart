@@ -652,6 +652,19 @@ class _GeneralTabState extends State<_GeneralTab> {
           ],
         ),
         _Section(
+          header: 'Little Touches',
+          footer: 'Sounds are quiet and short: a slate clack when a scene finishes rendering, a page turn when playback moves to the next scene.',
+          children: [
+            _toggleLine(t, 'Sound effects', app.soundEffects, app.setSoundEffects),
+            Row(
+              children: [
+                Expanded(child: Text('Tips in the margin', style: TextStyles.ui(t))),
+                Btn('Show Tips Again', small: true, onPressed: app.resetTips),
+              ],
+            ),
+          ],
+        ),
+        _Section(
           header: 'Software Update',
           children: [
             if (u != null)

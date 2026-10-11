@@ -69,6 +69,9 @@ class RehearsalPlayer extends ChangeNotifier {
   /// Called whenever rehearsal settings change, so the view can be remembered.
   VoidCallback? onSettingsChanged;
 
+  /// Called when playback moves to another scene (the optional page-turn sound).
+  VoidCallback? onSceneTurn;
+
   ScenePlayerItem? get currentScene => currentSceneIndex >= 0 && currentSceneIndex < scenes.length ? scenes[currentSceneIndex] : null;
   SceneCue? get currentCue => currentCueIndex >= 0 && currentCueIndex < cues.length ? cues[currentCueIndex] : null;
   double get duration {
@@ -153,6 +156,7 @@ class RehearsalPlayer extends ChangeNotifier {
     final wasPlaying = isPlaying;
     if (audioEnabled) await _player.pause();
     final changed = index != currentSceneIndex;
+    if (changed && scenes.isNotEmpty && (wasPlaying || autoPlay)) onSceneTurn?.call();
     currentSceneIndex = index;
     cues = scenes[index].cues;
     currentTime = startAt;
@@ -191,6 +195,46 @@ class RehearsalPlayer extends ChangeNotifier {
 
   void togglePlayPause() => isPlaying ? pause() : play();
 
+  /// A short handwritten word over the timeline ("Places…" as cue-mode
+  /// rehearsal starts). Gone after a second; never blocks anything.
+  String? flash;
+  Timer? _flashTimer;
+  void _showFlash(String text) {
+    flash = text;
+    _flashTimer?.cancel();
+    _flashTimer = Timer(const Duration(milliseconds: 1100), () {
+      flash = null;
+      notifyListeners();
+    });
+  }
+
+  /// "Line!": with Block My Lines on, shows my current (or next) line for two
+  /// seconds, like an actor calling for a prompt.
+  int? revealedCue;
+  Timer? _revealTimer;
+  static const revealDuration = Duration(seconds: 2);
+
+  void callForLine() {
+    if (myRole.isEmpty || cues.isEmpty) return;
+    var target = waitingAtCue ?? -1;
+    if (target < 0) {
+      for (var i = currentCueIndex < 0 ? 0 : currentCueIndex; i < cues.length; i++) {
+        if (isMyLine(cues[i].speaker)) {
+          target = i;
+          break;
+        }
+      }
+    }
+    if (target < 0) return;
+    revealedCue = target;
+    _revealTimer?.cancel();
+    _revealTimer = Timer(revealDuration, () {
+      revealedCue = null;
+      notifyListeners();
+    });
+    notifyListeners();
+  }
+
   void play() {
     if (scenes.isEmpty) return;
     final w = waitingAtCue;
@@ -203,6 +247,8 @@ class RehearsalPlayer extends ChangeNotifier {
       }
       seek(j < cues.length ? cues[j].endTime : currentTime);
     }
+    // Starting a scene in cue mode: the actor's call to positions.
+    if (cueMode && myRole.isNotEmpty && w == null && currentTime < 0.5) _showFlash('Places…');
     isPlaying = true;
     if (audioEnabled) _player.play();
     notifyListeners();
@@ -395,6 +441,8 @@ class RehearsalPlayer extends ChangeNotifier {
 
   @override
   void dispose() {
+    _revealTimer?.cancel();
+    _flashTimer?.cancel();
     _posSub?.cancel();
     _stateSub?.cancel();
     _p?.dispose();

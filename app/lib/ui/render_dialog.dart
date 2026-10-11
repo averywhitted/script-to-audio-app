@@ -77,7 +77,12 @@ class _Booth extends StatelessWidget {
           Row(
             children: [
               _RecLamp(on: !app.isPaused),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
+              // A word from the set and the stage: rolling, or on a break.
+              SizedBox(
+                width: 104,
+                child: Text(app.isPaused ? 'taking five…' : 'quiet on set…', style: TextStyles.hand(t, size: 17, color: t.boothSub)),
+              ),
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(3),

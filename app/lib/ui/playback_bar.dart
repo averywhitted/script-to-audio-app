@@ -199,10 +199,15 @@ class PlaybackBar extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(color: t.mine, borderRadius: BorderRadius.circular(99)),
                     child: Text(
-                      'Your line — press Space to continue',
+                      p.blockMyLines ? "You're on — say your line, then Space  ·  L for Line!" : "You're on — say your line, then press Space",
                       style: TextStyles.ui(t, size: 11, weight: FontWeight.w700, color: const Color(0xFF1C1B19)),
                     ),
                   ),
+                )
+              else if (p.flash != null)
+                Positioned(
+                  top: -6,
+                  child: IgnorePointer(child: Text(p.flash!, style: TextStyles.hand(t, size: 19, color: t.accent))),
                 ),
             ],
           ),
@@ -210,6 +215,10 @@ class PlaybackBar extends StatelessWidget {
         const SizedBox(width: 8),
         Text(_clock(p.duration), style: TextStyles.script(t, size: 11.5, color: t.muted)),
         const SizedBox(width: 12),
+        if (p.blockMyLines && p.myRole.isNotEmpty) ...[
+          _LineButton(onTap: p.callForLine, showing: p.revealedCue != null),
+          const SizedBox(width: 6),
+        ],
         Builder(
           builder: (ctx) => _BarChip(
             icon: Icons.person_outline_rounded,
@@ -243,6 +252,38 @@ class PlaybackBar extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "Line!": shows my current or next blocked line for two seconds (L).
+class _LineButton extends StatelessWidget {
+  const _LineButton({required this.onTap, required this.showing});
+  final VoidCallback onTap;
+  final bool showing;
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return Tooltip(
+      message: 'Show your line for 2 seconds (L)',
+      child: Hover(
+        cursor: SystemMouseCursors.click,
+        builder: (context, h) => GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: showing ? t.mine : (h ? t.mine.withValues(alpha: 0.55) : t.mine.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(7),
+              border: Border.all(color: t.border),
+            ),
+            child: Text('Line!', style: TextStyles.hand(t, size: 18, color: const Color(0xFF1C1B19))),
+          ),
+        ),
+      ),
     );
   }
 }

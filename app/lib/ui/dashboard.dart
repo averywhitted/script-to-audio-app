@@ -251,7 +251,7 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
   final selection = LineSelection();
   final view = SceneView();
   final search = SearchState();
@@ -262,6 +262,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late final AppState app = context.read<AppState>();
   late final RehearsalPlayer player = context.read<RehearsalPlayer>();
 
+  /// House lights: opening a project fades up from a warm dim (0.3 s).
+  late final AnimationController _houseLights = AnimationController(vsync: this, duration: const Duration(milliseconds: 300), value: 0);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_houseLights.value == 0 && !_houseLights.isAnimating) {
+      if (MediaQuery.of(context).disableAnimations) {
+        _houseLights.value = 1;
+      } else {
+        _houseLights.forward();
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -269,6 +284,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     app.addListener(_onAppChange);
     view.addListener(_saveView);
     player.onSettingsChanged = _saveView;
+    player.onSceneTurn = () => app.playEffect('page');
     WidgetsBinding.instance.addPostFrameCallback((_) => _onAppChange());
   }
 
@@ -277,8 +293,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     HardwareKeyboard.instance.removeHandler(_onKey);
     app.removeListener(_onAppChange);
     player.onSettingsChanged = null;
+    player.onSceneTurn = null;
     player.unload();
     searchFocus.dispose();
+    _houseLights.dispose();
     super.dispose();
   }
 
@@ -331,12 +349,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       searchFocus.requestFocus();
       return true;
     }
-    final focused = FocusManager.instance.primaryFocus?.context?.widget;
-    if (focused is EditableText) return false;
+    if (isTextInputFocused()) return false;
     if (player.scenes.isEmpty) return false;
     switch (e.logicalKey) {
       case LogicalKeyboardKey.space:
         player.togglePlayPause();
+        return true;
+      case LogicalKeyboardKey.keyL when player.blockMyLines && player.myRole.isNotEmpty && !keys.isMetaPressed:
+        player.callForLine();
         return true;
       case LogicalKeyboardKey.arrowLeft:
         keys.isMetaPressed ? player.prevScene() : player.prevLine();
@@ -385,12 +405,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
       child: Material(
         color: t.bg,
-        child: Column(
+        child: Stack(
           children: [
-            const _WorkspaceHeader(),
-            _ToolBar(searchFocus: searchFocus),
-            const Expanded(child: ScriptArea()),
-            PlaybackBar(selectedRange: _selectedRange),
+            Column(
+              children: [
+                const _WorkspaceHeader(),
+                _ToolBar(searchFocus: searchFocus),
+                const Expanded(child: ScriptArea()),
+                PlaybackBar(selectedRange: _selectedRange),
+              ],
+            ),
+            // Clicks go straight through; it's only light.
+            IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _houseLights,
+                builder: (context, _) {
+                  final dim = 1 - Curves.easeOut.transform(_houseLights.value);
+                  return dim <= 0 ? const SizedBox.shrink() : Container(color: const Color(0xFF1E140A).withValues(alpha: 0.38 * dim));
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -765,6 +799,19 @@ class _ScriptAreaState extends State<ScriptArea> {
             bottom: 16,
             child: Center(child: _SelectionBar(selection: sel)),
           ),
+        if (app.showCurtainCall)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: app.canUndo || app.canRedo ? 54 : 12,
+            child: Center(child: _CurtainCall(count: script.scenes.length, onClose: app.dismissCurtainCall)),
+          ),
+        if (sel.isEmpty ? _tipFor(app, player) : null case final tip?)
+          Positioned(
+            left: 18,
+            bottom: 16,
+            child: MarginTip(key: ValueKey(tip.$1), text: tip.$2, onDismiss: () => app.dismissTip(tip.$1)),
+          ),
         if (app.isFetchingVoices)
           Positioned(
             right: 18,
@@ -920,6 +967,7 @@ class _SceneCardState extends State<SceneCard> {
                   ),
                   const SizedBox(width: 6),
                   Expanded(child: editingTitle ? _titleEditor(t, app, s) : _title(t, app, s)),
+                  if (app.wrappedAt[s.number] case final at?) WrapStamp(key: ValueKey(at), at: at),
                   if (edited && !rendering) ...[
                     const SizedBox(width: 8),
                     const Tooltip(
@@ -1058,11 +1106,14 @@ class _SceneCardState extends State<SceneCard> {
 
 /// What a row needs from its scene: playing state, play-from-here, search.
 class RowContext {
-  const RowContext({required this.active, this.onPlay, this.query = '', this.currentHit = false});
+  const RowContext({required this.active, this.onPlay, this.query = '', this.currentHit = false, this.revealed = false});
   final bool active;
   final VoidCallback? onPlay;
   final String query;
   final bool currentHit;
+
+  /// "Line!" is showing this (blocked) line for a moment.
+  final bool revealed;
 }
 
 class _Lines extends StatelessWidget {
@@ -1105,6 +1156,7 @@ class _Lines extends StatelessWidget {
         onPlay: ci < 0 ? null : () => player.playFrom(scene.number, ci),
         query: searchQuery,
         currentHit: currentHitRow == i,
+        revealed: playingHere && ci >= 0 && player.revealedCue == ci,
       );
     }
 
@@ -1315,15 +1367,21 @@ class _RowShell extends StatelessWidget {
       onExit: (_) => onHover(false),
       child: Stack(
         children: [
-          Container(
+          // The playing line sits in a follow spot: the existing highlight
+          // color at the center, fading out toward the edges. The text never
+          // sits on anything stronger than the flat highlight it replaced, so
+          // contrast is the same or better. Fades in quickly as playback moves.
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
             decoration: BoxDecoration(
               color: active
-                  ? t.accentSoft
+                  ? null
                   : selected
                   ? t.accentSoft.withValues(alpha: t.accentSoft.a * 0.7)
                   // A faint wash under the pointer, so it's clear which line
                   // the actions belong to.
-                  : (hovered ? t.ink.withValues(alpha: t.dark ? 0.045 : 0.035) : Colors.transparent),
+                  : (hovered ? t.ink.withValues(alpha: t.dark ? 0.045 : 0.035) : t.accentSoft.withValues(alpha: 0)),
+              gradient: active ? followSpot(t) : null,
               border: Border(left: BorderSide(color: active || hit ? t.accent : Colors.transparent, width: 3)),
             ),
             padding: const EdgeInsets.fromLTRB(0, 5, 0, 5),
@@ -1373,6 +1431,207 @@ class _DialogueBlock extends StatelessWidget {
       : child;
 }
 
+/// The follow spot behind the playing line: an oval of the playing-line
+/// color, strongest in the middle where the dialogue sits.
+Gradient followSpot(Tokens t) => RadialGradient(
+  radius: 0.6,
+  // Stretch the circle into a wide oval across the row.
+  transform: const _WideOval(),
+  colors: [t.accentSoft, t.accentSoft, t.accentSoft.withValues(alpha: t.accentSoft.a * 0.35)],
+  stops: const [0, 0.45, 1],
+);
+
+class _WideOval extends GradientTransform {
+  const _WideOval();
+  @override
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
+    // RadialGradient sizes to the shorter side; scale x to the row's width.
+    final sx = bounds.height == 0 ? 1.0 : bounds.width / bounds.height;
+    final c = bounds.center;
+    return Matrix4.identity()
+      ..translateByDouble(c.dx, c.dy, 0, 1)
+      ..scaleByDouble(sx, 1, 1, 1)
+      ..translateByDouble(-c.dx, -c.dy, 0, 1);
+  }
+}
+
+/// A handwritten "wrapped" stamp that lands on a scene's card when it
+/// finishes rendering, then fades: ~0.2 s in, 2.5 s shown, ~0.25 s out. Never
+/// blocks anything; without motion (Reduce Motion) it simply appears.
+class WrapStamp extends StatefulWidget {
+  const WrapStamp({super.key, required this.at});
+  final DateTime at;
+  static const shown = Duration(milliseconds: 2700);
+  @override
+  State<WrapStamp> createState() => _WrapStampState();
+}
+
+class _WrapStampState extends State<WrapStamp> with SingleTickerProviderStateMixin {
+  late final AnimationController _in = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
+  Timer? _out;
+  bool _visible = true, _gone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final age = clockNow().difference(widget.at);
+    if (age > WrapStamp.shown) {
+      _gone = true;
+      return;
+    }
+    _in.forward();
+    _out = Timer(WrapStamp.shown - age, () {
+      if (!mounted) return;
+      setState(() => _visible = false);
+      Timer(const Duration(milliseconds: 260), () {
+        if (mounted) setState(() => _gone = true);
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _out?.cancel();
+    _in.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_gone) return const SizedBox.shrink();
+    final t = Tokens.of(context);
+    final still = MediaQuery.of(context).disableAnimations;
+    final stamp = Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.fromLTRB(7, 1, 8, 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: t.ok, width: 1.4),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text('wrapped!', style: TextStyles.hand(t, size: 16, color: t.ok)),
+    );
+    return AnimatedOpacity(
+      opacity: _visible ? 1 : 0,
+      duration: const Duration(milliseconds: 250),
+      child: still
+          ? Transform.rotate(angle: -0.08, child: stamp)
+          : AnimatedBuilder(
+              animation: _in,
+              builder: (context, child) {
+                final v = Curves.easeOutBack.transform(_in.value);
+                return Opacity(
+                  opacity: _in.value,
+                  child: Transform.rotate(angle: -0.08, child: Transform.scale(scale: 1.35 - 0.35 * v, child: child)),
+                );
+              },
+              child: stamp,
+            ),
+    );
+  }
+}
+
+/// The first-run tip that applies right now, if any: (id, text).
+(String, String)? _tipFor(AppState app, RehearsalPlayer player) {
+  bool open(String id) => !app.tipDismissed(id);
+  if (open('whoSpeaking')) {
+    final unsure = app.scenes.any(
+      (sc) => sc.elements.any((el) => el.confidence < 0.7 && app.correctionFor(sc.number, el) == null && !app.isChecked(sc.number, el)),
+    );
+    if (unsure) return ('whoSpeaking', 'A few lines say “who’s speaking?” — click the tag to pick who says them.');
+  }
+  if (open('clickLine') && app.hasRenderedAudio) return ('clickLine', 'Click any line to hear it from there.');
+  if (open('callLine') && player.blockMyLines && player.myRole.isNotEmpty) {
+    return ('callLine', 'Drew a blank? Press L for your line.');
+  }
+  return null;
+}
+
+/// A handwritten note in the margin with a "Got it". Fades in; never covers
+/// the script's text column for long and goes away for good when dismissed.
+class MarginTip extends StatelessWidget {
+  const MarginTip({super.key, required this.text, required this.onDismiss});
+  final String text;
+  final VoidCallback onDismiss;
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 160),
+      builder: (context, v, child) => Opacity(opacity: v, child: child),
+      child: Transform.rotate(
+        angle: -0.012,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 300),
+          padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
+          decoration: BoxDecoration(
+            color: t.sheet,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: t.border),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 3))],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Flexible(
+                child: Text(text, style: TextStyles.hand(t, size: 17, color: t.ink2).copyWith(height: 1.15)),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Don’t show this tip again',
+                child: GestureDetector(
+                  onTap: onDismiss,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 1, right: 4),
+                      child: Text('Got it', style: TextStyles.ui(t, size: 11.5, weight: FontWeight.w700, color: t.accent)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown once per project when every scene has been rendered.
+class _CurtainCall extends StatelessWidget {
+  const _CurtainCall({required this.count, required this.onClose});
+  final int count;
+  final VoidCallback onClose;
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 200),
+      builder: (context, v, child) => Opacity(opacity: v, child: child),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 7, 6, 7),
+        decoration: BoxDecoration(
+          color: t.okSoft,
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: t.ok.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Curtain call!', style: TextStyles.hand(t, size: 19, color: t.ok)),
+            const SizedBox(width: 10),
+            Text('All $count scenes are rendered and ready to play.', style: TextStyles.ui(t, size: 12.5, color: t.ink2)),
+            const SizedBox(width: 4),
+            IconBtn(Icons.close_rounded, size: 14, box: 22, tooltip: 'Close', onTap: onClose),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Right-hand column of small status marks (muted, corrected, uncertain).
 /// The same width as the checkbox gutter so lines stay centered.
 class _Status extends StatelessWidget {
@@ -1419,7 +1678,8 @@ class _LineRowState extends State<LineRow> {
     final text = (fix?.correctedText?.isNotEmpty ?? false) ? fix!.correctedText! : el.text;
     final isDialog = kind == 'dialog' && speaker != 'Narrator';
     final mine = isDialog && player.myRole.isNotEmpty && player.isMyLine(speaker);
-    final shownText = mine && player.blockMyLines ? blockText(text) : text;
+    final blocked = mine && player.blockMyLines && !widget.rc.revealed;
+    final shownText = blocked ? blockText(text) : text;
     final flagged = el.confidence < 0.7 && fix == null && !removed && !app.isChecked(n, el);
     final selected = sel.sceneNumber == n && sel.refs.contains(el.ref);
 
@@ -1464,7 +1724,13 @@ class _LineRowState extends State<LineRow> {
                 const SizedBox(height: 2),
                 _Playable(
                   onPlay: widget.rc.onPlay,
-                  child: Text.rich(highlightSpan(shownText, mine && player.blockMyLines ? '' : widget.rc.query, textStyle, t.accentSoft)),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 120),
+                    child: Text.rich(
+                      key: ValueKey(blocked),
+                      highlightSpan(shownText, blocked ? '' : widget.rc.query, textStyle, t.accentSoft),
+                    ),
+                  ),
                 ),
               ],
             ),

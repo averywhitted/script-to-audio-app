@@ -138,7 +138,7 @@ class _VoiceRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          if (ready) _PreviewButton(voice: voice) else const SizedBox(width: 24),
+          if (ready) _PreviewButton(voice: voice, characterKey: characterKey, name: name) else const SizedBox(width: 24),
         ],
       ),
     );
@@ -146,22 +146,26 @@ class _VoiceRow extends StatelessWidget {
 }
 
 class _PreviewButton extends StatelessWidget {
-  const _PreviewButton({required this.voice});
+  const _PreviewButton({required this.voice, required this.characterKey, required this.name});
   final VoiceSummary? voice;
+  final String characterKey;
+  final String name;
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
     final app = context.watch<AppState>();
     final v = voice;
-    final preparing = v != null && app.preparingPreviewVoiceId == v.id;
-    final playing = v != null && app.previewingVoiceId == v.id;
-    final enabled = v != null && app.preparingPreviewVoiceId == null && !app.isGenerating;
+    final key = v == null ? null : '$characterKey|${v.id}';
+    final preparing = key != null && app.preparingPreviewKey == key;
+    final playing = key != null && app.previewingKey == key;
+    final enabled = v != null && app.preparingPreviewKey == null && !app.isGenerating;
+    final who = characterKey == narratorKey ? 'the Narrator' : titleCaseName(name);
     return Tooltip(
-      message: v == null ? 'Choose a voice before previewing' : 'Preview ${v.label}',
+      message: v == null ? 'Choose a voice before previewing' : 'Hear ${v.label} read $who’s first line',
       child: Hover(
         cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
         builder: (context, h) => GestureDetector(
-          onTap: enabled || playing ? () => app.toggleVoicePreview(v) : null,
+          onTap: v != null && (enabled || playing) ? () => app.toggleVoicePreview(v, characterKey: characterKey) : null,
           child: Container(
             width: 24,
             height: 24,

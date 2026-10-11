@@ -68,10 +68,64 @@ class AppState extends ChangeNotifier {
   bool isFetchingVoices = false;
   Map<String, String> voiceAssignment = {};
   Map<String, String> characterGenderOverrides = {};
-  String? previewingVoiceId;
-  String? preparingPreviewVoiceId;
+  /// Voice previews are per cast row ("<characterKey>|<voiceId>"): each
+  /// character hears the voice read their own first line.
+  String? previewingKey;
+  String? preparingPreviewKey;
   AudioPlayer? _preview;
   AudioPlayer get _previewPlayer => _preview ??= AudioPlayer();
+
+  // ---------------------------------------------------------------------------
+  // Little moments: wrap stamps, the end-of-script note, sound effects, tips
+  // ---------------------------------------------------------------------------
+
+  /// When each scene finished rendering this session (its card shows a brief
+  /// "wrapped" stamp).
+  final Map<int, DateTime> wrappedAt = {};
+
+  /// Shown once per project when its last unrendered scene finishes.
+  bool showCurtainCall = false;
+  void dismissCurtainCall() {
+    showCurtainCall = false;
+    notifyListeners();
+  }
+
+  /// Optional sound effects (Settings → General), off by default.
+  bool soundEffects = false;
+  void setSoundEffects(bool v) {
+    soundEffects = v;
+    settings.setBool('soundEffects', v);
+    notifyListeners();
+    if (v) playEffect('slate');
+  }
+
+  AudioPlayer? _fx;
+  Future<void> playEffect(String name) async {
+    if (!soundEffects) return;
+    try {
+      final p = _fx ??= AudioPlayer();
+      await p.setAsset('assets/sounds/$name.wav');
+      await p.setVolume(0.6);
+      await p.play();
+    } catch (e) {
+      dlog('sound effect failed: $e', LogStyle.debug);
+    }
+  }
+
+  /// First-run tips in the margin; each one, once dismissed, stays away.
+  bool tipDismissed(String id) => settings.getBool('tip.$id');
+  void dismissTip(String id) {
+    settings.setBool('tip.$id', true);
+    notifyListeners();
+  }
+
+  static const tipIds = ['clickLine', 'callLine', 'whoSpeaking'];
+  void resetTips() {
+    for (final id in tipIds) {
+      settings.setBool('tip.$id', false);
+    }
+    notifyListeners();
+  }
   bool hasStoredOpenAIKey = false;
   String openAIKeyStatus = 'idle'; // idle | checking | valid | invalid
   String? openAIKeyError;
@@ -176,6 +230,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _loadSettings() {
+    soundEffects = settings.getBool('soundEffects');
     characterColors = settings.getBool('characterHighlightColors', fallback: true);
     characterColorsEnabled = characterColors;
     textSize = (int.tryParse(settings.getString('scriptTextSize') ?? '') ?? defaultTextSize).clamp(0, textSizeLabels.length - 1);
@@ -274,6 +329,8 @@ class AppState extends ChangeNotifier {
     userAddedElements = {};
     characterGenderOverrides = {};
     checkedLines = {};
+    wrappedAt.clear();
+    showCurtainCall = false;
     voices = [];
     voiceAssignment = {};
     selectedScenes = {};
@@ -469,23 +526,62 @@ class AppState extends ChangeNotifier {
     persistProject();
   }
 
-  Future<void> toggleVoicePreview(VoiceSummary voice) async {
-    if (previewingVoiceId == voice.id) {
+  /// The line a character's voice preview reads: their first real line
+  /// (with edits applied; removed lines skipped), trimmed to a sentence or two.
+  /// The Narrator reads the first stage direction. Null falls back to the
+  /// voice's standard introduction.
+  String? previewLine(String characterKey) {
+    String? best;
+    for (final scene in scenes) {
+      for (final el in scene.elements) {
+        final fix = correctionFor(scene.number, el);
+        if (fix?.markedAsNoise == true) continue;
+        final kind = fix?.correctedKind ?? el.kind;
+        var speaker = el.speaker ?? '';
+        if (fix?.correctedSpeaker != null) speaker = fix!.correctedSpeaker!;
+        final isNarration = kind != 'dialog' || speaker.isEmpty;
+        final matches = characterKey == narratorKey ? (isNarration && kind == 'stage_direction') : (!isNarration && (speaker == characterKey || (el.overlapCue?.contains(characterKey) ?? false)));
+        if (!matches) continue;
+        var text = (fix?.correctedText?.isNotEmpty ?? false) ? fix!.correctedText! : el.text;
+        text = text.replaceAll(RegExp(r'^\s*\([^)]*\)\s*'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+        final words = text.split(' ').where((w) => RegExp(r'\p{L}', unicode: true).hasMatch(w)).length;
+        if (words == 0) continue;
+        best ??= text;
+        if (words >= 4) return _trimForPreview(text);
+      }
+    }
+    return best == null ? null : _trimForPreview(best);
+  }
+
+  static String _trimForPreview(String text) {
+    if (text.length <= 180) return text;
+    // Cut at the last sentence end before 180 characters, else at a word.
+    final cut = text.substring(0, 180);
+    final end = cut.lastIndexOf(RegExp(r'[.!?…]\s'));
+    if (end > 40) return cut.substring(0, end + 1);
+    final space = cut.lastIndexOf(' ');
+    return '${cut.substring(0, space > 0 ? space : 180)}…';
+  }
+
+  Future<void> toggleVoicePreview(VoiceSummary voice, {String? characterKey}) async {
+    final key = '${characterKey ?? ''}|${voice.id}';
+    if (previewingKey == key) {
       await _previewPlayer.stop();
-      previewingVoiceId = null;
+      previewingKey = null;
       notifyListeners();
       return;
     }
     await _previewPlayer.stop();
-    previewingVoiceId = null;
-    preparingPreviewVoiceId = voice.id;
+    previewingKey = null;
+    preparingPreviewKey = key;
     notifyListeners();
     try {
-      String? key;
-      if (selectedEngine == EngineKind.openAI) key = await NativePlatform.keychainRead('openai_api_key');
-      final path = await bridge.previewVoice(selectedEngine, voice.id, apiKey: key);
-      preparingPreviewVoiceId = null;
-      previewingVoiceId = voice.id;
+      String? apiKey;
+      if (selectedEngine == EngineKind.openAI) apiKey = await NativePlatform.keychainRead('openai_api_key');
+      final line = characterKey == null ? null : previewLine(characterKey);
+      final path = await bridge.previewVoice(selectedEngine, voice.id, apiKey: apiKey, text: line);
+      preparingPreviewKey = null;
+      previewingKey = key;
       notifyListeners();
       await _previewPlayer.setFilePath(path);
       await _previewPlayer.play();
@@ -493,8 +589,8 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       dlog('preview failed: $e', LogStyle.error);
     }
-    preparingPreviewVoiceId = null;
-    if (previewingVoiceId == voice.id) previewingVoiceId = null;
+    if (preparingPreviewKey == key) preparingPreviewKey = null;
+    if (previewingKey == key) previewingKey = null;
     notifyListeners();
   }
 
@@ -811,6 +907,8 @@ class AppState extends ChangeNotifier {
             if ((ev.message ?? '').startsWith('✓')) {
               sceneProgress[n] = 1.0;
               _markRendered(n);
+              wrappedAt[n] = clockNow();
+              playEffect('slate');
             }
             generationProgress = (si + 1) / ts;
           }
@@ -845,7 +943,15 @@ class AppState extends ChangeNotifier {
           appendLog(e, LogStyle.error);
         }
         if (errs.isEmpty) {
+          final hadAll = scenes.isNotEmpty && scenes.every((sc) => sceneFileInfo[sc.number]?.exists == true);
           checkRenderedScenes();
+          final pid = store.currentProject?.id;
+          final hasAll = scenes.isNotEmpty && scenes.every((sc) => sceneFileInfo[sc.number]?.exists == true);
+          if (!hadAll && hasAll && pid != null && backgroundRenderProjectId == null && !settings.getBool('curtainCall.$pid')) {
+            // The whole script is ready: say so once for this project.
+            settings.setBool('curtainCall.$pid', true);
+            showCurtainCall = true;
+          }
           final bg = backgroundRenderProjectId;
           if (bg != null) {
             backgroundRenderProjectId = null;
