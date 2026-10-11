@@ -332,7 +332,7 @@ class _BugReportState extends State<_BugReport> {
             border: Border(top: BorderSide(color: t.rule)),
           ),
           child: Text(
-            'This opens a prefilled report as $destinationDescription. Nothing is sent until you review it there and submit it.',
+            'This opens a prefilled report as $destinationDescription, with the app’s recent log attached. Nothing is sent until you review it there and submit it.',
             style: TextStyles.ui(t, size: 11.5, color: t.muted, height: 1.4),
           ),
         ),
@@ -354,8 +354,16 @@ class _BugReportState extends State<_BugReport> {
                 onPressed: what.text.trim().isEmpty || sent
                     ? null
                     : () async {
+                        final app = context.read<AppState>();
+                        // Capped so the prefilled issue URL stays under GitHub's length limit.
+                        var recent = app.debugLog.reversed.take(40).toList().reversed.map((e) {
+                          final line = '[${e.timestampString}] ${e.text}';
+                          return line.length > 200 ? '${line.substring(0, 200)}…' : line;
+                        }).join('\n');
+                        if (recent.length > 4000) recent = '…${recent.substring(recent.length - 4000)}';
                         final body =
-                            'App version: $version\nmacOS: ${info['os']}\n\nWhat happened:\n${what.text}\n\nSteps to reproduce:\n${steps.text.isEmpty ? '(not provided)' : steps.text}';
+                            'App version: $version\nmacOS: ${info['os']}\n\nWhat happened:\n${what.text}\n\nSteps to reproduce:\n${steps.text.isEmpty ? '(not provided)' : steps.text}'
+                            '\n\nRecent app log:\n```\n${recent.isEmpty ? '(empty)' : recent}\n```';
                         await NativePlatform.openURL(issueUrl('Bug report $version', body, ['bug', 'user-report']));
                         if (!mounted) return;
                         setState(() => sent = true);

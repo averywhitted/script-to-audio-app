@@ -1,4 +1,6 @@
-// Rehearsal player. Port of Sources/TableRead/PlayerState.swift.
+// Rehearsal player (the playback bar). Started as a port of
+// Sources/TableRead/PlayerState.swift; adds play-from-line, cue mode, loops,
+// seeking and the scene timeline.
 
 import 'dart:async';
 import 'dart:convert';
@@ -11,12 +13,15 @@ import '../models/models.dart';
 import 'app_state.dart';
 
 class ScenePlayerItem {
-  ScenePlayerItem(this.sceneNumber, this.sceneTitle, this.audioPath, this.cues);
+  ScenePlayerItem(this.sceneNumber, this.sceneTitle, this.audioPath, this.cues, this.totalDuration);
   final int sceneNumber;
   final String sceneTitle;
   final String audioPath;
   final List<SceneCue> cues;
+  final double totalDuration;
 }
+
+enum LoopMode { off, scene, lines }
 
 class RehearsalPlayer extends ChangeNotifier {
   RehearsalPlayer({this.audioEnabled = true});
@@ -36,14 +41,7 @@ class RehearsalPlayer extends ChangeNotifier {
     _p = p;
     _posSub = p.positionStream.listen(_tick);
     _stateSub = p.playerStateStream.listen((s) {
-      if (s.processingState == ProcessingState.completed && isPlaying) {
-        if (currentSceneIndex + 1 < scenes.length) {
-          switchToScene(currentSceneIndex + 1, autoPlay: true);
-        } else {
-          pause();
-          _player.seek(Duration.zero);
-        }
-      }
+      if (s.processingState == ProcessingState.completed && isPlaying) _sceneEnded();
     });
     return p;
   }
@@ -57,11 +55,29 @@ class RehearsalPlayer extends ChangeNotifier {
   String myRole = '';
   bool muteMyLines = false;
   bool blockMyLines = false;
+
+  /// Cue mode: stop just before each of my lines so I can say it myself.
+  bool cueMode = false;
+
+  /// Index of my cue the player is waiting at (cue mode), or null.
+  int? waitingAtCue;
   double playbackRate = 1.0;
+  LoopMode loopMode = LoopMode.off;
+  double loopStart = 0, loopEnd = 0;
+
+  /// Called whenever rehearsal settings change, so the view can be remembered.
+  VoidCallback? onSettingsChanged;
 
   ScenePlayerItem? get currentScene => currentSceneIndex >= 0 && currentSceneIndex < scenes.length ? scenes[currentSceneIndex] : null;
-
   SceneCue? get currentCue => currentCueIndex >= 0 && currentCueIndex < cues.length ? cues[currentCueIndex] : null;
+  double get duration {
+    final s = currentScene;
+    if (s == null) return 0;
+    if (s.totalDuration > 0) return s.totalDuration;
+    return cues.isEmpty ? 0 : cues.last.endTime;
+  }
+
+  bool hasScene(int sceneNumber) => scenes.any((s) => s.sceneNumber == sceneNumber);
 
   void load(AppState app) {
     final pdf = app.pdfPath;
@@ -76,7 +92,21 @@ class RehearsalPlayer extends ChangeNotifier {
     for (final n in keys) {
       final info = app.sceneFileInfo[n]!;
       if (!info.exists) continue;
-      items.add(ScenePlayerItem(n, info.title, '$out/${info.filename}', _loadCues(app.sceneCueFiles[n])));
+      final (cueList, total) = _loadCues(app.sceneCueFiles[n]);
+      items.add(
+        ScenePlayerItem(
+          n,
+          app.effectiveSceneTitle(
+            app.scenes.firstWhere(
+              (s) => s.number == n,
+              orElse: () => Scene(number: n, title: info.title, elementCount: 0, elements: const []),
+            ),
+          ),
+          '$out/${info.filename}',
+          cueList,
+          total,
+        ),
+      );
     }
     final currentNumber = currentScene?.sceneNumber;
     final hadScenes = scenes.isNotEmpty;
@@ -90,36 +120,68 @@ class RehearsalPlayer extends ChangeNotifier {
       switchToScene(0);
     } else {
       currentSceneIndex = idx;
-      if (cues.isEmpty) cues = scenes[idx].cues;
+      cues = scenes[idx].cues;
       notifyListeners();
     }
   }
 
-  static List<SceneCue> _loadCues(String? path) {
-    if (path == null) return const [];
+  void unload() {
+    pause();
+    scenes = [];
+    cues = [];
+    currentCueIndex = -1;
+    currentTime = 0;
+    waitingAtCue = null;
+    loopMode = LoopMode.off;
+    notifyListeners();
+  }
+
+  static (List<SceneCue>, double) _loadCues(String? path) {
+    if (path == null) return (const [], 0);
     try {
       final j = jsonDecode(File(path).readAsStringSync()) as Map;
-      return ((j['cues'] as List?) ?? const []).map((e) => SceneCue.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+      final list = ((j['cues'] as List?) ?? const []).map((e) => SceneCue.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+      return (list, (j['totalDuration'] as num?)?.toDouble() ?? 0);
     } catch (_) {
-      return const [];
+      return (const [], 0);
     }
   }
 
-  Future<void> switchToScene(int index, {bool autoPlay = false}) async {
+  Future<void> switchToScene(int index, {bool autoPlay = false, double startAt = 0}) async {
     if (index < 0 || index >= scenes.length) return;
     final wasPlaying = isPlaying;
     if (audioEnabled) await _player.pause();
+    final changed = index != currentSceneIndex;
     currentSceneIndex = index;
-    currentCueIndex = -1;
-    currentTime = 0;
     cues = scenes[index].cues;
+    currentTime = startAt;
+    waitingAtCue = null;
+    if (changed && loopMode == LoopMode.lines) loopMode = LoopMode.off;
+    _updateCue();
     notifyListeners();
-    if (!audioEnabled) return;
-    try {
-      await _player.setFilePath(scenes[index].audioPath);
-      await _player.setSpeed(playbackRate);
-    } catch (_) {}
+    if (audioEnabled) {
+      try {
+        await _player.setFilePath(scenes[index].audioPath);
+        await _player.setSpeed(playbackRate);
+        if (startAt > 0) await _player.seek(Duration(milliseconds: (startAt * 1000).round()));
+      } catch (_) {}
+    }
     if (wasPlaying || autoPlay) play();
+  }
+
+  /// Plays scene [sceneNumber] from cue [cueIndex] (clicking a line).
+  Future<void> playFrom(int sceneNumber, int cueIndex) async {
+    final si = scenes.indexWhere((s) => s.sceneNumber == sceneNumber);
+    if (si < 0) return;
+    final sceneCues = scenes[si].cues;
+    final t = (cueIndex >= 0 && cueIndex < sceneCues.length) ? sceneCues[cueIndex].startTime : 0.0;
+    waitingAtCue = null;
+    if (si != currentSceneIndex) {
+      await switchToScene(si, autoPlay: true, startAt: t);
+    } else {
+      seek(t);
+      play();
+    }
   }
 
   @visibleForTesting
@@ -129,6 +191,16 @@ class RehearsalPlayer extends ChangeNotifier {
 
   void play() {
     if (scenes.isEmpty) return;
+    final w = waitingAtCue;
+    if (w != null) {
+      // Cue mode: the actor said their line; carry on after it.
+      waitingAtCue = null;
+      var j = w;
+      while (j + 1 < cues.length && isMyLine(cues[j + 1].speaker)) {
+        j++;
+      }
+      seek(j < cues.length ? cues[j].endTime : currentTime);
+    }
     isPlaying = true;
     if (audioEnabled) _player.play();
     notifyListeners();
@@ -136,18 +208,28 @@ class RehearsalPlayer extends ChangeNotifier {
 
   void pause() {
     isPlaying = false;
-    if (audioEnabled) {
+    if (audioEnabled && _p != null) {
       _player.pause();
       _player.setVolume(1);
     }
     notifyListeners();
   }
 
+  void seek(double t) {
+    final clamped = t.clamp(0.0, duration > 0 ? duration : t);
+    if (audioEnabled) _player.seek(Duration(milliseconds: (clamped * 1000).round()));
+    currentTime = clamped;
+    waitingAtCue = null;
+    _updateCue();
+    notifyListeners();
+  }
+
   void setRate(double r) {
     final snapped = (r * 20).round() / 20;
     playbackRate = snapped.clamp(0.5, 2.0);
-    if (audioEnabled) _player.setSpeed(playbackRate);
+    if (audioEnabled && _p != null) _player.setSpeed(playbackRate);
     notifyListeners();
+    onSettingsChanged?.call();
   }
 
   void stepRate(double delta) => setRate(playbackRate + delta);
@@ -157,32 +239,52 @@ class RehearsalPlayer extends ChangeNotifier {
     if (role.isEmpty) {
       muteMyLines = false;
       blockMyLines = false;
+      cueMode = false;
+      waitingAtCue = null;
     }
     notifyListeners();
+    onSettingsChanged?.call();
   }
 
   void setMute(bool v) {
     muteMyLines = v;
     notifyListeners();
+    onSettingsChanged?.call();
   }
 
   void setBlock(bool v) {
     blockMyLines = v;
     notifyListeners();
+    onSettingsChanged?.call();
+  }
+
+  void setCueMode(bool v) {
+    cueMode = v;
+    if (!v) waitingAtCue = null;
+    notifyListeners();
+    onSettingsChanged?.call();
+  }
+
+  void setLoop(LoopMode mode, {double start = 0, double end = 0}) {
+    loopMode = mode;
+    loopStart = start;
+    loopEnd = end;
+    if (mode == LoopMode.lines && (currentTime < start || currentTime >= end)) seek(start);
+    notifyListeners();
   }
 
   void nextLine() {
     final next = currentCueIndex + 1;
-    if (next < cues.length) _seek(cues[next].startTime);
+    if (next < cues.length) seek(cues[next].startTime);
   }
 
   void prevLine() {
     if (cues.isEmpty) return;
     if (currentCueIndex > 0) {
       final cue = cues[currentCueIndex];
-      _seek(currentTime - cue.startTime > 1.5 ? cue.startTime : cues[currentCueIndex - 1].startTime);
+      seek(currentTime - cue.startTime > 1.5 ? cue.startTime : cues[currentCueIndex - 1].startTime);
     } else {
-      _seek(0);
+      seek(0);
     }
   }
 
@@ -194,23 +296,50 @@ class RehearsalPlayer extends ChangeNotifier {
     if (currentSceneIndex > 0) {
       switchToScene(currentSceneIndex - 1, autoPlay: isPlaying);
     } else {
-      _seek(0);
+      seek(0);
     }
-  }
-
-  void _seek(double t) {
-    if (audioEnabled) _player.seek(Duration(milliseconds: (t * 1000).round()));
-    currentTime = t;
-    _updateCue();
-    notifyListeners();
   }
 
   bool isMyLine(String speaker) => myRole.isNotEmpty && speaker.split('/').contains(myRole);
 
+  void _sceneEnded() {
+    if (loopMode == LoopMode.scene) {
+      seek(0);
+      if (audioEnabled) _player.play();
+    } else if (currentSceneIndex + 1 < scenes.length) {
+      switchToScene(currentSceneIndex + 1, autoPlay: true);
+    } else {
+      pause();
+      seek(0);
+    }
+  }
+
   void _tick(Duration pos) {
+    if (waitingAtCue != null) return;
     currentTime = pos.inMilliseconds / 1000;
     final before = currentCueIndex;
     _updateCue();
+    if (isPlaying && loopMode == LoopMode.lines && loopEnd > loopStart && currentTime >= loopEnd) {
+      seek(loopStart);
+      if (audioEnabled) _player.play();
+      return;
+    }
+    // Cue mode: stop at the start of my next line.
+    if (isPlaying && cueMode && myRole.isNotEmpty) {
+      for (final i in [currentCueIndex, currentCueIndex + 1]) {
+        if (i < 0 || i >= cues.length) continue;
+        final c = cues[i];
+        if (isMyLine(c.speaker) && currentTime >= c.startTime - 0.08 && currentTime < c.endTime) {
+          isPlaying = false;
+          if (audioEnabled) _player.pause();
+          waitingAtCue = i;
+          currentCueIndex = i;
+          currentTime = c.startTime;
+          notifyListeners();
+          return;
+        }
+      }
+    }
     // Mute my lines: silence during my cues (looking one tick ahead) so the
     // gap stays the length of the line.
     var muted = false;
@@ -220,8 +349,21 @@ class RehearsalPlayer extends ChangeNotifier {
       final ni = currentCueIndex + 1;
       if (ni >= 0 && ni < cues.length && isMyLine(cues[ni].speaker) && cues[ni].startTime - currentTime <= 0.06) muted = true;
     }
-    _player.setVolume(muted ? 0 : 1);
-    if (before != currentCueIndex) notifyListeners();
+    if (audioEnabled) _player.setVolume(muted ? 0 : 1);
+    if (before != currentCueIndex) {
+      notifyListeners();
+    } else {
+      _throttledNotify();
+    }
+  }
+
+  DateTime _lastNotify = DateTime.fromMillisecondsSinceEpoch(0);
+  void _throttledNotify() {
+    final now = DateTime.now();
+    if (now.difference(_lastNotify) > const Duration(milliseconds: 200)) {
+      _lastNotify = now;
+      notifyListeners();
+    }
   }
 
   void _updateCue() {

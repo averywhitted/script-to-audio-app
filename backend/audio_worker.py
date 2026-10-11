@@ -732,7 +732,14 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
     command = payload.get("command")
     if command == "parse":
         pdf_path = payload["pdfPath"]
-        return {"ok": True, "script": _script_summary(script_parser.parse_pdf(pdf_path))}
+        if payload.get("progress"):
+            # Stream {"event": "parseProgress"} lines before the final result line.
+            script_parser.progress_hook = lambda fraction, message: _emit(
+                {"event": "parseProgress", "fraction": round(fraction, 3), "message": message})
+        try:
+            return {"ok": True, "script": _script_summary(script_parser.parse_pdf(pdf_path))}
+        finally:
+            script_parser.progress_hook = None
     if command == "voices":
         engine_id = payload.get("engine", "mac")
         pdf_path = payload.get("pdfPath")

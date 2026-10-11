@@ -82,8 +82,12 @@ class PythonBridge {
   // Commands
   // ---------------------------------------------------------------------------
 
-  Future<ScriptSummary> parse(String pdfPath) async {
-    final r = await _request({'command': 'parse', 'pdfPath': pdfPath});
+  Future<ScriptSummary> parse(String pdfPath, {void Function(double fraction, String message)? onProgress}) async {
+    final r = onProgress == null
+        ? await _request({'command': 'parse', 'pdfPath': pdfPath})
+        : await _requestWithEvents({'command': 'parse', 'pdfPath': pdfPath, 'progress': true}, (e) {
+            if (e.event == 'parseProgress') onProgress(e.fraction ?? 0, e.message ?? '');
+          });
     final script = r['script'];
     if (script is! Map) throw WorkerException('The Python worker returned an unexpected response.');
     return ScriptSummary.fromJson(Map<String, dynamic>.from(script));
@@ -223,6 +227,34 @@ class PythonBridge {
       throw WorkerException((decoded['error'] as String?) ?? 'Python worker failed.');
     }
     return decoded;
+  }
+
+  /// Like [_request], but forwards {"event": ...} lines as they arrive and
+  /// returns the final result line.
+  Future<Map<String, dynamic>> _requestWithEvents(Map<String, dynamic> payload, void Function(GenerationEvent) onEvent) async {
+    final process = await _start();
+    process.stdin.write(jsonEncode(payload));
+    await process.stdin.close();
+    final errF = process.stderr.transform(utf8.decoder).join();
+    Map<String, dynamic>? result;
+    await process.stdout.transform(utf8.decoder).transform(const LineSplitter()).forEach((line) {
+      final t = line.trim();
+      if (!t.startsWith('{')) return;
+      try {
+        final m = Map<String, dynamic>.from(jsonDecode(t) as Map);
+        if (m.containsKey('event')) {
+          onEvent(GenerationEvent(m));
+        } else {
+          result = m;
+        }
+      } catch (_) {}
+    });
+    _forwardStderr(await errF);
+    await process.exitCode;
+    final r = result;
+    if (r == null) throw WorkerException('The Python worker returned an unexpected response.');
+    if (r['ok'] != true) throw WorkerException((r['error'] as String?) ?? 'Python worker failed.');
+    return r;
   }
 
   Future<void> _stream(Map<String, dynamic> payload, void Function(GenerationEvent) onEvent) async {

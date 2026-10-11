@@ -15,7 +15,22 @@
       "2026-10-11: Line checkboxes are hidden until the row is hovered, checked, or a selection is active in that scene.",
       "2026-10-11: Color roles: blue is the main color (primary buttons, play button, progress, selection, playing line); highlighter yellow is the accent (your own lines in Rehearse, brand mark).",
       "2026-10-11: New setting (requested): Settings → General → Script Display → 'Character highlight colors', with On/Off previews. Off = neutral gray name tags everywhere.",
-      "2026-10-11: 'Edited' / 'Re-Render Edited Scenes' now compares each scene's edits with what was rendered; undoing or reverting an edit clears it."
+      "2026-10-11: 'Edited' / 'Re-Render Edited Scenes' now compares each scene's edits with what was rendered; undoing or reverting an edit clears it.",
+      "2026-10-11: The side panel is gone. The workspace is: header (back, title, tool palette: Cast, Render, search) → script area → playback bar at the bottom. Cast and Render are sheets.",
+      "2026-10-11: The app options (Update Available, BETA, Report a Bug, Settings) are pinned to the top-right corner of the window on every screen.",
+      "2026-10-11: Parsing shows a determinate progress bar with a message ('Reading page 4 of 120'), not a spinner.",
+      "2026-10-11: After a new script is parsed, the Cast sheet opens once by itself; 'Done' confirms the cast. It reopens from Cast in the header (⌘K).",
+      "2026-10-11: Render opens the Render sheet (choose scenes, then 'Render N Scenes'). Edited scenes are preselected. Progress shows on each scene bar (thin line when collapsed, bar in the heading when expanded) and in a status chip in the header.",
+      "2026-10-11: Scene cards no longer carry a render checkbox; choosing scenes happens only in the Render sheet.",
+      "2026-10-11: Rehearse is the playback bar at the bottom: scene picker, transport, scene timeline with character-colored segments, My Role (mute, block, stop before my lines), Loop (scene or selected lines), Speed.",
+      "2026-10-11: Click any line (or its Play pill) to play from it. Keyboard: Space play/pause, ←/→ line, ⌘←/⌘→ scene, ⌘F search.",
+      "2026-10-11: Click a speaker's name tag on a line to change the speaker.",
+      "2026-10-11: Search bar in the header finds text in the script with 'N of M' and previous/next; matching scenes show a count.",
+      "2026-10-11: Cast shows how many lines each character has and sorts by it (Narrator first).",
+      "2026-10-11: Voice and engine changes count as edits for 'Edited' / re-render.",
+      "2026-10-11: Each project remembers its expanded scenes, role, mute/block/stop, and speed.",
+      "2026-10-11: Script stats (scenes · characters · lines) are a footer under the last scene.",
+      "2026-10-11: The Log moved to Debug → Show Log (⌥⌘L), shown in a sheet. Bug reports attach the last 40 log lines."
     ]
   },
   "rules": {
@@ -25,7 +40,7 @@
       "Rename any navigation item, tab, button, menu item or field label. Use the exact 'label' strings.",
       "Change what any control does, or add new options to a menu or picker.",
       "Move a control to a different screen, tab, sheet or popover than the one it is listed under.",
-      "Merge or split screens, tabs or sheets. The side panel has exactly four tabs: Cast, Render, Rehearse, Log.",
+      "Merge or split screens, tabs or sheets. The workspace has no side panel: header (tool palette: Cast, Render, Search), script area, playback bar.",
       "Show data the app does not have (see 'notInApp' and 'dataShapes'). No waveforms, durations, costs, avatars, ratings or progress figures beyond those listed.",
       "Invent a workflow, onboarding step or empty state that refers to features not listed here."
     ],
@@ -64,13 +79,7 @@
   },
   "glossary": {
     "Projects": "The home screen (Project Gallery). Header text: 'Table Read' / 'Projects'.",
-    "Project Dashboard": "The screen for one open project: top bar, script area, side panel.",
-    "Side panel tabs": [
-      "Cast",
-      "Render",
-      "Rehearse",
-      "Log"
-    ],
+    "Project Dashboard": "The screen for one open project (the workspace): header with the tool palette, the script area, and the playback bar at the bottom.",
     "Settings tabs": [
       "General",
       "Engines",
@@ -89,31 +98,37 @@
       "OpenAI TTS"
     ],
     "Removed": "A line marked as not voiced. It stays visible, struck through, and can be restored. Never deleted.",
-    "Simultaneous": "Two voices speaking one line at the same time, shown side by side."
+    "Simultaneous": "Two voices speaking one line at the same time, shown side by side.",
+    "Tool palette": [
+      "Cast",
+      "Render",
+      "Search"
+    ]
   },
   "navigation": {
     "window": "One main window. Shows either Projects or a Project Dashboard, never both. Everything else (Settings, sheets, popovers) opens inside it.",
     "flows": [
-      "Projects → New Project → New Project sheet → system PDF picker → Project Dashboard (shows 'Parsing script…' then the script)",
-      "Projects → double-click a project → Project Dashboard",
-      "Project Dashboard → back chevron → Projects (asks to confirm if a render is running)",
+      "Projects → New Project → New Project sheet → system PDF picker → workspace (parse progress bar, then the script) → Cast sheet opens once → Done",
+      "Projects → double-click a project → workspace",
+      "Workspace → back chevron → Projects (asks to confirm if a render is running)",
+      "Workspace → Cast (⌘K) → Cast sheet",
+      "Workspace → Render (⌘R) → Render sheet → Render N Scenes → progress on the scene bars and the header status chip (click it to reopen the Render sheet)",
+      "Workspace → click a line, or the playback bar → playback",
       "Any screen → gear button or ⌘, → Settings sheet (inside the main window)",
       "Any screen → Report a Bug button or ⇧⌘B → Report a Bug sheet",
       "Update Available badge, Settings, or app menu → Update Available sheet",
+      "Debug → Show Log (⌥⌘L) → Log sheet",
       "First launch, or Help → Table Read Help (⌘?) → Onboarding sheet"
     ]
   },
   "sharedBehaviors": {
-    "speakerColor": "Each character has one color, used for their name, dot, chips, Edit pill and voice row everywhere. Colors are generated per script. The redesign may replace the palette but must keep one consistent color per character across all screens.",
+    "speakerColor": "Each character has one color, used for their name tag, chips, timeline segments and cast row everywhere. Colors are generated per script and can be turned off (Settings → General → Character highlight colors). The redesign may replace the palette but must keep one consistent color per character across all screens.",
     "undoRedo": "Every script edit can be undone. ⌘Z / ⇧⌘Z and the Undo/Redo pill. Up to 50 steps.",
     "nonDestructiveEdits": "Removed lines stay visible (struck through, 45% opacity) with Restore available.",
     "lightDark": "Must work in light mode, dark mode and increased contrast.",
     "minimumSizes": {
       "scriptAreaMinWidth": 450,
-      "sidePanelWidth": [
-        240,
-        480
-      ]
+      "playbackBarHeight": 62
     }
   },
   "screens": [
@@ -386,7 +401,7 @@
     {
       "id": "dashboard",
       "name": "Project Dashboard",
-      "layout": "Top bar across the top. Below it, the script area (left) and the side panel (right), separated by a draggable divider.",
+      "layout": "Header across the top (back, title, tool palette; app options pinned top-right). Below it the script area, centered, max 1080 wide. The playback bar runs along the bottom.",
       "regions": [
         {
           "id": "dashboard.topBar",
@@ -410,63 +425,64 @@
               "content": "project name"
             },
             {
-              "type": "badgeButton",
-              "label": "Update Available",
-              "visibleWhen": "an update was found",
-              "action": "Opens the Update Available sheet"
+              "type": "toolButton",
+              "label": "Cast",
+              "help": "Choose the voice engine and cast each character",
+              "action": "Opens the Cast sheet"
             },
             {
-              "type": "badge",
-              "label": "BETA"
+              "type": "toolButton",
+              "label": "Render",
+              "help": "Choose scenes to render (⌘R)",
+              "badge": "'{n} edited' when edits made rendered scenes out of date",
+              "action": "Opens the Render sheet",
+              "replacedWhen": "rendering, by the render status chip"
             },
             {
-              "type": "badgeButton",
-              "label": "Report a Bug",
-              "help": "Report a bug (⌘⇧B)",
-              "action": "Opens the Report a Bug sheet"
+              "type": "statusChip",
+              "visibleWhen": "rendering",
+              "content": "record light, 'Rendering {x} of {y}' | 'Paused', progress bar, pause/resume and cancel icon buttons",
+              "action": "Click opens the Render sheet"
             },
             {
-              "type": "iconButton",
-              "icon": "gear",
-              "help": "Settings (⌘,)",
-              "action": "Opens Settings"
-            }
-          ]
-        },
-        {
-          "id": "dashboard.scriptStats",
-          "elements": [
-            {
-              "type": "text",
-              "label": "{n} scenes"
+              "type": "searchField",
+              "placeholder": "Search script",
+              "shortcut": "⌘F",
+              "extras": [
+                "'{n} of {m}' or 'No matches'",
+                "Previous match (⇧↩)",
+                "Next match (↩)"
+              ],
+              "behavior": "Expands and scrolls to the current match; Esc clears focus"
             },
             {
-              "type": "text",
-              "label": "{n} characters"
-            },
-            {
-              "type": "text",
-              "label": "{n} lines"
-            },
-            {
-              "type": "progress",
-              "label": "Loading voices…",
-              "visibleWhen": "voices are loading"
-            },
-            {
-              "type": "button",
-              "label": "Select All",
-              "action": "Select every scene for rendering"
-            },
-            {
-              "type": "button",
-              "label": "Select None",
-              "action": "Clear scene selection"
-            },
-            {
-              "type": "button",
-              "label": "Skip Rendered",
-              "help": "Select only scenes that haven't been rendered yet"
+              "type": "group",
+              "id": "appOptions",
+              "position": "pinned top-right, also on Projects",
+              "elements": [
+                {
+                  "type": "badgeButton",
+                  "label": "Update Available",
+                  "visibleWhen": "an update was found",
+                  "action": "Opens the Update Available sheet"
+                },
+                {
+                  "type": "badge",
+                  "label": "BETA"
+                },
+                {
+                  "type": "badgeButton",
+                  "label": "Report a Bug",
+                  "help": "Report a bug (⌘⇧B)",
+                  "action": "Opens the Report a Bug sheet"
+                },
+                {
+                  "type": "iconButton",
+                  "icon": "gear",
+                  "help": "Settings (⌘,)",
+                  "action": "Opens Settings"
+                }
+              ]
             }
           ]
         },
@@ -474,10 +490,6 @@
           "id": "dashboard.sceneCard",
           "repeats": "per scene",
           "elements": [
-            {
-              "type": "checkbox",
-              "action": "Include/exclude this scene from the next render"
-            },
             {
               "type": "text",
               "content": "two-digit scene number, e.g. 07"
@@ -491,6 +503,17 @@
             {
               "type": "text",
               "content": "scene title"
+            },
+            {
+              "type": "stamp",
+              "label": "EDITED",
+              "help": "Edited since it was rendered",
+              "visibleWhen": "the scene changed since its audio was made"
+            },
+            {
+              "type": "stamp",
+              "content": "match count",
+              "visibleWhen": "searching and the scene has matches"
             },
             {
               "type": "button",
@@ -507,6 +530,16 @@
               "label": "{n} lines"
             },
             {
+              "type": "text",
+              "label": "Rendering {n}% | Queued | Rendered",
+              "visibleWhen": "this scene is in the running render (replaces '{n} lines')"
+            },
+            {
+              "type": "progress",
+              "visibleWhen": "rendering this scene",
+              "content": "thin line along the bottom edge when collapsed; a bar in the heading when expanded"
+            },
+            {
               "type": "iconButton",
               "icon": "chevron",
               "action": "Expand/collapse the scene's lines"
@@ -515,7 +548,8 @@
           "states": [
             "collapsed",
             "expanded",
-            "selected for render (accent outline)",
+            "rendering",
+            "queued",
             "dimmed to 55% when another scene is playing",
             "auto-expanded when its audio starts playing"
           ],
@@ -546,8 +580,9 @@
               "visibleWhen": "row hovered, row checked, or a selection is active in this scene"
             },
             {
-              "type": "text",
-              "content": "speaker name in their color ('Narrator' for narration)"
+              "type": "nameTag",
+              "content": "speaker name in their color ('Narrator' for narration)",
+              "action": "Click opens a speaker menu to change the speaker"
             },
             {
               "type": "icon",
@@ -586,6 +621,12 @@
               "visibleWhen": "hover"
             },
             {
+              "type": "pillButton",
+              "label": "Play",
+              "help": "Play from this line",
+              "visibleWhen": "hover and the scene is rendered"
+            },
+            {
               "type": "text",
               "content": "the line text; replaced by underscores when Block My Lines is on for the chosen role"
             }
@@ -599,13 +640,15 @@
             "corrected",
             "low confidence",
             "muted (rehearsal)",
-            "blocked (rehearsal)"
-          ]
+            "blocked (rehearsal)",
+            "search match"
+          ],
+          "behavior": "Clicking the line text plays from that line when the scene is rendered. Search matches are highlighted."
         },
         {
           "id": "dashboard.simultaneousLine",
           "repeats": "per line the parser found as simultaneous",
-          "layout": "Two voices side by side, separated by a thin divider. Each side: color dot, name, text.",
+          "layout": "Two voices side by side, separated by a thin divider. Each side: name tag, text.",
           "elements": [
             {
               "type": "checkbox",
@@ -797,302 +840,147 @@
           "id": "dashboard.scriptStates",
           "elements": [
             {
-              "type": "loading",
-              "label": "Parsing script…"
+              "type": "progress",
+              "label": "Parsing script…",
+              "content": "determinate bar + step message, e.g. 'Reading page 4 of 120'"
             },
             {
               "type": "emptyState",
               "title": "No script loaded",
               "message": "Open a PDF to review parsed scenes and characters."
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "sidePanel",
-      "name": "Side panel (right side of the Project Dashboard)",
-      "tabs": [
-        {
-          "id": "sidePanel.cast",
-          "label": "Cast",
-          "elements": [
-            {
-              "type": "menu",
-              "label": "Engine",
-              "options": [
-                "macOS Voices",
-                "Kokoro Local",
-                "Piper Local",
-                "OpenAI TTS"
-              ]
-            },
-            {
-              "type": "warningStrip",
-              "label": "{engine} not installed — go to Settings to set it up.",
-              "visibleWhen": "selected engine is not installed"
-            },
-            {
-              "type": "panel",
-              "label": "OpenAI Setup",
-              "visibleWhen": "engine is OpenAI TTS",
-              "elements": [
-                {
-                  "type": "notice",
-                  "label": "OpenAI voices are made on OpenAI's servers: the text of every line they read is sent to OpenAI. macOS and Kokoro voices never leave this Mac."
-                },
-                {
-                  "type": "secureField",
-                  "placeholder": "API key"
-                },
-                {
-                  "type": "text",
-                  "label": "Saved securely in Keychain and restored on next launch."
-                },
-                {
-                  "type": "button",
-                  "label": "Save Key"
-                }
-              ]
-            },
-            {
-              "type": "loading",
-              "label": "Loading voices…"
-            },
-            {
-              "type": "emptyState",
-              "variants": [
-                "No voices found for {engine}.",
-                "No voice engine installed yet. / Choose an engine on the right and click Install."
-              ],
-              "note": "The second message refers to an old layout; its wording may be corrected to point to Settings → Engines."
-            },
-            {
-              "type": "row",
-              "repeats": "Narrator first, then each character",
-              "elements": [
-                {
-                  "type": "indicator",
-                  "content": "color dot"
-                },
-                {
-                  "type": "text",
-                  "content": "name in their color"
-                },
-                {
-                  "type": "segmented",
-                  "options": [
-                    "Male",
-                    "Female",
-                    "Neutral"
-                  ],
-                  "help": "Male voice | Female voice | Neutral / unspecified — any voice",
-                  "action": "Sets the character's gender and auto-picks a matching voice"
-                },
-                {
-                  "type": "menu",
-                  "label": "{voice name} or 'Choose voice'",
-                  "sections": [
-                    "Male",
-                    "Female",
-                    "Other"
-                  ],
-                  "states": [
-                    "check mark on the current voice"
-                  ]
-                },
-                {
-                  "type": "iconButton",
-                  "content": "play / stop / spinner",
-                  "help": "Preview {voice} | Choose a voice before previewing",
-                  "visibleWhen": "engine installed",
-                  "enabledWhen": "a voice is chosen, no other preview preparing, not rendering"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "sidePanel.render",
-          "label": "Render",
-          "elements": [
-            {
-              "type": "button",
-              "style": "prominent (orange today)",
-              "label": "Re-Render Edited Scenes ({n})",
-              "visibleWhen": "edits made some rendered scenes out of date"
-            },
-            {
-              "type": "row",
-              "repeats": "per scene",
-              "elements": [
-                {
-                  "type": "checkbox"
-                },
-                {
-                  "type": "text",
-                  "label": "Scene {nn}"
-                },
-                {
-                  "type": "text",
-                  "content": "scene title"
-                },
-                {
-                  "type": "tag",
-                  "label": "Edited | Rendered",
-                  "visibleWhen": "out of date | audio exists"
-                }
-              ]
-            },
-            {
-              "type": "button",
-              "label": "All Unrendered"
-            },
-            {
-              "type": "button",
-              "label": "Select All"
-            },
-            {
-              "type": "button",
-              "label": "Clear"
             },
             {
               "type": "progress",
-              "visibleWhen": "rendering",
-              "content": "progress bar + latest log line"
-            },
-            {
-              "type": "disclosure",
-              "label": "Show Log",
-              "visibleWhen": "rendering",
-              "content": "scrolling monospaced render log"
-            },
-            {
-              "type": "button",
-              "label": "Cancel",
-              "visibleWhen": "rendering"
-            },
-            {
-              "type": "button",
-              "label": "Pause | Resume",
-              "visibleWhen": "rendering"
-            },
-            {
-              "type": "button",
-              "style": "primary",
-              "label": "Render {n} Scenes",
-              "visibleWhen": "not rendering",
-              "enabledWhen": "at least one scene selected and the engine is installed"
+              "label": "Loading voices…",
+              "position": "small, corner of the script area"
             }
           ]
         },
         {
-          "id": "sidePanel.rehearse",
-          "label": "Rehearse",
+          "id": "dashboard.statsFooter",
+          "position": "below the last scene",
+          "elements": [
+            {
+              "type": "text",
+              "label": "{n} scenes · {n} characters · {n} lines"
+            }
+          ]
+        },
+        {
+          "id": "dashboard.playbackBar",
+          "position": "bottom of the window, full width",
           "elements": [
             {
               "type": "emptyState",
-              "title": "No rendered scenes",
-              "message": "Render at least one scene to use the rehearsal player.",
-              "visibleWhen": "no rendered scenes"
+              "visibleWhen": "no rendered scenes",
+              "content": "'Rehearse' + 'Render a scene and its playback controls appear here.' + 'Render…' button (opens the Render sheet)"
             },
             {
-              "type": "picker",
-              "label": "Scene",
+              "type": "menu",
+              "label": "Scene {n} · {title}",
               "options": "'Scene {n}: {title}' for each rendered scene"
             },
             {
-              "type": "picker",
-              "label": "My Role",
-              "options": "'Spectator', then every character (sorted)"
-            },
-            {
               "type": "iconButton",
-              "help": "Previous scene",
+              "help": "Previous scene (⌘←)",
               "enabledWhen": "not the first scene"
             },
             {
               "type": "iconButton",
-              "help": "Previous line"
+              "help": "Previous line (←)"
             },
             {
               "type": "iconButton",
-              "style": "large, primary",
-              "help": "Play | Pause"
+              "style": "large, primary (blue)",
+              "help": "Play | Pause",
+              "shortcut": "Space"
             },
             {
               "type": "iconButton",
-              "help": "Next line"
+              "help": "Next line (→)"
             },
             {
               "type": "iconButton",
-              "help": "Next scene",
+              "help": "Next scene (⌘→)",
               "enabledWhen": "not the last scene"
             },
             {
-              "type": "toggle",
-              "label": "Mute My Lines",
-              "help": "Skip audio playback for your lines",
-              "enabledWhen": "a role is chosen"
+              "type": "timeline",
+              "content": "elapsed and total time; one segment per line in the speaker's color, your lines in yellow, loop range outlined, playhead",
+              "action": "Click or drag to seek"
             },
             {
-              "type": "toggle",
-              "label": "Block My Lines",
-              "help": "Replace your lines with underscores for memorization practice",
-              "enabledWhen": "a role is chosen"
+              "type": "banner",
+              "label": "Your line — press Space to continue",
+              "visibleWhen": "Stop Before My Lines paused playback"
             },
             {
-              "type": "slider",
-              "label": "Speed",
-              "range": [
-                0.5,
-                2.0
-              ],
-              "step": 0.05,
-              "extras": [
-                "− button (help 'Slower (−0.05×)')",
-                "+ button (help 'Faster (+0.05×)')",
-                "readout '{rate}×', e.g. '1.00×'"
-              ]
+              "type": "chipButton",
+              "label": "My Role | {role}",
+              "help": "My Role: pick who you are rehearsing as",
+              "opens": {
+                "type": "popover",
+                "title": "My Role",
+                "elements": [
+                  {
+                    "type": "picker",
+                    "options": "'Spectator', then every character (sorted)"
+                  },
+                  {
+                    "type": "toggle",
+                    "label": "Mute My Lines",
+                    "help": "Skip audio playback for your lines"
+                  },
+                  {
+                    "type": "toggle",
+                    "label": "Block My Lines",
+                    "help": "Replace your lines with underscores for memorization practice"
+                  },
+                  {
+                    "type": "toggle",
+                    "label": "Stop Before My Lines",
+                    "help": "Pause before each of your lines so you can say it, then press Space"
+                  }
+                ],
+                "note": "Toggles are disabled with help 'Select a role above to enable this' until a role is chosen"
+              }
+            },
+            {
+              "type": "chipButton",
+              "label": "Loop | Scene | Lines",
+              "help": "Loop a scene or the lines you selected",
+              "opens": {
+                "type": "popover",
+                "options": [
+                  "Off — Play on to the next scene",
+                  "Loop This Scene — Start the scene again when it ends",
+                  "Loop Selected Lines — Repeat {start}–{end} | Select lines in the playing scene first"
+                ]
+              }
+            },
+            {
+              "type": "chipButton",
+              "label": "{rate}×",
+              "help": "Speed",
+              "opens": {
+                "type": "popover",
+                "title": "Speed",
+                "elements": [
+                  {
+                    "type": "slider",
+                    "range": [
+                      0.5,
+                      2.0
+                    ],
+                    "step": 0.05
+                  },
+                  "− button (help 'Slower (−0.05×)')",
+                  "+ button (help 'Faster (+0.05×)')"
+                ]
+              }
             }
           ],
-          "note": "Playback highlights the playing line in the script area (dashboard.lineRow 'playing' state). There is no separate player screen."
-        },
-        {
-          "id": "sidePanel.log",
-          "label": "Log",
-          "tabIndicator": "small orange dot on the tab when the log has warnings or errors and the tab is not open",
-          "elements": [
-            {
-              "type": "text",
-              "label": "{n} entries"
-            },
-            {
-              "type": "filterButtons",
-              "options": [
-                "All",
-                "Err",
-                "Warn",
-                "Py"
-              ]
-            },
-            {
-              "type": "iconButton",
-              "help": "Copy all log entries"
-            },
-            {
-              "type": "iconButton",
-              "help": "Clear log"
-            },
-            {
-              "type": "list",
-              "content": "timestamp + message, monospaced, colored by level (error, warning, success, info, debug)"
-            },
-            {
-              "type": "emptyState",
-              "title": "No activity yet"
-            }
-          ]
+          "note": "Playback highlights the playing line in the script area. There is no separate player screen."
         }
       ]
     }
@@ -1325,6 +1213,9 @@
           "label": "Review on GitHub…",
           "enabledWhen": "'What happened?' is not empty"
         }
+      ],
+      "notes": [
+        "The report includes the last 40 log lines."
       ]
     },
     {
@@ -1377,6 +1268,249 @@
       "buttons": [
         "OK"
       ]
+    },
+    {
+      "id": "sheet.cast",
+      "title": "Cast Your Voices",
+      "openedFrom": "Cast in the header, Script → Cast Voices… (⌘K); opens once by itself after a new script is parsed",
+      "elements": [
+        {
+          "type": "title",
+          "label": "Cast Your Voices"
+        },
+        {
+          "type": "text",
+          "label": "Pick a voice engine, listen to the voices, and give each character one."
+        },
+        {
+          "type": "cards",
+          "label": "Engine",
+          "options": [
+            "macOS Voices",
+            "Kokoro Local",
+            "Piper Local",
+            "OpenAI TTS"
+          ],
+          "note": "one card per engine; 'Not installed' / 'Coming soon' subtitles"
+        },
+        {
+          "type": "warningStrip",
+          "label": "{engine} not installed — go to Settings to set it up.",
+          "visibleWhen": "selected engine is not installed",
+          "extra": "'Open Settings' button (opens Settings → Engines)"
+        },
+        {
+          "type": "panel",
+          "label": "OpenAI Setup",
+          "visibleWhen": "engine is OpenAI TTS",
+          "elements": [
+            {
+              "type": "notice",
+              "label": "OpenAI voices are made on OpenAI's servers: the text of every line they read is sent to OpenAI. macOS and Kokoro voices never leave this Mac."
+            },
+            {
+              "type": "secureField",
+              "placeholder": "API key"
+            },
+            {
+              "type": "text",
+              "label": "Saved securely in Keychain and restored on next launch."
+            },
+            {
+              "type": "button",
+              "label": "Save Key"
+            }
+          ]
+        },
+        {
+          "type": "loading",
+          "label": "Loading voices…"
+        },
+        {
+          "type": "emptyState",
+          "variants": [
+            "No voices found for {engine}.",
+            "No voice engine installed yet. / Install one in Settings → Engines."
+          ]
+        },
+        {
+          "type": "row",
+          "repeats": "Narrator first, then each character by line count (most first)",
+          "elements": [
+            {
+              "type": "nameTag",
+              "content": "name"
+            },
+            {
+              "type": "text",
+              "label": "{n} lines"
+            },
+            {
+              "type": "segmented",
+              "options": [
+                "Male",
+                "Female",
+                "Neutral"
+              ],
+              "help": "Male voice | Female voice | Neutral / unspecified — any voice",
+              "action": "Sets the character's gender and auto-picks a matching voice"
+            },
+            {
+              "type": "menu",
+              "label": "{voice name} or 'Choose voice'",
+              "sections": [
+                "Male",
+                "Female",
+                "Other"
+              ],
+              "states": [
+                "check mark on the current voice"
+              ]
+            },
+            {
+              "type": "iconButton",
+              "content": "play / stop / spinner",
+              "help": "Preview {voice} | Choose a voice before previewing",
+              "visibleWhen": "engine installed",
+              "enabledWhen": "a voice is chosen, no other preview preparing, not rendering"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "label": "You can change voices any time from Cast at the top of the window."
+        },
+        {
+          "type": "button",
+          "style": "primary",
+          "label": "Done",
+          "action": "Confirms the cast and closes"
+        }
+      ]
+    },
+    {
+      "id": "sheet.render",
+      "title": "Render Scenes",
+      "openedFrom": "Render in the header, the render status chip, Script → Render Scenes… (⌘R), the playback bar's 'Render…'",
+      "elements": [
+        {
+          "type": "title",
+          "label": "Render Scenes | Rendering"
+        },
+        {
+          "type": "text",
+          "label": "Each scene becomes its own audio file, voiced with {engine}."
+        },
+        {
+          "type": "banner",
+          "label": "{n} scenes were edited since rendering",
+          "visibleWhen": "edits made some rendered scenes out of date",
+          "extra": "'Select Edited' button"
+        },
+        {
+          "type": "row",
+          "repeats": "per scene",
+          "elements": [
+            {
+              "type": "checkbox"
+            },
+            {
+              "type": "text",
+              "label": "Scene {nn}"
+            },
+            {
+              "type": "text",
+              "content": "scene title"
+            },
+            {
+              "type": "tag",
+              "label": "Edited | Rendered",
+              "visibleWhen": "out of date | audio exists"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "All Unrendered"
+        },
+        {
+          "type": "button",
+          "label": "Select All"
+        },
+        {
+          "type": "button",
+          "label": "Clear"
+        },
+        {
+          "type": "panel",
+          "visibleWhen": "rendering",
+          "content": "record light, progress bar, latest log line, 'Pause | Resume' and 'Cancel' buttons, 'Show Log' disclosure (scrolling monospaced render log)"
+        },
+        {
+          "type": "warningStrip",
+          "label": "{engine} not installed — go to Settings to set it up.",
+          "visibleWhen": "engine not installed"
+        },
+        {
+          "type": "button",
+          "label": "Cancel",
+          "visibleWhen": "not rendering"
+        },
+        {
+          "type": "button",
+          "style": "primary",
+          "label": "Render {n} Scenes",
+          "visibleWhen": "not rendering",
+          "enabledWhen": "at least one scene selected and the engine is installed"
+        },
+        {
+          "type": "button",
+          "label": "Close",
+          "visibleWhen": "rendering",
+          "note": "Closing keeps the render running"
+        }
+      ],
+      "note": "Opens with edited scenes preselected, otherwise unrendered ones."
+    },
+    {
+      "id": "sheet.log",
+      "title": "Log",
+      "openedFrom": "Debug → Show Log (⌥⌘L)",
+      "elements": [
+        {
+          "type": "title",
+          "label": "Log"
+        },
+        {
+          "type": "text",
+          "label": "{n} entries"
+        },
+        {
+          "type": "filterButtons",
+          "options": [
+            "All",
+            "Err",
+            "Warn",
+            "Py"
+          ]
+        },
+        {
+          "type": "iconButton",
+          "help": "Copy all log entries"
+        },
+        {
+          "type": "iconButton",
+          "help": "Clear log"
+        },
+        {
+          "type": "list",
+          "content": "timestamp + message, monospaced, colored by level (error, warning, success, info, debug)"
+        },
+        {
+          "type": "emptyState",
+          "title": "No activity yet"
+        }
+      ]
     }
   ],
   "menus": {
@@ -1398,7 +1532,11 @@
     ],
     "Script": [
       {
-        "label": "Render Selected Scenes",
+        "label": "Cast Voices…",
+        "shortcut": "⌘K"
+      },
+      {
+        "label": "Render Scenes…",
         "shortcut": "⌘R"
       },
       {
@@ -1420,7 +1558,8 @@
         "type": "divider"
       },
       {
-        "label": "Skip Already-Rendered Scenes"
+        "label": "Skip Already-Rendered Scenes",
+        "action": "Opens the Render sheet with only unrendered scenes selected"
       }
     ],
     "Help": [
@@ -1434,7 +1573,16 @@
         "shortcut": "⇧⌘B"
       }
     ],
-    "Debug": "Developer builds only. Out of scope; do not design."
+    "Debug": [
+      {
+        "label": "Show Log",
+        "shortcut": "⌥⌘L",
+        "action": "Opens the Log sheet"
+      },
+      {
+        "note": "The other Debug items are developer tools. Out of scope; do not design."
+      }
+    ]
   },
   "systemNotifications": "macOS notifications for: a scene finished, the full render finished, the render finished with errors. Controlled by the three toggles in Settings → General.",
   "dataShapes": {
@@ -1493,7 +1641,9 @@
       "myRole",
       "muteMyLines",
       "blockMyLines",
-      "playbackRate 0.5–2.0"
+      "playbackRate 0.5–2.0",
+      "stopBeforeMyLines",
+      "loop: off | scene | selected lines"
     ]
   },
   "mockContent": "Use a public-domain play such as Hamlet or The Importance of Being Earnest: 8–15 characters, 10–25 scenes, at least one simultaneous line, two or three low-confidence lines, one removed line, one corrected line, one added line.",

@@ -7,8 +7,11 @@ import 'services/settings.dart';
 import 'state/app_state.dart';
 import 'state/player_state.dart';
 import 'theme/tokens.dart';
+import 'ui/cast_dialog.dart';
 import 'ui/dashboard.dart';
 import 'ui/gallery.dart';
+import 'ui/log_dialog.dart';
+import 'ui/render_dialog.dart';
 import 'ui/sheets.dart';
 import 'ui/widgets.dart';
 
@@ -159,9 +162,14 @@ class _AppShellState extends State<AppShell> {
             PlatformMenuItemGroup(
               members: [
                 PlatformMenuItem(
-                  label: 'Render Selected Scenes',
+                  label: 'Cast Voices…',
+                  shortcut: const SingleActivator(LogicalKeyboardKey.keyK, meta: true),
+                  onSelected: inProject && app.script != null ? () => showCastSheet(context) : null,
+                ),
+                PlatformMenuItem(
+                  label: 'Render Scenes…',
                   shortcut: const SingleActivator(LogicalKeyboardKey.keyR, meta: true),
-                  onSelected: canRender ? app.renderSelectedScenes : null,
+                  onSelected: inProject && app.script != null ? () => showRenderSheet(context) : null,
                 ),
                 PlatformMenuItem(
                   label: 'Preview First Scene',
@@ -185,7 +193,17 @@ class _AppShellState extends State<AppShell> {
               ],
             ),
             PlatformMenuItemGroup(
-              members: [PlatformMenuItem(label: 'Skip Already-Rendered Scenes', onSelected: inProject ? app.selectMissingScenes : null)],
+              members: [
+                PlatformMenuItem(
+                  label: 'Skip Already-Rendered Scenes',
+                  onSelected: inProject && !app.isGenerating && app.script != null
+                      ? () {
+                          showRenderSheet(context);
+                          app.selectMissingScenes();
+                        }
+                      : null,
+                ),
+              ],
             ),
           ],
         ),
@@ -207,6 +225,7 @@ class _AppShellState extends State<AppShell> {
         PlatformMenu(
           label: 'Debug',
           menus: [
+            PlatformMenuItem(label: 'Show Log', shortcut: const SingleActivator(LogicalKeyboardKey.keyL, meta: true, alt: true), onSelected: () => showLogSheet(context)),
             PlatformMenuItem(
               label: 'Simulate Update Available',
               onSelected: () {

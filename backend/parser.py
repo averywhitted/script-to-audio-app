@@ -421,6 +421,21 @@ def _merge_open_parentheticals(blocks: List[TextBlock]) -> List[TextBlock]:
     return result
 
 
+# Optional progress callback, set by audio_worker.py for the app's parse
+# progress bar: fn(fraction 0-1, message). It only observes; it never changes
+# what the parser produces.
+progress_hook: Optional[Callable[[float, str], None]] = None
+
+
+def _report_progress(fraction: float, message: str) -> None:
+    if progress_hook is None:
+        return
+    try:
+        progress_hook(fraction, message)
+    except Exception:  # progress must never break a parse
+        pass
+
+
 def _extract_blocks(pdf_path: str) -> List[TextBlock]:
     """Extract semantic TextBlock objects from a PDF using PyMuPDF.
 
@@ -446,7 +461,10 @@ def _extract_blocks(pdf_path: str) -> List[TextBlock]:
 
     result: List[TextBlock] = []
     with fitz.open(pdf_path) as doc:
+        page_count = len(doc)
         for page_num, page in enumerate(doc):
+            _report_progress(0.8 * page_num / max(page_count, 1),
+                             f"Reading page {page_num + 1} of {page_count}")
             # Default "dict" flags minus image extraction: images are skipped
             # below anyway, and extracting them made some scripts take over a
             # minute to parse (Stereophonic: 73 s). Text output is identical.
@@ -1953,7 +1971,9 @@ def _block_parse(pdf_path: str, title: str, config: Optional[dict]) -> Script:
 
     # Learn the document's own conventions (cast lexicon + dense cue/dialog
     # columns); the layout profile is inferred inside, dialog-column-aware.
+    _report_progress(0.82, "Learning this script's layout")
     model = _build_document_model(blocks, page_width=page_width)
+    _report_progress(0.9, "Finding scenes and speakers")
     profile = model.profile
     top_cast = sorted(model.cast, key=lambda n: -model.cast_lexicon[n])
     logger.debug(

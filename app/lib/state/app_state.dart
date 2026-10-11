@@ -52,6 +52,12 @@ class AppState extends ChangeNotifier {
   String? pdfPath;
   ScriptSummary? script;
   bool isParsing = false;
+  double parseFraction = 0;
+  String parseMessage = '';
+
+  /// True for a project that hasn't confirmed its cast yet; the workspace
+  /// opens the Cast dialog after the parse.
+  bool castPending = false;
   String? errorMessage;
 
   // Engines and voices
@@ -90,6 +96,7 @@ class AppState extends ChangeNotifier {
   /// Fingerprint of each rendered scene's edits at render time (saved in project.json).
   Map<int, String> renderFingerprints = {};
   Map<int, String> _renderingFingerprints = {};
+  final Set<int> _provisionalFingerprints = {};
   String? backgroundRenderProjectId;
 
   // Edits
@@ -218,6 +225,7 @@ class AppState extends ChangeNotifier {
     userAddedElements = {for (final e in p.userAddedElements.entries) e.key: List.of(e.value)};
     selectedEngine = EngineKind.fromId(p.selectedEngine) ?? EngineKind.macOS;
     renderFingerprints = Map.of(p.renderFingerprints);
+    castPending = p.voiceAssignment.isEmpty && !settings.getBool('castConfirmed.${p.id}');
     final pdf = p.pdfPath;
     if (pdf != null) importPDF(pdf);
   }
@@ -288,11 +296,21 @@ class AppState extends ChangeNotifier {
     sceneFileInfo = {};
     sceneCueFiles = {};
     isParsing = true;
+    parseFraction = 0;
+    parseMessage = 'Opening the PDF';
     errorMessage = null;
     notifyListeners();
     final sw = Stopwatch()..start();
     try {
-      final parsed = await bridge.parse(path);
+      final parsed = await bridge.parse(
+        path,
+        onProgress: (f, m) {
+          parseFraction = f;
+          parseMessage = m;
+          notifyListeners();
+        },
+      );
+      parseFraction = 1;
       script = parsed;
       selectedScenes = parsed.scenes.map((s) => s.number).toSet();
       dlog(
@@ -333,6 +351,7 @@ class AppState extends ChangeNotifier {
     if (selectedEngine == e) return;
     selectedEngine = e;
     voices = [];
+    _refreshEdited();
     notifyListeners();
     persistProject();
     fetchVoices();
@@ -355,6 +374,14 @@ class AppState extends ChangeNotifier {
         }
       });
       dlog('voices · ${list.length} available, $applied auto-assigned', LogStyle.info);
+      // Fingerprints seeded before the voices arrived describe the scene
+      // without its auto-assigned voices; re-seed them now so the voices
+      // filled in for an old render don't count as an edit.
+      for (final n in _provisionalFingerprints) {
+        renderFingerprints[n] = sceneFingerprint(n);
+      }
+      _provisionalFingerprints.clear();
+      _refreshEdited();
       persistProject();
     } catch (e) {
       if (selectedEngine == engine) dlog('voices failed: $e', LogStyle.error);
@@ -368,6 +395,7 @@ class AppState extends ChangeNotifier {
 
   void assignVoice(String characterKey, String voiceId) {
     voiceAssignment[characterKey] = voiceId;
+    _refreshEdited();
     notifyListeners();
     persistProject();
   }
@@ -398,6 +426,7 @@ class AppState extends ChangeNotifier {
         voiceAssignment[characterKey] = (pool.where((v) => !taken.contains(v.id)).firstOrNull ?? pool.first).id;
       }
     }
+    _refreshEdited();
     notifyListeners();
     persistProject();
   }
@@ -504,6 +533,50 @@ class AppState extends ChangeNotifier {
     await refreshEngineStatus();
   }
 
+  /// The user confirmed the Cast dialog for this project.
+  void confirmCast() {
+    castPending = false;
+    final id = store.currentProject?.id;
+    if (id != null) settings.setBool('castConfirmed.$id', true);
+    persistProject();
+    notifyListeners();
+  }
+
+  /// Per-project view state (open scenes, rehearsal settings), kept in app
+  /// preferences rather than the project file.
+  Map<String, dynamic> loadView() {
+    final id = store.currentProject?.id;
+    final raw = id == null ? null : settings.getString('view.$id');
+    if (raw == null) return const {};
+    try {
+      return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  void saveView(Map<String, dynamic> view) {
+    final id = store.currentProject?.id;
+    if (id != null) settings.setString('view.$id', jsonEncode(view));
+  }
+
+  /// Lines per character (dialogue only; a simultaneous line counts for each voice).
+  Map<String, int> get lineCounts {
+    final out = <String, int>{};
+    for (final s in scenes) {
+      for (final el in s.elements) {
+        if (el.kind != 'dialog') {
+          out[narratorKey] = (out[narratorKey] ?? 0) + 1;
+          continue;
+        }
+        for (final n in el.isOverlap ? el.overlapCue! : [el.speaker ?? narratorKey]) {
+          out[n] = (out[n] ?? 0) + 1;
+        }
+      }
+    }
+    return out;
+  }
+
   // ---------------------------------------------------------------------------
   // Scene selection
   // ---------------------------------------------------------------------------
@@ -572,7 +645,10 @@ class AppState extends ChangeNotifier {
     sceneCueFiles = cues;
     // Scenes rendered before fingerprints existed are assumed up to date.
     for (final e in info.entries) {
-      if (e.value.exists) renderFingerprints.putIfAbsent(e.key, () => sceneFingerprint(e.key));
+      if (e.value.exists && !renderFingerprints.containsKey(e.key)) {
+        renderFingerprints[e.key] = sceneFingerprint(e.key);
+        _provisionalFingerprints.add(e.key);
+      }
     }
     _refreshEdited();
     notifyListeners();
@@ -819,7 +895,18 @@ class AppState extends ChangeNotifier {
     final corr = corrections.values.where((c) => c.pdfIdentifier == pdf && c.sceneNumber == n).toList()..sort((a, b) => a.storageKey.compareTo(b.storageKey));
     final added = (userAddedElements[addedKey(n)] ?? const <UserAddedElement>[]).where((a) => a.text.trim().isNotEmpty).toList()
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    // Everyone who speaks in the scene, after corrections, plus the narrator.
+    final scene = scenes.where((s) => s.number == n).firstOrNull;
+    final speakers = <String>{
+      narratorKey,
+      ...?scene?.speakers,
+      for (final c in corr) ...[if (c.correctedSpeaker?.isNotEmpty ?? false) c.correctedSpeaker!, ...?c.correctedOverlapSpeakers],
+      for (final a in added)
+        if (a.speaker.isNotEmpty) a.speaker,
+    }.toList()..sort();
     final canon = jsonEncode([
+      selectedEngine.id,
+      for (final sp in speakers) [sp, voiceAssignment[sp]],
       for (final c in corr)
         [
           c.storageKey,

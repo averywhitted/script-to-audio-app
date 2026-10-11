@@ -12,6 +12,7 @@ import '../services/project_store.dart';
 import '../state/app_state.dart';
 import '../theme/tokens.dart';
 import 'empty_art.dart';
+import 'header.dart';
 import 'sheets.dart';
 import 'widgets.dart';
 
@@ -216,13 +217,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Title-bar strip: traffic lights live here; drag to move the window.
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onPanStart: (_) => WindowControl.startDrag(),
-                onDoubleTap: WindowControl.zoom,
-                child: const SizedBox(height: 36),
-              ),
+              // Window header: traffic lights on the left, app options top-right.
+              const AppHeader(border: false),
               _toolbar(t, store),
               Expanded(
                 child: showArchived
