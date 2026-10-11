@@ -210,9 +210,13 @@ class SpeakerColors {
 
 /// One consistent color per character, used on every screen.
 /// `allSpeakers` is the script's character list; Narrator is always neutral.
-SpeakerColors speakerColors(String speaker, List<String> allSpeakers, Tokens t) {
+/// Settings → General → "Character highlight colors". When off, every name
+/// uses the neutral narrator tag. Set by AppState; [enabled] overrides it for previews.
+bool characterColorsEnabled = true;
+
+SpeakerColors speakerColors(String speaker, List<String> allSpeakers, Tokens t, {bool? enabled}) {
   final isNarrator = speaker.isEmpty || speaker == 'Narrator' || speaker == 'NARRATOR' || speaker == '__NARRATOR__';
-  if (isNarrator) {
+  if (isNarrator || !(enabled ?? characterColorsEnabled)) {
     return SpeakerColors(highlight: oklch(t.hlLightness, 0.01, 70, t.hlAlpha), dot: oklch(t.dotLightness, 0.01, 70), nameInk: t.nameInk);
   }
   final sorted = allSpeakers.where((s) => s != 'Narrator').toList()..sort();

@@ -16,6 +16,7 @@ import '../services/platform.dart';
 import '../services/project_store.dart';
 import '../services/python_bridge.dart';
 import '../services/settings.dart';
+import '../theme/tokens.dart' show characterColorsEnabled;
 
 class _Snapshot {
   _Snapshot(this.corrections, this.added);
@@ -85,6 +86,10 @@ class AppState extends ChangeNotifier {
   Map<int, SceneOutputInfo> sceneFileInfo = {};
   Map<int, String> sceneCueFiles = {};
   Set<int> scenesNeedingRerender = {};
+
+  /// Fingerprint of each rendered scene's edits at render time (saved in project.json).
+  Map<int, String> renderFingerprints = {};
+  Map<int, String> _renderingFingerprints = {};
   String? backgroundRenderProjectId;
 
   // Edits
@@ -120,7 +125,18 @@ class AppState extends ChangeNotifier {
   List<String> get allSpeakers => ['Narrator', ...?script?.characters.map((c) => c.name)];
   String? get currentProjectFolder => store.currentProject?.folderPath;
 
+  bool characterColors = true;
+
+  void setCharacterColors(bool v) {
+    characterColors = v;
+    characterColorsEnabled = v;
+    settings.setBool('characterHighlightColors', v);
+    notifyListeners();
+  }
+
   void _loadSettings() {
+    characterColors = settings.getBool('characterHighlightColors', fallback: true);
+    characterColorsEnabled = characterColors;
     autoOpenFinderAfterRender = settings.getBool('autoOpenFinderAfterRender');
     contributeCorrections = settings.getBool('contributeCorrections');
     notifyOnSceneComplete = settings.getBool('notifyOnSceneComplete');
@@ -201,6 +217,7 @@ class AppState extends ChangeNotifier {
     sceneTitleOverrides = {for (final e in p.sceneTitleOverrides.entries) e.key: Map.of(e.value)};
     userAddedElements = {for (final e in p.userAddedElements.entries) e.key: List.of(e.value)};
     selectedEngine = EngineKind.fromId(p.selectedEngine) ?? EngineKind.macOS;
+    renderFingerprints = Map.of(p.renderFingerprints);
     final pdf = p.pdfPath;
     if (pdf != null) importPDF(pdf);
   }
@@ -225,6 +242,7 @@ class AppState extends ChangeNotifier {
       sceneFileInfo = {};
       sceneCueFiles = {};
       scenesNeedingRerender = {};
+      renderFingerprints = {};
     }
     notifyListeners();
   }
@@ -552,6 +570,11 @@ class AppState extends ChangeNotifier {
     }
     sceneFileInfo = info;
     sceneCueFiles = cues;
+    // Scenes rendered before fingerprints existed are assumed up to date.
+    for (final e in info.entries) {
+      if (e.value.exists) renderFingerprints.putIfAbsent(e.key, () => sceneFingerprint(e.key));
+    }
+    _refreshEdited();
     notifyListeners();
   }
 
@@ -582,6 +605,7 @@ class AppState extends ChangeNotifier {
     generationProgress = 0;
     isPaused = false;
     renderingSceneNumbers = sceneNumbers;
+    _renderingFingerprints = {for (final n in sceneNumbers) n: sceneFingerprint(n)};
     sceneProgress = {for (final n in sceneNumbers) n: 0.0};
     isGenerating = true;
     backgroundRenderProjectId = null;
@@ -652,7 +676,7 @@ class AppState extends ChangeNotifier {
           } else if (ei == -1) {
             if ((ev.message ?? '').startsWith('✓')) {
               sceneProgress[n] = 1.0;
-              scenesNeedingRerender.remove(n);
+              _markRendered(n);
             }
             generationProgress = (si + 1) / ts;
           }
@@ -702,7 +726,7 @@ class AppState extends ChangeNotifier {
         final n = ev.sceneNumber, p = ev.cueFilePath;
         if (n != null && p != null) {
           sceneCueFiles[n] = p;
-          scenesNeedingRerender.remove(n);
+          _markRendered(n);
           checkRenderedScenes();
         }
       default:
@@ -763,6 +787,7 @@ class AppState extends ChangeNotifier {
     final s = _undo.removeLast();
     corrections = s.corrections;
     userAddedElements = s.added;
+    _refreshEdited();
     notifyListeners();
     persistProject();
   }
@@ -773,6 +798,7 @@ class AppState extends ChangeNotifier {
     final s = _redo.removeLast();
     corrections = s.corrections;
     userAddedElements = s.added;
+    _refreshEdited();
     notifyListeners();
     persistProject();
   }
@@ -783,8 +809,57 @@ class AppState extends ChangeNotifier {
 
   ParserCorrection? correctionFor(int sceneNumber, SceneElement el) => corrections[correctionKey(pdfPath ?? '', sceneNumber, el.text, el.occurrence)];
 
-  void markSceneDirtyIfRendered(int n) {
-    if (sceneFileInfo[n]?.exists == true) scenesNeedingRerender.add(n);
+  void markSceneDirtyIfRendered(int n) => _refreshEdited(only: n);
+
+  /// Fingerprint of everything in a scene that changes what is voiced:
+  /// corrections and non-empty added lines. Timestamps and ids are left out, so
+  /// undoing an edit, or editing a line back, returns the original fingerprint.
+  String sceneFingerprint(int n) {
+    final pdf = pdfPath ?? '';
+    final corr = corrections.values.where((c) => c.pdfIdentifier == pdf && c.sceneNumber == n).toList()..sort((a, b) => a.storageKey.compareTo(b.storageKey));
+    final added = (userAddedElements[addedKey(n)] ?? const <UserAddedElement>[]).where((a) => a.text.trim().isNotEmpty).toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final canon = jsonEncode([
+      for (final c in corr)
+        [
+          c.storageKey,
+          c.correctedKind,
+          c.correctedSpeaker,
+          c.correctedText,
+          c.correctedOverlapTexts,
+          c.correctedOverlapSpeakers,
+          c.markedAsNoise,
+          c.removedVoiceIndex,
+          c.manualOverlapPartnerKey,
+        ],
+      for (final a in added) [a.afterElementTextKey, a.speaker, a.kind, a.text],
+    ]);
+    var h = 0xcbf29ce484222325; // FNV-1a, 64-bit
+    for (final b in utf8.encode(canon)) {
+      h ^= b;
+      h = (h * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+    }
+    return h.toUnsigned(64).toRadixString(16);
+  }
+
+  void _markRendered(int n) {
+    final fp = _renderingFingerprints[n];
+    if (fp != null) renderFingerprints[n] = fp;
+    _refreshEdited(only: n);
+  }
+
+  /// A rendered scene needs re-rendering only while its edits differ from the render.
+  void _refreshEdited({int? only}) {
+    final numbers = only != null ? [only] : scenes.map((s) => s.number);
+    for (final n in numbers) {
+      final rendered = sceneFileInfo[n]?.exists == true;
+      final fp = renderFingerprints[n];
+      if (rendered && fp != null && fp != sceneFingerprint(n)) {
+        scenesNeedingRerender.add(n);
+      } else {
+        scenesNeedingRerender.remove(n);
+      }
+    }
   }
 
   void saveCorrection(ParserCorrection c) {

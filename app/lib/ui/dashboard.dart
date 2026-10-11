@@ -581,13 +581,15 @@ class _Lines extends StatelessWidget {
     final total = scene.elements.length;
     final limit = showAll ? total : initialLimit;
     final merged = app.mergedElements(scene, limit: limit);
-    final activeText = player.currentScene?.sceneNumber == scene.number ? player.currentCue?.text.trim() : null;
-    var keyUsed = false;
-    GlobalKey? keyFor(String text) {
-      if (activeLineKey == null || keyUsed || activeText == null || text.trim() != activeText) return null;
-      keyUsed = true;
-      return activeLineKey;
-    }
+    // Which row is playing: the cue's text, matched by occurrence, so a line
+    // that repeats an earlier line's words doesn't light up both.
+    final playingHere = player.currentScene?.sceneNumber == scene.number;
+    final activeRow = playingHere
+        ? activeRowIndex([for (final m in merged) _rowText(app, m)], [for (final c in player.cues) c.text], player.currentCueIndex)
+        : -1;
+    var row = -1;
+    bool isActive() => ++row == activeRow;
+    GlobalKey? keyIf(bool active) => active ? activeLineKey : null;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 6, 0, 8),
@@ -595,25 +597,7 @@ class _Lines extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final m in merged)
-            switch (m) {
-              ParsedItem(:final element) =>
-                element.isOverlap && _showsTwoPanel(app, element)
-                    ? SimultaneousRow(
-                        key: keyFor(element.text),
-                        scene: scene,
-                        element: element,
-                        active: activeText != null && element.text.trim() == activeText,
-                      )
-                    : LineRow(key: keyFor(element.text), scene: scene, element: element, active: activeText != null && element.text.trim() == activeText),
-              ManualOverlapItem(:final primary, :final secondary) => ManualPairRow(
-                key: keyFor(primary.text),
-                scene: scene,
-                primary: primary,
-                secondary: secondary,
-                active: activeText != null && primary.text.trim() == activeText,
-              ),
-              AddedItem(:final element) => AddedLineRow(scene: scene, element: element),
-            },
+            if (isActive()) _row(app, m, true, keyIf(true)) else _row(app, m, false, null),
           if (total > initialLimit)
             Padding(
               padding: const EdgeInsets.fromLTRB(44, 6, 12, 2),
@@ -633,6 +617,30 @@ class _Lines extends StatelessWidget {
     );
   }
 
+  Widget _row(AppState app, MergedElement m, bool active, GlobalKey? key) => switch (m) {
+    ParsedItem(:final element) =>
+      element.isOverlap && _showsTwoPanel(app, element)
+          ? SimultaneousRow(key: key, scene: scene, element: element, active: active)
+          : LineRow(key: key, scene: scene, element: element, active: active),
+    ManualOverlapItem(:final primary, :final secondary) => ManualPairRow(key: key, scene: scene, primary: primary, secondary: secondary, active: active),
+    AddedItem(:final element) => AddedLineRow(key: key, scene: scene, element: element, active: active),
+  };
+
+  /// The words this row is voiced with (null when it isn't voiced).
+  String? _rowText(AppState app, MergedElement m) {
+    switch (m) {
+      case ParsedItem(:final element):
+        final fix = app.correctionFor(scene.number, element);
+        if (fix?.markedAsNoise == true) return null;
+        return (fix?.correctedText?.isNotEmpty ?? false) ? fix!.correctedText! : element.text;
+      case ManualOverlapItem(:final primary):
+        final fix = app.correctionFor(scene.number, primary);
+        return (fix?.correctedText?.isNotEmpty ?? false) ? fix!.correctedText! : primary.text;
+      case AddedItem(:final element):
+        return element.text.trim().isEmpty ? null : element.text;
+    }
+  }
+
   bool _showsTwoPanel(AppState app, SceneElement el) {
     final fix = app.correctionFor(scene.number, el);
     final kind = fix?.correctedKind ?? el.kind;
@@ -645,35 +653,53 @@ class _Lines extends StatelessWidget {
 // Line rows
 // ---------------------------------------------------------------------------
 
+/// Index of the playing row. The cue at [cueIndex] is the k-th cue with its
+/// words; the playing row is the k-th row with the same words. Rows with null
+/// text (removed lines) never match. Returns -1 when nothing matches.
+int activeRowIndex(List<String?> rowTexts, List<String> cueTexts, int cueIndex) {
+  if (cueIndex < 0 || cueIndex >= cueTexts.length) return -1;
+  final want = cueTexts[cueIndex].trim();
+  var k = 0;
+  for (var i = 0; i < cueIndex; i++) {
+    if (cueTexts[i].trim() == want) k++;
+  }
+  var seen = 0;
+  for (var i = 0; i < rowTexts.length; i++) {
+    if (rowTexts[i]?.trim() == want) {
+      if (seen == k) return i;
+      seen++;
+    }
+  }
+  return -1;
+}
+
 /// Replaces letters with underscores, keeping spaces and punctuation (Block My Lines).
 String blockText(String s) => s.replaceAll(RegExp(r'\p{L}|\p{N}', unicode: true), '_');
 
 class _Gutter extends StatelessWidget {
-  const _Gutter({required this.checked, required this.onCheck, required this.dotSpeaker, required this.glyph});
+  const _Gutter({required this.checked, required this.onCheck, required this.visible});
   final bool checked;
   final VoidCallback onCheck;
-  final String dotSpeaker;
-  final String glyph;
+
+  /// Checkboxes stay hidden until the row is hovered, checked, or a selection
+  /// is under way in this scene.
+  final bool visible;
   @override
   Widget build(BuildContext context) {
-    final t = Tokens.of(context);
-    final app = context.read<AppState>();
     return SizedBox(
-      width: 62,
+      width: 40,
       child: Padding(
-        padding: const EdgeInsets.only(top: 3),
-        child: Row(
-          children: [
-            const SizedBox(width: 14),
-            CheckMark(checked: checked, onTap: onCheck, size: 12),
-            const SizedBox(width: 8),
-            SpeakerDot(dotSpeaker, allSpeakers: app.allSpeakers, size: 7),
-            const SizedBox(width: 7),
-            Text(
-              glyph,
-              style: TextStyles.script(t, size: 12, weight: FontWeight.w700, color: t.faint),
+        padding: const EdgeInsets.only(top: 3, left: 16),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: AnimatedOpacity(
+            opacity: visible ? 1 : 0,
+            duration: const Duration(milliseconds: 120),
+            child: IgnorePointer(
+              ignoring: !visible,
+              child: CheckMark(checked: checked, onTap: onCheck, size: 12),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -783,7 +809,7 @@ class _LineRowState extends State<LineRow> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Gutter(checked: selected, onCheck: () => sel.toggle(n, el.ref), dotSpeaker: speaker, glyph: isDialog ? '“' : '¶'),
+            _Gutter(checked: selected, onCheck: () => sel.toggle(n, el.ref), visible: hover || selected || sel.sceneNumber == n && !sel.isEmpty),
             Expanded(child: body),
             SizedBox(
               width: 196,
@@ -892,8 +918,6 @@ class _SimultaneousRowState extends State<SimultaneousRow> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SpeakerDot(name, allSpeakers: app.allSpeakers, size: 7),
-              const SizedBox(width: 5),
               NameChip(name, allSpeakers: app.allSpeakers, uppercase: true, strike: voiceRemoved),
               if (fix != null && !voiceRemoved) ...[
                 const SizedBox(width: 4),
@@ -971,7 +995,7 @@ class _SimultaneousRowState extends State<SimultaneousRow> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Gutter(checked: selected, onCheck: () => sel.toggle(n, el.ref), dotSpeaker: cue.first, glyph: '“'),
+          _Gutter(checked: selected, onCheck: () => sel.toggle(n, el.ref), visible: hover || selected || sel.sceneNumber == n && !sel.isEmpty),
           Expanded(
             child: IntrinsicHeight(
               child: Row(
@@ -1021,11 +1045,7 @@ class _ManualPairRowState extends State<ManualPairRow> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SpeakerDot(name, allSpeakers: app.allSpeakers, size: 7),
-              const SizedBox(width: 5),
-              NameChip(name, allSpeakers: app.allSpeakers, uppercase: true, strike: removed),
-            ],
+            children: [NameChip(name, allSpeakers: app.allSpeakers, uppercase: true, strike: removed)],
           ),
           if (hover) ...[
             const SizedBox(height: 4),
@@ -1085,7 +1105,7 @@ class _ManualPairRowState extends State<ManualPairRow> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Gutter(checked: selected, onCheck: () => sel.toggle(n, widget.primary.ref), dotSpeaker: widget.primary.speaker ?? 'Narrator', glyph: '“'),
+          _Gutter(checked: selected, onCheck: () => sel.toggle(n, widget.primary.ref), visible: hover || selected || sel.sceneNumber == n && !sel.isEmpty),
           Expanded(
             child: IntrinsicHeight(
               child: Row(
@@ -1106,9 +1126,10 @@ class _ManualPairRowState extends State<ManualPairRow> {
 }
 
 class AddedLineRow extends StatefulWidget {
-  const AddedLineRow({super.key, required this.scene, required this.element});
+  const AddedLineRow({super.key, required this.scene, required this.element, this.active = false});
   final Scene scene;
   final UserAddedElement element;
+  final bool active;
   @override
   State<AddedLineRow> createState() => _AddedLineRowState();
 }
@@ -1128,12 +1149,12 @@ class _AddedLineRowState extends State<AddedLineRow> {
     final empty = el.text.trim().isEmpty;
     return _RowShell(
       selected: selected,
-      active: false,
+      active: widget.active,
       onHover: (v) => setState(() => hover = v),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Gutter(checked: selected, onCheck: () => sel.toggleAdded(n, el.id), dotSpeaker: speaker, glyph: '+'),
+          _Gutter(checked: selected, onCheck: () => sel.toggleAdded(n, el.id), visible: hover || selected || sel.sceneNumber == n && !sel.isEmpty),
           Expanded(
             child: Column(
               crossAxisAlignment: isDialog ? CrossAxisAlignment.center : CrossAxisAlignment.start,

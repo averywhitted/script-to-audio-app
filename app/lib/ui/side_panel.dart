@@ -540,7 +540,7 @@ class _Booth extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: app.generationProgress == 0 ? null : app.generationProgress,
                     minHeight: 5,
-                    color: t.highlighter,
+                    color: t.accent,
                     backgroundColor: Colors.white.withValues(alpha: 0.14),
                   ),
                 ),
@@ -940,18 +940,17 @@ class _PlayButton extends StatelessWidget {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: t.highlighter,
+                color: t.accent,
                 shape: BoxShape.circle,
-                border: Border.all(color: t.highlighterEdge, width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFB8AE1E).withValues(alpha: t.dark ? 0.35 : 0.45),
+                    color: t.accent.withValues(alpha: t.dark ? 0.35 : 0.4),
                     blurRadius: 18,
                     offset: const Offset(0, 6),
                   ),
                 ],
               ),
-              child: Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 30, color: const Color(0xFF1C1B19)),
+              child: Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 30, color: t.onAccent),
             ),
           ),
         ),

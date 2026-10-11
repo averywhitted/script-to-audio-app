@@ -382,9 +382,10 @@ class Project {
     required this.userAddedElements,
     required this.selectedEngine,
     required this.renderedScenes,
+    Map<int, String>? renderFingerprints,
     this.folderPath,
     this.extra = const {},
-  });
+  }) : renderFingerprints = renderFingerprints ?? {};
 
   final String id;
   String name;
@@ -399,6 +400,10 @@ class Project {
   Map<String, List<UserAddedElement>> userAddedElements;
   String selectedEngine;
   List<int> renderedScenes;
+
+  /// Scene number → fingerprint of the scene's edits when it was last rendered.
+  /// A scene needs re-rendering only while its current fingerprint differs.
+  Map<int, String> renderFingerprints;
 
   /// Absolute path of the project folder. Not saved.
   String? folderPath;
@@ -441,6 +446,7 @@ class Project {
     'sceneTitleOverrides',
     'userAddedElements',
     'selectedEngine',
+    'renderFingerprints',
     'renderedScenes',
   };
 
@@ -480,6 +486,7 @@ class Project {
       ),
       selectedEngine: j['selectedEngine'] as String? ?? 'macOS',
       renderedScenes: ((j['renderedScenes'] as List?) ?? const []).map((e) => (e as num).toInt()).toList(),
+      renderFingerprints: intKeyed(j['renderFingerprints']),
       folderPath: folderPath,
       extra: Map.fromEntries(j.entries.where((e) => !_known.contains(e.key))),
     );
@@ -496,6 +503,7 @@ class Project {
       'name': name,
       'pdfFilename': pdfFilename,
       'renderedScenes': renderedScenes,
+      if (renderFingerprints.isNotEmpty) 'renderFingerprints': renderFingerprints.map((n, f) => MapEntry('$n', f)),
       'sceneTitleOverrides': sceneTitleOverrides.map((k, v) => MapEntry(k, v.map((n, t) => MapEntry('$n', t)))),
       'scriptTitle': scriptTitle,
       'selectedEngine': selectedEngine,

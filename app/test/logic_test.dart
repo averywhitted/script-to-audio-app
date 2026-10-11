@@ -10,6 +10,7 @@ import 'package:table_read/models/models.dart';
 import 'package:table_read/services/project_store.dart';
 import 'package:table_read/services/settings.dart';
 import 'package:table_read/state/app_state.dart';
+import 'package:table_read/ui/dashboard.dart' show activeRowIndex;
 
 const pdf = '/tmp/echo.pdf';
 
@@ -209,5 +210,70 @@ void main() {
     expect(AppState.isNewer('v0.2.1', '0.2.0-preview'), isTrue);
     expect(AppState.isNewer('v0.1.8', '0.2.0-preview'), isFalse);
     expect(AppState.isNewer('0.2.0', '0.2.0'), isFalse);
+  });
+
+  group('playing line', () {
+    test('a repeated line lights up only the copy being played', () {
+      final rows = ["I'm looking at you.", "I'm looking at you.", 'They stare.'];
+      final cues = ["I'm looking at you.", "I'm looking at you.", 'They stare.'];
+      expect(activeRowIndex(rows, cues, 0), 0);
+      expect(activeRowIndex(rows, cues, 1), 1);
+      expect(activeRowIndex(rows, cues, 2), 2);
+    });
+
+    test('removed rows are skipped; added rows count', () {
+      final rows = ['A.', null, 'B.', 'A.'];
+      final cues = ['A.', 'B.', 'A.'];
+      expect(activeRowIndex(rows, cues, 2), 3);
+      expect(activeRowIndex(rows, cues, -1), -1);
+    });
+  });
+
+  group('re-render detection', () {
+    Future<AppState> rendered() async {
+      final app = await makeApp();
+      app.sceneFileInfo = {1: SceneOutputInfo(exists: true, filename: 'x.m4a', title: 'One')};
+      app.renderFingerprints = {1: app.sceneFingerprint(1)};
+      return app;
+    }
+
+    test('an edit marks the scene; undo clears it', () async {
+      final app = await rendered();
+      app.toggleRemoved(1, app.scenes[0].elements[2]);
+      expect(app.scenesNeedingRerender, {1});
+      app.undo();
+      expect(app.scenesNeedingRerender, isEmpty);
+      app.redo();
+      expect(app.scenesNeedingRerender, {1});
+    });
+
+    test('deleting the correction, or editing the line back, clears it', () async {
+      final app = await rendered();
+      final el = app.scenes[0].elements[0];
+      app.correctLine(1, el, kind: 'dialog', speaker: 'ELLIOT', removed: false);
+      expect(app.scenesNeedingRerender, {1});
+      app.deleteCorrection(1, el);
+      expect(app.scenesNeedingRerender, isEmpty);
+      app.correctLine(1, el, kind: 'dialog', speaker: 'ELLIOT', removed: false);
+      app.correctLine(1, el, kind: 'dialog', speaker: 'LOLA', removed: false);
+      expect(app.scenesNeedingRerender, isEmpty);
+    });
+
+    test('an empty added line is not an edit; giving it text is', () async {
+      final app = await rendered();
+      app.addLine(1, afterRef: app.scenes[0].elements[0].ref, speaker: 'LOLA');
+      expect(app.scenesNeedingRerender, isEmpty);
+      final added = app.userAddedElements[app.addedKey(1)]!.single;
+      app.updateAddedLine(1, added.id, speaker: 'LOLA', text: 'Hello.', kind: 'dialog');
+      expect(app.scenesNeedingRerender, {1});
+      app.deleteAddedLine(1, added.id);
+      expect(app.scenesNeedingRerender, isEmpty);
+    });
+
+    test('fingerprints are saved with the project', () {
+      final p = Project.newProject('X', '/tmp/x')..renderFingerprints = {3: 'abc'};
+      final again = Project.fromJson(p.toJson());
+      expect(again.renderFingerprints, {3: 'abc'});
+    });
   });
 }

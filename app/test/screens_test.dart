@@ -135,6 +135,9 @@ void main() {
       await tester.tap(find.text('Morning-room at the Manor House'));
       await tester.pumpAndSettle();
       await _snap(tester, 'dashboard_cast_$mode');
+      app.setCharacterColors(false);
+      await _snap(tester, 'dashboard_plain_names_$mode');
+      app.setCharacterColors(true);
 
       // Hover a line to show its actions.
       final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);

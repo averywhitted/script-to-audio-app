@@ -526,16 +526,19 @@ class IconBtn extends StatelessWidget {
 
 /// Character name with its highlighter stroke.
 class NameChip extends StatelessWidget {
-  const NameChip(this.name, {super.key, required this.allSpeakers, this.uppercase = false, this.size = 10.5, this.strike = false});
+  const NameChip(this.name, {super.key, required this.allSpeakers, this.uppercase = false, this.size = 10.5, this.strike = false, this.colors});
   final String name;
   final List<String> allSpeakers;
   final bool uppercase;
   final double size;
   final bool strike;
+
+  /// Overrides the "Character highlight colors" setting (used by its preview).
+  final bool? colors;
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    final c = speakerColors(name, allSpeakers, t);
+    final c = speakerColors(name, allSpeakers, t, enabled: colors);
     final shown = uppercase ? name.toUpperCase() : _title(name);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),

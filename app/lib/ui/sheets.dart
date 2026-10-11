@@ -620,6 +620,24 @@ class _GeneralTabState extends State<_GeneralTab> {
       padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
       children: [
         _Section(
+          header: 'Script Display',
+          footer: 'Each character gets their own highlighter color on their name in the script, the scene list and the Cast tab. Turn it off for plain gray name tags.',
+          children: [
+            _toggleLine(t, 'Character highlight colors', app.characterColors, app.setCharacterColors),
+            Row(
+              children: [
+                Expanded(
+                  child: _HighlightPreview(colors: true, selected: app.characterColors, onTap: () => app.setCharacterColors(true)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _HighlightPreview(colors: false, selected: !app.characterColors, onTap: () => app.setCharacterColors(false)),
+                ),
+              ],
+            ),
+          ],
+        ),
+        _Section(
           header: 'Software Update',
           children: [
             if (u != null)
@@ -640,10 +658,7 @@ class _GeneralTabState extends State<_GeneralTab> {
                     'Update Now',
                     kind: BtnKind.primary,
                     small: true,
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      showUpdateSheet(context);
-                    },
+                    onPressed: () => showUpdateSheet(context), // on top of Settings; Later returns here
                   ),
                 ],
               )
@@ -1077,10 +1092,7 @@ class _AboutTabState extends State<_AboutTab> {
                   kind: BtnKind.warn,
                   small: true,
                   icon: Icons.arrow_circle_down_rounded,
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    showUpdateSheet(context);
-                  },
+                  onPressed: () => showUpdateSheet(context), // on top of Settings; Later returns here
                 )
               : (checking
                     ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 1.8))
@@ -1118,6 +1130,67 @@ class _AboutTabState extends State<_AboutTab> {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// A small sample of the script, drawn with highlight colors on or off.
+class _HighlightPreview extends StatelessWidget {
+  const _HighlightPreview({required this.colors, required this.selected, required this.onTap});
+  final bool colors;
+  final bool selected;
+  final VoidCallback onTap;
+
+  static const _cast = ['CECILY', 'GWENDOLEN', 'JACK'];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    Widget line(String name, String text) => Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        children: [
+          NameChip(name, allSpeakers: _cast, uppercase: true, size: 9.5, colors: colors),
+          const SizedBox(height: 2),
+          Text(text, textAlign: TextAlign.center, style: TextStyles.script(t, size: 10.5).copyWith(height: 1.35)),
+        ],
+      ),
+    );
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Column(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
+              decoration: BoxDecoration(
+                color: t.bg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: selected ? t.accent : t.border, width: selected ? 2 : 1),
+              ),
+              child: Column(
+                children: [
+                  Wrap(
+                    spacing: 4,
+                    alignment: WrapAlignment.center,
+                    children: [for (final c in _cast) NameChip(c, allSpeakers: _cast, size: 9, colors: colors)],
+                  ),
+                  const SizedBox(height: 8),
+                  line('CECILY', 'They have been eating muffins.'),
+                  line('GWENDOLEN', "Couldn't you cough?"),
+                ],
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              colors ? 'On' : 'Off',
+              style: TextStyles.ui(t, size: 12, weight: FontWeight.w600, color: selected ? t.accent : t.muted),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

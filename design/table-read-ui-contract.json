@@ -10,7 +10,12 @@
       "2026-10-07: The app is being rebuilt in Flutter (macOS first). Labels and behavior in this file still bind the rebuild.",
       "2026-10-07: Palette is 'blue leads' (azure blue for actions, highlighter yellow for the play button and your own lines). See the design notes in design/claude-design-1a-v2/.",
       "2026-10-07: In the Archived view, the filter, view-mode and sort controls are hidden (they do nothing there).",
-      "2026-10-07: The Parser Corrections footer must keep the warning that contributed corrections are publicly visible on GitHub."
+      "2026-10-07: The Parser Corrections footer must keep the warning that contributed corrections are publicly visible on GitHub.",
+      "2026-10-11: Line rows no longer show a speaker color dot or a line-type symbol (“ ¶ +) in the gutter; the colored name tag carries the speaker. Two-voice rows drop the dot beside each name too.",
+      "2026-10-11: Line checkboxes are hidden until the row is hovered, checked, or a selection is active in that scene.",
+      "2026-10-11: Color roles: blue is the main color (primary buttons, play button, progress, selection, playing line); highlighter yellow is the accent (your own lines in Rehearse, brand mark).",
+      "2026-10-11: New setting (requested): Settings → General → Script Display → 'Character highlight colors', with On/Off previews. Off = neutral gray name tags everywhere.",
+      "2026-10-11: 'Edited' / 'Re-Render Edited Scenes' now compares each scene's edits with what was rendered; undoing or reverting an edit clears it."
     ]
   },
   "rules": {
@@ -537,15 +542,8 @@
           "elements": [
             {
               "type": "checkbox",
-              "action": "Add/remove the line from the multi-line selection (one scene at a time)"
-            },
-            {
-              "type": "indicator",
-              "content": "speaker color dot"
-            },
-            {
-              "type": "icon",
-              "content": "dialogue icon or narration icon, by line type"
+              "action": "Add/remove the line from the multi-line selection (one scene at a time)",
+              "visibleWhen": "row hovered, row checked, or a selection is active in this scene"
             },
             {
               "type": "text",
@@ -1504,6 +1502,20 @@
       {
         "label": "General",
         "sections": [
+          {
+            "header": "Script Display",
+            "elements": [
+              {
+                "type": "toggle",
+                "label": "Character highlight colors"
+              },
+              {
+                "type": "previews",
+                "content": "two clickable sample cards labeled 'On' and 'Off'"
+              }
+            ],
+            "footer": "explains per-character highlighter colors; off = plain gray name tags"
+          },
           {
             "header": "Software Update",
             "content": "Up to date: 'Table Read is up to date' + 'Check for Updates' (spinner while checking). Update found: 'Table Read {version} is available', 'You have version {version}', 'Update Now'."
