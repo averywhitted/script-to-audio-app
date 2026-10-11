@@ -25,7 +25,7 @@ String correctionKey(String pdfPath, int sceneNumber, String text, [int occurren
 
 enum EngineKind {
   macOS('macOS', 'macOS Voices', 'Built in, free, offline'),
-  kokoro('kokoro', 'Kokoro Local', 'Recommended offline neural voices'),
+  kokoro('kokoro', 'Kokoro Local', 'Offline neural voices'),
   piper('piper', 'Piper Local', 'Small, fast offline voices'),
   openAI('openAI', 'OpenAI TTS', 'Cloud quality, API key and limits');
 

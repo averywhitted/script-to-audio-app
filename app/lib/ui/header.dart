@@ -17,7 +17,7 @@ class AppHeader extends StatelessWidget {
   /// Left side, after the traffic lights (back button, title).
   final List<Widget> leading;
 
-  /// The tool palette (Cast, Render, search).
+  /// Extra controls after [leading] (unused by the workspace, whose tools sit in a bar below).
   final List<Widget> tools;
   final bool border;
 
@@ -65,7 +65,13 @@ class AppOptions extends StatelessWidget {
           ),
           const SizedBox(width: 8),
         ],
-        const Stamp('BETA'),
+        Tooltip(
+          message: 'About Table Read',
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(onTap: () => showSettingsSheet(context, initialTab: 3), child: const Stamp('BETA')),
+          ),
+        ),
         const SizedBox(width: 8),
         Tooltip(
           message: 'Report a bug (⌘⇧B)',
@@ -116,7 +122,7 @@ class ToolButton extends StatelessWidget {
           height: 30,
           padding: const EdgeInsets.symmetric(horizontal: 11),
           decoration: BoxDecoration(
-            color: h && onTap != null ? t.ctrl : Colors.transparent,
+            color: h && onTap != null ? Color.alphaBlend(t.ctrl, t.sheet) : t.sheet,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: t.border),
           ),

@@ -310,7 +310,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: t.bg,
         child: Column(
           children: [
-            _WorkspaceHeader(searchFocus: searchFocus),
+            const _WorkspaceHeader(),
+            _ToolBar(searchFocus: searchFocus),
             const Expanded(child: ScriptArea()),
             PlaybackBar(selectedRange: _selectedRange),
           ],
@@ -325,8 +326,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 // ---------------------------------------------------------------------------
 
 class _WorkspaceHeader extends StatelessWidget {
-  const _WorkspaceHeader({required this.searchFocus});
-  final FocusNode searchFocus;
+  const _WorkspaceHeader();
 
   Future<void> _back(BuildContext context) async {
     final app = context.read<AppState>();
@@ -349,40 +349,63 @@ class _WorkspaceHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
     final store = context.watch<ProjectStore>();
-    final app = context.watch<AppState>();
-    final edited = app.scenesNeedingRerender.length;
-    final engineReady = app.installedEngines.contains(app.selectedEngine);
     return AppHeader(
       leading: [
         IconBtn(Icons.chevron_left_rounded, size: 20, tooltip: 'Back to Projects', onTap: () => _back(context)),
         const SizedBox(width: 6),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 280),
-          child: Text(store.currentProject?.name ?? '', overflow: TextOverflow.ellipsis, style: TextStyles.display(t, size: 17)),
-        ),
-      ],
-      tools: [
-        ToolButton(
-          icon: Icons.record_voice_over_outlined,
-          label: 'Cast',
-          tooltip: 'Choose the voice engine and cast each character',
-          badge: engineReady ? null : '!',
-          onTap: app.script == null ? null : () => showCastSheet(context),
-        ),
-        const SizedBox(width: 6),
-        if (app.isGenerating)
-          const RenderStatusChip()
-        else
-          ToolButton(
-            icon: Icons.graphic_eq_rounded,
-            label: 'Render',
-            tooltip: edited > 0 ? '$edited edited scene${edited == 1 ? '' : 's'} to re-render' : 'Choose scenes to render (⌘R)',
-            badge: edited > 0 ? '$edited edited' : null,
-            onTap: app.script == null ? null : () => showRenderSheet(context),
+        Flexible(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Text(store.currentProject?.name ?? '', overflow: TextOverflow.ellipsis, style: TextStyles.display(t, size: 17)),
           ),
-        const SizedBox(width: 10),
-        _SearchField(focus: searchFocus),
+        ),
       ],
+    );
+  }
+}
+
+/// The tool palette under the title bar: Cast, Render, then search.
+class _ToolBar extends StatelessWidget {
+  const _ToolBar({required this.searchFocus});
+  final FocusNode searchFocus;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final app = context.watch<AppState>();
+    final edited = app.scenesNeedingRerender.length;
+    final engineReady = app.installedEngines.contains(app.selectedEngine);
+    return Container(
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: t.panel,
+        border: Border(bottom: BorderSide(color: t.rule)),
+      ),
+      child: Row(
+        children: [
+          ToolButton(
+            icon: Icons.record_voice_over_outlined,
+            label: 'Cast',
+            tooltip: 'Choose the voice engine and cast each character (⌘K)',
+            badge: engineReady ? null : '!',
+            onTap: app.script == null ? null : () => showCastSheet(context),
+          ),
+          const SizedBox(width: 6),
+          if (app.isGenerating)
+            const RenderStatusChip()
+          else
+            ToolButton(
+              icon: Icons.graphic_eq_rounded,
+              label: 'Render',
+              tooltip: edited > 0 ? '$edited edited scene${edited == 1 ? '' : 's'} to re-render' : 'Choose scenes to render (⌘R)',
+              badge: edited > 0 ? '$edited edited' : null,
+              onTap: app.script == null ? null : () => showRenderSheet(context),
+            ),
+          Container(width: 1, height: 20, margin: const EdgeInsets.symmetric(horizontal: 12), color: t.rule),
+          _SearchField(focus: searchFocus),
+        ],
+      ),
     );
   }
 }
@@ -405,7 +428,7 @@ class _SearchFieldState extends State<_SearchField> {
     final hits = searchHits(app, search.query);
     final active = search.query.trim().length >= 2;
     return SizedBox(
-      width: 260,
+      width: 300,
       height: 30,
       child: CallbackShortcuts(
         bindings: {
@@ -464,7 +487,7 @@ class _SearchFieldState extends State<_SearchField> {
                   )
                 : null,
             filled: true,
-            fillColor: t.field,
+            fillColor: t.sheet,
             contentPadding: const EdgeInsets.symmetric(vertical: 7),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -502,27 +525,45 @@ class _ScriptAreaState extends State<ScriptArea> {
   DateTime _lastManualScroll = DateTime.fromMillisecondsSinceEpoch(0);
   int? _lastActiveScene;
   int _lastCue = -1;
+  bool _lastPlaying = false;
   int _lastJump = 0;
 
-  void _scrollTo(GlobalKey key) {
+  /// Scrolls [key]'s line into view. The line may not exist until the scene
+  /// opens on the next frame, so it retries for a few frames.
+  void _scrollTo(GlobalKey key, {int tries = 6}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final ctx = key.currentContext;
       if (ctx != null && ctx.mounted) {
         Scrollable.ensureVisible(ctx, alignment: 0.4, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+      } else if (tries > 0) {
+        _scrollTo(key, tries: tries - 1);
+        WidgetsBinding.instance.scheduleFrame();
       }
     });
   }
 
-  void _followPlayback(RehearsalPlayer player, SceneView view) {
-    final scene = player.isPlaying || player.currentCueIndex >= 0 ? player.currentScene?.sceneNumber : null;
-    if (scene != null && scene != _lastActiveScene) {
-      _lastActiveScene = scene;
-      WidgetsBinding.instance.addPostFrameCallback((_) => view.open(scene));
-    }
-    if (player.currentCueIndex != _lastCue) {
-      _lastCue = player.currentCueIndex;
-      if (DateTime.now().difference(_lastManualScroll) > const Duration(seconds: 3)) _scrollTo(_activeLineKey);
-    }
+  /// Keeps the playing line on screen: when a new line starts (unless the
+  /// user scrolled in the last 3 seconds) and always on play and pause. Opens
+  /// the scene, and its "show all" part when the line is past the first rows.
+  void _followPlayback(AppState app, RehearsalPlayer player, SceneView view) {
+    final scene = player.currentScene;
+    final hasLine = scene != null && player.currentCueIndex >= 0;
+    final toggled = player.isPlaying != _lastPlaying;
+    _lastPlaying = player.isPlaying;
+    final cueChanged = player.currentCueIndex != _lastCue || scene?.sceneNumber != _lastActiveScene;
+    _lastCue = player.currentCueIndex;
+    _lastActiveScene = scene?.sceneNumber;
+    if (!hasLine || !(toggled || cueChanged)) return;
+    if (!toggled && DateTime.now().difference(_lastManualScroll) < const Duration(seconds: 3)) return;
+    final n = scene.sceneNumber;
+    final s = app.script?.scenes.where((x) => x.number == n).firstOrNull;
+    if (s == null) return;
+    final merged = app.mergedElements(s);
+    final row = activeRowIndex([for (final m in merged) voicedText(app, s, m)], [for (final c in player.cues) c.text], player.currentCueIndex);
+    final needAll = row >= _Lines.initialLimit;
+    WidgetsBinding.instance.addPostFrameCallback((_) => view.open(n, all: needAll));
+    _scrollTo(_activeLineKey);
   }
 
   void _followSearch(SearchState search, List<SearchHit> hits, SceneView view) {
@@ -550,7 +591,7 @@ class _ScriptAreaState extends State<ScriptArea> {
       if (app.isParsing) return _ParseProgress(fraction: app.parseFraction, message: app.parseMessage);
       return const EmptyState(art: EmptyArt.titlePage, title: 'No script loaded', message: 'Open a PDF to review parsed scenes and characters.');
     }
-    _followPlayback(player, view);
+    _followPlayback(app, player, view);
     final hits = searchHits(app, search.query);
     _followSearch(search, hits, view);
     final currentHit = hits.isEmpty ? null : hits[search.current % hits.length];
@@ -565,41 +606,44 @@ class _ScriptAreaState extends State<ScriptArea> {
           },
           child: Scrollbar(
             controller: _scroll,
-            child: ListView.builder(
+            // Every scene is built (not a lazy list) so playback and search
+            // can scroll to a line in any scene.
+            child: SingleChildScrollView(
               controller: _scroll,
               padding: EdgeInsets.fromLTRB(24, 18, 24, sel.isEmpty ? 24 : 88),
-              itemCount: script.scenes.length + 1,
-              itemBuilder: (context, i) {
-                if (i == script.scenes.length) return _StatsFooter(script: script);
-                final s = script.scenes[i];
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1080),
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        opacity: activeScene != null && activeScene != s.number ? 0.55 : 1,
-                        child: SceneCard(
-                          scene: s,
-                          expanded: view.expanded.contains(s.number),
-                          showAll: view.showAll.contains(s.number),
-                          activeLineKey: activeScene == s.number ? _activeLineKey : null,
-                          searchQuery: search.query.trim().length >= 2 ? search.query.trim() : '',
-                          matchCount: hits.where((h) => h.sceneNumber == s.number).length,
-                          currentHitRow: currentHit?.sceneNumber == s.number ? currentHit!.row : null,
-                          hitKey: _hitKey,
-                          onToggleExpand: () {
-                            if (view.expanded.contains(s.number) && sel.sceneNumber == s.number) sel.clear();
-                            view.toggle(s.number);
-                          },
-                          onToggleShowAll: () => view.toggleShowAll(s.number),
+              child: Column(
+                children: [
+                  for (final s in script.scenes)
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1080),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 200),
+                            opacity: activeScene != null && activeScene != s.number ? 0.55 : 1,
+                            child: SceneCard(
+                              scene: s,
+                              expanded: view.expanded.contains(s.number),
+                              showAll: view.showAll.contains(s.number),
+                              activeLineKey: activeScene == s.number ? _activeLineKey : null,
+                              searchQuery: search.query.trim().length >= 2 ? search.query.trim() : '',
+                              matchCount: hits.where((h) => h.sceneNumber == s.number).length,
+                              currentHitRow: currentHit?.sceneNumber == s.number ? currentHit!.row : null,
+                              hitKey: _hitKey,
+                              onToggleExpand: () {
+                                if (view.expanded.contains(s.number) && sel.sceneNumber == s.number) sel.clear();
+                                view.toggle(s.number);
+                              },
+                              onToggleShowAll: () => view.toggleShowAll(s.number),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  _StatsFooter(script: script),
+                ],
+              ),
             ),
           ),
         ),
@@ -791,11 +835,11 @@ class _SceneCardState extends State<SceneCard> {
                     Stamp('${widget.matchCount} match${widget.matchCount == 1 ? '' : 'es'}', kind: StampKind.accent),
                   ],
                   const SizedBox(width: 10),
-                  for (final sp in speakers.take(5))
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: NameChip(sp, allSpeakers: app.allSpeakers),
-                    ),
+                  for (final (i, sp) in speakers.take(5).indexed) ...[
+                    // Plain names (highlight colors off) need a separator.
+                    if (i > 0 && !characterColorsEnabled) Text(' · ', style: TextStyles.ui(t, size: 11, color: t.faint)) else const SizedBox(width: 4),
+                    NameChip(sp, allSpeakers: app.allSpeakers),
+                  ],
                   if (speakers.length > 5)
                     Padding(
                       padding: const EdgeInsets.only(left: 5),
@@ -1124,7 +1168,7 @@ class _Gutter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 40,
+      width: _gutterWidth,
       child: Padding(
         padding: const EdgeInsets.only(top: 3, left: 16),
         child: Align(
@@ -1143,29 +1187,91 @@ class _Gutter extends StatelessWidget {
   }
 }
 
-/// Row chrome shared by every line: hover, selection, playing highlight.
+/// Row chrome shared by every line: hover, selection, playing highlight. Hover
+/// actions float over the row's top-right corner so they take no layout space
+/// and the line stays centered.
 class _RowShell extends StatelessWidget {
-  const _RowShell({required this.child, required this.selected, required this.active, required this.onHover, this.hit = false});
+  const _RowShell({required this.child, required this.selected, required this.active, required this.onHover, this.hit = false, this.actions});
   final Widget child;
   final bool selected, active, hit;
   final ValueChanged<bool> onHover;
+  final List<Widget>? actions;
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
     return MouseRegion(
       onEnter: (_) => onHover(true),
       onExit: (_) => onHover(false),
-      child: Container(
-        decoration: BoxDecoration(
-          color: active ? t.accentSoft : (selected ? t.accentSoft.withValues(alpha: t.accentSoft.a * 0.7) : Colors.transparent),
-          border: Border(left: BorderSide(color: active || hit ? t.accent : Colors.transparent, width: 3)),
-        ),
-        padding: const EdgeInsets.fromLTRB(0, 5, 10, 5),
-        child: child,
+      child: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: active ? t.accentSoft : (selected ? t.accentSoft.withValues(alpha: t.accentSoft.a * 0.7) : Colors.transparent),
+              border: Border(left: BorderSide(color: active || hit ? t.accent : Colors.transparent, width: 3)),
+            ),
+            padding: const EdgeInsets.fromLTRB(0, 5, 0, 5),
+            child: child,
+          ),
+          if (actions != null && actions!.isNotEmpty)
+            Positioned(
+              top: 1,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: t.sheet,
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: t.border),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 8, offset: const Offset(0, 2))],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < actions!.length; i++) ...[if (i > 0) const SizedBox(width: 3), actions![i]],
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
+
+/// Dialogue sits in a centered block about as wide as a screenplay's
+/// dialogue column, so lines read as a balanced column under the name.
+class _DialogueBlock extends StatelessWidget {
+  const _DialogueBlock({required this.child, this.enabled = true});
+  final Widget child;
+  final bool enabled;
+  static const maxWidth = 540.0;
+  @override
+  Widget build(BuildContext context) => enabled
+      ? Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: maxWidth),
+            child: SizedBox(width: double.infinity, child: child),
+          ),
+        )
+      : child;
+}
+
+/// Right-hand column of small status marks (muted, corrected, uncertain).
+/// The same width as the checkbox gutter so lines stay centered.
+class _Status extends StatelessWidget {
+  const _Status({required this.children});
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: _gutterWidth,
+    child: Padding(
+      padding: const EdgeInsets.only(top: 2, right: 10),
+      child: Wrap(alignment: WrapAlignment.end, spacing: 4, runSpacing: 2, children: children),
+    ),
+  );
+}
+
+const double _gutterWidth = 44;
 
 class LineRow extends StatefulWidget {
   const LineRow({super.key, required this.scene, required this.element, required this.rc});
@@ -1207,58 +1313,60 @@ class _LineRowState extends State<LineRow> {
     ).copyWith(decoration: removed ? TextDecoration.lineThrough : null, decorationColor: t.muted, backgroundColor: mine && !removed ? t.mine : null);
 
     final body = isDialog
-        ? LayoutBuilder(
-            builder: (context, c) => Padding(
-              padding: EdgeInsets.only(left: c.maxWidth * 0.12, right: c.maxWidth * 0.12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: SpeakerTag(
-                      speaker,
-                      strike: removed,
-                      onPick: (sp) => app.correctLine(n, el, kind: 'dialog', speaker: sp, text: text, removed: removed),
-                    ),
+        ? _DialogueBlock(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: SpeakerTag(
+                    speaker,
+                    strike: removed,
+                    onPick: (sp) => app.correctLine(n, el, kind: 'dialog', speaker: sp, text: text, removed: removed),
                   ),
-                  const SizedBox(height: 2),
-                  _Playable(
-                    onPlay: widget.rc.onPlay,
-                    child: Text.rich(highlightSpan(shownText, mine && player.blockMyLines ? '' : widget.rc.query, textStyle, t.accentSoft)),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 2),
+                _Playable(
+                  onPlay: widget.rc.onPlay,
+                  child: Text.rich(highlightSpan(shownText, mine && player.blockMyLines ? '' : widget.rc.query, textStyle, t.accentSoft)),
+                ),
+              ],
             ),
           )
-        : _Playable(
-            onPlay: widget.rc.onPlay,
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: SpeakerTag(
-                        'NARRATOR',
-                        size: 9.5,
-                        strike: removed,
-                        onPick: (sp) {
-                          if (sp != 'Narrator') app.correctLine(n, el, kind: 'dialog', speaker: sp, text: text, removed: removed);
-                        },
-                      ),
-                    ),
-                  ),
-                  highlightSpan(shownText, widget.rc.query, textStyle, t.accentSoft),
-                ],
-              ),
-            ),
-          );
+        : _Playable(onPlay: widget.rc.onPlay, child: Text.rich(highlightSpan(shownText, widget.rc.query, textStyle, t.accentSoft)));
 
     return _RowShell(
       selected: selected,
       active: widget.rc.active,
       hit: widget.rc.currentHit,
       onHover: (v) => setState(() => hover = v),
+      actions: hover
+          ? [
+              if (widget.rc.onPlay != null)
+                Pill('Play', icon: Icons.play_arrow_rounded, bg: t.accentSoft, fg: t.accent, tooltip: 'Play from this line', onTap: widget.rc.onPlay),
+              Builder(
+                builder: (ctx) => Pill(
+                  'Edit',
+                  bg: speakerColors(speaker, app.allSpeakers, t).highlight,
+                  fg: t.nameInk,
+                  onTap: () => showPopover(ctx, (_) => CorrectLinePopover(sceneNumber: n, element: el), width: 340),
+                ),
+              ),
+              Pill(
+                removed ? 'Restore' : 'Remove',
+                icon: removed ? Icons.undo_rounded : Icons.remove_circle_outline_rounded,
+                bg: removed ? null : t.dangerSoft,
+                fg: removed ? null : t.danger,
+                tooltip: removed ? 'Restore this line' : "Mark line as removed (won't be voiced)",
+                onTap: () => app.toggleRemoved(n, el),
+              ),
+              Pill(
+                'Add line',
+                icon: Icons.add_circle_outline_rounded,
+                tooltip: 'Insert a new line below this one',
+                onTap: () => app.addLine(n, afterRef: el.ref, speaker: kind == 'dialog' ? (speaker == 'Narrator' ? '' : speaker) : ''),
+              ),
+            ]
+          : null,
       child: Opacity(
         opacity: removed ? 0.6 : 1,
         child: Row(
@@ -1266,72 +1374,24 @@ class _LineRowState extends State<LineRow> {
           children: [
             _Gutter(checked: selected, onCheck: () => sel.toggle(n, el.ref), visible: hover || selected || sel.sceneNumber == n && !sel.isEmpty),
             Expanded(child: body),
-            SizedBox(
-              width: 240,
-              child: hover
-                  ? Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: [
-                        if (widget.rc.onPlay != null)
-                          Pill('Play', icon: Icons.play_arrow_rounded, bg: t.accentSoft, fg: t.accent, tooltip: 'Play from this line', onTap: widget.rc.onPlay),
-                        Builder(
-                          builder: (ctx) => Pill(
-                            'Edit',
-                            bg: speakerColors(speaker, app.allSpeakers, t).highlight,
-                            fg: t.nameInk,
-                            onTap: () => showPopover(ctx, (_) => CorrectLinePopover(sceneNumber: n, element: el), width: 340),
-                          ),
-                        ),
-                        Pill(
-                          removed ? 'Restore' : 'Remove',
-                          icon: removed ? Icons.undo_rounded : Icons.remove_circle_outline_rounded,
-                          bg: removed ? null : t.dangerSoft,
-                          fg: removed ? null : t.danger,
-                          tooltip: removed ? 'Restore this line' : "Mark line as removed (won't be voiced)",
-                          onTap: () => app.toggleRemoved(n, el),
-                        ),
-                        Pill(
-                          'Add line',
-                          icon: Icons.add_circle_outline_rounded,
-                          tooltip: 'Insert a new line below this one',
-                          onTap: () => app.addLine(n, afterRef: el.ref, speaker: kind == 'dialog' ? (speaker == 'Narrator' ? '' : speaker) : ''),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (mine && player.muteMyLines)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8, top: 2),
-                            child: Tooltip(
-                              message: 'Your line — muted during playback',
-                              child: Icon(Icons.volume_off_rounded, size: 14, color: t.muted),
-                            ),
-                          ),
-                        if (fix != null && !removed)
-                          Tooltip(
-                            message: 'User correction applied',
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.check_rounded, size: 15, color: t.accent),
-                                Text('fixed', style: TextStyles.hand(t, size: 18, color: t.accent)),
-                              ],
-                            ),
-                          ),
-                        if (flagged)
-                          Tooltip(
-                            message: el.reason ?? 'Parser is uncertain about this line — check the speaker or type',
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: Text('?', style: TextStyles.hand(t, size: 26, color: t.warn)),
-                            ),
-                          ),
-                      ],
-                    ),
+            _Status(
+              children: [
+                if (mine && player.muteMyLines)
+                  Tooltip(
+                    message: 'Your line — muted during playback',
+                    child: Icon(Icons.volume_off_rounded, size: 14, color: t.muted),
+                  ),
+                if (fix != null && !removed)
+                  Tooltip(
+                    message: 'User correction applied',
+                    child: Icon(Icons.check_rounded, size: 15, color: t.accent),
+                  ),
+                if (flagged)
+                  Tooltip(
+                    message: el.reason ?? 'Parser is uncertain about this line — check the speaker or type',
+                    child: Text('?', style: TextStyles.hand(t, size: 22, color: t.warn).copyWith(height: 0.9)),
+                  ),
+              ],
             ),
           ],
         ),
@@ -1473,7 +1533,7 @@ class _SimultaneousRowState extends State<SimultaneousRow> {
               ),
             ),
           ),
-          const SizedBox(width: 40),
+          const SizedBox(width: _gutterWidth),
         ],
       ),
     );
@@ -1597,7 +1657,7 @@ class _ManualPairRowState extends State<ManualPairRow> {
               ),
             ),
           ),
-          const SizedBox(width: 40),
+          const SizedBox(width: _gutterWidth),
         ],
       ),
     );
@@ -1631,78 +1691,75 @@ class _AddedLineRowState extends State<AddedLineRow> {
       active: widget.rc.active,
       hit: widget.rc.currentHit,
       onHover: (v) => setState(() => hover = v),
+      actions: hover
+          ? [
+              if (widget.rc.onPlay != null)
+                Pill('Play', icon: Icons.play_arrow_rounded, bg: t.accentSoft, fg: t.accent, tooltip: 'Play from this line', onTap: widget.rc.onPlay),
+              Builder(
+                builder: (ctx) => Pill(
+                  'Edit',
+                  bg: speakerColors(speaker, app.allSpeakers, t).highlight,
+                  fg: t.nameInk,
+                  onTap: () => showPopover(ctx, (_) => EditAddedLinePopover(sceneNumber: n, element: el), width: 340),
+                ),
+              ),
+              Pill(
+                'Remove',
+                icon: Icons.remove_circle_outline_rounded,
+                bg: t.dangerSoft,
+                fg: t.danger,
+                tooltip: 'Remove this added line',
+                onTap: () => app.deleteAddedLine(n, el.id),
+              ),
+            ]
+          : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _Gutter(checked: selected, onCheck: () => sel.toggleAdded(n, el.id), visible: hover || selected || sel.sceneNumber == n && !sel.isEmpty),
           Expanded(
-            child: Column(
-              crossAxisAlignment: isDialog ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SpeakerTag(
-                      isDialog ? speaker : 'NARRATOR',
-                      size: isDialog ? 10.5 : 9.5,
-                      onPick: (sp) => app.updateAddedLine(
-                        n,
-                        el.id,
-                        speaker: sp == 'Narrator' ? '' : sp,
-                        text: el.text,
-                        kind: sp == 'Narrator' ? 'stage_direction' : 'dialog',
+            child: _DialogueBlock(
+              enabled: isDialog,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: isDialog ? MainAxisAlignment.center : MainAxisAlignment.start,
+                    children: [
+                      if (isDialog) ...[
+                        SpeakerTag(
+                          speaker,
+                          onPick: (sp) => app.updateAddedLine(
+                            n,
+                            el.id,
+                            speaker: sp == 'Narrator' ? '' : sp,
+                            text: el.text,
+                            kind: sp == 'Narrator' ? 'stage_direction' : 'dialog',
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      const Stamp('ADDED'),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  if (empty)
+                    Text(
+                      'Empty — hover and tap Edit to add text',
+                      style: TextStyles.ui(t, size: 12, color: t.faint).copyWith(fontStyle: FontStyle.italic),
+                    )
+                  else
+                    _Playable(
+                      onPlay: widget.rc.onPlay,
+                      child: Text.rich(
+                        highlightSpan(el.text, widget.rc.query, TextStyles.script(t, italic: !isDialog, color: isDialog ? t.ink : t.ink2), t.accentSoft),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    const Stamp('ADDED'),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                if (empty)
-                  Text(
-                    'Empty — hover and tap Edit to add text',
-                    style: TextStyles.ui(t, size: 12, color: t.faint).copyWith(fontStyle: FontStyle.italic),
-                  )
-                else
-                  _Playable(
-                    onPlay: widget.rc.onPlay,
-                    child: Text.rich(
-                      highlightSpan(el.text, widget.rc.query, TextStyles.script(t, italic: !isDialog, color: isDialog ? t.ink : t.ink2), t.accentSoft),
-                      textAlign: isDialog ? TextAlign.center : TextAlign.left,
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-          SizedBox(
-            width: 240,
-            child: hover
-                ? Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 4,
-                    children: [
-                      if (widget.rc.onPlay != null)
-                        Pill('Play', icon: Icons.play_arrow_rounded, bg: t.accentSoft, fg: t.accent, tooltip: 'Play from this line', onTap: widget.rc.onPlay),
-                      Builder(
-                        builder: (ctx) => Pill(
-                          'Edit',
-                          bg: speakerColors(speaker, app.allSpeakers, t).highlight,
-                          fg: t.nameInk,
-                          onTap: () => showPopover(ctx, (_) => EditAddedLinePopover(sceneNumber: n, element: el), width: 340),
-                        ),
-                      ),
-                      Pill(
-                        '',
-                        icon: Icons.remove_circle_outline_rounded,
-                        bg: t.dangerSoft,
-                        fg: t.danger,
-                        tooltip: 'Remove this added line',
-                        onTap: () => app.deleteAddedLine(n, el.id),
-                      ),
-                    ],
-                  )
-                : null,
-          ),
+          const _Status(children: []),
         ],
       ),
     );

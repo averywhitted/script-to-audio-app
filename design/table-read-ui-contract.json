@@ -30,7 +30,15 @@
       "2026-10-11: Voice and engine changes count as edits for 'Edited' / re-render.",
       "2026-10-11: Each project remembers its expanded scenes, role, mute/block/stop, and speed.",
       "2026-10-11: Script stats (scenes · characters · lines) are a footer under the last scene.",
-      "2026-10-11: The Log moved to Debug → Show Log (⌥⌘L), shown in a sheet. Bug reports attach the last 40 log lines."
+      "2026-10-11: The Log moved to Debug → Show Log (⌥⌘L), shown in a sheet. Bug reports attach the last 40 log lines.",
+      "2026-10-11 (round 2): Character highlight colors off = plain name text, no tag behind it. The playback timeline always keeps character colors.",
+      "2026-10-11 (round 2): Play and pause always scroll to the playing line, opening its scene (and the folded part past the first 30 lines) when needed.",
+      "2026-10-11 (round 2): Engine choices are equal-size cards with an icon each; no engine is labeled 'Recommended'.",
+      "2026-10-11 (round 2): Line actions (Play, Edit, Remove, Add line) float over the row's top-right corner on hover instead of taking a column; dialogue sits in a centered column. Narration rows have no Narrator tag.",
+      "2026-10-11 (round 2): Cast, Render and search sit in a toolbar under the title bar, on the left.",
+      "2026-10-11 (round 2): Clicking BETA opens Settings → About.",
+      "2026-10-11 (round 2): Report a Bug's button is 'Submit on GitHub'; the report opens on GitHub and is sent from there (a GitHub account is needed).",
+      "2026-10-11 (round 2): Projects: a click opens a project; the checkbox selects (clicks then add to the selection). Rename is in the selection bar (one selected), the right-click menu and the ⋯ button (Open, Rename…, Archive, Delete…)."
     ]
   },
   "rules": {
@@ -1801,7 +1809,7 @@
           {
             "header": "Local Engines",
             "repeats": "Kokoro Local, Piper Local",
-            "content": "engine name + subtitle ('Recommended offline neural voices' / 'Small, fast offline voices'), then one of: 'Install' button; install progress with cancel (help 'Cancel installation') and 'Installing…'; size + 'Uninstall'; 'Removing…'; 'Coming soon' (Piper)",
+            "content": "engine name + subtitle ('Offline neural voices' / 'Small, fast offline voices'), then one of: 'Install' button; install progress with cancel (help 'Cancel installation') and 'Installing…'; size + 'Uninstall'; 'Removing…'; 'Coming soon' (Piper)",
             "footer": "macOS Voices is always available with no setup required."
           }
         ]

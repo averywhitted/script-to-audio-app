@@ -111,6 +111,47 @@ class _GalleryScreenState extends State<GalleryScreen> {
     });
   }
 
+  /// A click opens the project. While a selection is under way (or with ⌘ or
+  /// ⇧ held) it adds to or removes from the selection instead.
+  void _click(Project p, List<Project> shown) {
+    final keys = HardwareKeyboard.instance;
+    if (keys.isMetaPressed || keys.isShiftPressed) return _tap(p, shown);
+    if (selected.isNotEmpty) return _toggleSelect(p);
+    _open(p);
+  }
+
+  void _toggleSelect(Project p) => setState(() {
+    renamingId = null;
+    selected.contains(p.id) ? selected.remove(p.id) : selected.add(p.id);
+    anchorId = p.id;
+  });
+
+  void _rename(Project p) => setState(() {
+    selected.clear();
+    renamingId = p.id;
+  });
+
+  Future<void> _projectMenu(Project p, Offset pos) async {
+    final pick = await showMenuAt<String>(context, pos, const [
+      MenuItemSpec('open', 'Open'),
+      MenuItemSpec('rename', 'Rename…'),
+      MenuItemSpec.divider(),
+      MenuItemSpec('archive', 'Archive'),
+      MenuItemSpec('delete', 'Delete…'),
+    ]);
+    if (!mounted) return;
+    switch (pick) {
+      case 'open':
+        _open(p);
+      case 'rename':
+        _rename(p);
+      case 'archive':
+        _confirmArchive([p]);
+      case 'delete':
+        _confirmDelete([p]);
+    }
+  }
+
   void _open(Project p) {
     final app = context.read<AppState>();
     final store = context.read<ProjectStore>();
@@ -244,6 +285,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         style: TextStyles.ui(t, size: 12.5, weight: FontWeight.w600, color: t.barInk),
                       ),
                     ),
+                    if (selected.length == 1) BarButton('Rename', icon: Icons.edit_outlined, onTap: () => _rename(selectedProjects.first)),
                     BarButton('Archive', icon: Icons.archive_outlined, onTap: () => _confirmArchive(selectedProjects)),
                     BarButton('Delete', icon: Icons.delete_outline_rounded, danger: true, onTap: () => _confirmDelete(selectedProjects)),
                     BarButton('', icon: Icons.close_rounded, onTap: () => setState(selected.clear), tooltip: 'Clear selection'),
@@ -428,9 +470,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
             renaming: renamingId == p.id,
             archiving: store.archivingIds.contains(p.id),
             backgroundProgress: app.backgroundRenderProjectId == p.id && app.isGenerating ? app.generationProgress : null,
-            onTap: () => _tap(p, shown),
-            onDoubleTap: () => _open(p),
-            onDoubleTapName: () => setState(() => renamingId = p.id),
+            onTap: () => _click(p, shown),
+            onSelect: () => _toggleSelect(p),
+            onMenu: (pos) => _projectMenu(p, pos),
             onRename: (name) {
               store.renameProject(p.id, name);
               setState(() => renamingId = null);
@@ -480,7 +522,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 const SizedBox(width: 110),
                 header('Scenes', SortKey.scenes, width: 70),
                 header('Last Opened', SortKey.recent, width: 120),
-                const SizedBox(width: 18),
+                const SizedBox(width: 26),
               ],
             ),
           ),
@@ -493,9 +535,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
               renaming: renamingId == p.id,
               archiving: store.archivingIds.contains(p.id),
               backgroundProgress: app.backgroundRenderProjectId == p.id && app.isGenerating ? app.generationProgress : null,
-              onTap: () => _tap(p, shown),
-              onDoubleTap: () => _open(p),
-              onDoubleTapName: () => setState(() => renamingId = p.id),
+              onTap: () => _click(p, shown),
+              onSelect: () => _toggleSelect(p),
+              onMenu: (pos) => _projectMenu(p, pos),
               onRename: (name) {
                 store.renameProject(p.id, name);
                 setState(() => renamingId = null);
@@ -655,16 +697,36 @@ class ScriptCover extends StatelessWidget {
     required this.archiving,
     required this.backgroundProgress,
     required this.onTap,
-    required this.onDoubleTap,
-    required this.onDoubleTapName,
+    required this.onSelect,
+    required this.onMenu,
     required this.onRename,
     required this.onRenameCancel,
   });
   final Project project;
   final bool selected, renaming, archiving;
   final double? backgroundProgress;
-  final VoidCallback onTap, onDoubleTap, onDoubleTapName, onRenameCancel;
+
+  /// Click: opens the project (or adds to a selection under way).
+  final VoidCallback onTap;
+
+  /// The checkbox: select or deselect.
+  final VoidCallback onSelect;
+
+  /// Right-click or the ⋯ button: Open / Rename / Archive / Delete.
+  final ValueChanged<Offset> onMenu;
+  final VoidCallback onRenameCancel;
   final ValueChanged<String> onRename;
+
+  Widget _coverCheck(Tokens t) => Container(
+    width: 18,
+    height: 18,
+    decoration: BoxDecoration(
+      color: selected ? t.accent : Colors.white.withValues(alpha: 0.7),
+      shape: BoxShape.circle,
+      border: Border.all(color: selected ? t.accent : Colors.black26, width: 1.5),
+    ),
+    child: selected ? Icon(Icons.check_rounded, size: 12, color: t.onAccent) : null,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -677,7 +739,7 @@ class ScriptCover extends StatelessWidget {
       cursor: SystemMouseCursors.click,
       builder: (context, h) => ClickTarget(
         onClick: onTap,
-        onDoubleClick: onDoubleTap,
+        onContextMenu: onMenu,
         child: SizedBox(
           width: 196,
           child: Column(
@@ -742,41 +804,45 @@ class ScriptCover extends StatelessWidget {
                       ),
                     Positioned(
                       left: 38,
-                      right: 14,
+                      right: 34, // clear of the checkbox
                       top: 18,
                       child: renaming
                           ? _RenameField(initial: project.name, onSubmit: onRename, onCancel: onRenameCancel, script: true)
-                          : ClickTarget(
-                              onDoubleClick: selected ? onDoubleTapName : null,
-                              child: Text(
-                                project.name.toUpperCase(),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyles.script(
-                                  t,
-                                  size: 13,
-                                  weight: FontWeight.w700,
-                                  color: t.dark ? const Color(0xFFF2EEE6) : const Color(0xFF2A2722),
-                                ).copyWith(height: 1.3),
-                              ),
+                          : Text(
+                              project.name.toUpperCase(),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyles.script(
+                                t,
+                                size: 13,
+                                weight: FontWeight.w700,
+                                color: t.dark ? const Color(0xFFF2EEE6) : const Color(0xFF2A2722),
+                              ).copyWith(height: 1.3),
                             ),
                     ),
                     Positioned(
-                      right: 10,
-                      top: 10,
+                      right: 6,
+                      top: 6,
                       child: AnimatedOpacity(
                         opacity: selected || h ? 1 : 0,
                         duration: const Duration(milliseconds: 120),
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: selected ? t.accent : Colors.white.withValues(alpha: 0.7),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: selected ? t.accent : Colors.black26, width: 1.5),
+                        child: ClickTarget(
+                          onClick: onSelect,
+                          child: Tooltip(
+                            message: selected ? 'Deselect' : 'Select',
+                            waitDuration: const Duration(milliseconds: 600),
+                            child: Padding(padding: const EdgeInsets.all(4), child: _coverCheck(t)),
                           ),
-                          child: selected ? Icon(Icons.check_rounded, size: 12, color: t.onAccent) : null,
                         ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 6,
+                      bottom: 6,
+                      child: AnimatedOpacity(
+                        opacity: h ? 1 : 0,
+                        duration: const Duration(milliseconds: 120),
+                        child: _MoreButton(onMenu: onMenu, onCover: true),
                       ),
                     ),
                     if (n > 0)
@@ -851,15 +917,24 @@ class ProjectRow extends StatelessWidget {
     required this.archiving,
     required this.backgroundProgress,
     required this.onTap,
-    required this.onDoubleTap,
-    required this.onDoubleTapName,
+    required this.onSelect,
+    required this.onMenu,
     required this.onRename,
     required this.onRenameCancel,
   });
   final Project project;
   final bool selected, renaming, archiving;
   final double? backgroundProgress;
-  final VoidCallback onTap, onDoubleTap, onDoubleTapName, onRenameCancel;
+
+  /// Click: opens the project (or adds to a selection under way).
+  final VoidCallback onTap;
+
+  /// The checkbox: select or deselect.
+  final VoidCallback onSelect;
+
+  /// Right-click or the ⋯ button: Open / Rename / Archive / Delete.
+  final ValueChanged<Offset> onMenu;
+  final VoidCallback onRenameCancel;
   final ValueChanged<String> onRename;
 
   @override
@@ -869,7 +944,7 @@ class ProjectRow extends StatelessWidget {
     return Hover(
       builder: (context, h) => ClickTarget(
         onClick: onTap,
-        onDoubleClick: onDoubleTap,
+        onContextMenu: onMenu,
         child: Container(
           color: selected ? t.accentSoft : (h ? t.ruleSoft : Colors.transparent),
           padding: const EdgeInsets.fromLTRB(14, 10, 18, 10),
@@ -882,7 +957,10 @@ class ProjectRow extends StatelessWidget {
                     child: AnimatedOpacity(
                       opacity: selected || h ? 1 : 0,
                       duration: const Duration(milliseconds: 120),
-                      child: CheckMark(checked: selected, round: true, size: 16, onTap: onTap),
+                      child: ClickTarget(
+                        onClick: onSelect,
+                        child: CheckMark(checked: selected, round: true, size: 16, tooltip: selected ? 'Deselect' : 'Select'),
+                      ),
                     ),
                   ),
                   Expanded(
@@ -891,14 +969,11 @@ class ProjectRow extends StatelessWidget {
                       children: [
                         renaming
                             ? _RenameField(initial: project.name, onSubmit: onRename, onCancel: onRenameCancel, script: true)
-                            : ClickTarget(
-                                onDoubleClick: selected ? onDoubleTapName : null,
-                                child: Text(
-                                  project.name.toUpperCase(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyles.script(t, size: 12.5, weight: FontWeight.w700),
-                                ),
+                            : Text(
+                                project.name.toUpperCase(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyles.script(t, size: 12.5, weight: FontWeight.w700),
                               ),
                         if (backgroundProgress != null)
                           Padding(
@@ -934,7 +1009,14 @@ class ProjectRow extends StatelessWidget {
                     width: 120,
                     child: Text(friendlyDate(project.lastOpenedAt), style: TextStyles.ui(t, size: 12.5, color: t.muted)),
                   ),
-                  SizedBox(width: 18, child: h ? Icon(Icons.chevron_right_rounded, size: 16, color: t.faint) : null),
+                  SizedBox(
+                    width: 26,
+                    child: AnimatedOpacity(
+                      opacity: h ? 1 : 0,
+                      duration: const Duration(milliseconds: 120),
+                      child: _MoreButton(onMenu: onMenu),
+                    ),
+                  ),
                 ],
               ),
               if (archiving)
@@ -995,3 +1077,32 @@ class _RenameFieldState extends State<_RenameField> {
 
 /// Reveal a project folder (used by Settings → Projects).
 Future<void> revealFolder(String path) => NativePlatform.revealInFinder(path);
+
+/// ⋯ button on a project: opens the same menu as right-click.
+class _MoreButton extends StatelessWidget {
+  const _MoreButton({required this.onMenu, this.onCover = false});
+  final ValueChanged<Offset> onMenu;
+  final bool onCover;
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return Builder(
+      builder: (ctx) => ClickTarget(
+        onClick: () {
+          final box = ctx.findRenderObject() as RenderBox;
+          onMenu(box.localToGlobal(Offset(0, box.size.height + 2)));
+        },
+        child: Tooltip(
+          message: 'More (Rename, Archive, Delete)',
+          waitDuration: const Duration(milliseconds: 600),
+          child: Container(
+            width: 24,
+            height: 22,
+            decoration: BoxDecoration(color: onCover ? Colors.white.withValues(alpha: 0.75) : t.ctrl, borderRadius: BorderRadius.circular(6)),
+            child: Icon(Icons.more_horiz_rounded, size: 16, color: onCover ? const Color(0xFF2A2722) : t.ink2),
+          ),
+        ),
+      ),
+    );
+  }
+}

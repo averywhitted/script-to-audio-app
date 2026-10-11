@@ -340,7 +340,7 @@ class _TimelinePainter extends CustomPainter {
       final x0 = c.startTime / d * size.width, x1 = c.endTime / d * size.width;
       final mine = player.isMyLine(c.speaker);
       final speaker = c.speaker == narratorKey ? 'Narrator' : c.speaker.split('/').first;
-      final color = mine ? const Color(0xFFFFE94D) : speakerColors(speaker, allSpeakers, t).dot.withValues(alpha: 0.8);
+      final color = mine ? const Color(0xFFFFE94D) : speakerColors(speaker, allSpeakers, t, enabled: true).dot.withValues(alpha: 0.8);
       canvas.drawRRect(
         RRect.fromRectAndRadius(Rect.fromLTWH(x0, mid - 3, (x1 - x0 - 1) < 1 ? 1.0 : (x1 - x0 - 1), 6), const Radius.circular(2)),
         Paint()..color = color,

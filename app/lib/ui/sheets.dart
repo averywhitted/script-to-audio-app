@@ -294,7 +294,7 @@ class _BugReportState extends State<_BugReport> {
           icon: Icons.bug_report_outlined,
           iconColor: t.danger,
           title: 'Report a Bug',
-          subtitle: 'Reports go directly to the developer. No account required.',
+          subtitle: 'Your report opens on GitHub, ready to send. You need a GitHub account to send it.',
         ),
         Container(height: 1, color: t.rule),
         Flexible(
@@ -332,7 +332,7 @@ class _BugReportState extends State<_BugReport> {
             border: Border(top: BorderSide(color: t.rule)),
           ),
           child: Text(
-            'This opens a prefilled report as $destinationDescription, with the app’s recent log attached. Nothing is sent until you review it there and submit it.',
+            'Submit opens your report as $destinationDescription, with the app’s recent log attached. Send it from GitHub to finish.',
             style: TextStyles.ui(t, size: 11.5, color: t.muted, height: 1.4),
           ),
         ),
@@ -343,13 +343,13 @@ class _BugReportState extends State<_BugReport> {
               if (sent) ...[
                 Icon(Icons.check_circle_rounded, size: 15, color: t.ok),
                 const SizedBox(width: 6),
-                Text('Opened in your browser.', style: TextStyles.ui(t, color: t.ok)),
+                Text('Opened on GitHub. Send it from there to finish.', style: TextStyles.ui(t, color: t.ok)),
               ],
               const Spacer(),
               Btn('Cancel', kind: BtnKind.plain, onPressed: () => Navigator.of(context).pop()),
               const SizedBox(width: 8),
               Btn(
-                'Review on GitHub…',
+                'Submit on GitHub',
                 kind: BtnKind.primary,
                 onPressed: what.text.trim().isEmpty || sent
                     ? null

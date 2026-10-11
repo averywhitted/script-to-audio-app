@@ -64,11 +64,13 @@ List<Map<String, dynamic>> _scene9() => [
   _d('GWENDOLEN', 'Let us preserve a dignified silence.'),
 ];
 
+/// Scene 8 is long (past the first 30 rows) so playback can reach lines that
+/// start out folded away.
 List<Map<String, dynamic>> _generic(int n) {
   final names = characters.keys.toList();
   return [
     _n('The scene opens. ${names[n % names.length]} enters, carrying a book.'),
-    for (var i = 0; i < 6; i++) _d(names[(n + i) % names.length], 'Line ${i + 1} of scene ${n + 1}, spoken with great feeling and a certain amount of wit.'),
+    for (var i = 0; i < (n == 7 ? 40 : 6); i++) _d(names[(n + i) % names.length], 'Line ${i + 1} of scene ${n + 1}, spoken with great feeling and a certain amount of wit.'),
   ];
 }
 

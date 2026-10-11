@@ -119,15 +119,72 @@ void main() {
       final (app, store, player) = await _makeState();
       await _pump(tester, const GalleryScreen(), b, app: app, store: store, player: player);
       await _snap(tester, 'gallery_grid_$mode');
-      // Select two projects and show the selection bar.
-      await tester.tap(find.text('HAMLET'));
+      // The checkbox selects (a click on the card opens it); one project
+      // selected offers Rename in the selection bar.
+      await tester.tap(find.byTooltip('Select').first);
       await tester.pump();
+      expect(store.currentProject, isNull);
       await _snap(tester, 'gallery_selected_$mode');
+      await tester.tap(find.text('Rename'));
+      await tester.pump();
+      await _snap(tester, 'gallery_rename_$mode');
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
       await tester.tap(find.byIcon(Icons.view_list_rounded));
       await _snap(tester, 'gallery_list_$mode');
+      // The ⋯ button opens Open / Rename / Archive / Delete.
+      await tester.tap(find.byTooltip('More (Rename, Archive, Delete)').first);
+      await tester.pumpAndSettle();
+      await _snap(tester, 'gallery_menu_$mode');
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      // A plain click opens the project.
+      await tester.tap(find.text('HAMLET'));
+      await tester.pump();
+      expect(store.currentProject?.name, 'Hamlet');
+      store.closeProject();
+      await tester.pump();
       await tester.tap(find.text('Archived'));
       await _snap(tester, 'gallery_archived_$mode');
     });
+
+    if (b == Brightness.light) {
+      testWidgets('play and pause bring the playing line into view', (tester) async {
+        final (app, store, player) = await _makeState();
+        store.currentProject = store.projects.firstWhere((x) => x.name.startsWith('The Importance'));
+        loadEarnest(app, earnestFolder);
+        await _pump(tester, const DashboardScreen(), b, app: app, store: store, player: player);
+        final view = Provider.of<SceneView>(tester.element(find.byType(ScriptArea)), listen: false);
+        // A line past the first 30 rows of a collapsed scene far down the list.
+        var si = 0;
+        for (var i = 0; i < player.scenes.length; i++) {
+          if (player.scenes[i].cues.length > player.scenes[si].cues.length) si = i;
+        }
+        final n = player.scenes[si].sceneNumber;
+        await player.switchToScene(si);
+        final ci = player.cues.lastIndexWhere((c) => c.text.length > 20);
+        expect(ci, greaterThanOrEqualTo(30));
+        player.seek(player.cues[ci].startTime + 0.5);
+        player.play();
+        await tester.pumpAndSettle();
+        expect(view.expanded, contains(n));
+        expect(view.showAll, contains(n));
+        bool onScreen() {
+          final r = tester.getRect(find.text(player.cues[ci].text).first);
+          final area = tester.getRect(find.byType(ScriptArea));
+          return r.top >= area.top && r.bottom <= area.bottom;
+        }
+
+        expect(onScreen(), isTrue);
+        // Scroll away by hand, then pause: the line comes back into view.
+        await tester.drag(find.byType(ScriptArea), const Offset(0, 3000));
+        await tester.pumpAndSettle();
+        expect(onScreen(), isFalse);
+        player.pause();
+        await tester.pumpAndSettle();
+        expect(onScreen(), isTrue);
+      });
+    }
 
     testWidgets('dashboard $mode', (tester) async {
       final (app, store, player) = await _makeState();
@@ -146,7 +203,7 @@ void main() {
       // Hover a line: checkbox, Play, Edit, Restore, Add line.
       final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
-      await gesture.moveTo(tester.getCenter(find.text("But I haven't got a cough.")));
+      await gesture.moveTo(tester.getCenter(find.text('They have been eating muffins. That looks like repentance.')));
       await tester.pumpAndSettle();
       await _snap(tester, 'workspace_hover_$mode');
       await gesture.moveTo(const Offset(5, 5));

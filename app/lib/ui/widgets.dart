@@ -1,7 +1,7 @@
 // Shared components for the 1a v2 design, styled from theme/tokens.dart.
 
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart' show kPrimaryMouseButton;
+import 'package:flutter/gestures.dart' show kPrimaryMouseButton, kSecondaryMouseButton;
 import 'package:flutter/services.dart';
 
 import '../theme/tokens.dart';
@@ -338,15 +338,26 @@ class MenuItemSpec<T> {
 
 /// Opens a menu anchored under [anchorContext].
 Future<T?> showAnchoredMenu<T>(BuildContext anchorContext, List<MenuItemSpec<T>> items) {
-  final t = Tokens.of(anchorContext);
   final box = anchorContext.findRenderObject() as RenderBox;
   final overlay = Overlay.of(anchorContext).context.findRenderObject() as RenderBox;
   final topLeft = box.localToGlobal(Offset(0, box.size.height + 4), ancestor: overlay);
   final rect = RelativeRect.fromLTRB(topLeft.dx, topLeft.dy, overlay.size.width - topLeft.dx - box.size.width, 0);
+  return _showMenu(anchorContext, rect, box.size.width.clamp(140, 360), items);
+}
+
+/// A context menu at a pointer position (right-click).
+Future<T?> showMenuAt<T>(BuildContext context, Offset globalPosition, List<MenuItemSpec<T>> items) {
+  final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+  final p = overlay.globalToLocal(globalPosition);
+  return _showMenu(context, RelativeRect.fromLTRB(p.dx, p.dy, overlay.size.width - p.dx, overlay.size.height - p.dy), 160, items);
+}
+
+Future<T?> _showMenu<T>(BuildContext anchorContext, RelativeRect rect, double minWidth, List<MenuItemSpec<T>> items) {
+  final t = Tokens.of(anchorContext);
   return showMenu<T>(
     context: anchorContext,
     position: rect,
-    constraints: BoxConstraints(minWidth: box.size.width.clamp(140, 360), maxWidth: 380),
+    constraints: BoxConstraints(minWidth: minWidth, maxWidth: 380),
     items: [
       for (final it in items)
         if (it.divider)
@@ -540,9 +551,11 @@ class NameChip extends StatelessWidget {
     final t = Tokens.of(context);
     final c = speakerColors(name, allSpeakers, t, enabled: colors);
     final shown = uppercase ? name.toUpperCase() : _title(name);
+    // With highlight colors off, a name is just text: no tag behind it.
+    final plain = !(colors ?? characterColorsEnabled);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(color: c.highlight, borderRadius: BorderRadius.circular(3)),
+      padding: plain ? const EdgeInsets.symmetric(vertical: 1) : const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: plain ? null : BoxDecoration(color: c.highlight, borderRadius: BorderRadius.circular(3)),
       child: Text(
         shown,
         maxLines: 1,
@@ -842,7 +855,7 @@ class Hairline extends StatelessWidget {
 /// [onDoubleClick] on a second click within 400 ms. A nested ClickTarget that
 /// handles a double-click stops outer ones from also handling it.
 class ClickTarget extends StatefulWidget {
-  const ClickTarget({super.key, required this.child, this.onClick, this.onDoubleClick});
+  const ClickTarget({super.key, required this.child, this.onClick, this.onDoubleClick, this.onContextMenu});
 
   /// Timestamp of the last mouse-down any ClickTarget received, so an
   /// enclosing background can tell its click landed on empty space.
@@ -850,12 +863,17 @@ class ClickTarget extends StatefulWidget {
   final Widget child;
   final VoidCallback? onClick;
   final VoidCallback? onDoubleClick;
+
+  /// Right-click (or control-click), with the pointer's global position.
+  final ValueChanged<Offset>? onContextMenu;
   @override
   State<ClickTarget> createState() => _ClickTargetState();
 }
 
 class _ClickTargetState extends State<ClickTarget> {
-  static Duration? _consumedAt;
+  /// The pointer-down already handled by an inner target (each press has a
+  /// unique pointer id).
+  static int? _consumedPointer;
   Duration? _lastDown;
   Offset? _lastPos;
   bool _armed = false;
@@ -864,24 +882,36 @@ class _ClickTargetState extends State<ClickTarget> {
   Widget build(BuildContext context) => Listener(
     behavior: HitTestBehavior.opaque,
     onPointerDown: (e) {
+      final secondary = e.buttons == kSecondaryMouseButton || (e.buttons == kPrimaryMouseButton && HardwareKeyboard.instance.isControlPressed);
+      if (secondary) {
+        if (widget.onContextMenu != null && _consumedPointer != e.pointer) {
+          _consumedPointer = e.pointer;
+          widget.onContextMenu!(e.position);
+        }
+        return;
+      }
       if (e.buttons != kPrimaryMouseButton) return;
       ClickTarget.lastHandledDown = e.timeStamp;
       final isDouble = _lastDown != null && e.timeStamp - _lastDown! < const Duration(milliseconds: 400) && (_lastPos! - e.position).distance < 6;
       if (isDouble) {
         _lastDown = null;
-        if (_consumedAt == e.timeStamp) return;
+        if (_consumedPointer == e.pointer) return;
         // Only act if double-click was available when the first click
         // landed (e.g. rename only a card that was already selected).
         if (widget.onDoubleClick != null && _armed) {
-          _consumedAt = e.timeStamp;
+          _consumedPointer = e.pointer;
           widget.onDoubleClick!();
         }
       } else {
         _lastDown = e.timeStamp;
         _lastPos = e.position;
         _armed = widget.onDoubleClick != null;
-        if (_consumedAt == e.timeStamp) return;
-        widget.onClick?.call();
+        if (_consumedPointer == e.pointer) return;
+        if (widget.onClick != null) {
+          // The innermost target with a click handler wins (a checkbox on a card).
+          _consumedPointer = e.pointer;
+          widget.onClick!();
+        }
       }
     },
     child: widget.child,

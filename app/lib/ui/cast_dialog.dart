@@ -217,8 +217,17 @@ class _CastSheetState extends State<_CastSheet> {
                 const SizedBox(height: 4),
                 Text('Pick a voice engine, listen to the voices, and give each character one.', style: TextStyles.ui(t, color: t.ink2)),
                 const SizedBox(height: 14),
-                Row(
-                  children: [for (final e in EngineKind.values) Expanded(child: _EngineCard(engine: e))],
+                // Equal-width, equal-height cards: no engine looks preferred.
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final e in EngineKind.values) ...[
+                        if (e != EngineKind.values.first) const SizedBox(width: 8),
+                        Expanded(child: _EngineCard(engine: e)),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -313,37 +322,41 @@ class _EngineCard extends StatelessWidget {
     final selected = app.selectedEngine == engine;
     final installed = app.installedEngines.contains(engine);
     final enabled = engine.isSupported;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Hover(
-        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        builder: (context, h) => GestureDetector(
-          onTap: enabled ? () => app.selectEngine(engine) : null,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
-            decoration: BoxDecoration(
-              color: selected ? t.accentSoft : (h && enabled ? t.ctrl : t.sheet),
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: selected ? t.accent : t.border, width: selected ? 1.5 : 1),
-            ),
-            child: Opacity(
-              opacity: enabled ? 1 : 0.5,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    engine.title,
-                    style: TextStyles.ui(t, weight: FontWeight.w700, color: selected ? t.accent : t.ink),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    !enabled ? 'Coming soon' : (installed ? engine.subtitle : 'Not installed'),
-                    maxLines: 2,
-                    style: TextStyles.ui(t, size: 11, color: installed || !enabled ? t.muted : t.warn),
-                  ),
-                ],
-              ),
+    return Hover(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      builder: (context, h) => GestureDetector(
+        onTap: enabled ? () => app.selectEngine(engine) : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
+          decoration: BoxDecoration(
+            color: selected ? t.accentSoft : (h && enabled ? t.ctrl : t.sheet),
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: selected ? t.accent : t.border, width: selected ? 1.5 : 1),
+          ),
+          child: Opacity(
+            opacity: enabled ? 1 : 0.5,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(color: selected ? t.accent : t.ctrl, borderRadius: BorderRadius.circular(8)),
+                  child: Icon(engineIcon(engine), size: 17, color: selected ? t.onAccent : t.ink2),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  engine.title,
+                  style: TextStyles.ui(t, weight: FontWeight.w700, color: selected ? t.accent : t.ink),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  !enabled ? 'Coming soon' : (installed ? engine.subtitle : 'Not installed'),
+                  maxLines: 2,
+                  style: TextStyles.ui(t, size: 11, color: installed || !enabled ? t.muted : t.warn),
+                ),
+              ],
             ),
           ),
         ),
@@ -351,3 +364,11 @@ class _EngineCard extends StatelessWidget {
     );
   }
 }
+
+/// One icon per engine, so the cards can be told apart at a glance.
+IconData engineIcon(EngineKind e) => switch (e) {
+  EngineKind.macOS => Icons.laptop_mac_rounded,
+  EngineKind.kokoro => Icons.graphic_eq_rounded,
+  EngineKind.piper => Icons.bolt_rounded,
+  EngineKind.openAI => Icons.cloud_outlined,
+};
