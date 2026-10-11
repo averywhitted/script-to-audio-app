@@ -1,0 +1,1707 @@
+{
+  "contract": {
+    "name": "Table Read UI contract",
+    "purpose": "The complete list of what exists in the Table Read macOS app today. A redesign may restyle and rearrange these things. It may not add, remove, rename or change what they do.",
+    "source": "Sources/TableRead/*.swift on main at 7f12798",
+    "asOf": "2026-10-11",
+    "howToRead": "Every 'label' value is the exact text shown in the app. Text in {braces} is filled in at runtime, e.g. '{n} selected' shows as '3 selected'. 'help' is the hover tooltip. 'visibleWhen' and 'enabledWhen' are conditions that must be kept.",
+    "decisions": [
+      "2026-10-07: One window only. Settings, Onboarding, Report a Bug, Update Available and New Project are sheets or panels inside the main window; there are no separate windows.",
+      "2026-10-07: The app is being rebuilt in Flutter (macOS first). Labels and behavior in this file still bind the rebuild.",
+      "2026-10-07: Palette is 'blue leads' (azure blue for actions, highlighter yellow for the play button and your own lines). See the design notes in design/claude-design-1a-v2/.",
+      "2026-10-07: In the Archived view, the filter, view-mode and sort controls are hidden (they do nothing there).",
+      "2026-10-07: The Parser Corrections footer must keep the warning that contributed corrections are publicly visible on GitHub."
+    ]
+  },
+  "rules": {
+    "mustNot": [
+      "Add any screen, mode, tab, panel, button, menu item, setting, toggle or feature that is not listed in this file.",
+      "Remove or hide any element listed here (making it hover-only is fine if it is already hover-only; see 'mayChange').",
+      "Rename any navigation item, tab, button, menu item or field label. Use the exact 'label' strings.",
+      "Change what any control does, or add new options to a menu or picker.",
+      "Move a control to a different screen, tab, sheet or popover than the one it is listed under.",
+      "Merge or split screens, tabs or sheets. The side panel has exactly four tabs: Cast, Render, Rehearse, Log.",
+      "Show data the app does not have (see 'notInApp' and 'dataShapes'). No waveforms, durations, costs, avatars, ratings or progress figures beyond those listed.",
+      "Invent a workflow, onboarding step or empty state that refers to features not listed here."
+    ],
+    "mayChange": [
+      "Visual style: color, type, spacing, radius, borders, shadows, materials, icons, illustration, light and dark themes.",
+      "Layout and arrangement of elements within their own screen, region, sheet or popover, including order and grouping.",
+      "Size and emphasis: which action looks primary, how big the play button is, how prominent a tag is.",
+      "How an existing control is revealed: hover-only controls may become always visible, or the reverse, if nothing becomes unreachable.",
+      "Motion and transitions, as long as Reduce Motion is respected.",
+      "Explanatory body copy (empty-state messages, footers, onboarding descriptions, tooltips) may be reworded for clarity if the meaning does not change. Control labels in 'label' fields stay exact.",
+      "Visual treatment of states that already exist: selected, hovered, playing, removed, corrected, low-confidence, rendered, edited, disabled, loading, error."
+    ],
+    "ifUnsure": "Leave it out. List the idea separately under 'Suggestions (not in the app)' in your reply instead of putting it in the design."
+  },
+  "notInApp": {
+    "note": "These have been proposed or invented before. None of them exist. Do not draw them.",
+    "items": [
+      "A 'Record' tab or mode, or any 'Prep / Record / Rehearse' mode switcher",
+      "A side-by-side PDF page view",
+      "A persistent or mini player bar outside the Rehearse tab",
+      "A listening library, albums, tracks or playlists",
+      "Memorization progress, 'off book' marks or scores (the 'Memorized' sort option exists but has no data behind it)",
+      "A cast table, seating chart or drag-a-voice-onto-a-character",
+      "A flagged-lines walkthrough or 'next flagged line' navigation",
+      "A recording booth, call sheet or 'on air' view of the render queue",
+      "Waveforms, scene durations or a scrubber/timeline",
+      "An OpenAI cost or time estimate anywhere in the current UI",
+      "A 'Parenthetical' line type in any picker (the Type picker has only Dialog and Narration)",
+      "Search, tags, folders or collections for projects",
+      "Export or share buttons for audio (files are saved to disk; there is no export UI)",
+      "Accounts, sign-in, cloud sync, collaboration or comments",
+      "Sound effects or app sounds",
+      "Chat or AI assistant features",
+      "An iPhone or iPad layout"
+    ]
+  },
+  "glossary": {
+    "Projects": "The home screen (Project Gallery). Header text: 'Table Read' / 'Projects'.",
+    "Project Dashboard": "The screen for one open project: top bar, script area, side panel.",
+    "Side panel tabs": [
+      "Cast",
+      "Render",
+      "Rehearse",
+      "Log"
+    ],
+    "Settings tabs": [
+      "General",
+      "Engines",
+      "Projects",
+      "About"
+    ],
+    "Narrator": "The voice that reads everything that is not dialogue. Displayed as 'Narrator'. Always listed first in cast and speaker lists.",
+    "Line types": {
+      "dialog": "Dialog",
+      "stage_direction": "Narration"
+    },
+    "Engines": [
+      "macOS Voices",
+      "Kokoro Local",
+      "Piper Local",
+      "OpenAI TTS"
+    ],
+    "Removed": "A line marked as not voiced. It stays visible, struck through, and can be restored. Never deleted.",
+    "Simultaneous": "Two voices speaking one line at the same time, shown side by side."
+  },
+  "navigation": {
+    "window": "One main window. Shows either Projects or a Project Dashboard, never both. Everything else (Settings, sheets, popovers) opens inside it.",
+    "flows": [
+      "Projects → New Project → New Project sheet → system PDF picker → Project Dashboard (shows 'Parsing script…' then the script)",
+      "Projects → double-click a project → Project Dashboard",
+      "Project Dashboard → back chevron → Projects (asks to confirm if a render is running)",
+      "Any screen → gear button or ⌘, → Settings sheet (inside the main window)",
+      "Any screen → Report a Bug button or ⇧⌘B → Report a Bug sheet",
+      "Update Available badge, Settings, or app menu → Update Available sheet",
+      "First launch, or Help → Table Read Help (⌘?) → Onboarding sheet"
+    ]
+  },
+  "sharedBehaviors": {
+    "speakerColor": "Each character has one color, used for their name, dot, chips, Edit pill and voice row everywhere. Colors are generated per script. The redesign may replace the palette but must keep one consistent color per character across all screens.",
+    "undoRedo": "Every script edit can be undone. ⌘Z / ⇧⌘Z and the Undo/Redo pill. Up to 50 steps.",
+    "nonDestructiveEdits": "Removed lines stay visible (struck through, 45% opacity) with Restore available.",
+    "lightDark": "Must work in light mode, dark mode and increased contrast.",
+    "minimumSizes": {
+      "scriptAreaMinWidth": 450,
+      "sidePanelWidth": [
+        240,
+        480
+      ]
+    }
+  },
+  "screens": [
+    {
+      "id": "gallery",
+      "name": "Projects (Project Gallery)",
+      "regions": [
+        {
+          "id": "gallery.toolbar",
+          "elements": [
+            {
+              "id": "gallery.title",
+              "type": "text",
+              "label": "Table Read"
+            },
+            {
+              "id": "gallery.subtitle",
+              "type": "text",
+              "label": "Projects"
+            },
+            {
+              "id": "gallery.activeArchived",
+              "type": "segmented",
+              "options": [
+                "Active",
+                "Archived"
+              ],
+              "action": "Switch between active and archived projects; clears the selection"
+            },
+            {
+              "id": "gallery.filter",
+              "type": "menu",
+              "help": "Filter projects",
+              "options": [
+                {
+                  "type": "toggle",
+                  "label": "Rendered"
+                },
+                {
+                  "type": "toggle",
+                  "label": "Has Screenplay"
+                }
+              ],
+              "states": [
+                "shows a small dot when any filter is on"
+              ],
+              "hiddenWhen": "Archived is selected"
+            },
+            {
+              "id": "gallery.viewMode",
+              "type": "segmented",
+              "options": [
+                "grid (icon)",
+                "list (icon)"
+              ],
+              "hiddenWhen": "Archived is selected"
+            },
+            {
+              "id": "gallery.sort",
+              "type": "menu",
+              "help": "Sort projects",
+              "visibleWhen": "grid view",
+              "options": [
+                "Last Opened",
+                "Name",
+                "Scenes",
+                "Memorized"
+              ],
+              "behavior": "Choosing the current key flips ascending/descending; shows an up/down arrow on the current key. 'Memorized' currently has no effect.",
+              "hiddenWhen": "Archived is selected"
+            },
+            {
+              "id": "gallery.newProject",
+              "type": "button",
+              "style": "primary",
+              "label": "New Project",
+              "action": "Opens the New Project sheet"
+            }
+          ]
+        },
+        {
+          "id": "gallery.grid",
+          "visibleWhen": "Active + grid view",
+          "elements": [
+            {
+              "id": "gallery.gridCard",
+              "type": "card",
+              "repeats": "per project",
+              "contents": [
+                "selection circle (shown on hover or when selected)",
+                "project name (up to 2 lines)",
+                "'Rendered' tag with check icon (when any scene is rendered)",
+                "'{n} scene' / '{n} scenes' tag (rendered scene count, when any)",
+                "last-opened date",
+                "progress bar (only while this project renders in the background)"
+              ],
+              "states": [
+                "normal",
+                "hover",
+                "selected",
+                "renaming",
+                "archiving (spinner overlay)",
+                "background rendering"
+              ],
+              "interactions": [
+                "click: select only this",
+                "⌘-click: add/remove from selection",
+                "⇧-click: select range",
+                "double-click: open project",
+                "double-click name while selected: rename in place (Return saves, Esc cancels)",
+                "drag on empty space: rubber-band select"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "gallery.list",
+          "visibleWhen": "Active + list view",
+          "elements": [
+            {
+              "id": "gallery.listHeaders",
+              "type": "columnHeaders",
+              "options": [
+                "Name",
+                "Scenes",
+                "Last Opened"
+              ],
+              "behavior": "Click to sort; click again to flip direction"
+            },
+            {
+              "id": "gallery.listRow",
+              "type": "row",
+              "repeats": "per project",
+              "contents": [
+                "selection circle",
+                "project name",
+                "'Rendered' tag",
+                "rendered scene count or '—'",
+                "last-opened date",
+                "chevron on hover",
+                "progress bar while background rendering"
+              ],
+              "states": [
+                "normal",
+                "hover",
+                "selected",
+                "renaming",
+                "archiving",
+                "background rendering"
+              ],
+              "interactions": "Same as grid card"
+            }
+          ]
+        },
+        {
+          "id": "gallery.selectionBar",
+          "visibleWhen": "one or more projects selected (Active view)",
+          "position": "floating, bottom",
+          "elements": [
+            {
+              "type": "text",
+              "label": "{n} selected"
+            },
+            {
+              "type": "button",
+              "label": "Archive",
+              "action": "Confirm, then archive"
+            },
+            {
+              "type": "button",
+              "label": "Delete",
+              "style": "destructive",
+              "action": "Confirm, then move to Trash"
+            },
+            {
+              "type": "iconButton",
+              "action": "Clear selection"
+            }
+          ]
+        },
+        {
+          "id": "gallery.confirmations",
+          "elements": [
+            {
+              "type": "confirmationDialog",
+              "title": "Move this project to the Trash? | Move {n} projects to the Trash?",
+              "message": "The project folder and any rendered audio go to the Trash. You can put them back from there, or from Recently Deleted.",
+              "buttons": [
+                "Move to Trash",
+                "Cancel"
+              ]
+            },
+            {
+              "type": "confirmationDialog",
+              "title": "Archive this project? | Archive {n} projects?",
+              "message": "Each project is zipped, then its folder is moved to the Trash. You can unarchive it later from the Archived tab.",
+              "buttons": [
+                "Archive",
+                "Cancel"
+              ]
+            },
+            {
+              "type": "alert",
+              "title": "Something went wrong",
+              "message": "A render is in progress. Wait for it to finish before opening another project.",
+              "visibleWhen": "opening another project while one renders"
+            }
+          ]
+        },
+        {
+          "id": "gallery.recentlyDeleted",
+          "visibleWhen": "a project was deleted this session",
+          "elements": [
+            {
+              "type": "text",
+              "label": "Recently Deleted"
+            },
+            {
+              "type": "text",
+              "label": "In your Trash — recoverable this session"
+            },
+            {
+              "type": "row",
+              "repeats": "per deleted project",
+              "contents": [
+                "trash icon",
+                "project name",
+                "'Restore' button"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "gallery.archived",
+          "visibleWhen": "Archived selected",
+          "elements": [
+            {
+              "type": "row",
+              "repeats": "per archived project",
+              "contents": [
+                "archive icon",
+                "project name",
+                "script title (italic, if known)",
+                "'Rendered' tag",
+                "date",
+                "'Unarchive' button (spinner while working)"
+              ]
+            },
+            {
+              "type": "emptyState",
+              "title": "No archived projects",
+              "message": "Archive projects to compress them and free up space."
+            }
+          ]
+        },
+        {
+          "id": "gallery.empty",
+          "visibleWhen": "no projects and nothing recently deleted",
+          "elements": [
+            {
+              "type": "emptyState",
+              "title": "No projects yet",
+              "message": "Create a new project to get started.",
+              "button": "New Project"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dashboard",
+      "name": "Project Dashboard",
+      "layout": "Top bar across the top. Below it, the script area (left) and the side panel (right), separated by a draggable divider.",
+      "regions": [
+        {
+          "id": "dashboard.topBar",
+          "elements": [
+            {
+              "type": "iconButton",
+              "icon": "back chevron",
+              "help": "Back to Projects",
+              "action": "Return to Projects",
+              "confirmWhen": "a render is running",
+              "confirmation": {
+                "title": "A render is in progress.",
+                "buttons": [
+                  "Cancel Render & Go Home",
+                  "Keep Rendering"
+                ]
+              }
+            },
+            {
+              "type": "text",
+              "content": "project name"
+            },
+            {
+              "type": "badgeButton",
+              "label": "Update Available",
+              "visibleWhen": "an update was found",
+              "action": "Opens the Update Available sheet"
+            },
+            {
+              "type": "badge",
+              "label": "BETA"
+            },
+            {
+              "type": "badgeButton",
+              "label": "Report a Bug",
+              "help": "Report a bug (⌘⇧B)",
+              "action": "Opens the Report a Bug sheet"
+            },
+            {
+              "type": "iconButton",
+              "icon": "gear",
+              "help": "Settings (⌘,)",
+              "action": "Opens Settings"
+            }
+          ]
+        },
+        {
+          "id": "dashboard.scriptStats",
+          "elements": [
+            {
+              "type": "text",
+              "label": "{n} scenes"
+            },
+            {
+              "type": "text",
+              "label": "{n} characters"
+            },
+            {
+              "type": "text",
+              "label": "{n} lines"
+            },
+            {
+              "type": "progress",
+              "label": "Loading voices…",
+              "visibleWhen": "voices are loading"
+            },
+            {
+              "type": "button",
+              "label": "Select All",
+              "action": "Select every scene for rendering"
+            },
+            {
+              "type": "button",
+              "label": "Select None",
+              "action": "Clear scene selection"
+            },
+            {
+              "type": "button",
+              "label": "Skip Rendered",
+              "help": "Select only scenes that haven't been rendered yet"
+            }
+          ]
+        },
+        {
+          "id": "dashboard.sceneCard",
+          "repeats": "per scene",
+          "elements": [
+            {
+              "type": "checkbox",
+              "action": "Include/exclude this scene from the next render"
+            },
+            {
+              "type": "text",
+              "content": "two-digit scene number, e.g. 07"
+            },
+            {
+              "type": "indicator",
+              "content": "green dot on the number",
+              "help": "Already rendered — output file exists",
+              "visibleWhen": "the scene's audio file exists"
+            },
+            {
+              "type": "text",
+              "content": "scene title"
+            },
+            {
+              "type": "button",
+              "label": "Edit",
+              "visibleWhen": "hovering the title",
+              "action": "Rename the scene inline: text field (placeholder 'Scene title') + 'Save' button; Return saves, Esc cancels"
+            },
+            {
+              "type": "chips",
+              "content": "names of up to 5 speaking characters in their colors, then '+{n}'"
+            },
+            {
+              "type": "text",
+              "label": "{n} lines"
+            },
+            {
+              "type": "iconButton",
+              "icon": "chevron",
+              "action": "Expand/collapse the scene's lines"
+            }
+          ],
+          "states": [
+            "collapsed",
+            "expanded",
+            "selected for render (accent outline)",
+            "dimmed to 55% when another scene is playing",
+            "auto-expanded when its audio starts playing"
+          ],
+          "expanded": {
+            "contents": "The scene's lines (see dashboard.lineRow, dashboard.simultaneousLine, dashboard.addedLine), first 30 only",
+            "elements": [
+              {
+                "type": "button",
+                "label": "Show all {n} lines ({m} more)",
+                "visibleWhen": "more than 30 lines, collapsed"
+              },
+              {
+                "type": "button",
+                "label": "Show fewer lines",
+                "visibleWhen": "showing all"
+              }
+            ],
+            "behavior": "During playback the list scrolls to keep the playing line centered, but stops for 3 seconds after the user scrolls by hand."
+          }
+        },
+        {
+          "id": "dashboard.lineRow",
+          "repeats": "per line (dialogue or narration)",
+          "elements": [
+            {
+              "type": "checkbox",
+              "action": "Add/remove the line from the multi-line selection (one scene at a time)"
+            },
+            {
+              "type": "indicator",
+              "content": "speaker color dot"
+            },
+            {
+              "type": "icon",
+              "content": "dialogue icon or narration icon, by line type"
+            },
+            {
+              "type": "text",
+              "content": "speaker name in their color ('Narrator' for narration)"
+            },
+            {
+              "type": "icon",
+              "content": "muted speaker icon",
+              "help": "Your line — muted during playback",
+              "visibleWhen": "Rehearse: this is the chosen role's line and Mute My Lines is on"
+            },
+            {
+              "type": "indicator",
+              "content": "small dot",
+              "help": "User correction applied",
+              "visibleWhen": "the line has a correction and is not removed"
+            },
+            {
+              "type": "icon",
+              "content": "warning triangle",
+              "help": "{the parser's reason} or 'Parser is uncertain about this line — check the speaker or type'",
+              "visibleWhen": "parser confidence below 0.7, no correction, not removed"
+            },
+            {
+              "type": "pillButton",
+              "label": "Edit",
+              "visibleWhen": "hover",
+              "action": "Opens the 'Correct this line' popover"
+            },
+            {
+              "type": "pillButton",
+              "label": "Remove | Restore",
+              "help": "Mark line as removed (won't be voiced) | Restore this line",
+              "visibleWhen": "hover"
+            },
+            {
+              "type": "pillButton",
+              "label": "Add line",
+              "help": "Insert a new line below this one",
+              "visibleWhen": "hover"
+            },
+            {
+              "type": "text",
+              "content": "the line text; replaced by underscores when Block My Lines is on for the chosen role"
+            }
+          ],
+          "states": [
+            "normal",
+            "hover",
+            "selected",
+            "playing (highlighted)",
+            "removed (struck through, 45% opacity, speaker struck)",
+            "corrected",
+            "low confidence",
+            "muted (rehearsal)",
+            "blocked (rehearsal)"
+          ]
+        },
+        {
+          "id": "dashboard.simultaneousLine",
+          "repeats": "per line the parser found as simultaneous",
+          "layout": "Two voices side by side, separated by a thin divider. Each side: color dot, name, text.",
+          "elements": [
+            {
+              "type": "checkbox",
+              "action": "Select the line"
+            },
+            {
+              "type": "pillButton",
+              "label": "Edit",
+              "scope": "each voice",
+              "visibleWhen": "hover",
+              "action": "Opens the 'Edit line' popover for that voice"
+            },
+            {
+              "type": "pillButton",
+              "label": "Remove",
+              "scope": "each voice",
+              "help": "Remove this voice",
+              "visibleWhen": "hover, voice not removed"
+            },
+            {
+              "type": "pillButton",
+              "label": "Restore",
+              "scope": "each voice",
+              "help": "Restore this voice",
+              "visibleWhen": "hover, voice removed"
+            },
+            {
+              "type": "pillButton",
+              "label": "Unlink",
+              "scope": "left voice",
+              "help": "Split into two separate solo lines",
+              "visibleWhen": "hover"
+            },
+            {
+              "type": "pillButton",
+              "label": "Relink",
+              "help": "Restore as simultaneous lines",
+              "visibleWhen": "hover, after Unlink"
+            },
+            {
+              "type": "pillButton",
+              "label": "Add line",
+              "help": "Insert a new line below this one",
+              "visibleWhen": "hover"
+            }
+          ],
+          "states": [
+            "normal",
+            "one voice removed (that side struck through)",
+            "both removed",
+            "corrected (small dot)"
+          ]
+        },
+        {
+          "id": "dashboard.manualSimultaneousPair",
+          "repeats": "per pair the user made simultaneous",
+          "layout": "Same two-column look as dashboard.simultaneousLine",
+          "elements": [
+            {
+              "type": "checkbox",
+              "action": "Select the pair"
+            },
+            {
+              "type": "pillButton",
+              "label": "Edit",
+              "scope": "each voice"
+            },
+            {
+              "type": "pillButton",
+              "label": "Remove | Restore",
+              "scope": "each voice"
+            },
+            {
+              "type": "pillButton",
+              "label": "Unlink",
+              "help": "Split into two separate lines"
+            },
+            {
+              "type": "pillButton",
+              "label": "Add line",
+              "help": "Insert a new line below this pair"
+            }
+          ]
+        },
+        {
+          "id": "dashboard.addedLine",
+          "repeats": "per line the user added",
+          "elements": [
+            {
+              "type": "checkbox",
+              "action": "Select the added line"
+            },
+            {
+              "type": "icon",
+              "content": "plus icon"
+            },
+            {
+              "type": "text",
+              "content": "speaker name"
+            },
+            {
+              "type": "tag",
+              "label": "Added"
+            },
+            {
+              "type": "pillButton",
+              "label": "Edit",
+              "visibleWhen": "hover",
+              "action": "Opens the 'Edit added line' popover"
+            },
+            {
+              "type": "iconButton",
+              "help": "Remove this added line"
+            },
+            {
+              "type": "text",
+              "content": "line text, or placeholder 'Empty — hover and tap Edit to add text'"
+            }
+          ]
+        },
+        {
+          "id": "dashboard.lineSelectionBar",
+          "visibleWhen": "one or more lines selected",
+          "position": "floating, bottom of the script area",
+          "elements": [
+            {
+              "type": "text",
+              "label": "{n} selected"
+            },
+            {
+              "type": "button",
+              "label": "Remove",
+              "style": "destructive",
+              "help": "Mark selected lines as removed"
+            },
+            {
+              "type": "button",
+              "label": "Simultaneous",
+              "help": "Make selected lines play simultaneously",
+              "visibleWhen": "exactly 2 parsed dialogue lines selected (no added lines)"
+            },
+            {
+              "type": "button",
+              "label": "Speaker",
+              "help": "Reassign speaker for selected dialog lines",
+              "visibleWhen": "any dialogue selected",
+              "opens": {
+                "type": "popover",
+                "title": "Change speaker",
+                "elements": [
+                  {
+                    "type": "picker",
+                    "label": "Speaker",
+                    "options": "Narrator + all characters"
+                  },
+                  {
+                    "type": "button",
+                    "label": "Apply to {n} line | Apply to {n} lines",
+                    "enabledWhen": "a speaker is chosen"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "iconButton",
+              "help": "Clear selection"
+            }
+          ]
+        },
+        {
+          "id": "dashboard.undoRedoBar",
+          "visibleWhen": "there is something to undo or redo",
+          "position": "floating, top of the script area",
+          "elements": [
+            {
+              "type": "button",
+              "label": "Undo",
+              "extra": "count of undo steps",
+              "enabledWhen": "can undo"
+            },
+            {
+              "type": "button",
+              "label": "Redo",
+              "enabledWhen": "can redo"
+            }
+          ]
+        },
+        {
+          "id": "dashboard.scriptStates",
+          "elements": [
+            {
+              "type": "loading",
+              "label": "Parsing script…"
+            },
+            {
+              "type": "emptyState",
+              "title": "No script loaded",
+              "message": "Open a PDF to review parsed scenes and characters."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sidePanel",
+      "name": "Side panel (right side of the Project Dashboard)",
+      "tabs": [
+        {
+          "id": "sidePanel.cast",
+          "label": "Cast",
+          "elements": [
+            {
+              "type": "menu",
+              "label": "Engine",
+              "options": [
+                "macOS Voices",
+                "Kokoro Local",
+                "Piper Local",
+                "OpenAI TTS"
+              ]
+            },
+            {
+              "type": "warningStrip",
+              "label": "{engine} not installed — go to Settings to set it up.",
+              "visibleWhen": "selected engine is not installed"
+            },
+            {
+              "type": "panel",
+              "label": "OpenAI Setup",
+              "visibleWhen": "engine is OpenAI TTS",
+              "elements": [
+                {
+                  "type": "notice",
+                  "label": "OpenAI voices are made on OpenAI's servers: the text of every line they read is sent to OpenAI. macOS and Kokoro voices never leave this Mac."
+                },
+                {
+                  "type": "secureField",
+                  "placeholder": "API key"
+                },
+                {
+                  "type": "text",
+                  "label": "Saved securely in Keychain and restored on next launch."
+                },
+                {
+                  "type": "button",
+                  "label": "Save Key"
+                }
+              ]
+            },
+            {
+              "type": "loading",
+              "label": "Loading voices…"
+            },
+            {
+              "type": "emptyState",
+              "variants": [
+                "No voices found for {engine}.",
+                "No voice engine installed yet. / Choose an engine on the right and click Install."
+              ],
+              "note": "The second message refers to an old layout; its wording may be corrected to point to Settings → Engines."
+            },
+            {
+              "type": "row",
+              "repeats": "Narrator first, then each character",
+              "elements": [
+                {
+                  "type": "indicator",
+                  "content": "color dot"
+                },
+                {
+                  "type": "text",
+                  "content": "name in their color"
+                },
+                {
+                  "type": "segmented",
+                  "options": [
+                    "Male",
+                    "Female",
+                    "Neutral"
+                  ],
+                  "help": "Male voice | Female voice | Neutral / unspecified — any voice",
+                  "action": "Sets the character's gender and auto-picks a matching voice"
+                },
+                {
+                  "type": "menu",
+                  "label": "{voice name} or 'Choose voice'",
+                  "sections": [
+                    "Male",
+                    "Female",
+                    "Other"
+                  ],
+                  "states": [
+                    "check mark on the current voice"
+                  ]
+                },
+                {
+                  "type": "iconButton",
+                  "content": "play / stop / spinner",
+                  "help": "Preview {voice} | Choose a voice before previewing",
+                  "visibleWhen": "engine installed",
+                  "enabledWhen": "a voice is chosen, no other preview preparing, not rendering"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sidePanel.render",
+          "label": "Render",
+          "elements": [
+            {
+              "type": "button",
+              "style": "prominent (orange today)",
+              "label": "Re-Render Edited Scenes ({n})",
+              "visibleWhen": "edits made some rendered scenes out of date"
+            },
+            {
+              "type": "row",
+              "repeats": "per scene",
+              "elements": [
+                {
+                  "type": "checkbox"
+                },
+                {
+                  "type": "text",
+                  "label": "Scene {nn}"
+                },
+                {
+                  "type": "text",
+                  "content": "scene title"
+                },
+                {
+                  "type": "tag",
+                  "label": "Edited | Rendered",
+                  "visibleWhen": "out of date | audio exists"
+                }
+              ]
+            },
+            {
+              "type": "button",
+              "label": "All Unrendered"
+            },
+            {
+              "type": "button",
+              "label": "Select All"
+            },
+            {
+              "type": "button",
+              "label": "Clear"
+            },
+            {
+              "type": "progress",
+              "visibleWhen": "rendering",
+              "content": "progress bar + latest log line"
+            },
+            {
+              "type": "disclosure",
+              "label": "Show Log",
+              "visibleWhen": "rendering",
+              "content": "scrolling monospaced render log"
+            },
+            {
+              "type": "button",
+              "label": "Cancel",
+              "visibleWhen": "rendering"
+            },
+            {
+              "type": "button",
+              "label": "Pause | Resume",
+              "visibleWhen": "rendering"
+            },
+            {
+              "type": "button",
+              "style": "primary",
+              "label": "Render {n} Scenes",
+              "visibleWhen": "not rendering",
+              "enabledWhen": "at least one scene selected and the engine is installed"
+            }
+          ]
+        },
+        {
+          "id": "sidePanel.rehearse",
+          "label": "Rehearse",
+          "elements": [
+            {
+              "type": "emptyState",
+              "title": "No rendered scenes",
+              "message": "Render at least one scene to use the rehearsal player.",
+              "visibleWhen": "no rendered scenes"
+            },
+            {
+              "type": "picker",
+              "label": "Scene",
+              "options": "'Scene {n}: {title}' for each rendered scene"
+            },
+            {
+              "type": "picker",
+              "label": "My Role",
+              "options": "'Spectator', then every character (sorted)"
+            },
+            {
+              "type": "iconButton",
+              "help": "Previous scene",
+              "enabledWhen": "not the first scene"
+            },
+            {
+              "type": "iconButton",
+              "help": "Previous line"
+            },
+            {
+              "type": "iconButton",
+              "style": "large, primary",
+              "help": "Play | Pause"
+            },
+            {
+              "type": "iconButton",
+              "help": "Next line"
+            },
+            {
+              "type": "iconButton",
+              "help": "Next scene",
+              "enabledWhen": "not the last scene"
+            },
+            {
+              "type": "toggle",
+              "label": "Mute My Lines",
+              "help": "Skip audio playback for your lines",
+              "enabledWhen": "a role is chosen"
+            },
+            {
+              "type": "toggle",
+              "label": "Block My Lines",
+              "help": "Replace your lines with underscores for memorization practice",
+              "enabledWhen": "a role is chosen"
+            },
+            {
+              "type": "slider",
+              "label": "Speed",
+              "range": [
+                0.5,
+                2.0
+              ],
+              "step": 0.05,
+              "extras": [
+                "− button (help 'Slower (−0.05×)')",
+                "+ button (help 'Faster (+0.05×)')",
+                "readout '{rate}×', e.g. '1.00×'"
+              ]
+            }
+          ],
+          "note": "Playback highlights the playing line in the script area (dashboard.lineRow 'playing' state). There is no separate player screen."
+        },
+        {
+          "id": "sidePanel.log",
+          "label": "Log",
+          "tabIndicator": "small orange dot on the tab when the log has warnings or errors and the tab is not open",
+          "elements": [
+            {
+              "type": "text",
+              "label": "{n} entries"
+            },
+            {
+              "type": "filterButtons",
+              "options": [
+                "All",
+                "Err",
+                "Warn",
+                "Py"
+              ]
+            },
+            {
+              "type": "iconButton",
+              "help": "Copy all log entries"
+            },
+            {
+              "type": "iconButton",
+              "help": "Clear log"
+            },
+            {
+              "type": "list",
+              "content": "timestamp + message, monospaced, colored by level (error, warning, success, info, debug)"
+            },
+            {
+              "type": "emptyState",
+              "title": "No activity yet"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "popovers": [
+    {
+      "id": "popover.correctLine",
+      "title": "Correct this line",
+      "openedFrom": "dashboard.lineRow → Edit",
+      "elements": [
+        {
+          "type": "segmented",
+          "label": "Type",
+          "options": [
+            "Dialog",
+            "Narration"
+          ]
+        },
+        {
+          "type": "picker",
+          "label": "Speaker",
+          "visibleWhen": "Type is Dialog",
+          "options": "all characters"
+        },
+        {
+          "type": "textEditors",
+          "label": "Lines (simultaneous)",
+          "visibleWhen": "the line has separate text per voice",
+          "content": "one text box per speaker, labeled with the speaker's name"
+        },
+        {
+          "type": "textEditor",
+          "label": "Text",
+          "visibleWhen": "otherwise"
+        },
+        {
+          "type": "button",
+          "label": "Remove this line | Restore this line"
+        },
+        {
+          "type": "button",
+          "label": "Undo Changes",
+          "visibleWhen": "the line already has a correction"
+        },
+        {
+          "type": "button",
+          "label": "Cancel"
+        },
+        {
+          "type": "button",
+          "style": "primary",
+          "label": "Save",
+          "enabledWhen": "something changed"
+        }
+      ]
+    },
+    {
+      "id": "popover.editAddedLine",
+      "title": "Edit added line",
+      "openedFrom": "dashboard.addedLine → Edit",
+      "elements": [
+        {
+          "type": "segmented",
+          "label": "Type",
+          "options": [
+            "Dialog",
+            "Narration"
+          ]
+        },
+        {
+          "type": "picker",
+          "label": "Speaker",
+          "visibleWhen": "Type is Dialog",
+          "options": "'Narrator' + all characters"
+        },
+        {
+          "type": "textEditor",
+          "label": "Text"
+        },
+        {
+          "type": "button",
+          "label": "Cancel"
+        },
+        {
+          "type": "button",
+          "style": "primary",
+          "label": "Save",
+          "enabledWhen": "text is not empty"
+        }
+      ]
+    },
+    {
+      "id": "popover.editVoice",
+      "title": "Edit line",
+      "openedFrom": "dashboard.simultaneousLine / dashboard.manualSimultaneousPair → Edit (one voice)",
+      "elements": [
+        {
+          "type": "picker",
+          "label": "Speaker"
+        },
+        {
+          "type": "textEditor",
+          "label": "Line"
+        },
+        {
+          "type": "button",
+          "label": "Cancel"
+        },
+        {
+          "type": "button",
+          "style": "primary",
+          "label": "Save"
+        }
+      ]
+    }
+  ],
+  "sheets": [
+    {
+      "id": "sheet.newProject",
+      "title": "New Project",
+      "elements": [
+        {
+          "type": "text",
+          "label": "Give your project a name, then choose a screenplay PDF."
+        },
+        {
+          "type": "textField",
+          "label": "Project Name",
+          "placeholder": "e.g. Hamlet, The Godfather…"
+        },
+        {
+          "type": "locationBox",
+          "label": "Save Location",
+          "content": "'~/Documents/Table Read/' + 'Default location', or the chosen folder name + 'A new project folder will be created inside this location'",
+          "button": "Choose…"
+        },
+        {
+          "type": "button",
+          "label": "Cancel"
+        },
+        {
+          "type": "button",
+          "style": "primary",
+          "label": "Create & Choose PDF…",
+          "enabledWhen": "name is not empty",
+          "action": "Closes the sheet and opens the system PDF picker"
+        }
+      ]
+    },
+    {
+      "id": "sheet.onboarding",
+      "title": "Welcome to Table Read",
+      "showWhen": "first launch, or Help → Table Read Help",
+      "elements": [
+        {
+          "type": "text",
+          "label": "Turn any screenplay PDF into a full cast audio drama —\neach character voiced differently, scene by scene."
+        },
+        {
+          "type": "steps",
+          "items": [
+            {
+              "number": 1,
+              "title": "Import a Script PDF"
+            },
+            {
+              "number": 2,
+              "title": "Review the Parse"
+            },
+            {
+              "number": 3,
+              "title": "Cast Your Voices"
+            },
+            {
+              "number": 4,
+              "title": "Generate Audio"
+            }
+          ],
+          "note": "Each step has a one-sentence description; descriptions may be reworded to match the current screens but no steps may be added."
+        },
+        {
+          "type": "tips",
+          "label": "Tips",
+          "items": 3
+        },
+        {
+          "type": "button",
+          "style": "primary",
+          "label": "Get Started"
+        }
+      ]
+    },
+    {
+      "id": "sheet.bugReport",
+      "title": "Report a Bug",
+      "elements": [
+        {
+          "type": "text",
+          "label": "Reports go directly to the developer. No account required."
+        },
+        {
+          "type": "group",
+          "label": "System Info",
+          "content": "App version, macOS version (auto-filled)"
+        },
+        {
+          "type": "textEditor",
+          "label": "What happened?"
+        },
+        {
+          "type": "textEditor",
+          "label": "Steps to reproduce",
+          "hint": "Optional — helps a lot if you can describe what you did before it happened."
+        },
+        {
+          "type": "text",
+          "content": "footer explaining a prefilled report opens in the browser and nothing is sent until reviewed there"
+        },
+        {
+          "type": "status",
+          "content": "'Opened in your browser.' on success, or an error message"
+        },
+        {
+          "type": "button",
+          "label": "Cancel"
+        },
+        {
+          "type": "button",
+          "style": "primary",
+          "label": "Review on GitHub…",
+          "enabledWhen": "'What happened?' is not empty"
+        }
+      ]
+    },
+    {
+      "id": "sheet.update",
+      "title": "Update Available",
+      "elements": [
+        {
+          "type": "text",
+          "label": "Table Read {version} is ready to install."
+        },
+        {
+          "type": "text",
+          "label": "You have version {version}."
+        },
+        {
+          "type": "scrollText",
+          "content": "release notes (when provided)"
+        },
+        {
+          "type": "progress",
+          "states": [
+            "Connecting…",
+            "Downloading… {n}%",
+            "Extracting…",
+            "Installing — Table Read will relaunch shortly…",
+            "error message"
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Release Notes",
+          "visibleWhen": "a release page exists"
+        },
+        {
+          "type": "button",
+          "label": "Later"
+        },
+        {
+          "type": "button",
+          "style": "primary",
+          "label": "Update Now | Retry | Download on GitHub | Installing…"
+        }
+      ]
+    },
+    {
+      "id": "alert.error",
+      "type": "alert",
+      "title": "Something went wrong",
+      "message": "{error text}",
+      "buttons": [
+        "OK"
+      ]
+    }
+  ],
+  "menus": {
+    "note": "Native macOS menu bar. Keep items, order and shortcuts.",
+    "Edit": [
+      {
+        "label": "Undo",
+        "shortcut": "⌘Z"
+      },
+      {
+        "label": "Redo",
+        "shortcut": "⇧⌘Z"
+      }
+    ],
+    "App menu (after Settings…)": [
+      {
+        "label": "Check for Updates | Update to {version}…"
+      }
+    ],
+    "Script": [
+      {
+        "label": "Render Selected Scenes",
+        "shortcut": "⌘R"
+      },
+      {
+        "label": "Preview First Scene",
+        "shortcut": "⇧⌘R"
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "label": "Pause Render | Resume Render",
+        "shortcut": "⇧⌘J"
+      },
+      {
+        "label": "Cancel Render",
+        "shortcut": "⌘."
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "label": "Skip Already-Rendered Scenes"
+      }
+    ],
+    "Help": [
+      {
+        "label": "Table Read Help",
+        "shortcut": "⌘?",
+        "action": "Shows the onboarding sheet"
+      },
+      {
+        "label": "Report a Bug…",
+        "shortcut": "⇧⌘B"
+      }
+    ],
+    "Debug": "Developer builds only. Out of scope; do not design."
+  },
+  "systemNotifications": "macOS notifications for: a scene finished, the full render finished, the render finished with errors. Controlled by the three toggles in Settings → General.",
+  "dataShapes": {
+    "note": "Use these for mock content. Do not show fields that are not here.",
+    "Project": [
+      "name",
+      "lastOpened (date)",
+      "renderedScenes (count)",
+      "has a PDF",
+      "archived",
+      "scriptTitle"
+    ],
+    "Script": [
+      "title",
+      "sceneCount",
+      "characterCount",
+      "lineCount",
+      "characters[]",
+      "scenes[]"
+    ],
+    "Character": [
+      "name",
+      "genderHint (M / F / N)"
+    ],
+    "Scene": [
+      "number",
+      "title",
+      "elementCount",
+      "elements[]",
+      "rendered (audio file exists)",
+      "edited since render"
+    ],
+    "Line": [
+      "kind: dialog | stage_direction",
+      "speaker",
+      "text",
+      "overlapCue[] (2 speakers when simultaneous)",
+      "overlapTexts[] (per-voice text)",
+      "confidence (0–1; below 0.7 is flagged)",
+      "reason (why it was flagged)"
+    ],
+    "Voice": [
+      "label",
+      "gender (M / F / other)",
+      "locale"
+    ],
+    "RenderProgress": [
+      "fraction 0–1",
+      "latest log line",
+      "paused"
+    ],
+    "Rehearsal": [
+      "current scene",
+      "current line",
+      "isPlaying",
+      "myRole",
+      "muteMyLines",
+      "blockMyLines",
+      "playbackRate 0.5–2.0"
+    ]
+  },
+  "mockContent": "Use a public-domain play such as Hamlet or The Importance of Being Earnest: 8–15 characters, 10–25 scenes, at least one simultaneous line, two or three low-confidence lines, one removed line, one corrected line, one added line.",
+  "settingsSheet": {
+    "tabs": [
+      {
+        "label": "General",
+        "sections": [
+          {
+            "header": "Software Update",
+            "content": "Up to date: 'Table Read is up to date' + 'Check for Updates' (spinner while checking). Update found: 'Table Read {version} is available', 'You have version {version}', 'Update Now'."
+          },
+          {
+            "header": "Update Channel",
+            "elements": [
+              {
+                "type": "segmented",
+                "label": "Update Channel",
+                "options": [
+                  "Stable",
+                  "Beta"
+                ]
+              }
+            ],
+            "content": "Description under it: 'Tested, production-ready releases only.' or 'Includes pre-releases with new features that may have rough edges.'"
+          },
+          {
+            "header": "Render",
+            "elements": [
+              {
+                "type": "toggle",
+                "label": "Auto-open output folder in Finder after render"
+              }
+            ]
+          },
+          {
+            "header": "Notifications",
+            "elements": [
+              {
+                "type": "toggle",
+                "label": "Notify when a scene finishes rendering"
+              },
+              {
+                "type": "toggle",
+                "label": "Notify when the full render completes"
+              },
+              {
+                "type": "toggle",
+                "label": "Notify if the render finishes with errors"
+              }
+            ],
+            "footer": "macOS will ask for permission the first time a notification option is enabled. Notifications appear even when Table Read is in the background."
+          },
+          {
+            "header": "Default Output Folder",
+            "content": "folder path or 'Next to the PDF (default)'",
+            "elements": [
+              {
+                "type": "button",
+                "label": "Change…"
+              },
+              {
+                "type": "button",
+                "label": "Reset to Default",
+                "visibleWhen": "a folder is set"
+              }
+            ],
+            "footer": "Audio files are saved here unless you change it during a session."
+          },
+          {
+            "header": "Parser Corrections",
+            "elements": [
+              {
+                "type": "toggle",
+                "label": "Offer to contribute corrections"
+              },
+              {
+                "type": "text",
+                "label": "{n} corrections stored locally"
+              },
+              {
+                "type": "text",
+                "label": "{n} not yet contributed",
+                "visibleWhen": "contributing is on and some are unsent"
+              },
+              {
+                "type": "button",
+                "label": "Contribute…",
+                "visibleWhen": "contributing is on"
+              },
+              {
+                "type": "button",
+                "label": "Export…"
+              },
+              {
+                "type": "button",
+                "label": "Clear All",
+                "style": "destructive"
+              }
+            ],
+            "footer": "privacy explanation of Contribute… and Export…. May be reworded, but must keep: corrections are stored locally and never sent on their own; Contribute… opens a prefilled public GitHub report the user reviews and submits; it includes the dialogue lines, so it is publicly visible; use Export… for confidential scripts."
+          }
+        ]
+      },
+      {
+        "label": "Engines",
+        "sections": [
+          {
+            "header": "OpenAI TTS",
+            "elements": [
+              {
+                "type": "secureField",
+                "placeholder": "Paste your key here… | Enter new key to replace…"
+              },
+              {
+                "type": "button",
+                "label": "Save"
+              },
+              {
+                "type": "button",
+                "label": "Clear",
+                "visibleWhen": "a key is stored"
+              },
+              {
+                "type": "status",
+                "states": [
+                  "API key saved in Keychain",
+                  "Checking key…",
+                  "API key verified — OpenAI TTS is active",
+                  "{failure reason}"
+                ]
+              },
+              {
+                "type": "button",
+                "label": "Test Key",
+                "visibleWhen": "a key is stored"
+              }
+            ],
+            "footer": "Your key is stored in Keychain and never sent anywhere except OpenAI's API. Type a new key and click Save to update, or Clear to remove it."
+          },
+          {
+            "header": "Local Engines",
+            "repeats": "Kokoro Local, Piper Local",
+            "content": "engine name + subtitle ('Recommended offline neural voices' / 'Small, fast offline voices'), then one of: 'Install' button; install progress with cancel (help 'Cancel installation') and 'Installing…'; size + 'Uninstall'; 'Removing…'; 'Coming soon' (Piper)",
+            "footer": "macOS Voices is always available with no setup required."
+          }
+        ]
+      },
+      {
+        "label": "Projects",
+        "sections": [
+          {
+            "header": "Default Projects Folder",
+            "content": "folder name and parent path",
+            "elements": [
+              {
+                "type": "button",
+                "label": "Change…"
+              },
+              {
+                "type": "button",
+                "label": "Reveal"
+              }
+            ],
+            "footer": "New projects are created inside this folder by default."
+          }
+        ]
+      },
+      {
+        "label": "About",
+        "elements": [
+          {
+            "type": "image",
+            "content": "app icon"
+          },
+          {
+            "type": "text",
+            "label": "Table Read"
+          },
+          {
+            "type": "text",
+            "label": "Version {version}"
+          },
+          {
+            "type": "button",
+            "label": "Check for Updates | Version {version} available"
+          },
+          {
+            "type": "text",
+            "label": "© 2025 Avery Whitted. All rights reserved."
+          },
+          {
+            "type": "text",
+            "content": "license text"
+          },
+          {
+            "type": "button",
+            "label": "View License on GitHub"
+          },
+          {
+            "type": "button",
+            "label": "Donate on Buy Me a Coffee"
+          }
+        ]
+      }
+    ],
+    "presentation": "Sheet inside the main window (decided 2026-10-07). Same four tabs."
+  }
+}

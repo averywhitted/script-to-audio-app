@@ -1,0 +1,244 @@
+// Renders every screen to PNG (test/goldens/) in light and dark so the UI can
+// be reviewed without launching the app. Run: flutter test --update-goldens test/screens_test.dart
+
+import 'dart:io';
+
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:table_read/models/models.dart';
+import 'package:table_read/services/project_store.dart';
+import 'package:table_read/services/settings.dart';
+import 'package:table_read/state/app_state.dart';
+import 'package:table_read/state/player_state.dart';
+import 'package:table_read/theme/tokens.dart';
+import 'package:table_read/ui/dashboard.dart';
+import 'package:table_read/ui/gallery.dart';
+import 'package:table_read/ui/popovers.dart';
+import 'package:table_read/ui/sheets.dart';
+import 'package:table_read/ui/widgets.dart';
+
+import 'fixtures.dart';
+
+Future<void> _loadFonts() async {
+  Future<void> family(String name, List<String> files) async {
+    final loader = FontLoader(name);
+    for (final f in files) {
+      loader.addFont(Future.value(ByteData.sublistView(File(f).readAsBytesSync())));
+    }
+    await loader.load();
+  }
+
+  const fonts = 'assets/fonts';
+  await family('Hanken', [
+    '$fonts/HankenGrotesk-Regular.ttf',
+    '$fonts/HankenGrotesk-Medium.ttf',
+    '$fonts/HankenGrotesk-SemiBold.ttf',
+    '$fonts/HankenGrotesk-Bold.ttf',
+  ]);
+  await family('CourierPrime', ['$fonts/CourierPrime-Regular.ttf', '$fonts/CourierPrime-Bold.ttf', '$fonts/CourierPrime-Italic.ttf']);
+  await family('Caveat', ['$fonts/Caveat-SemiBold.ttf']);
+  await family('YoungSerif', ['$fonts/YoungSerif-Regular.ttf']);
+  final sdk = File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path; // .../bin/cache/artifacts/engine/<host>/flutter_tester
+  for (final candidate in [
+    '$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+    '/opt/homebrew/share/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+  ]) {
+    if (File(candidate).existsSync()) {
+      await family('MaterialIcons', [candidate]);
+      break;
+    }
+  }
+}
+
+late Directory tmp;
+late String earnestFolder;
+
+Future<(AppState, ProjectStore, RehearsalPlayer)> _makeState() async {
+  SharedPreferences.setMockInitialValues({'importedSwiftSettings': true, 'hasSeenOnboarding': true, 'projectsBaseURL': tmp.path});
+  final settings = await Settings.load();
+  final store = ProjectStore(settings);
+  final app = AppState(settings, store, startBackgroundTasks: false);
+  return (app, store, RehearsalPlayer(audioEnabled: false));
+}
+
+Future<void> _pump(
+  WidgetTester tester,
+  Widget child,
+  Brightness b, {
+  required AppState app,
+  required ProjectStore store,
+  required RehearsalPlayer player,
+}) async {
+  tester.view.physicalSize = const Size(1320, 860);
+  tester.view.devicePixelRatio = 1;
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: store),
+        ChangeNotifierProvider.value(value: app),
+        ChangeNotifierProvider.value(value: player),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: buildTheme(Brightness.light),
+        darkTheme: buildTheme(Brightness.dark),
+        themeMode: b == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
+        home: child,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle(const Duration(milliseconds: 100));
+}
+
+Future<void> _snap(WidgetTester tester, String name) async {
+  await tester.pumpAndSettle(const Duration(milliseconds: 100));
+  await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/$name.png'));
+}
+
+void main() {
+  setUpAll(() async {
+    clockNow = () => DateTime(2026, 10, 10, 9, 14);
+    await _loadFonts();
+    tmp = Directory('${Directory.systemTemp.path}/tr_screens_fixture');
+    if (tmp.existsSync()) tmp.deleteSync(recursive: true);
+    tmp.createSync(recursive: true);
+    earnestFolder = writeProjects(tmp.path);
+  });
+
+  for (final b in [Brightness.light, Brightness.dark]) {
+    final mode = b == Brightness.dark ? 'dark' : 'light';
+
+    testWidgets('gallery $mode', (tester) async {
+      final (app, store, player) = await _makeState();
+      await _pump(tester, const GalleryScreen(), b, app: app, store: store, player: player);
+      await _snap(tester, 'gallery_grid_$mode');
+      // Select two projects and show the selection bar.
+      await tester.tap(find.text('HAMLET'));
+      await tester.pump();
+      await _snap(tester, 'gallery_selected_$mode');
+      await tester.tap(find.byIcon(Icons.view_list_rounded));
+      await _snap(tester, 'gallery_list_$mode');
+      await tester.tap(find.text('Archived'));
+      await _snap(tester, 'gallery_archived_$mode');
+    });
+
+    testWidgets('dashboard $mode', (tester) async {
+      final (app, store, player) = await _makeState();
+      final p = store.projects.firstWhere((x) => x.name.startsWith('The Importance'));
+      store.currentProject = p;
+      loadEarnest(app, earnestFolder);
+      await _pump(tester, const DashboardScreen(), b, app: app, store: store, player: player);
+      await tester.tap(find.text('Morning-room at the Manor House'));
+      await tester.pumpAndSettle();
+      await _snap(tester, 'dashboard_cast_$mode');
+
+      // Hover a line to show its actions.
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      await gesture.moveTo(tester.getCenter(find.textContaining('THE IMPORTANCE OF BEING EARNEST').first));
+      await tester.pumpAndSettle();
+      await _snap(tester, 'dashboard_hover_$mode');
+      await gesture.moveTo(const Offset(5, 5));
+      await gesture.removePointer();
+
+      await tester.tap(find.text('Render'));
+      await _snap(tester, 'dashboard_render_$mode');
+
+      app.isGenerating = true;
+      app.renderingSceneNumbers = [10, 11, 12];
+      app.generationProgress = 0.62;
+      app.sceneProgress = {10: 1.0, 11: 0.4, 12: 0};
+      for (final l in ['generate · 3 scenes', 'wrote 10 Lady Bracknell arrives.m4a', 'generate · Scene 11 The handbag · element 16/39']) {
+        app.appendLog(l, LogStyle.info);
+      }
+      app.refresh();
+      await tester.pump(const Duration(milliseconds: 200));
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/dashboard_rendering_$mode.png'));
+      app.isGenerating = false;
+      app.refresh();
+
+      await tester.tap(find.text('Rehearse'));
+      await tester.pumpAndSettle();
+      player.setRole('CECILY');
+      player.setMute(true);
+      player.currentCueIndex = 2;
+      player.refreshForTest();
+      await tester.pumpAndSettle();
+      await _snap(tester, 'dashboard_rehearse_$mode');
+      player.setBlock(true);
+      await tester.pumpAndSettle();
+      await _snap(tester, 'dashboard_rehearse_block_$mode');
+
+      await tester.tap(find.text('Log'));
+      app.dlog('parse finished · 12 scenes, 9 characters, 642 lines (1612 ms)', LogStyle.success);
+      app.dlog('[py] voices: kokoro model loaded', LogStyle.debug);
+      app.dlog('line 311 low confidence (0.58): speaker name split across a page break', LogStyle.warning);
+      await tester.pumpAndSettle();
+      await _snap(tester, 'dashboard_log_$mode');
+
+      // Multi-select bar + undo pill.
+      await tester.tap(find.text('Cast'));
+      await tester.pumpAndSettle();
+      final ctx = tester.element(find.byType(ScriptArea));
+      final sel = Provider.of<LineSelection>(ctx, listen: false);
+      final s9 = app.scenes[8];
+      sel.toggle(9, s9.elements[9].ref);
+      sel.toggle(9, s9.elements[10].ref);
+      app.setSceneTitle(s9, 'Morning-room at the Manor House');
+      await tester.pumpAndSettle();
+      await _snap(tester, 'dashboard_selection_$mode');
+    });
+
+    testWidgets('sheets $mode', (tester) async {
+      final (app, store, player) = await _makeState();
+      final p = store.projects.firstWhere((x) => x.name.startsWith('The Importance'));
+      store.currentProject = p;
+      loadEarnest(app, earnestFolder);
+      await _pump(tester, const DashboardScreen(), b, app: app, store: store, player: player);
+      final ctx = tester.element(find.byType(ScriptArea));
+
+      Future<void> sheet(String name, Future<void> Function() open) async {
+        open();
+        await tester.pumpAndSettle();
+        await _snap(tester, '${name}_$mode');
+        Navigator.of(tester.element(find.byType(ScriptArea)), rootNavigator: true).pop();
+        await tester.pumpAndSettle();
+      }
+
+      await sheet('sheet_new_project', () => showSheet(ctx, (_) => const NewProjectSheet(), width: 460));
+      await sheet('sheet_settings_general', () => showSettingsSheet(ctx));
+      await sheet('sheet_settings_engines', () => showSettingsSheet(ctx, initialTab: 1));
+      await sheet('sheet_settings_projects', () => showSettingsSheet(ctx, initialTab: 2));
+      await sheet('sheet_settings_about', () => showSettingsSheet(ctx, initialTab: 3));
+      await sheet('sheet_onboarding', () => showOnboarding(ctx));
+      await sheet('sheet_bug_report', () => showBugReportSheet(ctx));
+      app.simulateUpdate();
+      await sheet('sheet_update', () => showUpdateSheet(ctx));
+      await sheet(
+        'sheet_confirm',
+        () => showConfirm(
+          ctx,
+          title: 'Move 2 projects to the Trash?',
+          message: 'The project folder and any rendered audio go to the Trash. You can put them back from there, or from Recently Deleted.',
+          buttons: const [('Cancel', BtnKind.secondary), ('Move to Trash', BtnKind.danger)],
+        ),
+      );
+
+      await tester.tap(find.text('Morning-room at the Manor House'));
+      await tester.pumpAndSettle();
+      final lineCtx = tester.element(find.text('A most distasteful one.'));
+      final s9 = app.scenes[8];
+      await sheet('popover_correct_line', () => showPopover(lineCtx, (_) => CorrectLinePopover(sceneNumber: 9, element: s9.elements[5]), width: 340));
+      await sheet('popover_correct_simultaneous', () => showPopover(lineCtx, (_) => CorrectLinePopover(sceneNumber: 9, element: s9.elements[7]), width: 340));
+      await sheet(
+        'popover_edit_added',
+        () => showPopover(lineCtx, (_) => EditAddedLinePopover(sceneNumber: 9, element: app.userAddedElements[app.addedKey(9)]!.first), width: 340),
+      );
+      await sheet('popover_change_speaker', () => showPopover(lineCtx, (_) => ChangeSpeakerPopover(lineCount: 2, onApply: (_) {}), width: 280));
+    });
+  }
+}
