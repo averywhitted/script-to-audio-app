@@ -146,7 +146,7 @@ class ProjectStore extends ChangeNotifier {
   }
 
   Project openProject(Project p) {
-    p.lastOpenedAt = DateTime.now();
+    p.lastOpenedAt = clockNow();
     saveProject(p);
     currentProject = p;
     notifyListeners();

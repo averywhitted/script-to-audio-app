@@ -420,7 +420,7 @@ class Project {
   String? get pdfPath => (folderPath == null || pdfFilename.isEmpty) ? null : '$folderPath/$pdfFilename';
 
   factory Project.newProject(String name, String folderPath, {String engine = 'macOS'}) {
-    final now = DateTime.now();
+    final now = clockNow();
     return Project(
       id: const Uuid().v4().toUpperCase(),
       name: name,
