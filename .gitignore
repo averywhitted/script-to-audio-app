@@ -47,3 +47,6 @@ DerivedData/
 Test PDFs/synthetic/
 Test PDFs/reference/real_sample*.json
 Test PDFs/reference/real_sample.tmp
+
+# ML training data (names the corpus PDFs in its script column)
+ml/data/
