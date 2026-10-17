@@ -11,11 +11,17 @@ _Updated 2026-10-14 00:33 EDT · branch `flutter-mac-app` @ `a752904` · working
 - Done on this branch: workspace redesign with no side panel, three rounds of UI notes, playback/highlight sync by stable line ids, text size, Export Audio, personality pass. Avery hasn't given notes on the personality pass yet.
 - Bug-report relay (`relay/src/worker.js`, Cloudflare Worker) is committed but **not deployed**: Avery has to create the Cloudflare account and GitHub token. Issue #77.
 - Full test suite passes as of `a752904` (Python, Swift, Flutter 40/40).
-- Parser work (PRs #69–#74) is merged to `main`. Baselines: generated 99.4%, real sample 98.5%. The held-out exam sample is drawn but not labelled.
+- Parser work (PRs #69–#74) is merged to `main`. Baselines: generated 99.4%, real sample 98.5%. The held-out exam (`Test PDFs/reference/real_sample.exam.json`) is 260/403 labelled; 143 left across 13 PDFs.
+- **Plan decided (`/grilling`, Oct 14–16; awaiting Avery's final go-ahead).** Next milestone is **parser quality** (not shipping Flutter, not Rust). Avery labels the exam → score #69–#74 on it (pass = range overlaps 98.5% ± 2.5; if clearly lower, look at error categories, never exam lines). Exam scored once for this, then a normal judge. **No parser changes land until it's scored.** UI notes from Avery interrupt parser work when they arrive.
+  - Then, in order: #68 (learn the script's own acts/scenes; else "Part N", current chunk size, never announced) → furniture bugs (INATH margin scene number read twice; Stereophonic author's note read by "D A V I D") → #75 split in three: column splitting at extraction → dual dialogue → room columns + reading order → side-by-side exam (~400 lines, Avery labels by hand once at the end, new "spoken at the same time as" field).
+  - Side-by-side rule: **height on the page = time.** Lines next to each other are simultaneous (voices mixed, `overlap_voices`) until a real script proves otherwise; no exception rules built in advance. Action is read by the narrator in height order. EMMA's two-pages-per-sheet is already handled.
+  - #75 is designed on new generated layout families (dual dialogue, room columns) in `synth_generate.py`, not on real lines. Survey of side-by-side kinds in the corpus: 37 dual-dialogue regions (~240 lines, 7 PDFs); Stereophonic room columns 10% right voice; #75's text is wrong that right-column names aren't recognised.
+  - Out of scope: ML hybrid, #19, calibration wizard, #76, relay deploy (#77).
 
 **Next steps:**
-1. Run the planning session Avery asked for (`/grilling`): decide where to go next. Candidates: PR `flutter-mac-app` → `main`; Dart port of the updater; first-launch importer for the Swift app's settings and Keychain item; deploy the relay (#77); #76; labelling the exam sample.
-2. When Avery's notes on the personality pass come in: before shipping each round, re-check earlier fixes in the goldens (memory `feedback_ui_regressions.md`). Delete `sidetrack-ui-notes-3.md` and `sidetrack-personality-relay.md` once Avery confirms those rounds.
+1. On Avery's go-ahead: merge `flutter-mac-app` → `main` (fix the stale branch line in `CLAUDE.md` in the same PR); backlog cleanup: close #21–26, #13, #52, #42, draft PR #54; close draft PR #56 and file a "calibration wizard (Flutter)" issue linking it; keep #31/#32 with no milestone; open a parser-quality milestone.
+2. File the milestone issues: #75 split in three (and correct its explanation), the two furniture bugs, #68 updated with the decision; each records the height-as-time rule.
+3. Avery: label the remaining exam lines (`python scripts/label_sample.py --sample exam`) and review the latest preview build in depth. Delete `sidetrack-ui-notes-3.md` and `sidetrack-personality-relay.md` once Avery confirms those rounds.
 
 **Waiting on the user / open questions:**
 - Deploying the relay (#77): needs Avery's Cloudflare account and a fine-grained GitHub token. Claude can't create accounts or handle tokens.
@@ -36,6 +42,13 @@ _Updated 2026-10-14 00:33 EDT · branch `flutter-mac-app` @ `a752904` · working
 
 ## History
 <!-- newest first -->
+
+### 2026-10-16 — Planning session: next milestone is parser quality
+**Asked:** `/grilling` on where to go after the Flutter preview rounds.
+**Done:** 21 decisions, recorded in the Resume block. A background survey of side-by-side layouts across the 13 real PDFs (report was in a session scratchpad, not the repo) found four kinds: dual dialogue, Stereophonic's room columns, EMMA's two-pages-per-sheet, and page furniture. `CLAUDE.md` branch note updated (no more `parser-block-extraction`).
+**Decisions:** Parser quality before shipping Flutter or starting Rust. Exam first, no parser changes until it's scored. Height on the page = time; side by side = simultaneous until a real script proves otherwise (Avery: "I think that will usually be correct"). Design #75 on generated layouts, judge on real lines labelled once at the end (~400, Avery labels by hand, so kept small). Rejected: a stopgap for #75 (accepts broken units); scoring the exam against a pinned old commit (easy to score the wrong parser).
+**State:** Plan approved by Avery Oct 16. Merge and GitHub cleanup follow.
+**Next:** See Resume block.
 
 ### 2026-10-14 00:33 — Check-in: loose files committed, golden drift fixed
 **Asked:** Resume from the log; commit `DEVLOG.md` and `relay/`, gitignore the ML data, clear out finished sidetrack notes; then plan next steps with `/grilling`.

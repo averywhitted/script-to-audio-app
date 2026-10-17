@@ -5,7 +5,8 @@ Table Read converts screenplay PDFs into per-scene `.m4a` audio dramas using TTS
 Swift/SwiftUI macOS app → Python backend (`backend/audio_worker.py`) via stdin/stdout JSON bridge.
 
 ## Branch
-Active development is on `parser-block-extraction`. PRs target `main`.
+Work happens on short-lived branches off `main`; PRs target `main`. The Flutter app (`app/`) lives
+on `main` alongside the Swift app.
 
 ## Testing — run after every code change
 
