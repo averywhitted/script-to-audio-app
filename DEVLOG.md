@@ -1,13 +1,14 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-14 00:33 EDT · branch `flutter-mac-app` @ `a752904` · working tree: clean except two kept sidetrack notes (`sidetrack-personality-relay.md`, `sidetrack-ui-notes-3.md`)_
+_Updated 2026-10-19 13:29 EDT · branch `flutter-mac-app` @ `715ff21` (PR #78 open) · working tree: uncommitted label kit (Oct 17) + `scripts/build_flutter_app.sh`; two kept sidetrack notes (`sidetrack-personality-relay.md`, `sidetrack-ui-notes-3.md`)_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas with TTS. The shipped app is SwiftUI (`Sources/TableRead/`) with a Python backend (`backend/`) over a stdin/stdout JSON bridge. It is being rebuilt as a Flutter app (`app/`) that drives the same Python worker.
 **Current goal:** Flutter macOS preview app with the Claude Design "1a v2" redesign, refined in rounds of UI notes from Avery. This is step one of the approved plan: Flutter UI plus a Rust engine for all 5 platforms (see memory `platform_strategy.md`).
 
 **Where things stand:**
-- Flutter preview builds and is signed: `app/build/macos/Build/Products/Release/Table Read Preview.app` (bundle id `com.averywhitted.tableread.preview`). It runs the repo's backend live, so it always has the current parser.
+- Flutter preview builds and is signed: `app/build/macos/Build/Products/Release/Table Read Preview.app` (bundle id `com.averywhitted.tableread.preview`). That build runs the repo's backend live.
+- **Installed copy:** `/Applications/Table Read Preview.app` is self-contained (backend + `vendor/python` bundled), made by `bash scripts/build_flutter_app.sh`. It does NOT follow the repo: rerun the script after backend/UI changes. The old Swift `/Applications/TableRead.app` is untouched.
 - Done on this branch: workspace redesign with no side panel, three rounds of UI notes, playback/highlight sync by stable line ids, text size, Export Audio, personality pass. Avery hasn't given notes on the personality pass yet.
 - Bug-report relay (`relay/src/worker.js`, Cloudflare Worker) is committed but **not deployed**: Avery has to create the Cloudflare account and GitHub token. Issue #77.
 - Full test suite passes as of `a752904` (Python, Swift, Flutter 40/40).
@@ -19,9 +20,9 @@ _Updated 2026-10-14 00:33 EDT · branch `flutter-mac-app` @ `a752904` · working
   - Out of scope: ML hybrid, #19, calibration wizard, #76, relay deploy (#77).
 
 **Next steps:**
-1. On Avery's go-ahead: merge `flutter-mac-app` → `main` (fix the stale branch line in `CLAUDE.md` in the same PR); backlog cleanup: close #21–26, #13, #52, #42, draft PR #54; close draft PR #56 and file a "calibration wizard (Flutter)" issue linking it; keep #31/#32 with no milestone; open a parser-quality milestone.
-2. File the milestone issues: #75 split in three (and correct its explanation), the two furniture bugs, #68 updated with the decision; each records the height-as-time rule.
-3. Avery: label the remaining exam lines (`python scripts/label_sample.py --sample exam`) and review the latest preview build in depth. Delete `sidetrack-ui-notes-3.md` and `sidetrack-personality-relay.md` once Avery confirms those rounds.
+1. Avery merges PR #78 (`flutter-mac-app` → `main`); auto mode blocked Claude from merging without review. CI passed on the same commit's push run.
+2. Run the prepared GitHub cleanup script (closes #21–26, #13, #52, #42, #75, PRs #54/#56; creates the "Parser quality" milestone and 9 issues; comments on #68). It was dry-run against a fake `gh`; its text is the source for those issues. `gh` needs `GODEBUG=netdns=go` on this Mac: the system resolver times out on api.github.com (Tailscale DNS); the script sets it.
+3. Avery: label both exams in the offline kit (`Test PDFs/label-kit/Label lines.html`, double-click; 143 held-out + 400 side-by-side lines), Export, then Claude runs `python scripts/label_kit.py --import`. Score the held-out exam first; the side-by-side labels stay unread until steps 1–3 are done and review the latest preview build in depth. Delete `sidetrack-ui-notes-3.md` and `sidetrack-personality-relay.md` once Avery confirms those rounds.
 
 **Waiting on the user / open questions:**
 - Deploying the relay (#77): needs Avery's Cloudflare account and a fine-grained GitHub token. Claude can't create accounts or handle tokens.
@@ -42,6 +43,20 @@ _Updated 2026-10-14 00:33 EDT · branch `flutter-mac-app` @ `a752904` · working
 
 ## History
 <!-- newest first -->
+
+### 2026-10-19 13:29 — Flutter app installed as a normal Mac app
+**Asked:** A build Avery can run as a normal app on this Mac.
+**Done:** `scripts/build_flutter_app.sh`: `flutter build macos --release`, copies `backend/*.py` + `*.json` and `vendor/python` into `Contents/Resources` (the bridge's first lookup), signs nested Mach-O files then the app with the Apple Development cert, installs to `/Applications/Table Read Preview.app` (233 MB). `--no-build` re-bundles the last build.
+**Decisions:** Self-contained rather than pointing at the repo, so switching branches can't break the installed app. No hardened runtime on the bundled Python: library validation would refuse the Kokoro/onnxruntime packages pip-installed in `~/Library/Application Support/TableRead/python-packages`.
+**State:** Uncommitted. Verified: bundled worker parses a test PDF (18 scenes, 8 characters), engineStatus sees macOS + Kokoro, Kokoro imports under the re-signed Python, the app launches from /Applications. `spctl` says "rejected" (normal for a Development cert; no quarantine flag, so it opens). Not clicked through end to end in the UI.
+**Next:** Avery tries it; rerun the script after future changes.
+
+### 2026-10-17 — Offline labelling kit for both exams
+**Asked:** Both remaining exams in one tool that doesn't need the console running and can be paused.
+**Done:** `scripts/label_kit.py` builds `Test PDFs/label-kit/` (gitignored: page images + line text): one HTML page, labels autosave in the browser (localStorage), Export downloads `table-read-labels-*.json`, `--import` merges the newest one from ~/Downloads into the sample files. `scripts/side_by_side.py` finds side-by-side text without the parser (shared rows + two-column runs with names and prose on both sides; splits EMMA's two-page sheets; ignores rotated watermarks). Drew `real_sample.sbs.json` (400 lines: all 311 non-Stereophonic + 89 sampled Stereophonic; seed 2028), registered as sample `sbs` in `label_sample.py`. Added a `label-kit` server to `.claude/launch.json` (testing only: the browser pane can't load file:// pages properly).
+**Decisions:** Avery labels the side-by-side exam now rather than after #75 (changes the Oct 16 plan); the labels are not read until steps 1–3 are done, the same discipline as the held-out exam. `together` is stored as 'yes'/'no'/'unsure'.
+**State:** Uncommitted. Tested in the browser (label, side-by-side flow, reload keeps progress, region outline) and import tested on copies. `bash scripts/test.sh python` passes, answer keys unchanged.
+**Next:** Avery labels; Claude imports and scores the held-out exam.
 
 ### 2026-10-16 — Planning session: next milestone is parser quality
 **Asked:** `/grilling` on where to go after the Flutter preview rounds.
