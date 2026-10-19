@@ -9,6 +9,9 @@
 #
 #   bash scripts/build_flutter_app.sh            # build + install
 #   bash scripts/build_flutter_app.sh --no-build # re-bundle the last build
+#   bash scripts/build_flutter_app.sh --package  # also write release assets to build/:
+#       TableRead-Preview.zip, .dmg, .sha256 (names differ from the Swift app's
+#       TableRead.zip so the Swift updater never auto-installs this app)
 
 set -euo pipefail
 
@@ -20,7 +23,16 @@ IDENTITY="Apple Development: whitted.avery@protonmail.com (95GY76YVFT)"
 
 [ -d "$ROOT/vendor/python" ] || { echo "vendor/python/ missing — run: bash scripts/embed_python.sh"; exit 1; }
 
-if [ "${1:-}" != "--no-build" ]; then
+BUILD=1; PACKAGE=0
+for arg in "$@"; do
+    case "$arg" in
+        --no-build) BUILD=0 ;;
+        --package)  PACKAGE=1 ;;
+        *) echo "Unknown option: $arg"; exit 1 ;;
+    esac
+done
+
+if [ "$BUILD" = 1 ]; then
     (cd "$ROOT/app" && flutter build macos --release)
 fi
 
@@ -47,6 +59,20 @@ find "$RES/python" -type f \( -perm -u+x -o -name '*.so' -o -name '*.dylib' \) -
 codesign --force --timestamp=none --sign "$IDENTITY" \
     --preserve-metadata=entitlements,requirements,flags,runtime "$STAGE"
 codesign --verify --strict "$STAGE"
+
+if [ "$PACKAGE" = 1 ]; then
+    echo "Packaging release assets..."
+    OUT="$ROOT/build"; mkdir -p "$OUT"
+    rm -f "$OUT/TableRead-Preview.zip" "$OUT/TableRead-Preview.dmg"
+    ditto -c -k --keepParent "$STAGE" "$OUT/TableRead-Preview.zip"
+    DMG_SRC="$(mktemp -d)"
+    ditto "$STAGE" "$DMG_SRC/$NAME.app"
+    ln -s /Applications "$DMG_SRC/Applications"
+    hdiutil create -quiet -volname "$NAME" -srcfolder "$DMG_SRC" -ov -format UDZO "$OUT/TableRead-Preview.dmg"
+    rm -rf "$DMG_SRC"
+    (cd "$OUT" && shasum -a 256 TableRead-Preview.zip TableRead-Preview.dmg > TableRead-Preview.sha256)
+    echo "✓ $OUT/TableRead-Preview.{zip,dmg,sha256}"
+fi
 
 echo "Installing to $DEST..."
 osascript -e "tell application \"$NAME\" to quit" 2>/dev/null || true

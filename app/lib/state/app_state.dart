@@ -1421,7 +1421,7 @@ class AppState extends ChangeNotifier {
   // Updates (check only in the preview; installing is not wired yet)
   // ---------------------------------------------------------------------------
 
-  static const appVersion = '0.2.0-preview';
+  static const appVersion = '0.3.0-preview';
 
   static bool isNewer(String candidate, String current) {
     List<int> parts(String v) => v.replaceFirst(RegExp('^v'), '').split(RegExp(r'[.\-]')).map((p) => int.tryParse(p) ?? 0).toList();
