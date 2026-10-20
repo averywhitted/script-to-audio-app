@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:table_read/models/models.dart';
+import 'package:table_read/services/project_files.dart';
 import 'package:table_read/services/python_bridge.dart';
 import 'package:table_read/state/app_state.dart';
 
@@ -22,6 +23,19 @@ void main() {
     expect(script.characters, isNotEmpty);
     expect(script.lineCount, greaterThan(50));
   }, skip: skip, timeout: const Timeout(Duration(minutes: 2)));
+
+  test('every test PDF survives a save to script.json and back (what the iPhone reads)', () async {
+    final pdfs = Directory('$root/Test PDFs').listSync().whereType<File>().where((f) => f.path.endsWith('.pdf')).toList();
+    for (final f in pdfs) {
+      final script = await bridge.parse(f.path);
+      final dir = Directory.systemTemp.createTempSync('tr_snapshot').path;
+      saveScriptSnapshot(dir, script, pdfFilename: f.path.split('/').last);
+      final again = loadScriptSnapshot(dir)!;
+      expect(jsonEncode(again.toJson()), jsonEncode(script.toJson()), reason: f.path.split('/').last);
+      // Repeated lines keep their numbering, so corrections land on the same copy.
+      expect([for (final s in again.scenes) for (final e in s.elements) e.ref], [for (final s in script.scenes) for (final e in s.elements) e.ref]);
+    }
+  }, skip: skip, timeout: const Timeout(Duration(minutes: 10)));
 
   test('engine status and macOS voices', () async {
     final status = await bridge.engineStatus();

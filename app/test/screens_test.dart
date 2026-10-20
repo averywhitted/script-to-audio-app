@@ -62,6 +62,10 @@ late String earnestFolder;
 
 Future<(AppState, ProjectStore, RehearsalPlayer)> _makeState() async {
   SharedPreferences.setMockInitialValues({'importedSwiftSettings': true, 'hasSeenOnboarding': true, 'projectsBaseURL': tmp.path});
+  // Rehearsal settings are saved in the project folder: start each screen from none.
+  for (final d in tmp.listSync(recursive: true).whereType<Directory>().where((d) => d.path.endsWith('/Rehearsal')).toList()) {
+    d.deleteSync(recursive: true);
+  }
   final settings = await Settings.load();
   final store = ProjectStore(settings);
   final app = AppState(settings, store, startBackgroundTasks: false);

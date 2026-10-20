@@ -4,9 +4,11 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_read/models/models.dart';
+import 'package:table_read/services/project_files.dart';
 import 'package:table_read/services/project_store.dart';
 import 'package:table_read/services/settings.dart';
 import 'package:table_read/state/app_state.dart';
@@ -36,6 +38,7 @@ Future<AppState> makeApp() async {
 }
 
 void main() {
+  projectFilesTests();
   group('repeated lines (#55)', () {
     test('decoding numbers repeats', () {
       expect(echoScript().scenes[0].elements.map((e) => e.occurrence), [0, 1, 0, 0]);
@@ -335,6 +338,116 @@ void main() {
       final p = Project.newProject('X', '/tmp/x')..renderFingerprints = {3: 'abc'};
       final again = Project.fromJson(p.toJson());
       expect(again.renderFingerprints, {3: 'abc'});
+    });
+  });
+}
+
+void projectFilesTests() {
+  group('project files for other devices (#89)', () {
+    test('script.json round-trips the parse', () async {
+      final dir = Directory.systemTemp.createTempSync('tr_files').path;
+      saveScriptSnapshot(dir, echoScript(), pdfFilename: 'echo.pdf');
+      expect(jsonEncode(loadScriptSnapshot(dir)!.toJson()), jsonEncode(echoScript().toJson()));
+      final first = File('$dir/script.json').readAsStringSync();
+      saveScriptSnapshot(dir, echoScript(), pdfFilename: 'echo.pdf');
+      expect(File('$dir/script.json').readAsStringSync(), first);
+      expect(File('$dir/script.json.tmp').existsSync(), isFalse);
+    });
+
+    test("rebaseEdits re-points every edit at the PDF's new path", () {
+      final corrections = <String, ParserCorrection>{};
+      final c = ParserCorrection(textKey: 'They stare.', pdfIdentifier: '/old/x.pdf', sceneNumber: 1, originalKind: 'dialog', correctedSpeaker: 'ELLIOT');
+      corrections[c.storageKey] = c;
+      final titles = {'/old/x.pdf': {1: 'Opening'}};
+      final added = {'/old/x.pdf|1': [UserAddedElement(pdfPath: '/old/x.pdf', sceneNumber: 1, afterElementTextKey: 'They stare.', speaker: 'LOLA', text: 'Hm.', kind: 'dialog')]};
+      expect(rebaseEdits(pdfPath: '/new/x.pdf', corrections: corrections, sceneTitleOverrides: titles, userAddedElements: added), isTrue);
+      expect(corrections.keys.single, correctionKey('/new/x.pdf', 1, 'They stare.'));
+      expect(c.pdfIdentifier, '/new/x.pdf');
+      expect(titles, {'/new/x.pdf': {1: 'Opening'}});
+      expect(added.keys.single, '/new/x.pdf|1');
+      expect(added['/new/x.pdf|1']!.first.pdfPath, '/new/x.pdf');
+      expect(rebaseEdits(pdfPath: '/new/x.pdf', corrections: corrections, sceneTitleOverrides: titles, userAddedElements: added), isFalse);
+    });
+
+    test('moving the project folder does not mark scenes for re-render', () async {
+      final app = await makeApp();
+      final c = ParserCorrection(textKey: 'They stare.', pdfIdentifier: pdf, sceneNumber: 1, originalKind: 'dialog', correctedSpeaker: 'ELLIOT');
+      app.corrections[c.storageKey] = c;
+      final fp1 = app.sceneFingerprint(1);
+      app.pdfPath = '/moved/echo.pdf';
+      rebaseEdits(pdfPath: app.pdfPath!, corrections: app.corrections, sceneTitleOverrides: app.sceneTitleOverrides, userAddedElements: app.userAddedElements);
+      expect(app.sceneFingerprint(1), fp1);
+    });
+
+    test('render fingerprints are saved in project.json', () async {
+      final app = await makeApp();
+      final folder = Directory.systemTemp.createTempSync('tr_files').path;
+      app.store.openProject(Project.newProject('P', folder));
+      app.renderFingerprints[1] = 'abc';
+      app.persistProject();
+      final decoded = jsonDecode(File('$folder/project.json').readAsStringSync()) as Map;
+      expect(decoded['renderFingerprints'], {'1': 'abc'});
+    });
+
+    test("the newest device's rehearsal settings win; an unchanged save writes nothing", () async {
+      final folder = Directory.systemTemp.createTempSync('tr_files').path;
+      writeRehearsal(folder, 'MAC', RehearsalState(role: 'LOLA', updatedAt: DateTime.utc(2026, 1, 1)));
+      writeRehearsal(folder, 'PHONE', RehearsalState(role: 'ELLIOT', speed: 1.25, updatedAt: DateTime.utc(2026, 1, 2)));
+      final newest = loadNewestRehearsal(folder)!;
+      expect(newest.role, 'ELLIOT');
+      expect(newest.speed, 1.25);
+      final macPath = rehearsalPath(folder, 'MAC');
+      final oldText = File(macPath).readAsStringSync();
+      writeRehearsal(folder, 'MAC', RehearsalState(role: 'LOLA', updatedAt: DateTime.utc(2026, 3, 1)));
+      expect(File(macPath).readAsStringSync(), oldText);
+    });
+
+    test('rehearsal settings fall back to the old app preferences', () async {
+      final app = await makeApp();
+      final folder = Directory.systemTemp.createTempSync('tr_files').path;
+      app.store.openProject(Project.newProject('P', folder));
+      app.saveView({'role': 'LOLA', 'mute': true, 'speed': 1.5});
+      final r = app.loadRehearsal();
+      expect(r.role, 'LOLA');
+      expect(r.mute, isTrue);
+      expect(r.speed, 1.5);
+      app.saveRehearsal(RehearsalState(role: 'ELLIOT'));
+      expect(app.loadRehearsal().role, 'ELLIOT');
+      expect(File(rehearsalPath(folder, app.deviceId)).existsSync(), isTrue);
+    });
+
+    test('moving projects carries folders and archives, renaming clashes', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('tableread/platform'), (call) async => null);
+      final root = Directory.systemTemp.createTempSync('tr_files');
+      final base = '${root.path}/Documents/Table Read';
+      Directory(base).createSync(recursive: true);
+      final target = '${root.path}/iCloud/Table Read';
+      Directory('${root.path}/iCloud').createSync(recursive: true);
+      Directory('$target/A').createSync(recursive: true);
+      SharedPreferences.setMockInitialValues({'importedSwiftSettings': true, 'projectsBaseURL': base});
+      final settings = await Settings.load();
+      final store = ProjectStore(settings);
+      Directory('$base/A').createSync();
+      File('$base/A/project.json').writeAsStringSync(jsonEncode(Project.newProject('A', '$base/A').toJson()));
+      File('$base/X.zip').writeAsStringSync('zip');
+      File('$base/X.archive-meta.json').writeAsStringSync(jsonEncode({'project': Project.newProject('X', '/x').toJson(), 'zipFilename': 'X.zip', 'originalFolderName': 'X'}));
+      await store.moveProjectsTo(target);
+      expect(store.baseDir, target);
+      expect(File('$target/A 2/project.json').existsSync(), isTrue);
+      expect(File('$target/X.zip').existsSync(), isTrue);
+      expect(File('$target/X.archive-meta.json').existsSync(), isTrue);
+      expect(Directory('$base/A').existsSync(), isFalse);
+    });
+
+    test('moving projects fails clearly when iCloud Drive is off', () async {
+      final root = Directory.systemTemp.createTempSync('tr_files');
+      final base = '${root.path}/Documents/Table Read';
+      Directory(base).createSync(recursive: true);
+      SharedPreferences.setMockInitialValues({'importedSwiftSettings': true, 'projectsBaseURL': base});
+      final settings = await Settings.load();
+      final store = ProjectStore(settings);
+      await expectLater(store.moveProjectsTo('${root.path}/nope/Table Read'), throwsA(isA<FileSystemException>()));
     });
   });
 }

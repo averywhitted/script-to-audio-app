@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
+import '../services/project_files.dart';
 import '../services/project_store.dart';
 import '../state/app_state.dart';
 import '../state/player_state.dart';
@@ -305,14 +306,15 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     // Restore the remembered view once the script is in.
     if (!_viewRestored && app.script != null) {
       _viewRestored = true;
+      // Open scenes are per device; rehearsal settings follow the project (#89).
       final v = app.loadView();
       final open = ((v['expanded'] as List?) ?? const []).map((e) => (e as num).toInt());
-      final role = v['role'] as String?;
-      if (role != null && app.script!.characters.any((c) => c.name == role)) player.myRole = role;
-      player.muteMyLines = v['mute'] as bool? ?? false;
-      player.blockMyLines = v['block'] as bool? ?? false;
-      player.cueMode = v['cue'] as bool? ?? false;
-      player.playbackRate = (v['speed'] as num?)?.toDouble() ?? 1.0;
+      final r = app.loadRehearsal();
+      if (r.role.isNotEmpty && app.script!.characters.any((c) => c.name == r.role)) player.myRole = r.role;
+      player.muteMyLines = r.mute;
+      player.blockMyLines = r.block;
+      player.cueMode = r.cue;
+      player.playbackRate = r.speed;
       view.restore(open);
     }
     // Rendered files changed: refresh the playback bar.
@@ -331,14 +333,21 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
   void _saveView() {
     if (!_viewRestored) return;
-    app.saveView({
-      'expanded': view.expanded.toList()..sort(),
-      'role': player.myRole,
-      'mute': player.muteMyLines,
-      'block': player.blockMyLines,
-      'cue': player.cueMode,
-      'speed': player.playbackRate,
-    });
+    app.saveView({'expanded': view.expanded.toList()..sort()});
+    app.saveRehearsal(
+      RehearsalState(
+        role: player.myRole,
+        mute: player.muteMyLines,
+        block: player.blockMyLines,
+        cue: player.cueMode,
+        speed: player.playbackRate,
+        loopMode: player.loopMode.name,
+        loopStart: player.loopStart,
+        loopEnd: player.loopEnd,
+        sceneNumber: player.currentScene?.sceneNumber,
+        time: player.currentTime,
+      ),
+    );
   }
 
   bool _onKey(KeyEvent e) {

@@ -262,6 +262,78 @@ class ProjectStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  static String get iCloudDriveRoot => '${Platform.environment['HOME']}/Library/Mobile Documents/com~apple~CloudDocs';
+  static String get iCloudProjectsDir => '$iCloudDriveRoot/Table Read';
+
+  bool get projectsInICloud => baseDir == iCloudProjectsDir || baseDir.startsWith('$iCloudDriveRoot/');
+
+  /// What a move would carry: project folders and archives (zip + meta) directly in [baseDir].
+  ({int projects, int archives}) movableCounts() {
+    final dir = Directory(baseDir);
+    if (!dir.existsSync()) return (projects: 0, archives: 0);
+    var projects = 0, archives = 0;
+    for (final e in dir.listSync()) {
+      if (e is Directory && isManagedProjectFolder(e.path)) projects++;
+      if (e is File && e.path.endsWith('.archive-meta.json')) archives++;
+    }
+    return (projects: projects, archives: archives);
+  }
+
+  /// Moves everything in the projects folder (projects, archives, anything
+  /// else the user keeps there) into [target] and makes it the projects
+  /// folder. Name clashes get " 2", " 3"… Projects added from elsewhere
+  /// (external folders) stay where they are. Throws if [target]'s parent
+  /// doesn't exist (iCloud Drive turned off).
+  Future<int> moveProjectsTo(String target) async {
+    if (target == baseDir) return 0;
+    if (!Directory(Directory(target).parent.path).existsSync()) {
+      throw const FileSystemException('iCloud Drive isn\'t turned on on this Mac (System Settings → Apple Account → iCloud).');
+    }
+    Directory(target).createSync(recursive: true);
+    final source = Directory(baseDir);
+    var moved = 0;
+    if (source.existsSync()) {
+      for (final e in source.listSync()) {
+        final name = e.path.split('/').last;
+        if (name.startsWith('.')) continue;
+        var dest = '$target/$name';
+        for (var n = 2; FileSystemEntity.typeSync(dest) != FileSystemEntityType.notFound; n++) {
+          final dot = e is! File ? -1 : (name.endsWith('.archive-meta.json') ? name.length - '.archive-meta.json'.length : name.lastIndexOf('.'));
+          dest = dot > 0 ? '$target/${name.substring(0, dot)} $n${name.substring(dot)}' : '$target/$name $n';
+        }
+        try {
+          e.renameSync(dest);
+        } on FileSystemException {
+          // Another volume: copy, then Trash the original only if the copy worked.
+          final r = await Process.run('/usr/bin/ditto', [e.path, dest]);
+          if (r.exitCode != 0) throw FileSystemException('Could not copy $name (${r.stderr})'.trim());
+          await NativePlatform.trash(e.path);
+        }
+        moved++;
+      }
+      // An archive's meta names its zip by file name: keep them paired after a rename.
+      _repairArchiveMetas(target);
+      if (source.listSync().every((e) => e.path.split('/').last.startsWith('.'))) await NativePlatform.trash(source.path);
+    }
+    recentlyDeleted.clear();
+    changeBaseDir(target);
+    return moved;
+  }
+
+  void _repairArchiveMetas(String dir) {
+    for (final f in Directory(dir).listSync().whereType<File>().where((f) => f.path.endsWith('.archive-meta.json'))) {
+      try {
+        final j = Map<String, dynamic>.from(jsonDecode(f.readAsStringSync()) as Map);
+        final zip = j['zipFilename'] as String?;
+        final expected = '${f.path.split('/').last.replaceFirst('.archive-meta.json', '')}.zip';
+        if (zip != null && zip != expected && File('$dir/$expected').existsSync()) {
+          j['zipFilename'] = expected;
+          f.writeAsStringSync(_encoder.convert(j));
+        }
+      } catch (_) {}
+    }
+  }
+
   void changeBaseDir(String path) {
     baseDir = path;
     settings.setString('projectsBaseURL', path);

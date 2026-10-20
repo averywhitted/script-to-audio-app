@@ -12,6 +12,14 @@ class NativePlatform {
 
   static Future<void> openPath(String path) => _channel.invokeMethod('openPath', {'path': path});
 
+  /// Asks iCloud Drive to bring back any files in [folder] this Mac has
+  /// offloaded ("Optimize Mac Storage"). Doesn't wait; no-op outside iCloud.
+  static Future<void> downloadFolder(String folder) async {
+    try {
+      await _channel.invokeMethod('downloadFolder', {'path': folder});
+    } catch (_) {}
+  }
+
   static Future<void> openURL(String url) => _channel.invokeMethod('openURL', {'url': url});
 
   static Future<String?> keychainRead(String account) => _channel.invokeMethod<String>('keychainRead', {'account': account});

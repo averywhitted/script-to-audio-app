@@ -1,0 +1,184 @@
+// Files inside a project folder that other devices read (#89): the parsed
+// script, so the iPhone can show scenes without parsing the PDF, and each
+// device's rehearsal settings. Project folders can live in iCloud Drive, so
+// every write is whole-file and atomic, and each device writes only its own
+// rehearsal file (two devices never write the same file, so iCloud never
+// makes conflict copies).
+
+import 'dart:convert';
+import 'dart:io';
+
+import '../models/models.dart';
+
+const scriptSnapshotFile = 'script.json';
+const rehearsalFolder = 'Rehearsal';
+
+const _encoder = JsonEncoder.withIndent('  ');
+
+/// Writes [text] to [path] through a temporary file, so a reader (or iCloud)
+/// never sees half a file. Skips the write when the file already says it.
+void writeFileAtomic(String path, String text) {
+  final f = File(path);
+  try {
+    if (f.existsSync() && f.readAsStringSync() == text) return;
+  } catch (_) {}
+  f.parent.createSync(recursive: true);
+  final tmp = File('$path.tmp');
+  tmp.writeAsStringSync(text, flush: true);
+  tmp.renameSync(path);
+}
+
+/// Saves the parse next to project.json. Corrections and added lines stay in
+/// project.json and are applied on top, the same way on every device.
+void saveScriptSnapshot(String folder, ScriptSummary script, {required String pdfFilename}) {
+  writeFileAtomic(
+    '$folder/$scriptSnapshotFile',
+    _encoder.convert({'schemaVersion': 1, 'pdfFilename': pdfFilename, 'script': script.toJson()}),
+  );
+}
+
+ScriptSummary? loadScriptSnapshot(String folder) {
+  try {
+    final j = jsonDecode(File('$folder/$scriptSnapshotFile').readAsStringSync()) as Map;
+    return ScriptSummary.fromJson(Map<String, dynamic>.from(j['script'] as Map));
+  } catch (_) {
+    return null;
+  }
+}
+
+/// One device's rehearsal settings for one project.
+class RehearsalState {
+  RehearsalState({
+    this.role = '',
+    this.mute = false,
+    this.block = false,
+    this.cue = false,
+    this.speed = 1.0,
+    this.loopMode = 'off',
+    this.loopStart = 0,
+    this.loopEnd = 0,
+    this.sceneNumber,
+    this.time = 0,
+    DateTime? updatedAt,
+    this.device = '',
+  }) : updatedAt = updatedAt ?? clockNow().toUtc();
+
+  String role;
+  bool mute, block, cue;
+  double speed;
+
+  /// 'off' | 'scene' | 'lines' (LoopMode names); start/end are seconds in the scene.
+  String loopMode;
+  double loopStart, loopEnd;
+
+  /// Where playback last stopped.
+  int? sceneNumber;
+  double time;
+
+  DateTime updatedAt;
+  String device;
+
+  factory RehearsalState.fromJson(Map<String, dynamic> j) {
+    final loop = (j['loop'] as Map?) ?? const {};
+    final pos = (j['position'] as Map?) ?? const {};
+    return RehearsalState(
+      role: j['role'] as String? ?? '',
+      mute: j['mute'] as bool? ?? false,
+      block: j['block'] as bool? ?? false,
+      cue: j['cue'] as bool? ?? false,
+      speed: (j['speed'] as num?)?.toDouble() ?? 1.0,
+      loopMode: loop['mode'] as String? ?? 'off',
+      loopStart: (loop['start'] as num?)?.toDouble() ?? 0,
+      loopEnd: (loop['end'] as num?)?.toDouble() ?? 0,
+      sceneNumber: (pos['scene'] as num?)?.toInt(),
+      time: (pos['time'] as num?)?.toDouble() ?? 0,
+      updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? '')?.toUtc() ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      device: j['device'] as String? ?? '',
+    );
+  }
+
+  /// Everything but the timestamp: two states that say the same thing.
+  Map<String, dynamic> _body() => {
+    'role': role,
+    'mute': mute,
+    'block': block,
+    'cue': cue,
+    'speed': speed,
+    'loop': {'mode': loopMode, 'start': loopStart, 'end': loopEnd},
+    'position': {'scene': sceneNumber, 'time': time},
+  };
+
+  bool sameAs(RehearsalState o) => jsonEncode(_body()) == jsonEncode(o._body());
+
+  Map<String, dynamic> toJson() => {'schemaVersion': 1, 'device': device, 'updatedAt': updatedAt.toIso8601String(), ..._body()};
+}
+
+String rehearsalPath(String folder, String deviceId) => '$folder/$rehearsalFolder/$deviceId.json';
+
+/// The newest rehearsal state any device wrote for this project, or null.
+RehearsalState? loadNewestRehearsal(String folder) {
+  final dir = Directory('$folder/$rehearsalFolder');
+  if (!dir.existsSync()) return null;
+  RehearsalState? best;
+  for (final f in dir.listSync().whereType<File>()) {
+    if (!f.path.endsWith('.json')) continue;
+    try {
+      final s = RehearsalState.fromJson(Map<String, dynamic>.from(jsonDecode(f.readAsStringSync()) as Map));
+      if (best == null || s.updatedAt.isAfter(best.updatedAt)) best = s;
+    } catch (_) {}
+  }
+  return best;
+}
+
+/// Writes this device's state, unless it says the same as what's there.
+void writeRehearsal(String folder, String deviceId, RehearsalState state) {
+  final path = rehearsalPath(folder, deviceId);
+  try {
+    final old = RehearsalState.fromJson(Map<String, dynamic>.from(jsonDecode(File(path).readAsStringSync()) as Map));
+    if (old.sameAs(state)) return;
+  } catch (_) {}
+  writeFileAtomic(path, _encoder.convert(state.toJson()));
+}
+
+/// Edits in project.json are keyed by the PDF's absolute path, which changes
+/// when the project folder moves (to iCloud Drive, or onto another device). A
+/// project has one PDF, so every edit in its file belongs to it: re-point
+/// them all at [pdfPath]. Returns true if anything changed.
+bool rebaseEdits({
+  required String pdfPath,
+  required Map<String, ParserCorrection> corrections,
+  required Map<String, Map<int, String>> sceneTitleOverrides,
+  required Map<String, List<UserAddedElement>> userAddedElements,
+}) {
+  var changed = false;
+  if (corrections.values.any((c) => c.pdfIdentifier != pdfPath)) {
+    final all = corrections.values.toList();
+    corrections.clear();
+    for (final c in all) {
+      c.pdfIdentifier = pdfPath;
+      corrections[c.storageKey] = c;
+    }
+    changed = true;
+  }
+  if (sceneTitleOverrides.keys.any((k) => k != pdfPath)) {
+    final merged = <int, String>{};
+    for (final e in sceneTitleOverrides.entries) {
+      if (e.key != pdfPath) merged.addAll(e.value);
+    }
+    merged.addAll(sceneTitleOverrides[pdfPath] ?? const {});
+    sceneTitleOverrides
+      ..clear()
+      ..[pdfPath] = merged;
+    changed = true;
+  }
+  if (userAddedElements.entries.any((e) => !e.key.startsWith('$pdfPath|') || e.value.any((a) => a.pdfPath != pdfPath))) {
+    final all = userAddedElements.values.expand((l) => l).toList();
+    userAddedElements.clear();
+    for (final a in all) {
+      a.pdfPath = pdfPath;
+      userAddedElements.putIfAbsent('$pdfPath|${a.sceneNumber}', () => []).add(a);
+    }
+    changed = true;
+  }
+  return changed;
+}

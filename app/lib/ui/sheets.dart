@@ -1074,6 +1074,83 @@ class _ProjectsTab extends StatelessWidget {
             ),
           ],
         ),
+        const _ICloudSection(),
+      ],
+    );
+  }
+}
+
+/// Moves the projects folder into iCloud Drive so the iPhone app can open it (#89).
+class _ICloudSection extends StatefulWidget {
+  const _ICloudSection();
+  @override
+  State<_ICloudSection> createState() => _ICloudSectionState();
+}
+
+class _ICloudSectionState extends State<_ICloudSection> {
+  bool moving = false;
+  String? error;
+
+  Future<void> _move(ProjectStore store) async {
+    final (:projects, :archives) = store.movableCounts();
+    String plural(int n, String w) => '$n $w${n == 1 ? '' : 's'}';
+    final what = [plural(projects, 'project'), if (archives > 0) plural(archives, 'archived project')].join(' and ');
+    final r = await showConfirm(
+      context,
+      title: 'Move projects to iCloud Drive?',
+      message:
+          '$what move to iCloud Drive › Table Read, and new projects go there too. '
+          'Table Read on your iPhone can then open them, and your rehearsal settings follow you between devices.\n\n'
+          'The older TableRead app won\'t find them any more.',
+      buttons: [('Cancel', BtnKind.secondary), ('Move', BtnKind.primary)],
+    );
+    if (r != 'Move' || !mounted) return;
+    setState(() {
+      moving = true;
+      error = null;
+    });
+    try {
+      await store.moveProjectsTo(ProjectStore.iCloudProjectsDir);
+    } catch (e) {
+      error = e is FileSystemException ? e.message : '$e';
+    }
+    if (mounted) setState(() => moving = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final store = context.watch<ProjectStore>();
+    final app = context.watch<AppState>();
+    final inICloud = store.projectsInICloud;
+    final busy = store.currentProject != null || app.isGenerating;
+    return _Section(
+      header: 'iPhone',
+      footer: inICloud
+          ? null
+          : busy
+          ? 'Close the open project (and wait for any render to finish) to move your projects.'
+          : 'Renders stay on this Mac; the iPhone plays them.',
+      children: [
+        Row(
+          children: [
+            Icon(inICloud ? Icons.cloud_done_rounded : Icons.cloud_upload_rounded, size: 18, color: t.accent),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                inICloud
+                    ? 'Your projects are in iCloud Drive, so Table Read on your iPhone can open them.'
+                    : 'Move your projects to iCloud Drive so Table Read on your iPhone can open them.',
+                style: TextStyles.ui(t, height: 1.4),
+              ),
+            ),
+            if (!inICloud) ...[
+              const SizedBox(width: 10),
+              Btn(moving ? 'Moving…' : 'Move to iCloud Drive…', small: true, kind: BtnKind.primary, onPressed: moving || busy ? null : () => _move(store)),
+            ],
+          ],
+        ),
+        if (error != null) Text(error!, style: TextStyles.ui(t, size: 11.5, color: t.danger)),
       ],
     );
   }

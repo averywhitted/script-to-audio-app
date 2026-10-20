@@ -61,6 +61,20 @@ enum PlatformChannel {
           NSWorkspace.shared.open(URL(fileURLWithPath: path))
         }
         result(nil)
+      case "downloadFolder":
+        // Offloaded iCloud Drive files would otherwise download on first read,
+        // blocking whoever reads them (the audio player, the worker).
+        if let path = args["path"] as? String {
+          let fm = FileManager.default
+          let folder = URL(fileURLWithPath: path)
+          let keys: [URLResourceKey] = [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey]
+          for url in fm.enumerator(at: folder, includingPropertiesForKeys: keys)?.compactMap({ $0 as? URL }) ?? [] {
+            guard let v = try? url.resourceValues(forKeys: Set(keys)), v.isUbiquitousItem == true,
+                  v.ubiquitousItemDownloadingStatus != .current else { continue }
+            try? fm.startDownloadingUbiquitousItem(at: url)
+          }
+        }
+        result(nil)
       case "openURL":
         if let s = args["url"] as? String, let url = URL(string: s) {
           NSWorkspace.shared.open(url)

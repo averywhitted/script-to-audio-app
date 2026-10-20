@@ -261,6 +261,7 @@ class RehearsalPlayer extends ChangeNotifier {
       _player.setVolume(1);
     }
     notifyListeners();
+    onSettingsChanged?.call(); // remembers where playback stopped
   }
 
   // After a seek (or loading a file) the audio plugin keeps reporting the old
@@ -330,6 +331,7 @@ class RehearsalPlayer extends ChangeNotifier {
     loopEnd = end;
     if (mode == LoopMode.lines && (currentTime < start || currentTime >= end)) seek(start);
     notifyListeners();
+    onSettingsChanged?.call();
   }
 
   void nextLine() {

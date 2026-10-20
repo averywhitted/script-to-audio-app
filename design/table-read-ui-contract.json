@@ -1837,6 +1837,18 @@
               }
             ],
             "footer": "New projects are created inside this folder by default."
+          },
+          {
+            "header": "iPhone",
+            "content": "whether the projects are in iCloud Drive (Table Read on iPhone opens them from there)",
+            "elements": [
+              {
+                "type": "button",
+                "label": "Move to iCloud Drive…",
+                "note": "only while the projects folder is outside iCloud Drive; disabled with a project open or a render running; confirms first (\"Move projects to iCloud Drive?\")"
+              }
+            ],
+            "footer": "Renders stay on this Mac; the iPhone plays them."
           }
         ]
       },

@@ -75,6 +75,17 @@ class SceneElement {
     reason: j['reason'] as String?,
   );
 
+  /// Same shape the worker sends (no occurrence: it's derived when loading).
+  Map<String, dynamic> toJson() => {
+    'kind': kind,
+    if (speaker != null) 'speaker': speaker,
+    'text': text,
+    if (overlapCue != null) 'overlapCue': overlapCue,
+    if (overlapTexts != null) 'overlapTexts': overlapTexts,
+    'confidence': confidence,
+    if (reason != null) 'reason': reason,
+  };
+
   SceneElement copy() => SceneElement(
     kind: kind,
     speaker: speaker,
@@ -122,6 +133,13 @@ class Scene {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+    'number': number,
+    'title': title,
+    'elementCount': elementCount,
+    'elements': [for (final e in elements) e.toJson()],
+  };
+
   /// Unique speaking characters, in order of first line.
   List<String> get speakers {
     final seen = <String>{};
@@ -145,6 +163,12 @@ class CharacterSummary {
 
   factory CharacterSummary.fromJson(Map<String, dynamic> j) =>
       CharacterSummary(name: j['name'] as String, genderHint: j['genderHint'] as String?, roleHint: j['roleHint'] as String?);
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    if (genderHint != null) 'genderHint': genderHint,
+    if (roleHint != null) 'roleHint': roleHint,
+  };
 }
 
 class ScriptSummary {
@@ -172,6 +196,15 @@ class ScriptSummary {
     characters: ((j['characters'] as List?) ?? const []).map((e) => CharacterSummary.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
     scenes: ((j['scenes'] as List?) ?? const []).map((e) => Scene.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
   );
+
+  Map<String, dynamic> toJson() => {
+    'title': title,
+    'sceneCount': sceneCount,
+    'characterCount': characterCount,
+    'lineCount': lineCount,
+    'characters': [for (final c in characters) c.toJson()],
+    'scenes': [for (final s in scenes) s.toJson()],
+  };
 }
 
 // ---------------------------------------------------------------------------

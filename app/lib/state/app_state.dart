@@ -10,9 +10,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/models.dart';
 import '../services/platform.dart';
+import '../services/project_files.dart';
 import '../services/project_store.dart';
 import '../services/python_bridge.dart';
 import '../services/settings.dart';
@@ -316,8 +318,14 @@ class AppState extends ChangeNotifier {
     selectedEngine = EngineKind.fromId(p.selectedEngine) ?? EngineKind.macOS;
     renderFingerprints = Map.of(p.renderFingerprints);
     checkedLines = Set.of(p.checkedLines);
-    castPending = p.voiceAssignment.isEmpty && !settings.getBool('castConfirmed.${p.id}');
     final pdf = p.pdfPath;
+    if (pdf != null && rebaseEdits(pdfPath: pdf, corrections: corrections, sceneTitleOverrides: sceneTitleOverrides, userAddedElements: userAddedElements)) {
+      dlog('edits re-pointed at the PDF\'s current location (the project folder moved)', LogStyle.info);
+    }
+    final folder = p.folderPath;
+    // In iCloud Drive, fetch anything this Mac has offloaded before it's needed.
+    if (folder != null) NativePlatform.downloadFolder(folder);
+    castPending = p.voiceAssignment.isEmpty && !settings.getBool('castConfirmed.${p.id}');
     if (pdf != null) importPDF(pdf);
   }
 
@@ -357,6 +365,7 @@ class AppState extends ChangeNotifier {
     p.userAddedElements = {for (final e in userAddedElements.entries) e.key: List.of(e.value)};
     p.selectedEngine = selectedEngine.id;
     p.checkedLines = Set.of(checkedLines);
+    p.renderFingerprints = Map.of(renderFingerprints);
     p.renderedScenes = [
       for (final e in sceneFileInfo.entries)
         if (e.value.exists) e.key,
@@ -407,6 +416,14 @@ class AppState extends ChangeNotifier {
       );
       parseFraction = 1;
       script = parsed;
+      final folder = currentProjectFolder;
+      if (folder != null) {
+        try {
+          saveScriptSnapshot(folder, parsed, pdfFilename: path.split('/').last);
+        } catch (e) {
+          dlog('could not save script.json: $e', LogStyle.error);
+        }
+      }
       selectedScenes = parsed.scenes.map((s) => s.number).toSet();
       dlog(
         'parse finished · ${parsed.sceneCount} scenes, ${parsed.characterCount} characters, ${parsed.lineCount} lines (${sw.elapsedMilliseconds} ms)',
@@ -692,6 +709,45 @@ class AppState extends ChangeNotifier {
   void saveView(Map<String, dynamic> view) {
     final id = store.currentProject?.id;
     if (id != null) settings.setString('view.$id', jsonEncode(view));
+  }
+
+  /// This install's id: names its rehearsal file in each project folder.
+  String get deviceId {
+    var id = settings.getString('deviceId');
+    if (id == null) {
+      id = const Uuid().v4().toUpperCase();
+      settings.setString('deviceId', id);
+    }
+    return id;
+  }
+
+  /// Rehearsal settings (role, practice toggles, speed, loop, where playback
+  /// stopped) live in the project folder so they follow the project to other
+  /// devices: the newest any device wrote. Older projects kept them in app
+  /// preferences.
+  RehearsalState loadRehearsal() {
+    final folder = currentProjectFolder;
+    final saved = folder == null ? null : loadNewestRehearsal(folder);
+    if (saved != null) return saved;
+    final v = loadView();
+    return RehearsalState(
+      role: v['role'] as String? ?? '',
+      mute: v['mute'] as bool? ?? false,
+      block: v['block'] as bool? ?? false,
+      cue: v['cue'] as bool? ?? false,
+      speed: (v['speed'] as num?)?.toDouble() ?? 1.0,
+    );
+  }
+
+  void saveRehearsal(RehearsalState state) {
+    final folder = currentProjectFolder;
+    if (folder == null) return;
+    state.device = Platform.isMacOS ? 'Mac' : Platform.operatingSystem;
+    try {
+      writeRehearsal(folder, deviceId, state);
+    } catch (e) {
+      dlog('could not save rehearsal settings: $e', LogStyle.error);
+    }
   }
 
   /// Lines per character (dialogue only; a simultaneous line counts for each voice).
@@ -1073,7 +1129,8 @@ class AppState extends ChangeNotifier {
       for (final sp in speakers) [sp, voiceAssignment[sp]],
       for (final c in corr)
         [
-          c.storageKey,
+          // Without the PDF's path, so moving the project doesn't mark scenes for re-render.
+          '${c.sceneNumber}|${elementRef(c.textKey, c.occurrence ?? 0)}',
           c.correctedKind,
           c.correctedSpeaker,
           c.correctedText,
