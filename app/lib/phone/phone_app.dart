@@ -1,16 +1,14 @@
 // Table Read on iPhone (#90): pick the projects folder once, then the
-// project covers, as on the Mac. Rehearsal happens on the Mac's renders.
-
-import 'dart:io';
+// project covers, as on the Mac; a cover opens the rehearsal screen (#91).
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
-import '../services/project_files.dart';
 import '../theme/tokens.dart';
 import '../ui/gallery.dart' show ScriptCover;
 import 'phone_store.dart';
+import 'rehearsal_screen.dart';
 
 class PhoneApp extends StatelessWidget {
   const PhoneApp({super.key, required this.store, this.themeMode = ThemeMode.system});
@@ -127,7 +125,9 @@ class _Projects extends StatelessWidget {
     if (store.downloading.containsKey(p.id)) return;
     final ok = await store.download(p);
     if (!ok || !context.mounted) return;
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PhoneProjectScreen(project: p)));
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PhoneRehearsalScreen(project: p, folderAccess: store.folderAccess, audio: store.folderAccess)),
+    );
   }
 
   Future<void> _menu(BuildContext context) async {
@@ -251,57 +251,6 @@ class _Projects extends StatelessWidget {
             ),
         ],
       ),
-    );
-  }
-}
-
-/// Stand-in until the rehearsal screen (#91): the scenes the Mac saved.
-class PhoneProjectScreen extends StatelessWidget {
-  const PhoneProjectScreen({super.key, required this.project});
-  final Project project;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Tokens.of(context);
-    final folder = project.folderPath!;
-    final script = loadScriptSnapshot(folder);
-    final rendered = <int>{
-      for (final f in Directory(folder).listSync().whereType<File>())
-        if (RegExp(r'/Scene_(\d+)_.*\.m4a$').firstMatch(f.path) case final m?) int.parse(m.group(1)!),
-    };
-    return Scaffold(
-      backgroundColor: t.bg,
-      appBar: AppBar(
-        backgroundColor: t.bg,
-        title: Text(project.name, style: TextStyles.ui(t, size: 17, weight: FontWeight.w600)),
-      ),
-      body: script == null
-          ? Padding(
-              padding: const EdgeInsets.all(32),
-              child: Center(
-                child: Text(
-                  'Open this project on your Mac once, and it saves the script for your iPhone.',
-                  textAlign: TextAlign.center,
-                  style: TextStyles.ui(t, size: 16, color: t.muted, height: 1.5),
-                ),
-              ),
-            )
-          : ListView.separated(
-              itemCount: script.scenes.length,
-              separatorBuilder: (_, _) => Divider(height: 1, color: t.ruleSoft),
-              itemBuilder: (context, i) {
-                final s = script.scenes[i];
-                final title = project.sceneTitleOverrides.values.map((m) => m[s.number]).nonNulls.firstOrNull ?? s.title;
-                return ListTile(
-                  leading: Text(s.number.toString().padLeft(2, '0'), style: TextStyles.script(t, size: 14, weight: FontWeight.w700)),
-                  title: Text(title, style: TextStyles.ui(t, size: 16)),
-                  subtitle: Text('${s.elements.length} lines', style: TextStyles.ui(t, color: t.muted)),
-                  trailing: rendered.contains(s.number)
-                      ? Icon(Icons.graphic_eq_rounded, color: t.ok)
-                      : Text('Text only', style: TextStyles.ui(t, size: 12, color: t.muted)),
-                );
-              },
-            ),
     );
   }
 }

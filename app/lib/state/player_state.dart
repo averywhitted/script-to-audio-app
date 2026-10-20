@@ -15,7 +15,7 @@ import 'app_state.dart';
 class ScenePlayerItem {
   ScenePlayerItem(this.sceneNumber, this.sceneTitle, this.audioPath, this.cues, this.totalDuration);
   final int sceneNumber;
-  final String sceneTitle;
+  String sceneTitle;
   final String audioPath;
   final List<SceneCue> cues;
   final double totalDuration;
@@ -96,7 +96,7 @@ class RehearsalPlayer extends ChangeNotifier {
     for (final n in keys) {
       final info = app.sceneFileInfo[n]!;
       if (!info.exists) continue;
-      final (cueList, total) = _loadCues(app.sceneCueFiles[n]);
+      final (cueList, total) = loadCueFile(app.sceneCueFiles[n]);
       items.add(
         ScenePlayerItem(
           n,
@@ -112,6 +112,12 @@ class RehearsalPlayer extends ChangeNotifier {
         ),
       );
     }
+    loadItems(items);
+  }
+
+  /// Loads rendered scenes (the iPhone builds these from the project folder).
+  /// Keeps the current scene when it's still there.
+  void loadItems(List<ScenePlayerItem> items) {
     final currentNumber = currentScene?.sceneNumber;
     final hadScenes = scenes.isNotEmpty;
     scenes = items;
@@ -140,7 +146,8 @@ class RehearsalPlayer extends ChangeNotifier {
     notifyListeners();
   }
 
-  static (List<SceneCue>, double) _loadCues(String? path) {
+  /// A scene's cue map: every voiced line with its start and end time.
+  static (List<SceneCue>, double) loadCueFile(String? path) {
     if (path == null) return (const [], 0);
     try {
       final j = jsonDecode(File(path).readAsStringSync()) as Map;
@@ -192,6 +199,9 @@ class RehearsalPlayer extends ChangeNotifier {
 
   @visibleForTesting
   void refreshForTest() => notifyListeners();
+
+  /// Rebuild listeners after settings were restored directly into the fields.
+  void refresh() => notifyListeners();
 
   void togglePlayPause() => isPlaying ? pause() : play();
 

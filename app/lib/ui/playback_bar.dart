@@ -191,7 +191,7 @@ class PlaybackBar extends StatelessWidget {
             clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
-              _Timeline(player: p, allSpeakers: app.allSpeakers),
+              SceneTimeline(player: p, allSpeakers: app.allSpeakers),
               if (p.waitingAtCue != null)
                 Positioned(
                   top: -2,
@@ -329,10 +329,12 @@ class _BarChip extends StatelessWidget {
 }
 
 /// One colored segment per line (yellow for my lines); click or drag to seek.
-class _Timeline extends StatelessWidget {
-  const _Timeline({required this.player, required this.allSpeakers});
+/// Also the iPhone's scrubber, with a bigger knob for a finger.
+class SceneTimeline extends StatelessWidget {
+  const SceneTimeline({super.key, required this.player, required this.allSpeakers, this.height = 30, this.knob = 7});
   final RehearsalPlayer player;
   final List<String> allSpeakers;
+  final double height, knob;
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
@@ -351,9 +353,9 @@ class _Timeline extends StatelessWidget {
             onHorizontalDragUpdate: (d) => seekAt(d.localPosition.dx),
             child: SizedBox(
               width: c.maxWidth,
-              height: 30,
+              height: height,
               child: CustomPaint(
-                painter: _TimelinePainter(player: player, allSpeakers: allSpeakers, t: t),
+                painter: _TimelinePainter(player: player, allSpeakers: allSpeakers, t: t, knob: knob),
               ),
             ),
           ),
@@ -364,10 +366,11 @@ class _Timeline extends StatelessWidget {
 }
 
 class _TimelinePainter extends CustomPainter {
-  _TimelinePainter({required this.player, required this.allSpeakers, required this.t});
+  _TimelinePainter({required this.player, required this.allSpeakers, required this.t, required this.knob});
   final RehearsalPlayer player;
   final List<String> allSpeakers;
   final Tokens t;
+  final double knob;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -398,10 +401,10 @@ class _TimelinePainter extends CustomPainter {
       );
     }
     final x = (player.currentTime / d).clamp(0.0, 1.0) * size.width;
-    canvas.drawCircle(Offset(x, mid), 7, Paint()..color = t.knob);
+    canvas.drawCircle(Offset(x, mid), knob, Paint()..color = t.knob);
     canvas.drawCircle(
       Offset(x, mid),
-      7,
+      knob,
       Paint()
         ..color = t.accent
         ..style = PaintingStyle.stroke

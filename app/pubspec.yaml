@@ -37,6 +37,8 @@ dependencies:
   provider: ^6.1.5+1
   file_selector: ^1.1.0
   just_audio: ^0.10.6
+  # Already used by just_audio; direct so the iPhone can play as a playback app (silent switch, lock screen).
+  audio_session: ^0.2.4
   shared_preferences: ^2.5.6
   path: ^1.9.1
   uuid: ^4.6.0
