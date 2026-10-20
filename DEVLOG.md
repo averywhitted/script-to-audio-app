@@ -1,7 +1,7 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-20 01:20 EDT · branch `ios-rehearsal` @ `692b6f1` (not pushed) · working tree: uncommitted label kit (Oct 17: `scripts/label_kit.py`, `scripts/side_by_side.py`, `label_sample.py`, `.gitignore`, `CLAUDE.md`, `.claude/launch.json`; not part of the iOS work, don't commit it with it) + two kept sidetrack notes_
+_Updated 2026-10-20 01:20 EDT · branch `ios-rehearsal` @ `aa1127c` (not pushed) · working tree: uncommitted label kit (Oct 17: `scripts/label_kit.py`, `scripts/side_by_side.py`, `label_sample.py`, `.gitignore`, `CLAUDE.md`, `.claude/launch.json`; not part of the iOS work, don't commit it with it) + two kept sidetrack notes_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas with TTS. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); it is being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 still open) that drives the same Python worker.
 **Current goal:** milestone **iOS rehearsal** (GitHub milestone 4, issues #88–#94): an iPhone version of the Flutter app for rehearsing and learning lines. Planned with `/grilling` on Oct 19; Avery said go.
@@ -15,14 +15,17 @@ _Updated 2026-10-20 01:20 EDT · branch `ios-rehearsal` @ `692b6f1` (not pushed)
 - #88 spike app: `spikes/icloud_folder/` (Flutter, bundle id `com.averywhitted.icloudFolderTest`, team TX98CU7F96). Native code in `ios/Runner/AppDelegate.swift` (`FolderAccessPlugin`, channel `tableread/folder`: pick/status/list/read/write; bookmark in UserDefaults; coordinated reads that ask iCloud to download).
 - **#88 PASSED and closed (Oct 19)** on Avery's iPhone 15 Pro Max (UDID 00008130-000475601803401C), free team: folder kept across relaunch, 2.3 MB scene read, phone→Mac and Mac→phone (~30 s) both work. No iCloud entitlement needed. **The iCloud Drive approach is a go.**
 - Mac-side test folder `~/Library/Mobile Documents/com~apple~CloudDocs/Table Read Sync Test/` kept for #90 testing; delete when the real app reads real projects.
+- **#91 built (`aa1127c`), open for Avery's notes**: `lib/phone/rehearsal_screen.dart` (script follows playback, tap to play, long-press-drag → Loop, dark bar with `SceneTimeline` (made public from `playback_bar.dart`), Rehearse panel, your-line card + Line!, Aa sheet: text size + character colors per device) and `lib/phone/rehearsal_session.dart` (rendered scenes from cue maps, text-only from script.json with corrections; saves `Rehearsal/<deviceId>.json` via native coordinated write, restores newest incl. position). `RehearsalPlayer.loadItems`. `audio_session` direct dep, spoken-audio session. Loaded both real projects through it fine. Goldens `phone_rehearse_*`, `phone_panel_*`.
+- **`scripts/install_iphone.sh`**: build + sign + install on the connected iPhone (rerun weekly: free-team apps expire after 7 days).
 - **#90 done (`692b6f1`)**: iOS target `app/ios` (bundle `com.averywhitted.tableread.ios`, "Table Read", Mac icon, background-audio mode), `ProjectsFolderPlugin` in `app/ios/Runner/AppDelegate.swift` (pick/folder/forget/list/download/write; Simulator-only fallback to the app's own Documents/Table Read), `lib/phone/` (welcome, cover grid, download on open, stand-in scene list), `test/phone_test.dart` + `goldens/phone_*`. `main.dart` sends iOS to `PhoneApp`. Verified in the Simulator with copies of Diana of Dobsons + TLRAD (list renders through the native code). NOT verified on the iPhone (signing blocked).
 - **#89 code done (`a3ee5ca`), issue left open until Avery runs the real move.** Installed in `/Applications/Table Read Preview.app`. New `app/lib/services/project_files.dart`: `script.json` (worker parse; edits stay in project.json and are applied on top), `Rehearsal/<deviceId>.json` (one file per device, newest `updatedAt` wins, falls back to prefs `view.<id>`; also saves loop + position for #93, not restored yet), `rebaseEdits` (edits keyed by absolute PDF path get re-pointed on open). `ProjectStore.moveProjectsTo` + Settings → Projects → iPhone section. `NativePlatform.downloadFolder` on open. Re-render fingerprint no longer includes the PDF path; fingerprints are now actually saved (they never were).
 - Parser-quality milestone is paused, not dropped: it resumes when Avery's exam labels come in (Avery's call, Oct 19).
 
 **Next steps:**
 1. Avery: open Table Read Preview → Settings → Projects → Move to iCloud Drive… (close any open project first). Then check: projects open, corrections still applied, nothing newly marked for re-render, `script.json` + `Rehearsal/` appear in a project folder after opening it. Then close #89.
-2. #91 rehearsal screen, from the mockup https://claude.ai/artifact/7rVmDhroJQJzHnLLVimJ8B (3 screens: playing, Rehearse panel, your-line card). Replace `PhoneProjectScreen` in `lib/phone/phone_app.dart`; reuse `RehearsalPlayer` (split `load(AppState)` so the phone can feed it items); rows from each rendered scene's cues (already corrected at render), script.json elements for text-only scenes.
-3. Install on the iPhone once Xcode's Apple ID sign-in is renewed (see Waiting).
+2. Once Xcode is signed in again: `bash scripts/install_iphone.sh`, then Avery tries #90/#91 on the phone (pick iCloud Drive › Table Read after the Mac move). Real audio, scroll-follow and touch are untested on a device.
+3. #92 lock screen + AirPods: background playback is already allowed (`UIBackgroundModes` audio, spoken-audio session); needs lock-screen Now Playing + remote commands (play/pause/next) mapped to the player, AirPods tap = carry on in Stop Before. Probably `audio_service` or a small native MPRemoteCommandCenter channel.
+4. #93 sync: the Mac doesn't restore position/loop yet, and neither side reloads when the other device's file changes while open.
 
 **Waiting on the user / open questions:**
 - Labelling the exams (offline kit `Test PDFs/label-kit/Label lines.html`) for the parser milestone.
@@ -51,7 +54,14 @@ _Updated 2026-10-20 01:20 EDT · branch `ios-rehearsal` @ `692b6f1` (not pushed)
 ## History
 <!-- newest first -->
 
-### 2026-10-20 01:20 — #90 iPhone app basics; rehearsal mockup for #91
+### 2026-10-20 01:20 — #91 iPhone rehearsal screen
+**Asked:** (continuing independently) build the rehearsal screen from the mockup.
+**Done:** `aa1127c` as in the Resume block; `scripts/install_iphone.sh`. Issue #91 commented, left open for notes.
+**Decisions:** One scene on screen at a time (header or panel switches scenes), following playback into the next scene. Rendered scenes are shown from cue maps so the highlight is the cue index, no row matching. The phone restores position already (part of #93). Text options per device, as decided Oct 19.
+**State:** Flutter 60/60; iOS Simulator build compiles. Fixed during review of the goldens: dark-mode playing line unreadable (pale ink on yellow), "My Role" truncated, knob over "0:00", invisible ripples on the toggles. Device install still blocked ("No Accounts").
+**Next:** Avery: Xcode sign-in, Mac move, try the phone.
+
+### 2026-10-20 01:07 — #90 iPhone app basics; rehearsal mockup for #91
 **Asked:** Avery: "continue working independently" (after #89).
 **Done:** `692b6f1`: iOS target, native folder plugin, phone welcome + project covers + download, phone screen tests. Issue #90 commented. Mockup canvas for #91: https://claude.ai/artifact/7rVmDhroJQJzHnLLVimJ8B (playing; Rehearse panel; Stop Before + Block waiting card with "Line!").
 **Decisions:** The phone reuses the Mac's `ScriptCover` (scaled, two per row) instead of a new card. Rendered scenes will be shown from their cue files (what was voiced, corrections included); text-only scenes from script.json. Projects without script.json say "open it on your Mac once" rather than the phone guessing.
