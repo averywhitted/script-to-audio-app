@@ -1,49 +1,54 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-19 15:38 EDT · branch `flutter-mac-app` @ `e4f1f61` (pushed; tag `v0.3.0`; PR #78 open) · working tree: uncommitted label kit (Oct 17) + this file; two kept sidetrack notes (`sidetrack-personality-relay.md`, `sidetrack-ui-notes-3.md`)_
+_Updated 2026-10-19 23:20 EDT · branch `ios-rehearsal` (from `flutter-mac-app` @ `60ac61b`) · working tree: uncommitted label kit (Oct 17: `scripts/label_kit.py`, `scripts/side_by_side.py`, `label_sample.py`, `.gitignore`, `CLAUDE.md`, `.claude/launch.json`; not part of the iOS work, don't commit it with it) + two kept sidetrack notes_
 
-**Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas with TTS. The shipped app is SwiftUI (`Sources/TableRead/`) with a Python backend (`backend/`) over a stdin/stdout JSON bridge. It is being rebuilt as a Flutter app (`app/`) that drives the same Python worker.
-**Current goal:** Flutter macOS preview app with the Claude Design "1a v2" redesign, refined in rounds of UI notes from Avery. This is step one of the approved plan: Flutter UI plus a Rust engine for all 5 platforms (see memory `platform_strategy.md`).
+**Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas with TTS. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); it is being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 still open) that drives the same Python worker.
+**Current goal:** milestone **iOS rehearsal** (GitHub milestone 4, issues #88–#94): an iPhone version of the Flutter app for rehearsing and learning lines. Planned with `/grilling` on Oct 19; Avery said go.
+
+**The plan (TLDR for Avery):** render on the Mac; projects live in an iCloud Drive folder both apps read and write; the phone is the Mac's rehearsal player on a touchscreen, plus lock-screen playback and AirPods controls; role/toggles/speed/loops/where-you-stopped sync both ways. Free Apple account, just Avery, reinstall from the Mac every 7 days.
+- Steps (one issue each): #88 iCloud folder test (go/no-go) → #89 Mac changes (save full parsed `script.json` per project; rehearsal settings move from prefs `view.<id>` into a file in the project folder; "Move projects to iCloud Drive" button, archives too; handle not-downloaded files) → #90 iPhone basics (iOS target in `app/`, name "Table Read", same icon, own bundle id, project list, one-time folder pick, offline download) → #91 rehearsal screen (mockup first, then iterate) → #92 lock screen + AirPods (AirPods tap = "I said it, carry on" in Stop Before My Lines) → #93 sync (synced: role, mute/block/stop, speed, loops, position; per device: text size, highlights) → #94 on Avery's iPhone, rounds of notes.
+- Facts it rests on: a rendered project is self-sufficient for rehearsal (`Scene_NN_*.cues.json` has every line's text, speaker, kind, start/end time, `ref`); the phone needs no parser or Python. `just_audio` already supports iOS.
+- Out of scope: iPad layout, voice detection, $99 membership/TestFlight for castmates, full parity (import/parse/render on the phone = the Rust engine milestone). Avery: "the goal is to have complete parity with the desktop app eventually."
 
 **Where things stand:**
-- Flutter preview builds and is signed: `app/build/macos/Build/Products/Release/Table Read Preview.app` (bundle id `com.averywhitted.tableread.preview`). That build runs the repo's backend live.
-- **Installed copy:** `/Applications/Table Read Preview.app` is self-contained (backend + `vendor/python` bundled), made by `bash scripts/build_flutter_app.sh`. It does NOT follow the repo: rerun the script after backend/UI changes. The old Swift `/Applications/TableRead.app` is untouched.
-- **Beta v0.3.0 (Oct 19) is the Flutter app**, a GitHub prerelease with `TableRead-Preview.{dmg,zip,sha256}` (`bash scripts/build_flutter_app.sh --package`). The asset names deliberately differ from `TableRead.zip`: Swift beta-channel users get a link to the release page, never an auto-install (Avery's choice). Apple Silicon only (bundled Python is arm64), Development-signed (Gatekeeper right-click → Open).
-- Done on this branch: workspace redesign with no side panel, three rounds of UI notes, playback/highlight sync by stable line ids, text size, Export Audio, personality pass. Avery hasn't given notes on the personality pass yet.
-- Bug-report relay (`relay/src/worker.js`, Cloudflare Worker) is committed but **not deployed**: Avery has to create the Cloudflare account and GitHub token. Issue #77.
-- Full test suite passes as of `a752904` (Python, Swift, Flutter 40/40).
-- Parser work (PRs #69–#74) is merged to `main`. Baselines: generated 99.4%, real sample 98.5%. The held-out exam (`Test PDFs/reference/real_sample.exam.json`) is 260/403 labelled; 143 left across 13 PDFs.
-- **Plan decided (`/grilling`, Oct 14–16; awaiting Avery's final go-ahead).** Next milestone is **parser quality** (not shipping Flutter, not Rust). Avery labels the exam → score #69–#74 on it (pass = range overlaps 98.5% ± 2.5; if clearly lower, look at error categories, never exam lines). Exam scored once for this, then a normal judge. **No parser changes land until it's scored.** UI notes from Avery interrupt parser work when they arrive.
-  - Then, in order: #68 (learn the script's own acts/scenes; else "Part N", current chunk size, never announced) → furniture bugs (INATH margin scene number read twice; Stereophonic author's note read by "D A V I D") → #75 split in three: column splitting at extraction → dual dialogue → room columns + reading order → side-by-side exam (~400 lines, Avery labels by hand once at the end, new "spoken at the same time as" field).
-  - Side-by-side rule: **height on the page = time.** Lines next to each other are simultaneous (voices mixed, `overlap_voices`) until a real script proves otherwise; no exception rules built in advance. Action is read by the narrator in height order. EMMA's two-pages-per-sheet is already handled.
-  - #75 is designed on new generated layout families (dual dialogue, room columns) in `synth_generate.py`, not on real lines. Survey of side-by-side kinds in the corpus: 37 dual-dialogue regions (~240 lines, 7 PDFs); Stereophonic room columns 10% right voice; #75's text is wrong that right-column names aren't recognised.
-  - Out of scope: ML hybrid, #19, calibration wizard, #76, relay deploy (#77).
+- #88 spike app: `spikes/icloud_folder/` (Flutter, bundle id `com.averywhitted.icloudFolderTest`, team TX98CU7F96). Native code in `ios/Runner/AppDelegate.swift` (`FolderAccessPlugin`, channel `tableread/folder`: pick/status/list/read/write; bookmark in UserDefaults; coordinated reads that ask iCloud to download).
+- **Simulator half passed** (iPhone 17 sim, local folder): pick, list, read, write, read a 2.3 MB m4a, folder remembered after quit + relaunch (stale: false).
+- **Device half not done:** needs Avery's iPhone plugged in. iCloud Drive and free-account signing can only be proven on the real phone.
+- Mac-side test folder: `~/Library/Mobile Documents/com~apple~CloudDocs/Table Read Sync Test/` (hello-from-mac.txt + one Diana of Dobsons scene + project.json). Delete after #88.
+- Parser-quality milestone is paused, not dropped: it resumes when Avery's exam labels come in (Avery's call, Oct 19).
 
 **Next steps:**
-1. Avery merges PR #78 (`flutter-mac-app` → `main`); auto mode blocked Claude from merging without review. CI passed on the same commit's push run.
-2. Run the prepared GitHub cleanup script (closes #21–26, #13, #52, #42, #75, PRs #54/#56; creates the "Parser quality" milestone and 9 issues; comments on #68). It was dry-run against a fake `gh`; its text is the source for those issues. `gh` needs `GODEBUG=netdns=go` on this Mac: the system resolver times out on api.github.com (Tailscale DNS); the script sets it.
-3. Avery: label both exams in the offline kit (`Test PDFs/label-kit/Label lines.html`, double-click; 143 held-out + 400 side-by-side lines), Export, then Claude runs `python scripts/label_kit.py --import`. Score the held-out exam first; the side-by-side labels stay unread until steps 1–3 are done and review the latest preview build in depth. Delete `sidetrack-ui-notes-3.md` and `sidetrack-personality-relay.md` once Avery confirms those rounds.
+1. Avery plugs in the iPhone (Developer Mode on). Then `cd spikes/icloud_folder && flutter run --release -d <iphone>`; on the phone trust the developer in Settings → General → VPN & Device Management. In the app: Pick folder → iCloud Drive → "Table Read Sync Test" → Open; List; Read hello-from-mac; Write; Read all (watch download seconds); quit and reopen; confirm `hello-from-iphone.txt` appears on the Mac. Edit hello-from-mac on the Mac and re-read on the phone.
+2. Pass → close #88 with the results, start #89. Fail → tell Avery first; fallback is Wi-Fi sync (Mac app as hub, Bonjour).
+3. #91 needs a mockup shown to Avery before building.
 
 **Waiting on the user / open questions:**
-- Deploying the relay (#77): needs Avery's Cloudflare account and a fine-grained GitHub token. Claude can't create accounts or handle tokens.
-- #76: ask about uncertain lines instead of showing a flagged-lines navigator? Proposed, not built.
-- Open a PR from `flutter-mac-app` to `main`?
+- iPhone plugged in for the #88 device test.
+- Labelling the exams (offline kit `Test PDFs/label-kit/Label lines.html`) for the parser milestone.
+- Merge PR #78 (`flutter-mac-app` → `main`).
 
 **Watch out for:**
-- `sidetrack-*.md` notes are ephemeral: delete each once its task is confirmed done; never commit them.
-- Avery catches UI regressions by eye. The options cluster must stay pinned far top-right, and playback must scroll to the playing line.
-- Goldens: record with the whole file (`flutter test --update-goldens test/screens_test.dart`), never a single test. Earlier tests open a project, which changes the gallery's order. Use `clockNow()`, never `DateTime.now()`, for anything a golden shows.
-- `app/test/failures/` is tracked in git by mistake (old diff images). Don't `rm -rf` it in a commit unless removing it on purpose.
-- `ml/data/` is gitignored: `dataset.csv` names the corpus PDFs, like `real_sample*.json`.
-- Parser edits must follow the answer-key protocol in `CLAUDE.md` (`python scripts/answer_key.py`; nothing right may go wrong).
-- Builds are signed with Avery's Apple Development cert (team TX98CU7F96) so macOS doesn't re-prompt for Documents access.
+- Avery asked (Oct 19): use the local models on linux-box for grunt work and supervise (skill `linux-box-llm`). Used so far for the issue drafts and the spike's Dart UI; both needed review (one real bug: error logs interpolated a function).
+- Simulator: the iOS sim tool only has access to the `iPhone 17` sim (3F48D6A2…); the iPhone 18 Pro sim was declined. Its screenshots lag taps by a second or two: wait before screenshotting.
+- `sidetrack-*.md` notes are ephemeral: delete once confirmed done; never commit them.
+- Avery catches UI regressions by eye (options cluster top-right, scroll-follow on play).
+- Goldens: record with the whole file (`flutter test --update-goldens test/screens_test.dart`); use `clockNow()` for anything a golden shows.
+- Parser edits follow the answer-key protocol in `CLAUDE.md`.
+- `gh` needs `GODEBUG=netdns=go` on this Mac. Git pushes: `-c credential.helper='!gh auth git-credential'`.
 
-**Key files:** `app/lib/` (Flutter UI), `design/table-read-ui-contract.json` (screens and labels the UI must match), `backend/audio_worker.py` (worker protocol), `relay/src/worker.js`
-**Run / test:** `bash scripts/test.sh flutter` (analyze + logic/screen/worker tests), `bash scripts/test.sh` (full suite).
+**Key files:** `app/lib/state/player_state.dart` (RehearsalPlayer, to be shared with iOS), `app/lib/ui/playback_bar.dart` (rehearsal controls), `app/lib/services/project_store.dart` (projects folder, `projectsBaseURL`), `app/lib/state/app_state.dart` (`loadView`/`saveView`: rehearsal settings in prefs today), `spikes/icloud_folder/` (#88)
+**Run / test:** `bash scripts/test.sh flutter`, `bash scripts/test.sh` (full). Spike: `cd spikes/icloud_folder && flutter analyze && flutter build ios --simulator --debug`.
 
 ## History
 <!-- newest first -->
+
+### 2026-10-19 23:20 — iOS rehearsal planned; iCloud folder test passes in the Simulator
+**Asked:** Plan an iOS port as a rehearsal/line-learning tool at parity with the desktop player (`/grilling`, TLDR for Avery), then go. Also: use linux-box local models for grunt work from now on.
+**Done:** Three rounds of questions, 13 decisions (Resume block). Branch `ios-rehearsal`. GitHub milestone 4 renamed "iOS rehearsal" with issues #88–#94 (bodies drafted by qwen-big, reviewed). Spike app `spikes/icloud_folder/` for #88, run on the iPhone 17 simulator.
+**Decisions (Avery):** iOS goes ahead of the parser milestone (parser resumes when labels arrive); just Avery, free account; sync via a shared iCloud Drive folder (rejected: AirDrop is one-way; Wi-Fi sync only when both on the same network with the Mac app open, most code; Apple's app sync needs $99); sync role/toggles/speed/loops/position both ways, text size + highlights per device; Mac saves the full parsed script so unrendered scenes show as text; Mac gets a one-button move to iCloud Drive (old Swift app loses the projects, accepted); phone layout as proposed, "start here and iterate"; app "Table Read", same icon.
+**State:** Simulator: pick, list, read/write, 2.3 MB read, bookmark survives relaunch. Device/iCloud test pending Avery's iPhone. Spike not covered by `scripts/test.sh` (flutter analyze clean); suite not rerun, no app code changed.
+**Next:** #88 on the real iPhone.
 
 ### 2026-10-19 15:38 — Released the Flutter app as beta v0.3.0
 **Asked:** Release this version as the new beta.
