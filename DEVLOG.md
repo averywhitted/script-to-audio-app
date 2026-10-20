@@ -1,7 +1,7 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-20 09:01 EDT · branch `ios-rehearsal` @ `cf41edc` (not pushed) · working tree: uncommitted label kit (Oct 17: `scripts/label_kit.py`, `scripts/side_by_side.py`, `label_sample.py`, `.gitignore`, `CLAUDE.md`, `.claude/launch.json`; not part of the iOS work, don't commit it with it) + two kept sidetrack notes_
+_Updated 2026-10-20 16:09 EDT · branch `ios-rehearsal` @ `9957288` (not pushed) · working tree: uncommitted label kit (Oct 17: `scripts/label_kit.py`, `scripts/side_by_side.py`, `label_sample.py`, `.gitignore`, `CLAUDE.md`, `.claude/launch.json`; not part of the iOS work, don't commit it with it) + two kept sidetrack notes_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas with TTS. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); it is being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 still open) that drives the same Python worker.
 **Current goal:** milestone **iOS rehearsal** (GitHub milestone 4, issues #88–#94): an iPhone version of the Flutter app for rehearsing and learning lines. Planned with `/grilling` on Oct 19; Avery said go.
@@ -15,7 +15,8 @@ _Updated 2026-10-20 09:01 EDT · branch `ios-rehearsal` @ `cf41edc` (not pushed)
 - #88 spike app: `spikes/icloud_folder/` (Flutter, bundle id `com.averywhitted.icloudFolderTest`, team TX98CU7F96). Native code in `ios/Runner/AppDelegate.swift` (`FolderAccessPlugin`, channel `tableread/folder`: pick/status/list/read/write; bookmark in UserDefaults; coordinated reads that ask iCloud to download).
 - **#88 PASSED and closed (Oct 19)** on Avery's iPhone 15 Pro Max (UDID 00008130-000475601803401C), free team: folder kept across relaunch, 2.3 MB scene read, phone→Mac and Mac→phone (~30 s) both work. No iCloud entitlement needed. **The iCloud Drive approach is a go.**
 - Mac-side test folder `~/Library/Mobile Documents/com~apple~CloudDocs/Table Read Sync Test/` kept for #90 testing; delete when the real app reads real projects.
-- **Round 1 of Avery's iPhone notes done (`cf41edc`)**, not yet on the phone (it was unreachable): dark bottom bar + status bar; whole play in one `CustomScrollView` with `SliverMainAxisGroup` + pinned `_SceneHeading` per scene (tap → scene list); drag-select edge auto-scroll; text sizes Small/Medium/Large/Huge; Stop Before carry-on fix (`_carriedPast` in `player_state.dart`: an early-landing seek re-stopped on the line just said; `test/player_test.dart`); peek = `peekLine` toggles + reads the line's recording aloud (`_Prompt`), shared with the Mac's Line!/L key.
+- **Round 2 (`9957288`), installed on the phone**: bar follows the theme (`_barColors`: light tray / dark); scene list drops down from the tapped heading (`_openScenes(Rect)` via `showGeneralDialog` + `_RevealDown` clip; the Rehearse panel's scene row uses the top heading); Line! is a bar button replacing the role pill only while Block My Lines is on (`_lineButtonWidget`, key `lineButton`), one-time hint (`phoneLineHintSeen` pref), the "Your line" card is gone ("Your line" in the bar while waiting). **#92 lock screen + headphones built**: `NowPlayingPlugin` in `ios/Runner/AppDelegate.swift` + `lib/phone/now_playing.dart`; becoming-noisy/interruption pauses. #97 closed (Avery: render requests work).
+- **Round 1 (`cf41edc`)**: dark bottom bar + status bar; whole play in one `CustomScrollView` with `SliverMainAxisGroup` + pinned `_SceneHeading` per scene (tap → scene list); drag-select edge auto-scroll; text sizes Small/Medium/Large/Huge; Stop Before carry-on fix (`_carriedPast` in `player_state.dart`: an early-landing seek re-stopped on the line just said; `test/player_test.dart`); peek = `peekLine` toggles + reads the line's recording aloud (`_Prompt`), shared with the Mac's Line!/L key.
 - **Render queue (#97, `cf41edc`)**: phone writes `render-request.json` (`RenderRequest` in `project_files.dart`; long-press cover / scene list; "Waiting for your Mac" list); Mac gallery "Waiting to Render" (polls every 15 s) → Render… opens the project then the Render sheet with those scenes (`app.renderWhenReady`, `app.requestedScenes`); `_settleRenderRequest` after a render. Mac app rebuilt into /Applications. Spoken "Line!" filed as #96.
 - **#91 built (`aa1127c`)**: `lib/phone/rehearsal_screen.dart` (script follows playback, tap to play, long-press-drag → Loop, dark bar with `SceneTimeline` (made public from `playback_bar.dart`), Rehearse panel, your-line card + Line!, Aa sheet: text size + character colors per device) and `lib/phone/rehearsal_session.dart` (rendered scenes from cue maps, text-only from script.json with corrections; saves `Rehearsal/<deviceId>.json` via native coordinated write, restores newest incl. position). `RehearsalPlayer.loadItems`. `audio_session` direct dep, spoken-audio session. Loaded both real projects through it fine. Goldens `phone_rehearse_*`, `phone_panel_*`.
 - **`scripts/install_iphone.sh`**: build + sign + install on the connected iPhone (rerun weekly: free-team apps expire after 7 days).
@@ -25,8 +26,7 @@ _Updated 2026-10-20 09:01 EDT · branch `ios-rehearsal` @ `cf41edc` (not pushed)
 
 **Next steps:**
 1. Avery: open Table Read Preview → Settings → Projects → Move to iCloud Drive… (close any open project first). Then check: projects open, corrections still applied, nothing newly marked for re-render, `script.json` + `Rehearsal/` appear in a project folder after opening it. Then close #89.
-2. Plug in / unlock the iPhone, `bash scripts/install_iphone.sh` (it says when the phone is unreachable). Then Avery tries round 1 + the render queue (needs the Mac move to iCloud Drive first). Real audio, the read-aloud peek, scroll-follow and touch are untested on a device.
-3. #92 lock screen + AirPods: background playback is already allowed (`UIBackgroundModes` audio, spoken-audio session); needs lock-screen Now Playing + remote commands (play/pause/next) mapped to the player, AirPods tap = carry on in Stop Before. Probably `audio_service` or a small native MPRemoteCommandCenter channel.
+2. Avery tries round 2 on the phone, especially lock screen + AirPods (#92: untested on a device) and the Line! toggle with real audio. Reinstall: `bash scripts/install_iphone.sh` (weekly).
 4. #93 sync: the Mac doesn't restore position/loop yet, and neither side reloads when the other device's file changes while open.
 
 **Waiting on the user / open questions:**
@@ -55,6 +55,13 @@ _Updated 2026-10-20 09:01 EDT · branch `ios-rehearsal` @ `cf41edc` (not pushed)
 
 ## History
 <!-- newest first -->
+
+### 2026-10-20 16:09 — iPhone round 2; lock screen + headphone controls
+**Asked:** bar only dark → follow the theme; scene list should drop down from the header; Line! as a bar button (only when blocking), one-time hint instead of the tutorial card, tap again while playing stops; render request works; implement headphone + lock-screen controls.
+**Done:** `9957288` (Resume block). Issues: #97 closed, #92 and #91 commented.
+**Decisions:** Line! replaces the role pill while Block My Lines is on (both pills opened the panel anyway). Native MPRemoteCommandCenter instead of the `audio_service` package (smaller; just_audio stays the player). AirPods press maps to toggle, so it carries on at your line.
+**State:** Flutter 74/74 (new now_playing_test, Line! test, drop-down position check). Installed on the iPhone. Lock screen/AirPods not tried on the device yet.
+**Next:** Avery's notes on round 2.
 
 ### 2026-10-20 09:01 — iPhone round 1 notes; render queue
 **Asked:** Avery's first notes on the phone build: dark mode in the bottom bar; drag-select should scroll at the edges; whole play scrollable with sticky, tappable scene headings; "Large" twice → "Huge"; ask the Mac to render from the phone (a queue on the home screen); Stop Before: play didn't carry on; peek should toggle and read the line aloud; could you say "Line!" out loud?
