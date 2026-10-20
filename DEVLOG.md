@@ -1,7 +1,7 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-19 23:20 EDT · branch `ios-rehearsal` (from `flutter-mac-app` @ `60ac61b`) · working tree: uncommitted label kit (Oct 17: `scripts/label_kit.py`, `scripts/side_by_side.py`, `label_sample.py`, `.gitignore`, `CLAUDE.md`, `.claude/launch.json`; not part of the iOS work, don't commit it with it) + two kept sidetrack notes_
+_Updated 2026-10-19 23:50 EDT · branch `ios-rehearsal` @ `cd676a5` · working tree: uncommitted label kit (Oct 17: `scripts/label_kit.py`, `scripts/side_by_side.py`, `label_sample.py`, `.gitignore`, `CLAUDE.md`, `.claude/launch.json`; not part of the iOS work, don't commit it with it) + two kept sidetrack notes_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas with TTS. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); it is being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 still open) that drives the same Python worker.
 **Current goal:** milestone **iOS rehearsal** (GitHub milestone 4, issues #88–#94): an iPhone version of the Flutter app for rehearsing and learning lines. Planned with `/grilling` on Oct 19; Avery said go.
@@ -13,23 +13,22 @@ _Updated 2026-10-19 23:20 EDT · branch `ios-rehearsal` (from `flutter-mac-app` 
 
 **Where things stand:**
 - #88 spike app: `spikes/icloud_folder/` (Flutter, bundle id `com.averywhitted.icloudFolderTest`, team TX98CU7F96). Native code in `ios/Runner/AppDelegate.swift` (`FolderAccessPlugin`, channel `tableread/folder`: pick/status/list/read/write; bookmark in UserDefaults; coordinated reads that ask iCloud to download).
-- **Simulator half passed** (iPhone 17 sim, local folder): pick, list, read, write, read a 2.3 MB m4a, folder remembered after quit + relaunch (stale: false).
-- **Device half not done:** needs Avery's iPhone plugged in. iCloud Drive and free-account signing can only be proven on the real phone.
-- Mac-side test folder: `~/Library/Mobile Documents/com~apple~CloudDocs/Table Read Sync Test/` (hello-from-mac.txt + one Diana of Dobsons scene + project.json). Delete after #88.
+- **#88 PASSED and closed (Oct 19)** on Avery's iPhone 15 Pro Max (UDID 00008130-000475601803401C), free team: folder kept across relaunch, 2.3 MB scene read, phone→Mac and Mac→phone (~30 s) both work. No iCloud entitlement needed. **The iCloud Drive approach is a go.**
+- Mac-side test folder `~/Library/Mobile Documents/com~apple~CloudDocs/Table Read Sync Test/` kept for #90 testing; delete when the real app reads real projects.
 - Parser-quality milestone is paused, not dropped: it resumes when Avery's exam labels come in (Avery's call, Oct 19).
 
 **Next steps:**
-1. Avery plugs in the iPhone (Developer Mode on). Then `cd spikes/icloud_folder && flutter run --release -d <iphone>`; on the phone trust the developer in Settings → General → VPN & Device Management. In the app: Pick folder → iCloud Drive → "Table Read Sync Test" → Open; List; Read hello-from-mac; Write; Read all (watch download seconds); quit and reopen; confirm `hello-from-iphone.txt` appears on the Mac. Edit hello-from-mac on the Mac and re-read on the phone.
-2. Pass → close #88 with the results, start #89. Fail → tell Avery first; fallback is Wi-Fi sync (Mac app as hub, Bonjour).
+1. #89 Mac app changes: write the full parsed script to the project folder (`script.json`), move rehearsal settings from prefs `view.<id>` (`app_state.dart` `loadView`/`saveView`) into a project file, add "Move projects to iCloud Drive" (projects + archives, repoint `projectsBaseURL`), handle not-yet-downloaded files. Tests: `bash scripts/test.sh flutter`.
+2. #90 iOS target in `app/`, reusing the spike's `FolderAccessPlugin`.
 3. #91 needs a mockup shown to Avery before building.
 
 **Waiting on the user / open questions:**
-- iPhone plugged in for the #88 device test.
 - Labelling the exams (offline kit `Test PDFs/label-kit/Label lines.html`) for the parser milestone.
 - Merge PR #78 (`flutter-mac-app` → `main`).
 
 **Watch out for:**
 - Avery asked (Oct 19): use the local models on linux-box for grunt work and supervise (skill `linux-box-llm`). Used so far for the issue drafts and the spike's Dart UI; both needed review (one real bug: error logs interpolated a function).
+- **Installing on the iPhone:** `flutter build ios` / `flutter devices` don't see the phone. What works: `xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -destination 'id=00008130-000475601803401C' -allowProvisioningUpdates -allowProvisioningDeviceRegistration build`, then `xcrun devicectl device install app --device <udid> <DerivedData>/Release-iphoneos/Runner.app`. Xcode is now signed in to Avery's Apple ID; the developer is trusted on the phone. Free-team apps expire after 7 days: reinstall.
 - Simulator: the iOS sim tool only has access to the `iPhone 17` sim (3F48D6A2…); the iPhone 18 Pro sim was declined. Its screenshots lag taps by a second or two: wait before screenshotting.
 - `sidetrack-*.md` notes are ephemeral: delete once confirmed done; never commit them.
 - Avery catches UI regressions by eye (options cluster top-right, scroll-follow on play).
@@ -42,6 +41,13 @@ _Updated 2026-10-19 23:20 EDT · branch `ios-rehearsal` (from `flutter-mac-app` 
 
 ## History
 <!-- newest first -->
+
+### 2026-10-19 23:50 — #88 passed on the real iPhone: iCloud Drive approach is a go
+**Asked:** Run the iCloud folder test on Avery's iPhone.
+**Done:** Avery signed in to Xcode (it had no Apple ID; iOS signing needs one). Built for the phone's exact UDID so Xcode registered it and made a team profile, installed with `devicectl`, Avery trusted the developer and ran the test. Closed #88 with results.
+**Decisions:** Go for the shared iCloud Drive folder (the Wi-Fi fallback isn't needed).
+**State:** Verified: phone wrote `hello-from-iphone.txt`, seen on the Mac; a Mac edit read on the phone (Avery: "says edited"); folder remembered after relaunch. Only spike + log changed.
+**Next:** #89 Mac app changes.
 
 ### 2026-10-19 23:20 — iOS rehearsal planned; iCloud folder test passes in the Simulator
 **Asked:** Plan an iOS port as a rehearsal/line-learning tool at parity with the desktop player (`/grilling`, TLDR for Avery), then go. Also: use linux-box local models for grunt work from now on.
