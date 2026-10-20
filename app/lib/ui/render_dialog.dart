@@ -266,8 +266,16 @@ class _RenderSheetState extends State<_RenderSheet> {
     super.initState();
     final app = context.read<AppState>();
     if (!app.isGenerating) {
-      // Start from what most likely needs rendering: edited scenes, else unrendered ones.
-      if (app.scenesNeedingRerender.isNotEmpty) {
+      final asked = app.requestedScenes;
+      app.requestedScenes = null;
+      // Start from what most likely needs rendering: what the iPhone asked for,
+      // else edited scenes, else unrendered ones.
+      if (asked != null) {
+        app.selectedScenes = {
+          for (final s in app.scenes)
+            if (asked.contains(s.number)) s.number,
+        };
+      } else if (app.scenesNeedingRerender.isNotEmpty) {
         app.selectedScenes = Set.of(app.scenesNeedingRerender);
       } else {
         final missing = {

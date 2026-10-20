@@ -34,6 +34,8 @@ class FolderAccess {
   /// Waits until each file is on the phone.
   static Future<void> download(List<String> paths) => _channel.invokeMethod('download', {'paths': paths});
 
+  static Future<void> delete(String path) => _channel.invokeMethod('delete', {'path': path});
+
   /// Coordinated write, so iCloud picks the change up cleanly.
   static Future<void> write(String path, String text) => _channel.invokeMethod('write', {'path': path, 'text': text});
 }

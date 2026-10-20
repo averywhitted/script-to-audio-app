@@ -1,5 +1,7 @@
 // Projects (Project Gallery). Contract: screens[gallery].
 
+import 'dart:async';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +10,7 @@ import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../services/platform.dart';
+import '../services/project_files.dart';
 import '../services/project_store.dart';
 import '../state/app_state.dart';
 import '../theme/tokens.dart';
@@ -62,6 +65,32 @@ class _GalleryScreenState extends State<GalleryScreen> {
   Offset? _dragStart, _dragNow;
   bool _downOnCard = false;
   final GlobalKey _areaKey = GlobalKey();
+
+  /// Looks for new iPhone render requests while the gallery is up (iCloud
+  /// brings them in at any time).
+  Timer? _requestPoll;
+
+  @override
+  void initState() {
+    super.initState();
+    _requestPoll = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) context.read<ProjectStore>().refreshRenderRequests();
+    });
+  }
+
+  @override
+  void dispose() {
+    _requestPoll?.cancel();
+    super.dispose();
+  }
+
+  /// Opens a project the iPhone asked to render, straight to the Render sheet.
+  void _renderRequested(Project p, RenderRequest r) {
+    final app = context.read<AppState>();
+    app.requestedScenes = r.scenes?.toSet();
+    app.renderWhenReady = true;
+    _open(p);
+  }
 
   List<Project> _displayed(ProjectStore store) {
     var list = List<Project>.of(store.projects);
@@ -439,6 +468,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
             ListView(
               padding: const EdgeInsets.fromLTRB(40, 0, 40, 90),
               children: [
+                if (store.renderRequests.isNotEmpty) ...[_renderRequests(t, store, app), const SizedBox(height: 24)],
                 if (listView) _listTable(t, store, app, shown) else _grid(t, store, app, shown),
                 if (store.recentlyDeleted.isNotEmpty) ...[const SizedBox(height: 28), _recentlyDeleted(t, store)],
               ],
@@ -550,6 +580,58 @@ class _GalleryScreenState extends State<GalleryScreen> {
             ),
             if (p != shown.last) const Hairline(),
           ],
+        ],
+      ),
+    );
+  }
+
+  /// "Your iPhone asked to render …": one row per request, newest first.
+  Widget _renderRequests(Tokens t, ProjectStore store, AppState app) {
+    final rows = [
+      for (final p in store.projects)
+        if (store.renderRequests[p.id] case final r?) (p, r),
+    ]..sort((a, b) => b.$2.requestedAt.compareTo(a.$2.requestedAt));
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 640),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('WAITING TO RENDER', style: TextStyles.label(t)),
+          const SizedBox(height: 8),
+          for (final (p, r) in rows)
+            Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+              decoration: BoxDecoration(
+                color: t.accentSoft,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: t.accentLine),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.phone_iphone_rounded, size: 20, color: t.accent),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Your ${r.device} asked to render “${p.name}”', style: TextStyles.ui(t, weight: FontWeight.w600)),
+                        Text('${r.summary[0].toUpperCase()}${r.summary.substring(1)} · ${friendlyDate(r.requestedAt)}', style: TextStyles.ui(t, size: 12, color: t.muted)),
+                      ],
+                    ),
+                  ),
+                  Btn('Dismiss', small: true, onPressed: () => store.dismissRenderRequest(p)),
+                  const SizedBox(width: 6),
+                  Btn(
+                    'Render…',
+                    small: true,
+                    kind: BtnKind.primary,
+                    onPressed: app.isGenerating ? null : () => _renderRequested(p, r),
+                    tooltip: app.isGenerating ? 'Wait for the current render to finish' : null,
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

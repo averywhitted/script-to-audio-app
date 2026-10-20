@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import 'platform.dart';
+import 'project_files.dart';
 import 'settings.dart';
 
 class DeletedProjectRecord {
@@ -32,6 +33,9 @@ class ProjectStore extends ChangeNotifier {
   final List<DeletedProjectRecord> recentlyDeleted = [];
   List<ArchivedProjectMeta> archivedProjects = [];
   final Set<String> archivingIds = {};
+
+  /// Project id → what the iPhone asked this Mac to render (render-request.json).
+  Map<String, RenderRequest> renderRequests = {};
 
   /// Project files this session has already backed up before first changing them.
   final Set<String> _backedUp = {};
@@ -75,6 +79,7 @@ class ProjectStore extends ChangeNotifier {
     }
     loaded.sort((a, b) => b.lastOpenedAt.compareTo(a.lastOpenedAt));
     projects = loaded;
+    renderRequests = _readRenderRequests();
     notifyListeners();
   }
 
@@ -332,6 +337,33 @@ class ProjectStore extends ChangeNotifier {
         }
       } catch (_) {}
     }
+  }
+
+  Map<String, RenderRequest> _readRenderRequests() => {
+    for (final p in projects)
+      if (p.folderPath case final f?) p.id: ?loadRenderRequest(f),
+  };
+
+  /// Re-reads only the request files (iCloud brings new ones while the app is open).
+  void refreshRenderRequests() {
+    final next = _readRenderRequests();
+    final same = next.length == renderRequests.length &&
+        next.entries.every((e) => renderRequests[e.key]?.requestedAt == e.value.requestedAt && renderRequests[e.key]?.summary == e.value.summary);
+    if (same) return;
+    renderRequests = next;
+    notifyListeners();
+  }
+
+  void refresh() => notifyListeners();
+
+  void dismissRenderRequest(Project p) {
+    final folder = p.folderPath;
+    if (folder == null) return;
+    try {
+      File('$folder/$renderRequestFile').deleteSync();
+    } catch (_) {}
+    renderRequests.remove(p.id);
+    notifyListeners();
   }
 
   void changeBaseDir(String path) {

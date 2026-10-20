@@ -167,6 +167,9 @@ class RehearsalPlayer extends ChangeNotifier {
     currentSceneIndex = index;
     cues = scenes[index].cues;
     currentTime = startAt;
+    _carriedPast = null;
+    _prompt = null;
+    revealedCue = null;
     waitingAtCue = null;
     if (changed && loopMode == LoopMode.lines) loopMode = LoopMode.off;
     _updateCue();
@@ -218,15 +221,16 @@ class RehearsalPlayer extends ChangeNotifier {
     });
   }
 
-  /// "Line!": with Block My Lines on, shows my current (or next) line for two
-  /// seconds, like an actor calling for a prompt.
+  /// "Line!": like an actor calling for a prompt, shows my current (or next)
+  /// line and reads it aloud from the recording. Calling again while it shows
+  /// hides it; otherwise it hides two seconds after the reading ends.
   int? revealedCue;
   Timer? _revealTimer;
   static const revealDuration = Duration(seconds: 2);
 
   void callForLine() {
     if (myRole.isEmpty || cues.isEmpty) return;
-    var target = waitingAtCue ?? -1;
+    var target = waitingAtCue ?? _prompt?.cue ?? -1;
     if (target < 0) {
       for (var i = currentCueIndex < 0 ? 0 : currentCueIndex; i < cues.length; i++) {
         if (isMyLine(cues[i].speaker)) {
@@ -235,18 +239,80 @@ class RehearsalPlayer extends ChangeNotifier {
         }
       }
     }
-    if (target < 0) return;
-    revealedCue = target;
+    if (target >= 0) peekLine(target);
+  }
+
+  /// Shows cue [i] (and reads it aloud); a second call while it shows hides it.
+  void peekLine(int i) {
+    if (i < 0 || i >= cues.length) return;
+    _revealTimer?.cancel();
+    if (revealedCue == i) {
+      revealedCue = null;
+      _endPrompt();
+      notifyListeners();
+      return;
+    }
+    revealedCue = i;
+    _startPrompt(i);
+    if (_prompt == null) _hideRevealSoon(); // nothing to play (tests, no audio)
+    notifyListeners();
+  }
+
+  void _hideRevealSoon() {
     _revealTimer?.cancel();
     _revealTimer = Timer(revealDuration, () {
       revealedCue = null;
       notifyListeners();
     });
-    notifyListeners();
   }
+
+  /// The line being read aloud for a peek, and where to go back to after.
+  _Prompt? _prompt;
+  int? get promptingCue => _prompt?.cue;
+
+  void _startPrompt(int i) {
+    _endPrompt();
+    if (!audioEnabled) return;
+    _prompt = _Prompt(i, currentTime, isPlaying, waitingAtCue);
+    waitingAtCue = null;
+    isPlaying = false;
+    final start = cues[i].startTime;
+    _expectSeek(start);
+    _player.setVolume(1);
+    _player.seek(Duration(milliseconds: (start * 1000).round())).then((_) {
+      if (_prompt?.cue == i) _player.play();
+    });
+  }
+
+  /// Back to where the peek started: waiting at my line again, or playing on.
+  void _endPrompt() {
+    final pr = _prompt;
+    if (pr == null) return;
+    _prompt = null;
+    if (audioEnabled) _player.pause();
+    currentTime = pr.time;
+    _expectSeek(pr.time);
+    if (audioEnabled) _player.seek(Duration(milliseconds: (pr.time * 1000).round()));
+    _updateCue();
+    waitingAtCue = pr.waiting;
+    if (pr.waiting != null) currentCueIndex = pr.waiting!;
+    if (pr.wasPlaying) {
+      isPlaying = true;
+      if (audioEnabled) _player.play();
+    }
+  }
+
+  /// Cue mode: the last of my lines the actor already said. Seeks on the
+  /// phone can land a little early, inside that line; it must not stop there again.
+  int? _carriedPast;
 
   void play() {
     if (scenes.isEmpty) return;
+    if (_prompt != null) {
+      // Play during a peek: stop reading and carry on as if it had finished.
+      revealedCue = null;
+      _endPrompt();
+    }
     final w = waitingAtCue;
     if (w != null) {
       // Cue mode: the actor said their line; carry on after it.
@@ -256,6 +322,7 @@ class RehearsalPlayer extends ChangeNotifier {
         j++;
       }
       seek(j < cues.length ? cues[j].endTime : currentTime);
+      _carriedPast = j;
     }
     // Starting a scene in cue mode: the actor's call to positions.
     if (cueMode && myRole.isNotEmpty && w == null && currentTime < 0.5) _showFlash('Places…');
@@ -265,6 +332,10 @@ class RehearsalPlayer extends ChangeNotifier {
   }
 
   void pause() {
+    if (_prompt != null) {
+      revealedCue = null;
+      _prompt = null;
+    }
     isPlaying = false;
     if (audioEnabled && _p != null) {
       _player.pause();
@@ -285,6 +356,7 @@ class RehearsalPlayer extends ChangeNotifier {
   }
 
   void seek(double t) {
+    _carriedPast = null;
     final clamped = t.clamp(0.0, duration > 0 ? duration : t);
     _expectSeek(clamped);
     if (audioEnabled) _player.seek(Duration(milliseconds: (clamped * 1000).round()));
@@ -385,6 +457,9 @@ class RehearsalPlayer extends ChangeNotifier {
     }
   }
 
+  @visibleForTesting
+  void tickForTest(double seconds) => _tick(Duration(milliseconds: (seconds * 1000).round()));
+
   void _tick(Duration pos) {
     if (waitingAtCue != null) return;
     final t = pos.inMilliseconds / 1000;
@@ -393,9 +468,24 @@ class RehearsalPlayer extends ChangeNotifier {
       if ((t - target).abs() > 0.3 && DateTime.now().isBefore(_seekDeadline)) return;
       _seekTarget = null;
     }
+    // Reading a line aloud for a peek: just that line, then back.
+    final pr = _prompt;
+    if (pr != null) {
+      currentTime = t;
+      if (t >= cues[pr.cue].endTime) {
+        _endPrompt();
+        _hideRevealSoon();
+        notifyListeners();
+      } else {
+        _throttledNotify();
+      }
+      return;
+    }
     currentTime = t;
     final before = currentCueIndex;
     _updateCue();
+    final past = _carriedPast;
+    if (past != null && currentCueIndex > past) _carriedPast = null;
     if (isPlaying && loopMode == LoopMode.lines && loopEnd > loopStart && currentTime >= loopEnd) {
       seek(loopStart);
       if (audioEnabled) _player.play();
@@ -405,6 +495,7 @@ class RehearsalPlayer extends ChangeNotifier {
     if (isPlaying && cueMode && myRole.isNotEmpty) {
       for (final i in [currentCueIndex, currentCueIndex + 1]) {
         if (i < 0 || i >= cues.length) continue;
+        if (past != null && i <= past) continue;
         final c = cues[i];
         if (isMyLine(c.speaker) && currentTime >= c.startTime - 0.08 && currentTime < c.endTime) {
           isPlaying = false;
@@ -479,4 +570,12 @@ int cueIndexAt(List<SceneCue> cues, double t) {
     }
   }
   return found;
+}
+
+class _Prompt {
+  _Prompt(this.cue, this.time, this.wasPlaying, this.waiting);
+  final int cue;
+  final double time;
+  final bool wasPlaying;
+  final int? waiting;
 }

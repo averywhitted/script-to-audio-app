@@ -440,6 +440,37 @@ void projectFilesTests() {
       expect(Directory('$base/A').existsSync(), isFalse);
     });
 
+    test('a render request shrinks as scenes are rendered and goes away when done', () {
+      final folder = Directory.systemTemp.createTempSync('tr_files').path;
+      writeFileAtomic('$folder/$renderRequestFile', RenderRequest(scenes: [3, 4]).encode());
+      expect(settleRenderRequest(folder, rendered: {1, 3}, allScenes: {1, 2, 3, 4})?.scenes, [4]);
+      expect(loadRenderRequest(folder)?.scenes, [4]);
+      expect(settleRenderRequest(folder, rendered: {1, 3, 4}, allScenes: {1, 2, 3, 4}), isNull);
+      expect(File('$folder/$renderRequestFile').existsSync(), isFalse);
+      // "Everything not rendered yet" stays until every scene is.
+      writeFileAtomic('$folder/$renderRequestFile', RenderRequest().encode());
+      expect(settleRenderRequest(folder, rendered: {1, 2}, allScenes: {1, 2, 3})?.scenes, isNull);
+      expect(settleRenderRequest(folder, rendered: {1, 2, 3}, allScenes: {1, 2, 3}), isNull);
+    });
+
+    test('the Mac lists render requests and can dismiss them', () async {
+      final base = Directory.systemTemp.createTempSync('tr_files').path;
+      Directory('$base/A').createSync();
+      final p = Project.newProject('A', '$base/A');
+      File('$base/A/project.json').writeAsStringSync(jsonEncode(p.toJson()));
+      writeFileAtomic('$base/A/$renderRequestFile', RenderRequest(scenes: [2]).encode());
+      SharedPreferences.setMockInitialValues({'importedSwiftSettings': true, 'projectsBaseURL': base});
+      final store = ProjectStore(await Settings.load());
+      expect(store.renderRequests[p.id]?.scenes, [2]);
+      store.dismissRenderRequest(store.projects.single);
+      expect(store.renderRequests, isEmpty);
+      expect(File('$base/A/$renderRequestFile').existsSync(), isFalse);
+      // A request that arrives later (from iCloud) shows up on the next check.
+      writeFileAtomic('$base/A/$renderRequestFile', RenderRequest().encode());
+      store.refreshRenderRequests();
+      expect(store.renderRequests[p.id]?.summary, 'every scene not rendered yet');
+    });
+
     test('moving projects fails clearly when iCloud Drive is off', () async {
       final root = Directory.systemTemp.createTempSync('tr_files');
       final base = '${root.path}/Documents/Table Read';

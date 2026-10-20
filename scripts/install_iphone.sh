@@ -21,6 +21,10 @@ if [ -z "$udid" ]; then
     echo "No iPhone found. Plug it in (and unlock it), then try again." >&2
     exit 1
 fi
+if xcrun devicectl list devices 2>/dev/null | grep "$udid" | grep -q "unavailable"; then
+    echo "The iPhone isn't reachable right now: plug it in (or join this Mac's Wi-Fi) and unlock it, then try again." >&2
+    exit 1
+fi
 echo "iPhone: $udid"
 
 flutter build ios --release --no-codesign

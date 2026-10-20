@@ -182,3 +182,65 @@ bool rebaseEdits({
   }
   return changed;
 }
+
+// ---------------------------------------------------------------------------
+// Render requests: the iPhone asks the Mac to render a project
+// ---------------------------------------------------------------------------
+
+const renderRequestFile = 'render-request.json';
+
+/// Written by the iPhone; the Mac shows it on its home screen and removes it
+/// once those scenes are rendered (or the user dismisses it).
+class RenderRequest {
+  RenderRequest({this.scenes, DateTime? requestedAt, this.device = 'iPhone'}) : requestedAt = requestedAt ?? clockNow().toUtc();
+
+  /// The scenes asked for; null = every scene not rendered yet.
+  final List<int>? scenes;
+  final DateTime requestedAt;
+  final String device;
+
+  factory RenderRequest.fromJson(Map<String, dynamic> j) => RenderRequest(
+    scenes: (j['scenes'] as List?)?.map((e) => (e as num).toInt()).toList(),
+    requestedAt: DateTime.tryParse(j['requestedAt'] as String? ?? '')?.toUtc(),
+    device: j['device'] as String? ?? 'iPhone',
+  );
+
+  Map<String, dynamic> toJson() => {'schemaVersion': 1, 'device': device, 'requestedAt': requestedAt.toIso8601String(), 'scenes': scenes};
+
+  String encode() => _encoder.convert(toJson());
+
+  /// "3 scenes" / "every scene not rendered yet".
+  String get summary {
+    final s = scenes;
+    if (s == null) return 'every scene not rendered yet';
+    return '${s.length} scene${s.length == 1 ? '' : 's'}';
+  }
+}
+
+RenderRequest? loadRenderRequest(String folder) {
+  try {
+    return RenderRequest.fromJson(Map<String, dynamic>.from(jsonDecode(File('$folder/$renderRequestFile').readAsStringSync()) as Map));
+  } catch (_) {
+    return null;
+  }
+}
+
+/// After a render: drops the scenes now rendered from the request; removes
+/// the file once nothing asked for is left. Returns the request still open.
+RenderRequest? settleRenderRequest(String folder, {required Set<int> rendered, required Set<int> allScenes}) {
+  final req = loadRenderRequest(folder);
+  if (req == null) return null;
+  final left = (req.scenes ?? allScenes.toList()).where((n) => !rendered.contains(n)).toList();
+  if (left.isEmpty) {
+    try {
+      File('$folder/$renderRequestFile').deleteSync();
+    } catch (_) {}
+    return null;
+  }
+  if (req.scenes != null && left.length != req.scenes!.length) {
+    final next = RenderRequest(scenes: left, requestedAt: req.requestedAt, device: req.device);
+    writeFileAtomic('$folder/$renderRequestFile', next.encode());
+    return next;
+  }
+  return req;
+}

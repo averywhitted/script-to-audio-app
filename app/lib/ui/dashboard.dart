@@ -322,6 +322,14 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       _lastFileInfo = app.sceneFileInfo;
       player.load(app);
     }
+    // Opened from an iPhone render request: the Render sheet, once the script
+    // is in (and after casting, for a project never cast).
+    if (app.renderWhenReady && app.script != null && !app.isParsing && !app.castPending) {
+      app.renderWhenReady = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showRenderSheet(context);
+      });
+    }
     // First open of a new project: cast it once the parse is done.
     if (!_castShown && app.castPending && app.script != null && !app.isParsing) {
       _castShown = true;

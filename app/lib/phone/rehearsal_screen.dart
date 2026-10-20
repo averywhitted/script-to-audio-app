@@ -1,11 +1,16 @@
 // The iPhone's rehearsal screen (#91), after the mockup
-// (https://claude.ai/artifact/7rVmDhroJQJzHnLLVimJ8B): the scene's lines fill
-// the screen and follow playback; a dark bar holds the timeline and
-// transport; Rehearse opens a panel with the role and practice settings.
-// Playback is the Mac's RehearsalPlayer, unchanged.
+// (https://claude.ai/artifact/7rVmDhroJQJzHnLLVimJ8B) and Avery's first notes:
+// the whole play in one scroll with each scene's heading sticking to the top
+// (tap it to jump to another scene); lines follow playback; a dark bar holds
+// the timeline and transport; Rehearse opens the role and practice settings.
+// Playback is the Mac's RehearsalPlayer.
+
+import 'dart:async';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
@@ -14,14 +19,27 @@ import '../theme/tokens.dart';
 import '../ui/dashboard.dart' show blockText;
 import '../ui/playback_bar.dart' show SceneTimeline;
 import '../ui/widgets.dart' show NameChip, titleCaseName;
+import 'phone_store.dart';
 import 'rehearsal_session.dart';
 
 const _textScales = [1.0, 1.15, 1.3, 1.5];
-const _textSizeLabels = ['Small', 'Medium', 'Large', 'Extra Large'];
+const _textSizeLabels = ['Small', 'Medium', 'Large', 'Huge'];
+
+/// The sticky scene heading's height.
+const _headingHeight = 52.0;
+
+/// The bottom bar stays dark in both themes (the Mac's bar flips to light in
+/// dark mode; on the phone that read as dark mode being ignored).
+({Color bg, Color ink, Color btn, Color btnOn}) _barColors(Tokens t) => t.dark
+    ? (bg: const Color(0xFF262624), ink: const Color(0xFFEFEDE8), btn: const Color(0x1CFFFFFF), btnOn: const Color(0x33FFFFFF))
+    : (bg: t.bar, ink: t.barInk, btn: t.barBtn, btnOn: t.barBtnOn);
 
 class PhoneRehearsalScreen extends StatefulWidget {
-  const PhoneRehearsalScreen({super.key, required this.project, this.folderAccess = true, this.audio = true});
+  const PhoneRehearsalScreen({super.key, required this.project, this.store, this.folderAccess = true, this.audio = true});
   final Project project;
+
+  /// For asking the Mac to render the text-only scenes.
+  final PhoneStore? store;
 
   /// Off in tests: settings are written with dart:io instead of the native plugin.
   final bool folderAccess;
@@ -37,15 +55,24 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   late final RehearsalSession session = RehearsalSession.load(widget.project);
   late final RehearsalPlayer player = RehearsalPlayer(audioEnabled: widget.audio);
   final scroll = ScrollController();
+  final _viewportKey = GlobalKey();
 
-  /// The scene on screen: the playing one, unless the user picked a text-only scene.
-  int? viewing;
-  int? _lastScene;
   int _lastCue = -2;
-  final Map<int, GlobalKey> _rowKeys = {};
+  int? _lastScene;
 
-  /// Lines picked for a loop (long-press and drag), as line indices in [viewing].
-  int? _selA, _selB;
+  /// `"scene:line"` → that line's row; `"scene"` → the scene's lines.
+  final Map<String, GlobalKey> _keys = {};
+  GlobalKey _key(String k) => _keys.putIfAbsent(k, GlobalKey.new);
+
+  /// The user scrolled by hand: don't pull the view back to the playing line
+  /// for a few seconds (or until they press play).
+  DateTime _userScrolled = DateTime.fromMillisecondsSinceEpoch(0);
+  bool get _following => DateTime.now().difference(_userScrolled) > const Duration(seconds: 4);
+
+  /// Lines picked for a loop (long-press and drag): one scene, line indices.
+  int? _selScene, _selA, _selB;
+  Offset? _dragPoint;
+  Timer? _edgeScroll;
 
   int textSize = 1;
 
@@ -56,12 +83,11 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       AudioSession.instance.then((s) => s.configure(const AudioSessionConfiguration.speech())).catchError((_) {});
     }
     player.loadItems(session.items);
-    viewing = player.currentScene?.sceneNumber ?? session.scenes.firstOrNull?.number;
-    _lastScene = viewing;
+    _lastScene = player.currentScene?.sceneNumber;
     player.addListener(_onPlayer);
     session.restore(player).then((_) {
       if (!mounted) return;
-      setState(() => viewing = player.currentScene?.sceneNumber ?? viewing);
+      setState(() {});
       player.onSettingsChanged = () => session.scheduleSave(player, folderAccess: widget.folderAccess);
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent(animate: false));
     });
@@ -72,6 +98,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
 
   @override
   void dispose() {
+    _edgeScroll?.cancel();
     player.removeListener(_onPlayer);
     player.onSettingsChanged = null;
     session.save(player, folderAccess: widget.folderAccess);
@@ -84,77 +111,134 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   void _onPlayer() {
     if (!mounted) return;
     final scene = player.currentScene?.sceneNumber;
-    // Playback moved on to another scene: follow it if we were watching the playing one.
-    if (scene != _lastScene) {
-      if (viewing == _lastScene) {
-        viewing = scene;
-        _rowKeys.clear();
-        _clearSelection();
-        if (scroll.hasClients) scroll.jumpTo(0);
-      }
-      _lastScene = scene;
-    }
-    if (player.currentCueIndex != _lastCue) {
+    if (player.currentCueIndex != _lastCue || scene != _lastScene) {
       _lastCue = player.currentCueIndex;
-      if (viewing == scene) WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
+      _lastScene = scene;
+      if (player.isPlaying && _following) WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
     }
     setState(() {});
   }
 
-  PhoneScene? get _scene => session.scenes.where((s) => s.number == viewing).firstOrNull;
+  PhoneScene? _sceneNumbered(int? n) => session.scenes.where((s) => s.number == n).firstOrNull;
 
-  void _scrollToCurrent({bool animate = true}) {
-    final s = _scene;
-    if (s == null || player.currentScene?.sceneNumber != s.number) return;
-    final i = s.lines.indexWhere((l) => l.cueIndex == player.currentCueIndex);
-    final ctx = _rowKeys[i]?.currentContext;
-    if (ctx == null) return;
-    Scrollable.ensureVisible(ctx, alignment: 0.3, duration: animate ? const Duration(milliseconds: 250) : Duration.zero, curve: Curves.easeOut);
+  /// Scrolls so [key]'s row sits [alignment] of the way down the view.
+  void _reveal(GlobalKey key, {double alignment = 0.3, bool animate = true}) {
+    final ro = key.currentContext?.findRenderObject();
+    if (ro == null || !scroll.hasClients) return;
+    final viewport = RenderAbstractViewport.maybeOf(ro);
+    if (viewport == null) return;
+    final pos = scroll.position;
+    // The viewport already keeps the target clear of the pinned heading.
+    final target = viewport.getOffsetToReveal(ro, alignment).offset.clamp(pos.minScrollExtent, pos.maxScrollExtent);
+    if (animate) {
+      scroll.animateTo(target, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    } else {
+      scroll.jumpTo(target);
+    }
   }
 
-  void _showScene(int number) {
+  void _scrollToCurrent({bool animate = true}) {
+    final s = _sceneNumbered(player.currentScene?.sceneNumber);
+    if (s == null) return;
+    final i = s.lines.indexWhere((l) => l.cueIndex == player.currentCueIndex);
+    if (i < 0) return;
+    _reveal(_key('${s.number}:$i'), animate: animate);
+  }
+
+  void _jumpToScene(int number) {
     final si = player.scenes.indexWhere((s) => s.sceneNumber == number);
     if (si >= 0 && si != player.currentSceneIndex) player.switchToScene(si);
-    setState(() {
-      viewing = number;
-      _rowKeys.clear();
-      _clearSelection();
-    });
-    if (scroll.hasClients) scroll.jumpTo(0);
+    setState(_clearSelection);
+    _userScrolled = DateTime.now();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(_key('$number'), alignment: 0, animate: false));
   }
 
   void _tapLine(PhoneScene s, PhoneLine l) {
-    if (!s.rendered || l.cueIndex == null) return;
     if (_selA != null) {
       setState(_clearSelection);
       return;
     }
-    if (player.waitingAtCue != null && player.waitingAtCue == l.cueIndex) {
-      player.callForLine();
+    if (!s.rendered || l.cueIndex == null) return;
+    final playingHere = player.currentScene?.sceneNumber == s.number;
+    // My blanked line: peek (shows it and reads it aloud; tap again to hide).
+    if (playingHere && l.isDialog && player.isMyLine(l.speaker) && player.blockMyLines) {
+      player.peekLine(l.cueIndex!);
       return;
     }
+    if (playingHere && player.waitingAtCue == l.cueIndex) {
+      player.peekLine(l.cueIndex!);
+      return;
+    }
+    _userScrolled = DateTime.fromMillisecondsSinceEpoch(0);
     player.playFrom(s.number, l.cueIndex!);
   }
 
   // Loop selection -------------------------------------------------------------
 
   void _clearSelection() {
+    _selScene = null;
     _selA = null;
     _selB = null;
+    _dragPoint = null;
+    _edgeScroll?.cancel();
+    _edgeScroll = null;
   }
 
   int? _lineAt(Offset global) {
-    for (final e in _rowKeys.entries) {
-      final box = e.value.currentContext?.findRenderObject() as RenderBox?;
+    final s = _sceneNumbered(_selScene);
+    if (s == null) return null;
+    int? nearest;
+    var best = double.infinity;
+    for (var i = 0; i < s.lines.length; i++) {
+      if (s.lines[i].cueIndex == null) continue;
+      final box = _keys['${s.number}:$i']?.currentContext?.findRenderObject() as RenderBox?;
       if (box == null || !box.attached) continue;
-      final top = box.localToGlobal(Offset.zero).dy;
-      if (global.dy >= top && global.dy < top + box.size.height) return e.key;
+      final top = box.localToGlobal(Offset.zero).dy, bottom = top + box.size.height;
+      if (global.dy >= top && global.dy < bottom) return i;
+      // Past the scene's first or last line: the nearest one.
+      final d = global.dy < top ? top - global.dy : global.dy - bottom;
+      if (d < best) {
+        best = d;
+        nearest = i;
+      }
     }
-    return null;
+    return nearest;
+  }
+
+  void _dragTo(Offset global) {
+    _dragPoint = global;
+    final j = _lineAt(global);
+    if (j != null && j != _selB) setState(() => _selB = j);
+    // Near the top or bottom edge: keep scrolling, faster the closer the finger.
+    final box = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final top = box.localToGlobal(Offset.zero).dy + _headingHeight, bottom = box.localToGlobal(Offset(0, box.size.height)).dy;
+    const zone = 72.0;
+    final speed = global.dy > bottom - zone
+        ? (global.dy - (bottom - zone)) / zone
+        : (global.dy < top + zone ? -((top + zone) - global.dy) / zone : 0.0);
+    if (speed == 0) {
+      _edgeScroll?.cancel();
+      _edgeScroll = null;
+      return;
+    }
+    _edgeScroll ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
+      final p = _dragPoint;
+      if (p == null || !scroll.hasClients) return;
+      final b = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+      if (b == null) return;
+      final t0 = b.localToGlobal(Offset.zero).dy + _headingHeight, b0 = b.localToGlobal(Offset(0, b.size.height)).dy;
+      final v = p.dy > b0 - zone ? (p.dy - (b0 - zone)) / zone : (p.dy < t0 + zone ? -((t0 + zone) - p.dy) / zone : 0.0);
+      if (v == 0) return;
+      final pos = scroll.position;
+      scroll.jumpTo((pos.pixels + v.clamp(-1.0, 1.0) * 14).clamp(pos.minScrollExtent, pos.maxScrollExtent));
+      final j = _lineAt(p);
+      if (j != null && j != _selB) setState(() => _selB = j);
+    });
   }
 
   void _loopSelection() {
-    final s = _scene;
+    final s = _sceneNumbered(_selScene);
     if (s == null || _selA == null) return;
     final a = _selA! < _selB! ? _selA! : _selB!, b = _selA! < _selB! ? _selB! : _selA!;
     final cues = s.lines.sublist(a, b + 1).map((l) => l.cueIndex).nonNulls.toList();
@@ -177,27 +261,29 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    final s = _scene;
-    final selecting = _selA != null;
-    return Scaffold(
-      backgroundColor: t.bg,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _header(t, s),
-            Expanded(child: s == null ? _empty(t) : _script(t, s)),
-            if (player.waitingAtCue != null && viewing == player.currentScene?.sceneNumber) _cueCard(t),
-            if (selecting) _selectionBar(t),
-            if (player.scenes.isNotEmpty) _bar(t),
-          ],
+    final waitingHere = player.waitingAtCue != null;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: t.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: t.bg,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _header(t),
+              Expanded(child: session.scenes.isEmpty ? _empty(t) : _script(t)),
+              if (waitingHere) _cueCard(t),
+              if (_selA != null) _selectionBar(t),
+              if (player.scenes.isNotEmpty) _bar(t),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _header(Tokens t, PhoneScene? s) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 4, 8, 6),
+  Widget _header(Tokens t) => Padding(
+    padding: const EdgeInsets.fromLTRB(4, 4, 8, 2),
     child: Row(
       children: [
         IconButton(
@@ -206,21 +292,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         Expanded(
-          child: GestureDetector(
-            onTap: _openScenes,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.project.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 12, weight: FontWeight.w500, color: t.muted)),
-                Text(
-                  s == null ? '' : '${s.number} · ${s.title}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyles.ui(t, size: 17, weight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ),
+          child: Text(widget.project.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 17, weight: FontWeight.w600)),
         ),
         TextButton(
           onPressed: _openTextOptions,
@@ -242,30 +314,41 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     ),
   );
 
-  Widget _script(Tokens t, PhoneScene s) {
+  Widget _script(Tokens t) {
     final scale = _textScales[textSize];
-    return SingleChildScrollView(
-      controller: scroll,
-      padding: const EdgeInsets.fromLTRB(20, 6, 20, 40),
-      // Not lazy: every row exists, so playback can scroll to any line.
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (!s.rendered)
-            Container(
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(color: t.panel, borderRadius: BorderRadius.circular(10)),
-              child: Text('Text only. Render this scene on your Mac to hear it.', style: TextStyles.ui(t, size: 14, color: t.ink2)),
+    return NotificationListener<UserScrollNotification>(
+      onNotification: (n) {
+        if (n.direction != ScrollDirection.idle) _userScrolled = DateTime.now();
+        return false;
+      },
+      child: CustomScrollView(
+        key: _viewportKey,
+        controller: scroll,
+        slivers: [
+          for (final s in session.scenes)
+            SliverMainAxisGroup(
+              slivers: [
+                SliverPersistentHeader(pinned: true, delegate: _SceneHeading(scene: s, tokens: t, onTap: _openScenes)),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+                  // Not lazy within a scene: playback can scroll to any line.
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      key: _key('${s.number}'),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [for (final (i, l) in s.lines.indexed) _line(t, s, i, l, scale)],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          for (final (i, l) in s.lines.indexed) _line(t, s, i, l, scale),
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
       ),
     );
   }
 
   Widget _line(Tokens t, PhoneScene s, int i, PhoneLine l, double scale) {
-    final key = _rowKeys.putIfAbsent(i, GlobalKey.new);
     final playingHere = player.currentScene?.sceneNumber == s.number;
     final current = playingHere && l.cueIndex != null && l.cueIndex == player.currentCueIndex;
     final mine = l.isDialog && player.isMyLine(l.speaker);
@@ -273,13 +356,14 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     final revealed = playingHere && l.cueIndex != null && l.cueIndex == player.revealedCue;
     final blocked = mine && player.blockMyLines && !revealed;
     final a = _selA, b = _selB;
-    final selected = a != null && b != null && i >= (a < b ? a : b) && i <= (a < b ? b : a);
+    final selected = _selScene == s.number && a != null && b != null && i >= (a < b ? a : b) && i <= (a < b ? b : a);
+    const onHighlighter = Color(0xFF1C1B19);
     final textStyle = TextStyles.script(
       t,
       size: 15 * scale,
       italic: !l.isDialog,
       // The highlighter is yellow in both themes: dark ink on it.
-      color: current ? const Color(0xFF1C1B19) : (blocked ? t.muted : (l.isDialog ? t.ink : t.ink2)),
+      color: current ? onHighlighter : (blocked ? t.muted : (l.isDialog ? t.ink : t.ink2)),
     ).copyWith(height: 1.45, letterSpacing: blocked ? 0.3 : null);
     final body = l.isDialog
         ? Column(
@@ -295,24 +379,35 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
               ),
               const SizedBox(height: 3),
               Text(blocked ? blockText(l.text) : l.text, style: textStyle),
-              if (waiting && blocked)
+              if ((waiting || current) && mine && player.blockMyLines)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text('Tap the line to peek', style: TextStyles.ui(t, size: 13, weight: FontWeight.w600, color: const Color(0xFF2C6BC9))),
+                  child: Text(
+                    revealed ? 'Tap to hide' : 'Tap to hear your line',
+                    style: TextStyles.ui(t, size: 13, weight: FontWeight.w600, color: current ? const Color(0xFF2C6BC9) : t.accent),
+                  ),
                 ),
             ],
           )
         : Text(l.text, style: textStyle);
     final Color? fill = current ? t.highlighter : (selected ? t.accentSoft : (mine ? t.mine : null));
     return GestureDetector(
-      key: key,
+      key: _key('${s.number}:$i'),
       behavior: HitTestBehavior.opaque,
       onTap: () => _tapLine(s, l),
-      onLongPressStart: s.rendered && l.cueIndex != null ? (_) => setState(() => _selA = _selB = i) : null,
-      onLongPressMoveUpdate: s.rendered
-          ? (d) {
-              final j = _lineAt(d.globalPosition);
-              if (j != null && j != _selB && s.lines[j].cueIndex != null) setState(() => _selB = j);
+      onLongPressStart: s.rendered && l.cueIndex != null
+          ? (d) => setState(() {
+              _selScene = s.number;
+              _selA = _selB = i;
+              _dragPoint = d.globalPosition;
+            })
+          : null,
+      onLongPressMoveUpdate: s.rendered ? (d) => _dragTo(d.globalPosition) : null,
+      onLongPressEnd: s.rendered
+          ? (_) {
+              _edgeScroll?.cancel();
+              _edgeScroll = null;
+              _dragPoint = null;
             }
           : null,
       child: AnimatedContainer(
@@ -322,7 +417,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
         decoration: BoxDecoration(
           color: fill,
           borderRadius: BorderRadius.circular(6),
-          border: current ? Border.all(color: t.highlighterEdge, width: 2) : (selected ? Border.all(color: t.accentLine, width: 1.5) : null),
+          border: current ? Border.all(color: t.dark ? onHighlighter : t.highlighterEdge, width: 2) : (selected ? Border.all(color: t.accentLine, width: 1.5) : null),
         ),
         child: body,
       ),
@@ -330,25 +425,27 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   }
 
   Widget _cueCard(Tokens t) => Container(
-    margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+    margin: const EdgeInsets.fromLTRB(14, 8, 14, 12),
     padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-    decoration: BoxDecoration(color: t.sheet, borderRadius: BorderRadius.circular(16), boxShadow: t.shadow),
+    decoration: BoxDecoration(color: t.sheet, borderRadius: BorderRadius.circular(16), boxShadow: t.shadow, border: t.dark ? Border.all(color: t.border) : null),
     child: Row(
       children: [
         Text('Your line', style: TextStyles.hand(t, size: 26, color: t.accent)),
         const SizedBox(width: 12),
         Expanded(child: Text('Say it, then tap play or your AirPods.', style: TextStyles.ui(t, size: 14, color: t.ink2))),
-        if (player.blockMyLines)
-          FilledButton(
-            onPressed: player.callForLine,
-            style: FilledButton.styleFrom(
-              backgroundColor: t.highlighter,
-              foregroundColor: const Color(0xFF1C1B19),
-              side: const BorderSide(color: Color(0xFF1C1B19), width: 2),
-              minimumSize: const Size(44, 40),
-            ),
-            child: Text('Line!', style: TextStyles.ui(t, size: 15, weight: FontWeight.w700, color: const Color(0xFF1C1B19))),
+        FilledButton(
+          onPressed: player.callForLine,
+          style: FilledButton.styleFrom(
+            backgroundColor: t.highlighter,
+            foregroundColor: const Color(0xFF1C1B19),
+            side: const BorderSide(color: Color(0xFF1C1B19), width: 2),
+            minimumSize: const Size(44, 40),
           ),
+          child: Text(
+            player.revealedCue != null ? 'Hide' : 'Line!',
+            style: TextStyles.ui(t, size: 15, weight: FontWeight.w700, color: const Color(0xFF1C1B19)),
+          ),
+        ),
       ],
     ),
   );
@@ -356,9 +453,9 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   Widget _selectionBar(Tokens t) {
     final n = ((_selA! - _selB!).abs()) + 1;
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 12),
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-      decoration: BoxDecoration(color: t.sheet, borderRadius: BorderRadius.circular(16), boxShadow: t.shadow),
+      decoration: BoxDecoration(color: t.sheet, borderRadius: BorderRadius.circular(16), boxShadow: t.shadow, border: t.dark ? Border.all(color: t.border) : null),
       child: Row(
         children: [
           Expanded(child: Text('$n line${n == 1 ? '' : 's'} selected', style: TextStyles.ui(t, size: 15, weight: FontWeight.w600))),
@@ -376,23 +473,24 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   }
 
   Widget _bar(Tokens t) {
+    final c = _barColors(t);
     final bottom = MediaQuery.of(context).padding.bottom;
-    final clock = TextStyles.ui(t, size: 12, color: t.barInk.withValues(alpha: 0.7)).copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
-    Widget round(IconData icon, String label, VoidCallback? onTap, {double size = 48, Color? bg, double iconSize = 24}) => Semantics(
+    final clock = TextStyles.ui(t, size: 12, color: c.ink.withValues(alpha: 0.7)).copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
+    Widget round(IconData icon, String label, VoidCallback? onTap, {double size = 48, Color? bg, Color? fg, double iconSize = 24}) => Semantics(
       button: true,
       label: label,
       child: Material(
-        color: bg ?? t.barBtn,
+        color: bg ?? c.btn,
         shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onTap,
-          child: SizedBox(width: size, height: size, child: Icon(icon, color: t.barInk, size: iconSize)),
+          child: SizedBox(width: size, height: size, child: Icon(icon, color: fg ?? c.ink, size: iconSize)),
         ),
       ),
     );
-    Widget pill(String label, VoidCallback onTap, {IconData? icon, bool strong = false}) => Material(
-      color: strong ? t.barBtnOn : t.barBtn,
+    Widget pill(String label, VoidCallback onTap, {bool strong = false}) => Material(
+      color: strong ? c.btnOn : c.btn,
       borderRadius: BorderRadius.circular(22),
       child: InkWell(
         borderRadius: BorderRadius.circular(22),
@@ -400,21 +498,14 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
         child: Container(
           height: 44,
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[Icon(icon, size: 16, color: t.barInk), const SizedBox(width: 6)],
-              Flexible(
-                child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 14, weight: FontWeight.w600, color: t.barInk)),
-              ),
-            ],
-          ),
+          alignment: Alignment.center,
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 14, weight: FontWeight.w600, color: c.ink)),
         ),
       ),
     );
     final waiting = player.waitingAtCue != null;
     return Container(
-      decoration: BoxDecoration(color: t.bar, borderRadius: const BorderRadius.vertical(top: Radius.circular(22))),
+      decoration: BoxDecoration(color: c.bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(22))),
       padding: EdgeInsets.fromLTRB(18, 10, 18, 12 + bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -452,11 +543,13 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
                 player.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                 player.isPlaying ? 'Pause' : (waiting ? 'Carry on' : 'Play'),
                 () {
-                  if (viewing != player.currentScene?.sceneNumber) _showScene(player.currentScene!.sceneNumber);
+                  _userScrolled = DateTime.fromMillisecondsSinceEpoch(0);
                   player.togglePlayPause();
+                  WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
                 },
                 size: 60,
                 bg: t.accent,
+                fg: t.onAccent,
                 iconSize: 32,
               ),
               const SizedBox(width: 8),
@@ -472,6 +565,8 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
 
   // Sheets ---------------------------------------------------------------------
 
+  int? get _topScene => player.currentScene?.sceneNumber ?? session.scenes.firstOrNull?.number;
+
   Future<void> _openPanel() async {
     final t = Tokens.of(context);
     await showModalBottomSheet<void>(
@@ -482,9 +577,9 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => ListenableBuilder(
         listenable: player,
-        builder: (ctx, _) => _RehearsePanel(player: player, session: session, viewing: viewing, onScene: (n) {
+        builder: (ctx, _) => _RehearsePanel(player: player, session: session, viewing: _topScene, onScene: (n) {
           Navigator.pop(ctx);
-          _showScene(n);
+          _jumpToScene(n);
         }),
       ),
     );
@@ -503,11 +598,12 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
         maxChildSize: 0.92,
         builder: (ctx, sc) => _SceneList(
           session: session,
-          viewing: viewing,
+          viewing: _topScene,
           controller: sc,
+          store: widget.store,
           onScene: (n) {
             Navigator.pop(ctx);
-            _showScene(n);
+            _jumpToScene(n);
           },
         ),
       ),
@@ -532,7 +628,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
                 const SizedBox(height: 8),
                 SegmentedButton<int>(
                   showSelectedIcon: false,
-                  segments: [for (var i = 0; i < 4; i++) ButtonSegment(value: i, label: Text(_textSizeLabels[i].split(' ').last))],
+                  segments: [for (var i = 0; i < 4; i++) ButtonSegment(value: i, label: Text(_textSizeLabels[i]))],
                   selected: {textSize},
                   onSelectionChanged: (v) async {
                     setState(() => textSize = v.first);
@@ -560,6 +656,63 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       ),
     );
   }
+}
+
+/// A scene's heading: sticks to the top while its lines scroll under it; a
+/// tap opens the scene list to jump elsewhere (the chevron says so).
+class _SceneHeading extends SliverPersistentHeaderDelegate {
+  _SceneHeading({required this.scene, required this.tokens, required this.onTap});
+  final PhoneScene scene;
+  final Tokens tokens;
+  final VoidCallback onTap;
+
+  @override
+  double get minExtent => _headingHeight;
+  @override
+  double get maxExtent => _headingHeight;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final t = tokens;
+    final stuck = overlapsContent || shrinkOffset > 0;
+    return Material(
+      color: t.bg,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          height: _headingHeight,
+          padding: const EdgeInsets.fromLTRB(20, 0, 14, 0),
+          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: stuck ? t.rule : Colors.transparent))),
+          child: Row(
+            children: [
+              Text(scene.number.toString().padLeft(2, '0'), style: TextStyles.script(t, size: 14, weight: FontWeight.w700, color: t.muted)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(scene.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 16, weight: FontWeight.w700)),
+              ),
+              if (!scene.rendered) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(color: t.panel, borderRadius: BorderRadius.circular(6), border: Border.all(color: t.border)),
+                  child: Text('Text only', style: TextStyles.ui(t, size: 11.5, weight: FontWeight.w600, color: t.muted)),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(color: t.accentSoft, shape: BoxShape.circle),
+                child: Icon(Icons.unfold_more_rounded, size: 18, color: t.accent, semanticLabel: 'Scenes'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SceneHeading old) => old.scene != scene || old.tokens != tokens;
 }
 
 String _clockText(double s) {
@@ -705,19 +858,52 @@ class _RehearsePanel extends StatelessWidget {
 }
 
 class _SceneList extends StatelessWidget {
-  const _SceneList({required this.session, required this.viewing, required this.controller, required this.onScene});
+  const _SceneList({required this.session, required this.viewing, required this.controller, required this.onScene, this.store});
   final RehearsalSession session;
   final int? viewing;
   final ScrollController controller;
   final ValueChanged<int> onScene;
+  final PhoneStore? store;
 
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
+    final missing = session.scenes.where((s) => !s.rendered).length;
+    final st = store;
+    final header = st == null || missing == 0
+        ? null
+        : ListenableBuilder(
+            listenable: st,
+            builder: (context, _) {
+              final asked = st.requests[session.project.id];
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: asked == null
+                    ? OutlinedButton.icon(
+                        onPressed: () => st.requestRender(session.project),
+                        icon: const Icon(Icons.graphic_eq_rounded, size: 18),
+                        label: Text('Ask Mac to Render $missing Text-Only Scene${missing == 1 ? '' : 's'}'),
+                        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44), foregroundColor: t.accent, side: BorderSide(color: t.accentLine)),
+                      )
+                    : Row(
+                        children: [
+                          Icon(Icons.schedule_rounded, size: 18, color: t.muted),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('Waiting for your Mac to render ${asked.summary}.', style: TextStyles.ui(t, size: 14, color: t.ink2))),
+                          TextButton(onPressed: () => st.cancelRequest(session.project), child: const Text('Cancel')),
+                        ],
+                      ),
+              );
+            },
+          );
     return ListView.builder(
       controller: controller,
-      itemCount: session.scenes.length,
+      itemCount: session.scenes.length + (header == null ? 0 : 1),
       itemBuilder: (context, i) {
+        if (header != null) {
+          if (i == 0) return header;
+          i--;
+        }
         final s = session.scenes[i];
         return ListTile(
           selected: s.number == viewing,

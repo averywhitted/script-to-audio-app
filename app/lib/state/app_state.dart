@@ -711,6 +711,12 @@ class AppState extends ChangeNotifier {
     if (id != null) settings.setString('view.$id', jsonEncode(view));
   }
 
+  /// Opening a project from an iPhone render request: once the script is in,
+  /// the dashboard opens the Render sheet with [requestedScenes] picked
+  /// (null = the scenes not rendered yet).
+  bool renderWhenReady = false;
+  Set<int>? requestedScenes;
+
   /// This install's id: names its rehearsal file in each project folder.
   String get deviceId {
     var id = settings.getString('deviceId');
@@ -919,7 +925,26 @@ class AppState extends ChangeNotifier {
     }
     isGenerating = false;
     isPaused = false;
+    _settleRenderRequest();
     notifyListeners();
+  }
+
+  /// A render finished: whatever the iPhone asked for that's now rendered is done.
+  void _settleRenderRequest() {
+    final p = store.currentProject;
+    final folder = p?.folderPath;
+    if (p == null || folder == null || !store.renderRequests.containsKey(p.id)) return;
+    final rendered = {
+      for (final e in sceneFileInfo.entries)
+        if (e.value.exists && !scenesNeedingRerender.contains(e.key)) e.key,
+    };
+    final left = settleRenderRequest(folder, rendered: rendered, allScenes: scenes.map((s) => s.number).toSet());
+    if (left == null) {
+      store.renderRequests.remove(p.id);
+    } else {
+      store.renderRequests[p.id] = left;
+    }
+    store.refresh();
   }
 
   void cancelGeneration() {

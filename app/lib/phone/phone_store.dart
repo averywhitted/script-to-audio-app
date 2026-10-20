@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
+import '../services/project_files.dart';
 import 'folder_access.dart';
 
 class PhoneStore extends ChangeNotifier {
@@ -20,6 +21,9 @@ class PhoneStore extends ChangeNotifier {
   bool loading = true;
   String? error;
   List<Project> projects = [];
+
+  /// Project id → the render this phone asked the Mac for (render-request.json).
+  Map<String, RenderRequest> requests = {};
 
   /// Project id → download progress (0–1) while it's being brought onto the phone.
   final Map<String, double> downloading = {};
@@ -84,7 +88,11 @@ class PhoneStore extends ChangeNotifier {
         final m = entries.where((e) => e.name == 'project.json').firstOrNull;
         if (m == null) continue;
         manifests.add('$f/${d.name}/project.json');
-        if (!m.downloaded) await _download([manifests.last]);
+        final wanted = [
+          for (final e in entries)
+            if ((e.name == 'project.json' || e.name == renderRequestFile || e.name == scriptSnapshotFile) && !e.downloaded) '$f/${d.name}/${e.name}',
+        ];
+        await _download(wanted);
       }
       final out = <Project>[];
       for (final path in manifests) {
@@ -97,11 +105,67 @@ class PhoneStore extends ChangeNotifier {
       }
       out.sort((a, b) => b.lastOpenedAt.compareTo(a.lastOpenedAt));
       projects = out;
+      requests = {
+        for (final p in out)
+          if (p.folderPath case final f?) p.id: ?loadRenderRequest(f),
+      };
       error = null;
     } catch (e) {
       error = '$e';
     }
     loading = false;
+    notifyListeners();
+  }
+
+  /// Scenes the Mac hasn't rendered yet, when the Mac has saved the script
+  /// (null when it hasn't: the request then asks for every missing scene).
+  List<int>? missingScenes(Project p) {
+    final folder = p.folderPath;
+    final script = folder == null ? null : loadScriptSnapshot(folder);
+    if (script == null) return null;
+    // The audio files that are there (the same test as the rehearsal screen's).
+    final rendered = <int>{
+      for (final f in Directory(folder!).listSync().whereType<File>())
+        if (RegExp(r'/Scene_(\d+)_[^/]*\.m4a$').firstMatch(f.path) case final m?) int.parse(m.group(1)!),
+    };
+    return [
+      for (final s in script.scenes)
+        if (!rendered.contains(s.number)) s.number,
+    ];
+  }
+
+  /// Asks the Mac to render [p]: the scenes not rendered yet.
+  Future<void> requestRender(Project p) async {
+    final folder = p.folderPath;
+    if (folder == null) return;
+    final r = RenderRequest(scenes: missingScenes(p));
+    try {
+      if (folderAccess) {
+        await FolderAccess.write('$folder/$renderRequestFile', r.encode());
+      } else {
+        writeFileAtomic('$folder/$renderRequestFile', r.encode());
+      }
+      requests[p.id] = r;
+    } catch (e) {
+      error = 'Couldn’t ask your Mac to render “${p.name}”: $e';
+    }
+    notifyListeners();
+  }
+
+  Future<void> cancelRequest(Project p) async {
+    final folder = p.folderPath;
+    if (folder == null) return;
+    try {
+      if (folderAccess) {
+        await FolderAccess.delete('$folder/$renderRequestFile');
+      } else {
+        final f = File('$folder/$renderRequestFile');
+        if (f.existsSync()) f.deleteSync();
+      }
+      requests.remove(p.id);
+    } catch (e) {
+      error = '$e';
+    }
     notifyListeners();
   }
 

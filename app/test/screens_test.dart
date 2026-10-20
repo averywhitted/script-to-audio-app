@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_read/models/models.dart';
+import 'package:table_read/services/project_files.dart';
 import 'package:table_read/services/project_store.dart';
 import 'package:table_read/services/settings.dart';
 import 'package:table_read/state/app_state.dart';
@@ -87,6 +88,18 @@ void main() {
 
   for (final b in [Brightness.light, Brightness.dark]) {
     final mode = b == Brightness.dark ? 'dark' : 'light';
+
+    testWidgets('gallery with an iPhone render request $mode', (tester) async {
+      final req = File('$earnestFolder/render-request.json');
+      req.writeAsStringSync(RenderRequest(scenes: [3, 4, 5], requestedAt: clockNow().subtract(const Duration(minutes: 20))).encode());
+      addTearDown(() {
+        if (req.existsSync()) req.deleteSync();
+      });
+      final (app, store, player) = await _makeState();
+      await _pump(tester, const GalleryScreen(), b, app: app, store: store, player: player);
+      expect(find.text('Your iPhone asked to render “The Importance of Being Earnest”'), findsOneWidget);
+      await _snap(tester, 'gallery_render_request_$mode');
+    });
 
     testWidgets('gallery $mode', (tester) async {
       final (app, store, player) = await _makeState();

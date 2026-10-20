@@ -6,6 +6,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +17,9 @@ import 'package:table_read/phone/rehearsal_session.dart';
 import 'package:table_read/services/project_files.dart';
 
 import 'fixtures.dart';
+
+/// A heading's text sits a little below the heading's own top.
+const _headingSlack = 30.0;
 
 late Directory tmp;
 late String earnestFolder;
@@ -53,10 +57,10 @@ void _writeCues(String folder, int n, Scene scene) {
         'ref': el.ref,
       },
   ];
-  File('$folder/Scene_0${n}_Scene.cues.json').writeAsStringSync(
+  File('$folder/Scene_${n.toString().padLeft(2, '0')}_Scene.cues.json').writeAsStringSync(
     jsonEncode({'schemaVersion': 1, 'sceneNumber': n, 'sceneTitle': scene.title, 'totalDuration': cues.length * 3.0, 'cues': cues}),
   );
-  File('$folder/Scene_0${n}_Scene.m4a').writeAsStringSync('');
+  File('$folder/Scene_${n.toString().padLeft(2, '0')}_Scene.m4a').writeAsStringSync('');
 }
 
 void main() {
@@ -69,13 +73,15 @@ void main() {
     earnestFolder = writeProjects(tmp.path);
     final script = earnestScript();
     saveScriptSnapshot(earnestFolder, script, pdfFilename: 'script.pdf');
-    for (final n in [1, 2]) {
+    for (final n in [1, 2, 8]) {
       _writeCues(earnestFolder, n, script.scenes[n - 1]);
     }
   });
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    final req = File('$earnestFolder/$renderRequestFile');
+    if (req.existsSync()) req.deleteSync();
     final r = Directory('$earnestFolder/$rehearsalFolder');
     if (r.existsSync()) r.deleteSync(recursive: true);
   });
@@ -90,7 +96,7 @@ void main() {
   test('a session shows rendered scenes from their cues and the rest from script.json', () async {
     final s = await _store();
     final session = RehearsalSession.load(s.projects.first);
-    expect(session.items.map((i) => i.sceneNumber), [1, 2]);
+    expect(session.items.map((i) => i.sceneNumber), [1, 2, 8]);
     expect(session.scenes.length, 12);
     expect(session.scenes[0].rendered, isTrue);
     expect(session.scenes[0].lines.every((l) => l.cueIndex != null), isTrue);
@@ -112,7 +118,7 @@ void main() {
       await _pump(tester, await _store(), b);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/phone_projects_$mode.png'));
       await _openEarnest(tester);
-      expect(find.text('1 · Morning-room, Half-Moon Street'), findsOneWidget);
+      expect(find.text('Morning-room, Half-Moon Street'), findsOneWidget); // scene 1's heading
       expect(find.text('Rehearse'), findsOneWidget);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/phone_rehearse_$mode.png'));
       await tester.tap(find.text('Rehearse'));
@@ -141,15 +147,77 @@ void main() {
     expect(find.text('Algernon'), findsOneWidget); // the role pill in the bar
   });
 
-  testWidgets('a text-only scene says so', (tester) async {
+  testWidgets('the whole play scrolls; a scene heading jumps to another scene', (tester) async {
     await _pump(tester, await _store(), Brightness.light);
     await _openEarnest(tester);
-    await tester.tap(find.text('1 · Morning-room, Half-Moon Street'));
+    await tester.tap(find.text('Morning-room, Half-Moon Street'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Bunburying'));
+    await tester.tap(find.text('Bunburying').last); // in the scene list
     await tester.pumpAndSettle();
-    expect(find.text('3 · Bunburying'), findsOneWidget);
-    expect(find.textContaining('Text only. Render this scene'), findsOneWidget);
+    // Scene 3's heading is stuck at the top, marked text only; its first line is under it.
+    final heading = tester.getRect(find.text('Bunburying'));
+    final top = tester.getRect(find.byType(CustomScrollView)).top;
+    expect(heading.top - top, lessThan(_headingSlack), reason: 'scene 3 heading at the very top');
+    expect(find.text('Cucumber sandwiches').hitTestable(), findsNothing, reason: "scene 2's heading has scrolled away");
+    expect(find.text('Text only'), findsWidgets);
+    final first = tester.getRect(find.text('The scene opens. DR. CHASUBLE enters, carrying a book.'));
+    expect(first.top, greaterThan(heading.bottom));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/phone_scene_jump.png'));
+  });
+
+  testWidgets('dragging a selection to the bottom edge keeps scrolling and selecting', (tester) async {
+    await _pump(tester, await _store(), Brightness.light);
+    await _openEarnest(tester);
+    await tester.tap(find.text('Morning-room, Half-Moon Street'));
+    await tester.pumpAndSettle();
+    final sheet = find.byType(DraggableScrollableSheet);
+    final row = find.descendant(of: sheet, matching: find.text('Tea, and a misunderstanding')); // scene 8: 41 lines
+    await tester.scrollUntilVisible(row, 120, scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)));
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    final list = find.byType(CustomScrollView);
+    double offset() => tester.state<ScrollableState>(find.descendant(of: list, matching: find.byType(Scrollable))).position.pixels;
+    final before = offset();
+    final start = tester.getCenter(find.text('Line 1 of scene 8, spoken with great feeling and a certain amount of wit.'));
+    final g = await tester.startGesture(start);
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await tester.pump();
+    final view = tester.getRect(list); // the selection bar has taken its place below the list
+    await g.moveTo(Offset(start.dx, view.bottom - 10));
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(offset() - before, greaterThan(300), reason: 'the list scrolled under the finger');
+    final n = int.parse(RegExp(r'(\d+) lines selected').firstMatch(tester.widget<Text>(find.textContaining('lines selected')).data!)!.group(1)!);
+    expect(n, greaterThan(8), reason: 'more lines than fit on screen at once');
+    await g.up();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('tapping my blanked line shows it; tapping again hides it', (tester) async {
+    await _pump(tester, await _store(), Brightness.light);
+    await _openEarnest(tester);
+    await tester.tap(find.text('Rehearse'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Algernon'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Block My Lines'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    const mine = 'Line 1 of scene 1, spoken with great feeling and a certain amount of wit.';
+    await tester.tap(find.textContaining('____ _ __ _____ _'));
+    await tester.pump();
+    expect(find.text(mine), findsOneWidget);
+    await tester.tap(find.text(mine));
+    await tester.pump();
+    expect(find.text(mine), findsNothing);
+    // Left alone, a peek hides by itself.
+    await tester.tap(find.textContaining('____ _ __ _____ _'));
+    await tester.pump();
+    expect(find.text(mine), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text(mine), findsNothing);
   });
 
   testWidgets('tapping a line plays from it; long-press picks lines to loop', (tester) async {
@@ -184,6 +252,24 @@ void main() {
     await _openEarnest(tester);
     await tester.pumpAndSettle();
     expect(find.text('Jack'), findsOneWidget);
+  });
+
+  testWidgets('long-press a cover to ask the Mac to render it; it waits on the home screen', (tester) async {
+    await _pump(tester, await _store(), Brightness.light);
+    await tester.longPress(find.text('THE IMPORTANCE OF BEING EARNEST'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('9 scenes not rendered yet'), findsOneWidget);
+    await tester.tap(find.text('Ask Mac to Render'));
+    await tester.pumpAndSettle();
+    expect(find.text('WAITING FOR YOUR MAC'), findsOneWidget);
+    expect(loadRenderRequest(earnestFolder)?.scenes, [3, 4, 5, 6, 7, 9, 10, 11, 12]);
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/phone_waiting.png'));
+    await tester.longPress(find.text('THE IMPORTANCE OF BEING EARNEST'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel Render Request'));
+    await tester.pumpAndSettle();
+    expect(find.text('WAITING FOR YOUR MAC'), findsNothing);
+    expect(loadRenderRequest(earnestFolder), isNull);
   });
 
   testWidgets('a project the Mac hasn\'t opened since the update asks for that', (tester) async {

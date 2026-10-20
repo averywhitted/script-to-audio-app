@@ -56,6 +56,9 @@ class ProjectsFolderPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate {
       let path = args["path"] as? String ?? ""
       let text = args["text"] as? String ?? ""
       background(result) { try self.write(URL(fileURLWithPath: path), text) }
+    case "delete":
+      let path = args["path"] as? String ?? ""
+      background(result) { try self.delete(URL(fileURLWithPath: path)) }
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -172,6 +175,18 @@ class ProjectsFolderPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate {
       do { try Data(text.utf8).write(to: u, options: .atomic) } catch { writeError = error }
     }
     if let e = coordError ?? writeError { throw e }
+    return true
+  }
+
+  private func delete(_ url: URL) throws -> Bool {
+    var coordError: NSError?
+    var deleteError: Error?
+    NSFileCoordinator().coordinate(writingItemAt: url, options: .forDeleting, error: &coordError) { u in
+      do {
+        if FileManager.default.fileExists(atPath: u.path) { try FileManager.default.removeItem(at: u) }
+      } catch { deleteError = error }
+    }
+    if let e = coordError ?? deleteError { throw e }
     return true
   }
 

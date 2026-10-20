@@ -353,6 +353,27 @@
           ]
         },
         {
+          "id": "gallery.renderRequests",
+          "visibleWhen": "Table Read on iPhone asked to render a project (render-request.json in its folder); checked every 15 s",
+          "elements": [
+            {
+              "type": "text",
+              "label": "Waiting to Render"
+            },
+            {
+              "type": "row",
+              "repeats": "per request, newest first",
+              "contents": [
+                "phone icon",
+                "'Your iPhone asked to render “<project>”'",
+                "'<N scenes | Every scene not rendered yet> · <when>'",
+                "'Dismiss' button (removes the request)",
+                "'Render…' primary button (opens the project, then the Render sheet with those scenes picked; disabled while a render runs)"
+              ]
+            }
+          ]
+        },
+        {
           "id": "gallery.recentlyDeleted",
           "visibleWhen": "a project was deleted this session",
           "elements": [

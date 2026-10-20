@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../theme/tokens.dart';
-import '../ui/gallery.dart' show ScriptCover;
+import '../ui/gallery.dart' show ScriptCover, friendlyDate;
 import 'phone_store.dart';
 import 'rehearsal_screen.dart';
 
@@ -126,7 +126,54 @@ class _Projects extends StatelessWidget {
     final ok = await store.download(p);
     if (!ok || !context.mounted) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PhoneRehearsalScreen(project: p, folderAccess: store.folderAccess, audio: store.folderAccess)),
+      MaterialPageRoute(builder: (_) => PhoneRehearsalScreen(project: p, store: store, folderAccess: store.folderAccess, audio: store.folderAccess)),
+    );
+  }
+
+  /// Long-press a cover: ask the Mac to render it (or take the request back).
+  Future<void> _projectMenu(BuildContext context, Project p) async {
+    final store = context.read<PhoneStore>();
+    final t = Tokens.of(context);
+    final asked = store.requests[p.id];
+    final missing = store.missingScenes(p);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: t.sheet,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(title: Text(p.name, style: TextStyles.ui(t, size: 17, weight: FontWeight.w700))),
+            if (asked == null)
+              ListTile(
+                leading: const Icon(Icons.graphic_eq_rounded),
+                title: const Text('Ask Mac to Render'),
+                subtitle: Text(
+                  missing == null
+                      ? 'Every scene not rendered yet. Table Read on your Mac will ask you to start it.'
+                      : missing.isEmpty
+                      ? 'Every scene is rendered already.'
+                      : '${missing.length} scene${missing.length == 1 ? '' : 's'} not rendered yet. Table Read on your Mac will ask you to start it.',
+                ),
+                enabled: missing == null || missing.isNotEmpty,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  store.requestRender(p);
+                },
+              )
+            else
+              ListTile(
+                leading: const Icon(Icons.close_rounded),
+                title: const Text('Cancel Render Request'),
+                subtitle: Text('Asked for ${asked.summary}'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  store.cancelRequest(p);
+                },
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -187,6 +234,11 @@ class _Projects extends StatelessWidget {
               ),
             ),
           ),
+          if (store.requests.isNotEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+              sliver: SliverToBoxAdapter(child: _Waiting(store: store, onTap: (p) => _projectMenu(context, p))),
+            ),
           if (store.error != null)
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
@@ -223,6 +275,7 @@ class _Projects extends StatelessWidget {
                   return GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => _open(context, p),
+                    onLongPress: () => _projectMenu(context, p),
                     child: Semantics(
                       button: true,
                       label: p.name,
@@ -254,3 +307,58 @@ class _Projects extends StatelessWidget {
     );
   }
 }
+
+/// "Waiting for your Mac": the projects this phone asked the Mac to render.
+class _Waiting extends StatelessWidget {
+  const _Waiting({required this.store, required this.onTap});
+  final PhoneStore store;
+  final ValueChanged<Project> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final rows = [
+      for (final p in store.projects)
+        if (store.requests[p.id] case final r?) (p, r),
+    ];
+    return Container(
+      decoration: BoxDecoration(color: t.accentSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: t.accentLine)),
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('WAITING FOR YOUR MAC', style: TextStyles.label(t)),
+          const SizedBox(height: 2),
+          for (final (p, r) in rows)
+            InkWell(
+              onTap: () => onTap(p),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.graphic_eq_rounded, size: 20, color: t.accent),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 16, weight: FontWeight.w600)),
+                          Text('${r.summary[0].toUpperCase()}${r.summary.substring(1)} · asked ${_lowerFirst(friendlyDate(r.requestedAt))}', style: TextStyles.ui(t, size: 13, color: t.muted)),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.more_horiz_rounded, color: t.muted),
+                    const SizedBox(width: 8),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Today, 9:14" reads as "asked today, 9:14" mid-sentence.
+String _lowerFirst(String s) => s.startsWith('Today') || s.startsWith('Yesterday') ? s[0].toLowerCase() + s.substring(1) : s;
