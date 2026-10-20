@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'phone/phone_app.dart';
+import 'phone/phone_store.dart';
 import 'services/project_store.dart';
 import 'services/settings.dart';
 import 'state/app_state.dart';
@@ -18,6 +22,11 @@ import 'ui/widgets.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // iPhone: a rehearsal app for the Mac's renders (#90). No worker, no Mac settings.
+  if (Platform.isIOS) {
+    runApp(PhoneApp(store: PhoneStore()..start()));
+    return;
+  }
   final settings = await Settings.load();
   final store = ProjectStore(settings);
   final app = AppState(settings, store);

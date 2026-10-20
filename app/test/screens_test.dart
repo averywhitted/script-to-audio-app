@@ -26,37 +26,6 @@ import 'package:table_read/ui/widgets.dart';
 
 import 'fixtures.dart';
 
-Future<void> _loadFonts() async {
-  Future<void> family(String name, List<String> files) async {
-    final loader = FontLoader(name);
-    for (final f in files) {
-      loader.addFont(Future.value(ByteData.sublistView(File(f).readAsBytesSync())));
-    }
-    await loader.load();
-  }
-
-  const fonts = 'assets/fonts';
-  await family('Hanken', [
-    '$fonts/HankenGrotesk-Regular.ttf',
-    '$fonts/HankenGrotesk-Medium.ttf',
-    '$fonts/HankenGrotesk-SemiBold.ttf',
-    '$fonts/HankenGrotesk-Bold.ttf',
-  ]);
-  await family('CourierPrime', ['$fonts/CourierPrime-Regular.ttf', '$fonts/CourierPrime-Bold.ttf', '$fonts/CourierPrime-Italic.ttf']);
-  await family('Caveat', ['$fonts/Caveat-SemiBold.ttf']);
-  await family('YoungSerif', ['$fonts/YoungSerif-Regular.ttf']);
-  final sdk = File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path; // .../bin/cache/artifacts/engine/<host>/flutter_tester
-  for (final candidate in [
-    '$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
-    '/opt/homebrew/share/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
-  ]) {
-    if (File(candidate).existsSync()) {
-      await family('MaterialIcons', [candidate]);
-      break;
-    }
-  }
-}
-
 late Directory tmp;
 late String earnestFolder;
 
@@ -109,7 +78,7 @@ Future<void> _snap(WidgetTester tester, String name) async {
 void main() {
   setUpAll(() async {
     clockNow = () => DateTime(2026, 10, 10, 9, 14);
-    await _loadFonts();
+    await loadTestFonts();
     tmp = Directory('${Directory.systemTemp.path}/tr_screens_fixture');
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
     tmp.createSync(recursive: true);

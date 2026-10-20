@@ -4,6 +4,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
+
 import 'package:table_read/models/models.dart';
 import 'package:table_read/state/app_state.dart';
 
@@ -218,4 +220,36 @@ void loadEarnest(AppState app, String folder) {
       kind: 'stage_direction',
     ),
   ];
+}
+
+/// The app's bundled fonts plus Material Icons, so goldens show real text.
+Future<void> loadTestFonts() async {
+  Future<void> family(String name, List<String> files) async {
+    final loader = FontLoader(name);
+    for (final f in files) {
+      loader.addFont(Future.value(ByteData.sublistView(File(f).readAsBytesSync())));
+    }
+    await loader.load();
+  }
+
+  const fonts = 'assets/fonts';
+  await family('Hanken', [
+    '$fonts/HankenGrotesk-Regular.ttf',
+    '$fonts/HankenGrotesk-Medium.ttf',
+    '$fonts/HankenGrotesk-SemiBold.ttf',
+    '$fonts/HankenGrotesk-Bold.ttf',
+  ]);
+  await family('CourierPrime', ['$fonts/CourierPrime-Regular.ttf', '$fonts/CourierPrime-Bold.ttf', '$fonts/CourierPrime-Italic.ttf']);
+  await family('Caveat', ['$fonts/Caveat-SemiBold.ttf']);
+  await family('YoungSerif', ['$fonts/YoungSerif-Regular.ttf']);
+  final sdk = File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path; // .../bin/cache/artifacts/engine/<host>/flutter_tester
+  for (final candidate in [
+    '$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+    '/opt/homebrew/share/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+  ]) {
+    if (File(candidate).existsSync()) {
+      await family('MaterialIcons', [candidate]);
+      break;
+    }
+  }
 }
