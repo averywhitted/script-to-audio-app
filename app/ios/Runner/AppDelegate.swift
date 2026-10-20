@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import MediaPlayer
 import UniformTypeIdentifiers
 
 @main
@@ -15,6 +16,9 @@ import UniformTypeIdentifiers
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "ProjectsFolderPlugin") {
       ProjectsFolderPlugin.register(with: registrar)
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "NowPlayingPlugin") {
+      NowPlayingPlugin.register(with: registrar)
     }
   }
 }
@@ -195,5 +199,87 @@ class ProjectsFolderPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate {
     var vc = scenes.flatMap { $0.windows }.first { $0.isKeyWindow }?.rootViewController
     while let presented = vc?.presentedViewController { vc = presented }
     return vc
+  }
+}
+
+/// Lock screen, Control Center and headphone controls (#92). The Dart side
+/// (lib/phone/now_playing.dart) sends what's playing ("update"/"clear") and
+/// gets the buttons back as "command" calls: play, pause, toggle (an AirPods
+/// press), next / previous (double / triple press), seek.
+class NowPlayingPlugin: NSObject, FlutterPlugin {
+  static func register(with registrar: FlutterPluginRegistrar) {
+    let channel = FlutterMethodChannel(name: "tableread/nowplaying", binaryMessenger: registrar.messenger())
+    registrar.addMethodCallDelegate(NowPlayingPlugin(channel: channel), channel: channel)
+  }
+
+  private let channel: FlutterMethodChannel
+  private var targets: [(MPRemoteCommand, Any)] = []
+  private lazy var artwork: MPMediaItemArtwork? = {
+    let key = FlutterDartProject.lookupKey(forAsset: "assets/app_icon.png")
+    guard let path = Bundle.main.path(forResource: key, ofType: nil), let image = UIImage(contentsOfFile: path) else { return nil }
+    return MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+  }()
+
+  init(channel: FlutterMethodChannel) {
+    self.channel = channel
+  }
+
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    let args = call.arguments as? [String: Any] ?? [:]
+    switch call.method {
+    case "update":
+      enableCommands()
+      let rate = args["rate"] as? Double ?? 1
+      let playing = args["playing"] as? Bool ?? false
+      var info: [String: Any] = [
+        MPMediaItemPropertyTitle: args["title"] as? String ?? "",
+        MPMediaItemPropertyArtist: args["artist"] as? String ?? "",
+        MPMediaItemPropertyAlbumTitle: args["album"] as? String ?? "",
+        MPMediaItemPropertyPlaybackDuration: args["duration"] as? Double ?? 0,
+        MPNowPlayingInfoPropertyElapsedPlaybackTime: args["position"] as? Double ?? 0,
+        MPNowPlayingInfoPropertyPlaybackRate: playing ? rate : 0.0,
+        MPNowPlayingInfoPropertyDefaultPlaybackRate: rate,
+        MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
+      ]
+      if let art = artwork { info[MPMediaItemPropertyArtwork] = art }
+      MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+      result(nil)
+    case "clear":
+      MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+      for (command, target) in targets {
+        command.removeTarget(target)
+        command.isEnabled = false
+      }
+      targets = []
+      result(nil)
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private func enableCommands() {
+    guard targets.isEmpty else { return }
+    let center = MPRemoteCommandCenter.shared()
+    func add(_ command: MPRemoteCommand, _ name: String) {
+      command.isEnabled = true
+      let target = command.addTarget { [weak self] _ in
+        self?.channel.invokeMethod("command", arguments: ["name": name])
+        return .success
+      }
+      targets.append((command, target))
+    }
+    add(center.playCommand, "play")
+    add(center.pauseCommand, "pause")
+    add(center.togglePlayPauseCommand, "toggle")
+    add(center.nextTrackCommand, "next")
+    add(center.previousTrackCommand, "previous")
+    let seek = center.changePlaybackPositionCommand
+    seek.isEnabled = true
+    let target = seek.addTarget { [weak self] event in
+      guard let e = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
+      self?.channel.invokeMethod("command", arguments: ["name": "seek", "position": e.positionTime])
+      return .success
+    }
+    targets.append((seek, target))
   }
 }

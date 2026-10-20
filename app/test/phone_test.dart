@@ -144,7 +144,7 @@ void main() {
     expect(find.text('Line 1 of scene 1, spoken with great feeling and a certain amount of wit.'), findsNothing);
     expect(find.textContaining('____ _ __ _____ _'), findsOneWidget);
     expect(find.text('Line 2 of scene 1, spoken with great feeling and a certain amount of wit.'), findsOneWidget);
-    expect(find.text('Algernon'), findsOneWidget); // the role pill in the bar
+    expect(find.byKey(const Key('lineButton')), findsOneWidget); // Line! takes the role pill's place
   });
 
   testWidgets('the whole play scrolls; a scene heading jumps to another scene', (tester) async {
@@ -152,7 +152,10 @@ void main() {
     await _openEarnest(tester);
     await tester.tap(find.text('Morning-room, Half-Moon Street'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Bunburying').last); // in the scene list
+    // The list drops down from the heading, not up from the bottom.
+    final drop = tester.getRect(find.byKey(const Key('sceneDropdown')));
+    expect(drop.top, closeTo(tester.getRect(find.byType(CustomScrollView)).top + 52, 1));
+    await tester.tap(find.descendant(of: find.byKey(const Key('sceneDropdown')), matching: find.text('Bunburying')));
     await tester.pumpAndSettle();
     // Scene 3's heading is stuck at the top, marked text only; its first line is under it.
     final heading = tester.getRect(find.text('Bunburying'));
@@ -170,7 +173,7 @@ void main() {
     await _openEarnest(tester);
     await tester.tap(find.text('Morning-room, Half-Moon Street'));
     await tester.pumpAndSettle();
-    final sheet = find.byType(DraggableScrollableSheet);
+    final sheet = find.byKey(const Key('sceneDropdown'));
     final row = find.descendant(of: sheet, matching: find.text('Tea, and a misunderstanding')); // scene 8: 41 lines
     await tester.scrollUntilVisible(row, 120, scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)));
     await tester.tap(row);
@@ -192,6 +195,34 @@ void main() {
     expect(n, greaterThan(8), reason: 'more lines than fit on screen at once');
     await g.up();
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('Line! in the bar: only with Block My Lines; a hint the first time only', (tester) async {
+    await _pump(tester, await _store(), Brightness.light);
+    await _openEarnest(tester);
+    expect(find.byKey(const Key('lineButton')), findsNothing);
+    await tester.tap(find.text('Rehearse'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Algernon'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Block My Lines'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('Forgot a line? '), findsNothing, reason: 'the hint is one rich text');
+    expect(find.textContaining('Tap Line! below'), findsOneWidget);
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/phone_line_hint.png'));
+    const mine = 'Line 1 of scene 1, spoken with great feeling and a certain amount of wit.';
+    await tester.tap(find.byKey(const Key('lineButton')));
+    await tester.pump();
+    expect(find.text(mine), findsOneWidget);
+    expect(find.textContaining('Tap Line! below'), findsNothing, reason: 'using it dismisses the hint');
+    await tester.tap(find.byKey(const Key('lineButton')));
+    await tester.pump();
+    expect(find.text(mine), findsNothing, reason: 'calling Line! again stops it');
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('phoneLineHintSeen'), isTrue);
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('tapping my blanked line shows it; tapping again hides it', (tester) async {

@@ -19,6 +19,7 @@ import '../theme/tokens.dart';
 import '../ui/dashboard.dart' show blockText;
 import '../ui/playback_bar.dart' show SceneTimeline;
 import '../ui/widgets.dart' show NameChip, titleCaseName;
+import 'now_playing.dart';
 import 'phone_store.dart';
 import 'rehearsal_session.dart';
 
@@ -28,11 +29,13 @@ const _textSizeLabels = ['Small', 'Medium', 'Large', 'Huge'];
 /// The sticky scene heading's height.
 const _headingHeight = 52.0;
 
-/// The bottom bar stays dark in both themes (the Mac's bar flips to light in
-/// dark mode; on the phone that read as dark mode being ignored).
-({Color bg, Color ink, Color btn, Color btnOn}) _barColors(Tokens t) => t.dark
-    ? (bg: const Color(0xFF262624), ink: const Color(0xFFEFEDE8), btn: const Color(0x1CFFFFFF), btnOn: const Color(0x33FFFFFF))
-    : (bg: t.bar, ink: t.barInk, btn: t.barBtn, btnOn: t.barBtnOn);
+/// The bottom bar follows the theme: a light tray in light mode, dark in dark.
+({Color bg, Color edge, Color ink, Color btn, Color btnOn}) _barColors(Tokens t) => t.dark
+    ? (bg: const Color(0xFF262624), edge: const Color(0x1FFFFFFF), ink: const Color(0xFFEFEDE8), btn: const Color(0x1CFFFFFF), btnOn: const Color(0x33FFFFFF))
+    : (bg: t.panel, edge: t.border, ink: t.ink, btn: const Color(0x12000000), btnOn: const Color(0x21000000));
+
+/// Remembers that the one-time Line! hint was seen.
+const _lineHintSeenKey = 'phoneLineHintSeen';
 
 class PhoneRehearsalScreen extends StatefulWidget {
   const PhoneRehearsalScreen({super.key, required this.project, this.store, this.folderAccess = true, this.audio = true});
@@ -55,6 +58,8 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   late final RehearsalSession session = RehearsalSession.load(widget.project);
   late final RehearsalPlayer player = RehearsalPlayer(audioEnabled: widget.audio);
   final scroll = ScrollController();
+  late final NowPlaying nowPlaying = NowPlaying(player, projectName: widget.project.name);
+  final List<StreamSubscription<dynamic>> _audioSubs = [];
   final _viewportKey = GlobalKey();
 
   int _lastCue = -2;
@@ -80,7 +85,19 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   void initState() {
     super.initState();
     if (widget.audio) {
-      AudioSession.instance.then((s) => s.configure(const AudioSessionConfiguration.speech())).catchError((_) {});
+      AudioSession.instance
+          .then((s) async {
+            await s.configure(const AudioSessionConfiguration.speech());
+            // Headphones pulled out, or a call coming in: stop, like any player.
+            _audioSubs.add(s.becomingNoisyEventStream.listen((_) => player.pause()));
+            _audioSubs.add(
+              s.interruptionEventStream.listen((e) {
+                if (e.begin) player.pause();
+              }),
+            );
+          })
+          .catchError((_) {});
+      nowPlaying.attach();
     }
     player.loadItems(session.items);
     _lastScene = player.currentScene?.sceneNumber;
@@ -92,12 +109,21 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent(animate: false));
     });
     SharedPreferences.getInstance().then((p) {
-      if (mounted) setState(() => textSize = (p.getInt('phoneTextSize') ?? 1).clamp(0, 3));
+      if (mounted) {
+        setState(() {
+          textSize = (p.getInt('phoneTextSize') ?? 1).clamp(0, 3);
+          _lineHintSeen = p.getBool(_lineHintSeenKey) ?? false;
+        });
+      }
     });
   }
 
   @override
   void dispose() {
+    if (widget.audio) nowPlaying.detach();
+    for (final sub in _audioSubs) {
+      sub.cancel();
+    }
     _edgeScroll?.cancel();
     player.removeListener(_onPlayer);
     player.onSettingsChanged = null;
@@ -214,9 +240,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     if (box == null) return;
     final top = box.localToGlobal(Offset.zero).dy + _headingHeight, bottom = box.localToGlobal(Offset(0, box.size.height)).dy;
     const zone = 72.0;
-    final speed = global.dy > bottom - zone
-        ? (global.dy - (bottom - zone)) / zone
-        : (global.dy < top + zone ? -((top + zone) - global.dy) / zone : 0.0);
+    final speed = global.dy > bottom - zone ? (global.dy - (bottom - zone)) / zone : (global.dy < top + zone ? -((top + zone) - global.dy) / zone : 0.0);
     if (speed == 0) {
       _edgeScroll?.cancel();
       _edgeScroll = null;
@@ -261,7 +285,6 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
-    final waitingHere = player.waitingAtCue != null;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: t.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
@@ -272,8 +295,8 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
             children: [
               _header(t),
               Expanded(child: session.scenes.isEmpty ? _empty(t) : _script(t)),
-              if (waitingHere) _cueCard(t),
               if (_selA != null) _selectionBar(t),
+              if (_showLineHint) _lineHint(t),
               if (player.scenes.isNotEmpty) _bar(t),
             ],
           ),
@@ -292,12 +315,20 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         Expanded(
-          child: Text(widget.project.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 17, weight: FontWeight.w600)),
+          child: Text(
+            widget.project.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyles.ui(t, size: 17, weight: FontWeight.w600),
+          ),
         ),
         TextButton(
           onPressed: _openTextOptions,
           style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: t.ink2),
-          child: Text('Aa', style: TextStyles.ui(t, size: 17, weight: FontWeight.w600, color: t.ink2)),
+          child: Text(
+            'Aa',
+            style: TextStyles.ui(t, size: 17, weight: FontWeight.w600, color: t.ink2),
+          ),
         ),
       ],
     ),
@@ -328,7 +359,10 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
           for (final s in session.scenes)
             SliverMainAxisGroup(
               slivers: [
-                SliverPersistentHeader(pinned: true, delegate: _SceneHeading(scene: s, tokens: t, onTap: _openScenes)),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SceneHeading(scene: s, tokens: t, onTap: _openScenesFrom),
+                ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
                   // Not lazy within a scene: playback can scroll to any line.
@@ -352,7 +386,6 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     final playingHere = player.currentScene?.sceneNumber == s.number;
     final current = playingHere && l.cueIndex != null && l.cueIndex == player.currentCueIndex;
     final mine = l.isDialog && player.isMyLine(l.speaker);
-    final waiting = playingHere && l.cueIndex != null && l.cueIndex == player.waitingAtCue;
     final revealed = playingHere && l.cueIndex != null && l.cueIndex == player.revealedCue;
     final blocked = mine && player.blockMyLines && !revealed;
     final a = _selA, b = _selB;
@@ -374,19 +407,15 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   for (final n in l.names) NameChip(n, allSpeakers: session.characters, uppercase: true, size: 12.5 * scale),
-                  if (mine) Text('· YOU', style: TextStyles.ui(t, size: 11 * scale, weight: FontWeight.w600, color: current ? const Color(0xFF46433E) : t.ink2)),
+                  if (mine)
+                    Text(
+                      '· YOU',
+                      style: TextStyles.ui(t, size: 11 * scale, weight: FontWeight.w600, color: current ? const Color(0xFF46433E) : t.ink2),
+                    ),
                 ],
               ),
               const SizedBox(height: 3),
               Text(blocked ? blockText(l.text) : l.text, style: textStyle),
-              if ((waiting || current) && mine && player.blockMyLines)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    revealed ? 'Tap to hide' : 'Tap to hear your line',
-                    style: TextStyles.ui(t, size: 13, weight: FontWeight.w600, color: current ? const Color(0xFF2C6BC9) : t.accent),
-                  ),
-                ),
             ],
           )
         : Text(l.text, style: textStyle);
@@ -417,35 +446,63 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
         decoration: BoxDecoration(
           color: fill,
           borderRadius: BorderRadius.circular(6),
-          border: current ? Border.all(color: t.dark ? onHighlighter : t.highlighterEdge, width: 2) : (selected ? Border.all(color: t.accentLine, width: 1.5) : null),
+          border: current
+              ? Border.all(color: t.dark ? onHighlighter : t.highlighterEdge, width: 2)
+              : (selected ? Border.all(color: t.accentLine, width: 1.5) : null),
         ),
         child: body,
       ),
     );
   }
 
-  Widget _cueCard(Tokens t) => Container(
-    margin: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-    padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-    decoration: BoxDecoration(color: t.sheet, borderRadius: BorderRadius.circular(16), boxShadow: t.shadow, border: t.dark ? Border.all(color: t.border) : null),
+  /// Line! is in the bar only while Block My Lines is on.
+  bool get _lineButton => player.blockMyLines && player.myRole.isNotEmpty;
+
+  /// Shown once, the first time Line! appears.
+  bool _lineHintSeen = true;
+  bool get _showLineHint => _lineButton && !_lineHintSeen;
+
+  Future<void> _dismissLineHint() async {
+    if (_lineHintSeen) return;
+    setState(() => _lineHintSeen = true);
+    (await SharedPreferences.getInstance()).setBool(_lineHintSeenKey, true);
+  }
+
+  /// Like calling "Line!" to whoever is on book: plays your line; calling
+  /// again while it plays stops it.
+  void _callLine() {
+    _dismissLineHint();
+    player.callForLine();
+  }
+
+  Widget _lineHint(Tokens t) => Container(
+    margin: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+    padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+    decoration: BoxDecoration(
+      color: t.sheet,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: t.shadow,
+      border: Border.all(color: t.border),
+    ),
     child: Row(
       children: [
-        Text('Your line', style: TextStyles.hand(t, size: 26, color: t.accent)),
-        const SizedBox(width: 12),
-        Expanded(child: Text('Say it, then tap play or your AirPods.', style: TextStyles.ui(t, size: 14, color: t.ink2))),
-        FilledButton(
-          onPressed: player.callForLine,
-          style: FilledButton.styleFrom(
-            backgroundColor: t.highlighter,
-            foregroundColor: const Color(0xFF1C1B19),
-            side: const BorderSide(color: Color(0xFF1C1B19), width: 2),
-            minimumSize: const Size(44, 40),
-          ),
-          child: Text(
-            player.revealedCue != null ? 'Hide' : 'Line!',
-            style: TextStyles.ui(t, size: 15, weight: FontWeight.w700, color: const Color(0xFF1C1B19)),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Forgot a line? ',
+                  style: TextStyles.ui(t, size: 14, weight: FontWeight.w700),
+                ),
+                TextSpan(
+                  text: 'Tap Line! below to hear it, and tap again to stop. You can also tap your line in the script.',
+                  style: TextStyles.ui(t, size: 14, color: t.ink2),
+                ),
+              ],
+            ),
           ),
         ),
+        TextButton(onPressed: _dismissLineHint, child: const Text('Got it')),
       ],
     ),
   );
@@ -455,10 +512,17 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 8, 14, 12),
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-      decoration: BoxDecoration(color: t.sheet, borderRadius: BorderRadius.circular(16), boxShadow: t.shadow, border: t.dark ? Border.all(color: t.border) : null),
+      decoration: BoxDecoration(
+        color: t.sheet,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: t.shadow,
+        border: t.dark ? Border.all(color: t.border) : null,
+      ),
       child: Row(
         children: [
-          Expanded(child: Text('$n line${n == 1 ? '' : 's'} selected', style: TextStyles.ui(t, size: 15, weight: FontWeight.w600))),
+          Expanded(
+            child: Text('$n line${n == 1 ? '' : 's'} selected', style: TextStyles.ui(t, size: 15, weight: FontWeight.w600)),
+          ),
           TextButton(onPressed: () => setState(_clearSelection), child: const Text('Cancel')),
           const SizedBox(width: 4),
           FilledButton.icon(
@@ -485,7 +549,11 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onTap,
-          child: SizedBox(width: size, height: size, child: Icon(icon, color: fg ?? c.ink, size: iconSize)),
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Icon(icon, color: fg ?? c.ink, size: iconSize),
+          ),
         ),
       ),
     );
@@ -499,18 +567,30 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
           height: 44,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           alignment: Alignment.center,
-          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 14, weight: FontWeight.w600, color: c.ink)),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyles.ui(t, size: 14, weight: FontWeight.w600, color: c.ink),
+          ),
         ),
       ),
     );
     final waiting = player.waitingAtCue != null;
     return Container(
-      decoration: BoxDecoration(color: c.bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(22))),
+      decoration: BoxDecoration(
+        color: c.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        border: Border(top: BorderSide(color: c.edge)),
+      ),
       padding: EdgeInsets.fromLTRB(18, 10, 18, 12 + bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (player.flash != null) Text(player.flash!, style: TextStyles.hand(t, size: 20, color: t.highlighter)),
+          if (player.flash != null)
+            Text(player.flash!, style: TextStyles.hand(t, size: 20, color: t.dark ? t.highlighter : t.accent))
+          else if (waiting)
+            Text('Your line', style: TextStyles.hand(t, size: 20, color: t.dark ? t.highlighter : t.accent)),
           Row(
             children: [
               Text(_clockText(player.currentTime), style: clock),
@@ -533,7 +613,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
               Expanded(
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: pill(player.myRole.isEmpty ? 'My Role' : titleCaseName(player.myRole), _openPanel),
+                  child: _lineButton ? _lineButtonWidget(t) : pill(player.myRole.isEmpty ? 'My Role' : titleCaseName(player.myRole), _openPanel),
                 ),
               ),
               const SizedBox(width: 8),
@@ -555,10 +635,36 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
               const SizedBox(width: 8),
               round(Icons.fast_forward_rounded, 'Next line', player.nextLine, size: 44),
               const SizedBox(width: 8),
-              Expanded(child: Align(alignment: Alignment.centerRight, child: pill('Rehearse', _openPanel, strong: true))),
+              Expanded(
+                child: Align(alignment: Alignment.centerRight, child: pill('Rehearse', _openPanel, strong: true)),
+              ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _lineButtonWidget(Tokens t) {
+    const ink = Color(0xFF1C1B19);
+    final on = player.revealedCue != null;
+    return Semantics(
+      button: true,
+      label: on ? 'Stop your line' : 'Line! Hear your line',
+      child: Material(
+        color: on ? ink : t.highlighter,
+        shape: const StadiumBorder(side: BorderSide(color: ink, width: 2)),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: _callLine,
+          child: Container(
+            key: const Key('lineButton'),
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            alignment: Alignment.center,
+            child: Text('Line!', style: TextStyles.hand(t, size: 22, color: on ? t.highlighter : ink)),
+          ),
+        ),
       ),
     );
   }
@@ -577,37 +683,100 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => ListenableBuilder(
         listenable: player,
-        builder: (ctx, _) => _RehearsePanel(player: player, session: session, viewing: _topScene, onScene: (n) {
-          Navigator.pop(ctx);
-          _jumpToScene(n);
-        }),
-      ),
-    );
-  }
-
-  Future<void> _openScenes() async {
-    final t = Tokens.of(context);
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: t.sheet,
-      showDragHandle: true,
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.92,
-        builder: (ctx, sc) => _SceneList(
+        builder: (ctx, _) => _RehearsePanel(
+          player: player,
           session: session,
           viewing: _topScene,
-          controller: sc,
-          store: widget.store,
-          onScene: (n) {
+          onPickScene: () {
             Navigator.pop(ctx);
-            _jumpToScene(n);
+            Future.delayed(const Duration(milliseconds: 250), () {
+              if (mounted) _openScenesFromTop();
+            });
           },
         ),
       ),
     );
+  }
+
+  /// The scene list, dropping down from the heading that was tapped.
+  void _openScenesFrom(BuildContext heading) {
+    final box = heading.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    _openScenes(box.localToGlobal(Offset.zero) & box.size);
+  }
+
+  /// From the Rehearse panel: drops down from the heading stuck at the top.
+  void _openScenesFromTop() {
+    final box = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    _openScenes(box.localToGlobal(Offset.zero) & Size(box.size.width, _headingHeight));
+  }
+
+  Future<void> _openScenes(Rect heading) async {
+    final t = Tokens.of(context);
+    final list = ScrollController();
+    final picked = await showGeneralDialog<int>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close scenes',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (ctx, _, _) {
+        final media = MediaQuery.of(ctx);
+        final room = media.size.height - heading.bottom - media.padding.bottom - 24;
+        return Stack(
+          children: [
+            // Dims the script below the heading; a tap anywhere closes.
+            Positioned.fill(
+              child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => Navigator.pop(ctx)),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: heading.bottom,
+              bottom: 0,
+              child: IgnorePointer(
+                child: ColoredBox(color: Colors.black.withValues(alpha: t.dark ? 0.45 : 0.22)),
+              ),
+            ),
+            Positioned(
+              key: const Key('sceneDropdown'),
+              left: 8,
+              right: 8,
+              top: heading.bottom,
+              child: Material(
+                color: t.sheet,
+                elevation: 8,
+                shadowColor: Colors.black45,
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+                clipBehavior: Clip.antiAlias,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: room.clamp(160.0, media.size.height * 0.62)),
+                  child: _SceneList(session: session, viewing: _topScene, controller: list, store: widget.store, onScene: (n) => Navigator.pop(ctx, n)),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      // Unfolds downward from the heading.
+      transitionBuilder: (ctx, anim, _, child) {
+        final a = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+        return FadeTransition(
+          opacity: a,
+          child: AnimatedBuilder(
+            animation: a,
+            builder: (ctx, c) => ClipRect(
+              clipper: _RevealDown(top: heading.bottom, progress: a.value),
+              child: c,
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+    list.dispose();
+    if (picked != null) _jumpToScene(picked);
   }
 
   Future<void> _openTextOptions() async {
@@ -664,7 +833,9 @@ class _SceneHeading extends SliverPersistentHeaderDelegate {
   _SceneHeading({required this.scene, required this.tokens, required this.onTap});
   final PhoneScene scene;
   final Tokens tokens;
-  final VoidCallback onTap;
+
+  /// Gets the heading's context, so the list can drop down from it.
+  final ValueChanged<BuildContext> onTap;
 
   @override
   double get minExtent => _headingHeight;
@@ -677,34 +848,54 @@ class _SceneHeading extends SliverPersistentHeaderDelegate {
     final stuck = overlapsContent || shrinkOffset > 0;
     return Material(
       color: t.bg,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          height: _headingHeight,
-          padding: const EdgeInsets.fromLTRB(20, 0, 14, 0),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: stuck ? t.rule : Colors.transparent))),
-          child: Row(
-            children: [
-              Text(scene.number.toString().padLeft(2, '0'), style: TextStyles.script(t, size: 14, weight: FontWeight.w700, color: t.muted)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(scene.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 16, weight: FontWeight.w700)),
-              ),
-              if (!scene.rendered) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(color: t.panel, borderRadius: BorderRadius.circular(6), border: Border.all(color: t.border)),
-                  child: Text('Text only', style: TextStyles.ui(t, size: 11.5, weight: FontWeight.w600, color: t.muted)),
+      // The box's own context (the delegate's is the sliver's).
+      child: Builder(
+        builder: (box) => InkWell(
+          onTap: () => onTap(box),
+          child: Container(
+            height: _headingHeight,
+            padding: const EdgeInsets.fromLTRB(20, 0, 14, 0),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: stuck ? t.rule : Colors.transparent)),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  scene.number.toString().padLeft(2, '0'),
+                  style: TextStyles.script(t, size: 14, weight: FontWeight.w700, color: t.muted),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    scene.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyles.ui(t, size: 16, weight: FontWeight.w700),
+                  ),
+                ),
+                if (!scene.rendered) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: t.panel,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: t.border),
+                    ),
+                    child: Text(
+                      'Text only',
+                      style: TextStyles.ui(t, size: 11.5, weight: FontWeight.w600, color: t.muted),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(color: t.accentSoft, shape: BoxShape.circle),
+                  child: Icon(Icons.unfold_more_rounded, size: 18, color: t.accent, semanticLabel: 'Scenes'),
+                ),
               ],
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(color: t.accentSoft, shape: BoxShape.circle),
-                child: Icon(Icons.unfold_more_rounded, size: 18, color: t.accent, semanticLabel: 'Scenes'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -723,11 +914,13 @@ String _clockText(double s) {
 /// Role, practice toggles, loop, speed and scene: the Mac's playback-bar
 /// options, as one panel.
 class _RehearsePanel extends StatelessWidget {
-  const _RehearsePanel({required this.player, required this.session, required this.viewing, required this.onScene});
+  const _RehearsePanel({required this.player, required this.session, required this.viewing, required this.onPickScene});
   final RehearsalPlayer player;
   final RehearsalSession session;
   final int? viewing;
-  final ValueChanged<int> onScene;
+
+  /// Closes the panel and drops the scene list down from the top heading.
+  final VoidCallback onPickScene;
 
   @override
   Widget build(BuildContext context) {
@@ -765,18 +958,16 @@ class _RehearsePanel extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: Text('Rehearse', style: TextStyles.ui(t, size: 22, weight: FontWeight.w700))),
+                  Expanded(
+                    child: Text('Rehearse', style: TextStyles.ui(t, size: 22, weight: FontWeight.w700)),
+                  ),
                   TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
                 ],
               ),
               const SizedBox(height: 8),
               Text('MY ROLE', style: TextStyles.label(t)),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [chip('No one', ''), for (final c in session.characters) chip(titleCaseName(c), c)],
-              ),
+              Wrap(spacing: 8, runSpacing: 8, children: [chip('No one', ''), for (final c in session.characters) chip(titleCaseName(c), c)]),
               const SizedBox(height: 16),
               Material(
                 color: t.panel,
@@ -831,23 +1022,14 @@ class _RehearsePanel extends StatelessWidget {
                 ListTile(
                   tileColor: t.panel,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  title: Text('Scene ${scene.number} · ${scene.title}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 16, weight: FontWeight.w600)),
+                  title: Text(
+                    'Scene ${scene.number} · ${scene.title}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyles.ui(t, size: 16, weight: FontWeight.w600),
+                  ),
                   trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () async {
-                    final picked = await showModalBottomSheet<int>(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: t.sheet,
-                      showDragHandle: true,
-                      builder: (ctx) => DraggableScrollableSheet(
-                        expand: false,
-                        initialChildSize: 0.6,
-                        maxChildSize: 0.92,
-                        builder: (ctx, sc) => _SceneList(session: session, viewing: viewing, controller: sc, onScene: (n) => Navigator.pop(ctx, n)),
-                      ),
-                    );
-                    if (picked != null) onScene(picked);
-                  },
+                  onTap: onPickScene,
                 ),
             ],
           ),
@@ -883,13 +1065,19 @@ class _SceneList extends StatelessWidget {
                         onPressed: () => st.requestRender(session.project),
                         icon: const Icon(Icons.graphic_eq_rounded, size: 18),
                         label: Text('Ask Mac to Render $missing Text-Only Scene${missing == 1 ? '' : 's'}'),
-                        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44), foregroundColor: t.accent, side: BorderSide(color: t.accentLine)),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(44),
+                          foregroundColor: t.accent,
+                          side: BorderSide(color: t.accentLine),
+                        ),
                       )
                     : Row(
                         children: [
                           Icon(Icons.schedule_rounded, size: 18, color: t.muted),
                           const SizedBox(width: 8),
-                          Expanded(child: Text('Waiting for your Mac to render ${asked.summary}.', style: TextStyles.ui(t, size: 14, color: t.ink2))),
+                          Expanded(
+                            child: Text('Waiting for your Mac to render ${asked.summary}.', style: TextStyles.ui(t, size: 14, color: t.ink2)),
+                          ),
                           TextButton(onPressed: () => st.cancelRequest(session.project), child: const Text('Cancel')),
                         ],
                       ),
@@ -917,4 +1105,16 @@ class _SceneList extends StatelessWidget {
       },
     );
   }
+}
+
+/// Clips everything below [top] to the part already unfolded.
+class _RevealDown extends CustomClipper<Rect> {
+  _RevealDown({required this.top, required this.progress});
+  final double top, progress;
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTRB(0, 0, size.width, top + (size.height - top) * progress);
+
+  @override
+  bool shouldReclip(_RevealDown old) => old.progress != progress || old.top != top;
 }
