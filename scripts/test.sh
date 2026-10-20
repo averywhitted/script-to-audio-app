@@ -5,6 +5,7 @@
 #   bash scripts/test.sh          # full suite
 #   bash scripts/test.sh python   # Python backend only
 #   bash scripts/test.sh swift    # Swift build + unit tests only
+#   bash scripts/test.sh flutter  # Flutter app: analyze + tests (logic, screens, real worker)
 #
 # Exit code is non-zero if any suite fails.
 
@@ -103,15 +104,39 @@ run_swift() {
     fi
 }
 
+# ── Flutter app (app/) ───────────────────────────────────────────────────────
+# Screen renders compare against test/goldens/. After an intentional visual
+# change, refresh them with: (cd app && flutter test --update-goldens test/screens_test.dart)
+
+run_flutter() {
+    section "Flutter analyze"
+    if ! command -v flutter &>/dev/null; then
+        fail "Flutter not installed (brew install --cask flutter)"
+        return
+    fi
+    if (cd app && flutter analyze --no-fatal-infos 2>&1 | tail -3); then
+        ok "Flutter analyze passed"
+    else
+        fail "Flutter analyze FAILED"
+    fi
+    section "Flutter tests"
+    if (cd app && flutter test 2>&1 | tail -5); then
+        ok "Flutter tests passed"
+    else
+        fail "Flutter tests FAILED"
+    fi
+}
+
 # ── dispatch ──────────────────────────────────────────────────────────────────
 
 case "$SUITE" in
     python)      run_python ;;
     python-fast) run_python_fast ;;
     swift)       run_swift  ;;
-    all)         run_python; run_swift ;;
+    flutter)     run_flutter ;;
+    all)         run_python; run_swift; run_flutter ;;
     *)
-        echo "Usage: bash scripts/test.sh [python|python-fast|swift|all]"
+        echo "Usage: bash scripts/test.sh [python|python-fast|swift|flutter|all]"
         exit 1
         ;;
 esac

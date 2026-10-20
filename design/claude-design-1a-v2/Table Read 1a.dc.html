@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Caveat:wght@500;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#DCD6CC;-webkit-font-smoothing:antialiased}
+a{color:#A33A2E}a:hover{color:#7E2A21}
+</style>
+</helmet>
+<section id="turn2" style="padding:72px 80px 140px;display:flex;flex-direction:column;gap:56px;font-family:'Hanken Grotesk',sans-serif;color:#2B2620">
+<div style="display:flex;flex-direction:column;gap:10px;max-width:980px">
+<div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#6F6558;font-weight:600">Turn 2 · Direction 1a, refined · Main windows</div>
+<div style="font-family:'Young Serif',serif;font-size:46px;line-height:1.1">Table Read — Rehearsal Room</div>
+<div style="font-size:17px;line-height:1.5;color:#4D453B;text-wrap:pretty">Every main window from the brief's inventory, laid out with three modes (Prep · Record · Rehearse) and the PDF beside the parse inside Prep. Sheets, Settings, popovers, menus and alerts are in <a href="Table Read 1a Sheets.dc.html">Table Read 1a Sheets</a>. Light mode throughout, plus dark Rehearse and phone width.</div>
+</div>
+
+<!-- ================= HOME ================= -->
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="font-family:'Young Serif',serif;font-size:30px">1 · Project Gallery</div>
+<div style="display:flex;gap:56px;flex-wrap:wrap;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Grid</b> · 2 selected (⌘-click), 1 hovered, Hamlet rendering in the background, Filter on, Recently Deleted</div>
+<div data-screen-label="Gallery grid" style="width:1280px;height:860px;border-radius:12px;overflow:hidden;background:#F4EEE3;box-shadow:0 30px 60px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;font-size:13px">
+<div style="position:absolute;width:230px;height:230px;border-radius:50%;border:9px solid rgba(120,78,40,0.06);right:-50px;bottom:150px"></div>
+<div style="display:flex;align-items:center;gap:8px;height:52px;padding:0 20px;flex-shrink:0"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="display:flex;align-items:flex-end;justify-content:space-between;padding:0 40px 22px;gap:24px">
+<div style="display:flex;flex-direction:column;gap:2px"><div style="font-family:'Young Serif',serif;font-size:34px;letter-spacing:-0.01em">Table Read</div><div style="font-size:14px;color:#6F6558">Projects</div></div>
+<div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+<div style="display:flex;background:#E8E0D2;border-radius:8px;padding:2px"><div style="padding:5px 12px;background:#FBF8F2;border-radius:6px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Active</div><div style="padding:5px 12px;color:#6F6558">Archived</div></div>
+<div style="display:flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid #D6CCBB;border-radius:8px">Filter<div style="width:6px;height:6px;border-radius:50%;background:#A33A2E"></div></div>
+<div style="display:flex;border:1px solid #D6CCBB;border-radius:8px;overflow:hidden"><div style="padding:6px 11px;background:#E8E0D2;font-weight:600">Grid</div><div style="padding:6px 11px;color:#6F6558">List</div></div>
+<div style="padding:6px 11px;border:1px solid #D6CCBB;border-radius:8px">Last Opened ↓</div>
+<div style="padding:7px 14px;background:#A33A2E;color:#FBF3EC;border-radius:8px;font-weight:600;box-shadow:0 1px 0 rgba(0,0,0,0.2)">New Project</div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:28px 32px;padding:4px 40px">
+<sc-for list="{{ projects }}" as="p" hint-placeholder-count="8">
+<div style="display:flex;flex-direction:column;gap:8px;transform:{{ p.lift }}">
+<div style="height:226px;background:{{ p.stock }};border-radius:2px 7px 7px 2px;position:relative;box-shadow:0 1px 0 rgba(255,255,255,0.6) inset,{{ p.shadow }},0 0 0 1px rgba(60,40,20,0.12);display:flex;flex-direction:column;padding:26px 16px 14px 34px;box-sizing:border-box;outline:{{ p.outline }};outline-offset:3px">
+<div style="position:absolute;left:0;top:0;bottom:0;width:12px;background:rgba(60,35,10,0.12);display:flex;align-items:flex-end"><div style="width:100%;height:{{ p.progressH }};background:#A33A2E"></div></div>
+<div style="position:absolute;left:19px;top:22%;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#F2D99A,#A57E36 70%);box-shadow:0 1px 1px rgba(0,0,0,0.35)"></div>
+<div style="position:absolute;left:19px;top:76%;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#F2D99A,#A57E36 70%);box-shadow:0 1px 1px rgba(0,0,0,0.35)"></div>
+<sc-if value="{{ p.selected }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;right:10px;top:10px;width:20px;height:20px;border-radius:50%;background:#A33A2E;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:700">✓</div></sc-if>
+<sc-if value="{{ p.hovered }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;right:10px;top:10px;width:18px;height:18px;border-radius:50%;box-shadow:0 0 0 1.5px rgba(43,38,32,0.45);background:rgba(255,255,255,0.5)"></div></sc-if>
+<div style="font-family:'Courier Prime',monospace;font-weight:700;font-size:15px;line-height:1.3;color:#2B2620;text-transform:uppercase;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding-right:12px">{{ p.name }}</div>
+<div style="flex:1"></div>
+<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+<sc-if value="{{ p.rendered }}" hint-placeholder-val="{{ false }}"><div style="transform:rotate(-5deg);background:#A33A2E;color:#FBF3EC;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:4px 8px;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,0.25)">Rendered</div></sc-if>
+<div style="font-size:11px;font-weight:600;padding:3px 7px;border-radius:4px;background:rgba(255,255,255,0.55);color:#4D453B;white-space:nowrap">{{ p.scenes }} scenes</div>
+</div>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#6F6558;padding:0 2px;white-space:nowrap"><span>{{ p.date }}</span><sc-if value="{{ p.rendering }}" hint-placeholder-val="{{ false }}"><span style="color:#A33A2E;font-weight:600">Rendering {{ p.progressH }}</span></sc-if></div>
+</div>
+</sc-for>
+</div>
+<div style="margin:22px 40px 0;border-top:1px solid rgba(60,45,30,0.14);padding-top:14px;display:flex;flex-direction:column;gap:8px;max-width:520px">
+<div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6F6558">Recently Deleted</div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#FBF8F2;border-radius:8px;box-shadow:0 0 0 1px rgba(60,45,30,0.1)">
+<div style="width:11px;height:12px;border:1.5px solid #9A8F80;border-top-width:3px;border-radius:1px 1px 3px 3px;box-sizing:border-box"></div>
+<span style="flex:1">Pygmalion</span><span style="color:#A33A2E;font-weight:600">Restore</span>
+</div>
+</div>
+<div style="position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:flex;align-items:center;gap:4px;background:#2B2620;color:#F4EEE3;border-radius:12px;padding:6px 6px 6px 16px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,0.3);white-space:nowrap">
+<span style="font-weight:600;padding-right:10px">2 selected</span>
+<div style="padding:6px 12px;border-radius:8px;background:rgba(255,255,255,0.08)">Archive</div>
+<div style="padding:6px 12px;border-radius:8px;background:rgba(224,90,70,0.2);color:#FF9B8A">Delete</div>
+<div style="padding:6px 10px;color:#B5AA9A">✕</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>List</b> · sorted by clicking column headers, hover chevron, background-render progress</div>
+<div data-screen-label="Gallery list" style="width:1280px;height:860px;border-radius:12px;overflow:hidden;background:#F4EEE3;box-shadow:0 30px 60px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;font-size:13px">
+<div style="display:flex;align-items:center;gap:8px;height:52px;padding:0 20px;flex-shrink:0"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="display:flex;align-items:flex-end;justify-content:space-between;padding:0 40px 22px;gap:24px">
+<div style="display:flex;flex-direction:column;gap:2px"><div style="font-family:'Young Serif',serif;font-size:34px;letter-spacing:-0.01em">Table Read</div><div style="font-size:14px;color:#6F6558">Projects</div></div>
+<div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+<div style="display:flex;background:#E8E0D2;border-radius:8px;padding:2px"><div style="padding:5px 12px;background:#FBF8F2;border-radius:6px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Active</div><div style="padding:5px 12px;color:#6F6558">Archived</div></div>
+<div style="padding:6px 11px;border:1px solid #D6CCBB;border-radius:8px">Filter</div>
+<div style="display:flex;border:1px solid #D6CCBB;border-radius:8px;overflow:hidden"><div style="padding:6px 11px;color:#6F6558">Grid</div><div style="padding:6px 11px;background:#E8E0D2;font-weight:600">List</div></div>
+<div style="padding:7px 14px;background:#A33A2E;color:#FBF3EC;border-radius:8px;font-weight:600">New Project</div>
+</div>
+</div>
+<div style="margin:0 40px;background:#FBF8F2;border-radius:10px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);overflow:hidden">
+<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 110px 90px 140px 32px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(60,45,30,0.12);font-size:12px;font-weight:600;color:#6F6558">
+<span></span><span>Name</span><span></span><span>Scenes</span><span style="color:#2B2620">Last Opened ↓</span><span></span>
+</div>
+<sc-for list="{{ listRows }}" as="p" hint-placeholder-count="8">
+<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 110px 90px 140px 32px;align-items:center;padding:0;border-bottom:1px solid rgba(60,45,30,0.07);background:{{ p.rowBg }};height:52px;position:relative">
+<div style="display:flex;justify-content:center"><div style="width:16px;height:16px;border-radius:50%;box-shadow:0 0 0 1.5px {{ p.ring }};background:{{ p.fill }};color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center">{{ p.check }}</div></div>
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-family:'Courier Prime',monospace;font-weight:700;font-size:14px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+<sc-if value="{{ p.rendering }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#A33A2E;font-weight:600"><div style="width:180px;height:3px;background:#E8E0D2;border-radius:2px"><div style="width:{{ p.progressH }};height:100%;background:#A33A2E;border-radius:2px"></div></div>Rendering {{ p.progressH }}</div></sc-if>
+</div>
+<div><sc-if value="{{ p.rendered }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;transform:rotate(-4deg);background:#A33A2E;color:#FBF3EC;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:3px 7px;border-radius:3px">Rendered</span></sc-if></div>
+<span style="font-family:'Courier Prime',monospace;font-weight:700">{{ p.scenes }}</span>
+<span style="color:#4D453B">{{ p.date }}</span>
+<span style="color:#6F6558;font-size:16px">{{ p.chev }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Archived</b> · italic script title, Unarchive with spinner while working</div>
+<div data-screen-label="Gallery archived" style="width:1280px;height:560px;border-radius:12px;overflow:hidden;background:#F4EEE3;box-shadow:0 30px 60px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;font-size:13px">
+<div style="display:flex;align-items:center;gap:8px;height:52px;padding:0 20px;flex-shrink:0"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="display:flex;align-items:flex-end;justify-content:space-between;padding:0 40px 22px;gap:24px">
+<div style="display:flex;flex-direction:column;gap:2px"><div style="font-family:'Young Serif',serif;font-size:34px;letter-spacing:-0.01em">Table Read</div><div style="font-size:14px;color:#6F6558">Projects</div></div>
+<div style="display:flex;align-items:center;gap:10px;white-space:nowrap">
+<div style="display:flex;background:#E8E0D2;border-radius:8px;padding:2px"><div style="padding:5px 12px;color:#6F6558">Active</div><div style="padding:5px 12px;background:#FBF8F2;border-radius:6px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Archived</div></div>
+<div style="padding:7px 14px;background:#A33A2E;color:#FBF3EC;border-radius:8px;font-weight:600">New Project</div>
+</div>
+</div>
+<div style="margin:0 40px;background:#FBF8F2;border-radius:10px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);overflow:hidden">
+<sc-for list="{{ archived }}" as="a" hint-placeholder-count="4">
+<div style="display:grid;grid-template-columns:52px minmax(0,1fr) 110px 120px 130px;align-items:center;height:60px;border-bottom:1px solid rgba(60,45,30,0.07)">
+<div style="display:flex;justify-content:center"><div style="width:16px;height:12px;border:1.5px solid #9A8F80;border-top-width:4px;border-radius:2px;box-sizing:border-box"></div></div>
+<div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-family:'Courier Prime',monospace;font-weight:700;font-size:14px;text-transform:uppercase">{{ a.name }}</span><span style="font-style:italic;color:#6F6558;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.title }}</span></div>
+<div><sc-if value="{{ a.rendered }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;transform:rotate(-4deg);background:#A33A2E;color:#FBF3EC;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:3px 7px;border-radius:3px">Rendered</span></sc-if></div>
+<span style="color:#4D453B">{{ a.date }}</span>
+<div style="display:flex;justify-content:flex-end;padding-right:20px">
+<sc-if value="{{ a.working }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;padding:5px 12px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB;color:#6F6558"><div style="width:11px;height:11px;border-radius:50%;border:2px solid #D6CCBB;border-top-color:#A33A2E"></div>Unarchive</div></sc-if>
+<sc-if value="{{ a.idle }}" hint-placeholder-val="{{ true }}"><div style="padding:5px 12px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB;font-weight:600">Unarchive</div></sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ================= PREP ================= -->
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="font-family:'Young Serif',serif;font-size:30px">2 · Prep</div>
+<div style="display:flex;gap:56px;flex-wrap:wrap;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Review</b> · scene 09 playing and expanded, other scenes dimmed to 55%, Undo pill, Cast panel, mini-player</div>
+<div data-screen-label="Prep review" style="width:1280px;height:800px;border-radius:12px;overflow:hidden;background:#F4EEE3;box-shadow:0 30px 60px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;font-size:13px">
+<div style="display:flex;align-items:center;gap:16px;height:52px;padding:0 20px;border-bottom:1px solid rgba(60,45,30,0.12);flex-shrink:0;white-space:nowrap">
+<div style="display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="color:#6F6558;font-size:18px;padding-left:8px">‹</div>
+<div style="font-family:'Young Serif',serif;font-size:17px">The Importance of Being Earnest</div>
+<div style="flex:1;display:flex;justify-content:center"><div style="display:flex;background:#E8E0D2;border-radius:9px;padding:3px;gap:2px"><div style="padding:5px 16px;background:#FBF8F2;border-radius:7px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Prep</div><div style="padding:5px 16px;color:#6F6558">Record</div><div style="padding:5px 16px;color:#6F6558">Rehearse</div></div></div>
+<div style="padding:3px 8px;border-radius:5px;background:#E7D8B3;color:#6A5221;font-size:11px;font-weight:600">Update Available</div>
+<div style="padding:2px 6px;border:1px solid #CDBFA8;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#6F6558">BETA</div>
+<div style="color:#6F6558">Report a Bug</div><div style="color:#6F6558">Settings</div>
+</div>
+<div style="flex:1;display:flex;min-height:0">
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;position:relative">
+<div style="display:flex;align-items:center;gap:18px;padding:10px 28px;color:#6F6558;border-bottom:1px solid rgba(60,45,30,0.08);white-space:nowrap">
+<span><b style="color:#2B2620">12</b> scenes</span><span><b style="color:#2B2620">10</b> characters</span><span><b style="color:#2B2620">642</b> lines</span>
+<div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:50%;border:2px solid #D6CCBB;border-top-color:#A33A2E"></div>Loading voices…</div>
+<div style="flex:1"></div>
+<span>Select All</span><span>Select None</span><span>Skip Rendered</span>
+<div style="padding:3px 9px;border-radius:6px;box-shadow:0 0 0 1px #D6CCBB;color:#2B2620">Show PDF</div>
+</div>
+<div style="position:absolute;top:52px;left:50%;transform:translateX(-50%);display:flex;align-items:center;background:#2B2620;color:#F4EEE3;border-radius:20px;font-size:12px;z-index:2;box-shadow:0 6px 16px rgba(0,0,0,0.2);white-space:nowrap"><div style="padding:6px 12px;border-right:1px solid rgba(255,255,255,0.15)">↶ Undo 3</div><div style="padding:6px 12px;color:#B5AA9A">Redo ↷</div></div>
+<div style="flex:1;overflow:hidden;padding:20px 28px 0;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ scenesBefore }}" as="s" hint-placeholder-count="1">
+<div style="display:flex;align-items:center;gap:14px;background:#FBF8F2;border-radius:8px;padding:11px 16px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);opacity:0.55;white-space:nowrap">
+<div style="width:14px;height:14px;border:1.5px solid #B9AD9B;border-radius:4px"></div>
+<div style="display:flex;align-items:center;gap:6px;font-family:'Courier Prime',monospace;font-weight:700;font-size:14px">{{ s.n }}<div style="width:6px;height:6px;border-radius:50%;background:#3E8E5A"></div></div>
+<div style="font-weight:600;font-size:14px;flex:1">{{ s.t }}</div>
+<div style="display:flex;gap:4px"><sc-for list="{{ s.chips }}" as="c" hint-placeholder-count="5"><span style="font-family:'Courier Prime',monospace;font-size:11px;font-weight:700;padding:1px 5px;background:{{ c.hl }};border-radius:2px 5px 3px 6px">{{ c.short }}</span></sc-for></div>
+<div style="color:#6F6558;width:60px;text-align:right">{{ s.lines }} lines</div><div style="color:#9A8F80">⌄</div>
+</div>
+</sc-for>
+<div style="background:#FBF8F2;border-radius:8px;box-shadow:0 0 0 1px rgba(60,45,30,0.12),0 10px 24px -14px rgba(60,35,10,0.35);display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden">
+<div style="display:flex;align-items:center;gap:14px;padding:11px 16px;border-bottom:1px dashed rgba(60,45,30,0.15);white-space:nowrap">
+<div style="width:14px;height:14px;border-radius:4px;background:#A33A2E;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center">✓</div>
+<div style="display:flex;align-items:center;gap:6px;font-family:'Courier Prime',monospace;font-weight:700;font-size:14px">09<div style="width:6px;height:6px;border-radius:50%;background:#3E8E5A"></div></div>
+<div style="font-weight:600;font-size:14px;flex:1;display:flex;gap:8px;align-items:baseline">Morning-room at the Manor House<span style="color:#A33A2E;font-weight:500;font-size:12px">Edit</span></div>
+<div style="display:flex;gap:4px"><sc-for list="{{ scene09chips }}" as="c" hint-placeholder-count="5"><span style="font-family:'Courier Prime',monospace;font-size:11px;font-weight:700;padding:1px 5px;background:{{ c.hl }};border-radius:2px 5px 3px 6px">{{ c.short }}</span></sc-for></div>
+<div style="color:#6F6558;width:60px;text-align:right">64 lines</div><div style="color:#9A8F80">⌃</div>
+</div>
+<div style="padding:8px 0;display:flex;flex-direction:column">
+<sc-for list="{{ lines09 }}" as="l" hint-placeholder-count="8">
+<div style="display:grid;grid-template-columns:64px minmax(0,1fr) 128px;align-items:start;padding:3px 0;background:{{ l.rowBg }};opacity:{{ l.opacity }};position:relative">
+<div style="display:flex;gap:9px;align-items:center;padding:3px 0 0 16px;color:#A69A88;font-family:'Courier Prime',monospace;font-size:12px"><div style="width:12px;height:12px;border:1.3px solid {{ l.cbBorder }};background:{{ l.cbFill }};border-radius:3px;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">{{ l.cbMark }}</div>{{ l.icon }}</div>
+<div style="min-width:0">
+<sc-if value="{{ l.isDir }}" hint-placeholder-val="{{ false }}"><div style="font-family:'Courier Prime',monospace;font-style:italic;font-size:13.5px;line-height:1.45;color:#6F6558;padding:2px 40px 2px 60px;text-decoration:{{ l.deco }};text-decoration-color:#8C8273">{{ l.text }}</div></sc-if>
+<sc-if value="{{ l.isDialog }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;align-items:center;font-family:'Courier Prime',monospace;font-size:14px;line-height:1.45">
+<span style="font-weight:700;letter-spacing:0.02em;background:{{ l.hl }};padding:0 6px;border-radius:2px 7px 3px 8px;text-decoration:{{ l.deco }}">{{ l.name }}</span>
+<sc-if value="{{ l.paren }}" hint-placeholder-val="{{ false }}"><span style="color:#6F6558;white-space:nowrap">{{ l.paren }}</span></sc-if>
+<div style="max-width:380px;width:100%;text-wrap:pretty;text-decoration:{{ l.deco }}"><span style="background:{{ l.textBg }};box-decoration-break:clone;-webkit-box-decoration-break:clone;padding:1px 2px;border-radius:2px 6px 3px 6px">{{ l.text }}</span></div>
+</div></sc-if>
+<sc-if value="{{ l.isSim }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:center;gap:28px;font-family:'Courier Prime',monospace;font-size:14px;line-height:1.45;padding:4px 0">
+<sc-for list="{{ l.voices }}" as="v" hint-placeholder-count="2"><div style="display:flex;flex-direction:column;align-items:center;width:210px;gap:2px"><span style="font-weight:700;background:{{ v.hl }};padding:0 6px;border-radius:2px 7px 3px 8px">{{ v.name }}</span><span style="text-align:center;text-wrap:pretty">{{ l.text }}</span></div></sc-for>
+</div></sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:2px;padding-right:16px">
+<sc-if value="{{ l.corrected }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Caveat',cursive;font-size:19px;color:#5E6B78;transform:rotate(-4deg);transform-origin:left;line-height:1">fixed ✓</span></sc-if>
+<sc-if value="{{ l.flagged }}" hint-placeholder-val="{{ false }}"><span title="{{ l.reason }}" style="font-family:'Caveat',cursive;font-size:30px;font-weight:700;color:#5E6B78;line-height:0.9">?</span></sc-if>
+<sc-if value="{{ l.added }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6A5221;background:#E7D8B3;padding:2px 6px;border-radius:3px">Added</span></sc-if>
+<sc-if value="{{ l.isSim }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#6F6558">Simultaneous</span></sc-if>
+</div>
+<sc-if value="{{ l.hover }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;right:136px;top:0;display:flex;gap:2px;background:#FFFFFF;border-radius:7px;box-shadow:0 2px 8px rgba(60,35,10,0.18),0 0 0 1px rgba(60,45,30,0.1);font-size:12px;padding:2px;white-space:nowrap"><sc-for list="{{ l.actions }}" as="a" hint-placeholder-count="3"><span style="padding:3px 8px">{{ a }}</span></sc-for></div></sc-if>
+<sc-if value="{{ l.tip }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;right:8px;top:30px;width:190px;background:#2B2620;color:#F4EEE3;font-size:11.5px;line-height:1.35;padding:7px 9px;border-radius:6px;z-index:3;box-shadow:0 6px 16px rgba(0,0,0,0.25)">Low confidence (0.58): {{ l.reason }}</div></sc-if>
+</div>
+</sc-for>
+<div style="text-align:center;font-size:12px;color:#A33A2E;font-weight:600;padding:8px 0">Show all 64 lines (56 more)</div>
+</div>
+</div>
+</div>
+</div>
+<div style="width:340px;flex-shrink:0;border-left:1px solid rgba(60,45,30,0.12);background:#EFE7DA;display:flex;flex-direction:column">
+<div style="display:flex;gap:18px;padding:12px 20px 0;border-bottom:1px solid rgba(60,45,30,0.1)">
+<div style="padding-bottom:10px;border-bottom:2px solid #A33A2E;font-weight:600">Cast</div>
+<div style="padding-bottom:10px;color:#6F6558;display:flex;gap:5px;align-items:center">Log<div style="width:6px;height:6px;border-radius:50%;background:#C2711F"></div></div>
+</div>
+<div style="padding:14px 20px 10px;display:flex;flex-direction:column;gap:6px">
+<div style="font-size:11px;color:#6F6558;font-weight:600;letter-spacing:0.06em;text-transform:uppercase">Engine</div>
+<div style="display:flex;justify-content:space-between;align-items:center;background:#FBF8F2;border-radius:7px;padding:7px 10px;box-shadow:0 0 0 1px rgba(60,45,30,0.12)">Kokoro Local<span style="color:#9A8F80">⌄</span></div>
+</div>
+<div style="display:flex;flex-direction:column;padding:0 12px">
+<sc-for list="{{ cast }}" as="c" hint-placeholder-count="10">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) auto 86px 26px;align-items:center;gap:8px;padding:6px 8px;border-radius:7px">
+<div style="display:flex;align-items:center;gap:7px;min-width:0"><div style="width:8px;height:8px;border-radius:50%;background:{{ c.dot }};flex-shrink:0"></div><span style="font-family:'Courier Prime',monospace;font-weight:700;font-size:12.5px;color:{{ c.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.upper }}</span></div>
+<div style="display:flex;background:#E4DACB;border-radius:5px;padding:1px;font-size:10.5px;font-weight:600"><sc-for list="{{ c.g }}" as="g" hint-placeholder-count="3"><span style="padding:2px 5px;border-radius:4px;background:{{ g.bg }};color:{{ g.fg }}">{{ g.l }}</span></sc-for></div>
+<div style="font-size:12px;color:#4D453B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.voice }} ⌄</div>
+<div style="width:24px;height:24px;border-radius:50%;box-shadow:0 0 0 1px #CDBFA8;display:flex;align-items:center;justify-content:center;font-size:9px;color:#4D453B">▶</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="height:54px;flex-shrink:0;border-top:1px solid rgba(60,45,30,0.12);background:#FBF8F2;display:flex;align-items:center;gap:16px;padding:0 20px">
+<div style="width:32px;height:32px;border-radius:50%;background:#A33A2E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px">❚❚</div>
+<div style="display:flex;flex-direction:column;width:240px;white-space:nowrap;overflow:hidden"><span style="font-weight:600">09 · Morning-room at the Manor House</span><span style="font-size:11px;color:#6F6558;font-family:'Courier Prime',monospace">CECILY · But I haven't got a cough.</span></div>
+<div style="flex:1;height:28px;display:flex;align-items:center;gap:2px"><sc-for list="{{ wave }}" as="w" hint-placeholder-count="60"><div style="flex:1;height:{{ w.h }};background:{{ w.c }};opacity:{{ w.o }};border-radius:1px"></div></sc-for></div>
+<div style="font-family:'Courier Prime',monospace;font-size:12px;color:#6F6558">1:42 / 4:18</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Review with PDF</b> · PDF page beside the parse, flagged-lines pass (2 of 7)</div>
+<div data-screen-label="Prep PDF + flagged" style="width:1280px;height:800px;border-radius:12px;overflow:hidden;background:#F4EEE3;box-shadow:0 30px 60px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;font-size:13px">
+<div style="display:flex;align-items:center;gap:16px;height:52px;padding:0 20px;border-bottom:1px solid rgba(60,45,30,0.12);flex-shrink:0;white-space:nowrap">
+<div style="display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="color:#6F6558;font-size:18px;padding-left:8px">‹</div>
+<div style="font-family:'Young Serif',serif;font-size:17px">The Importance of Being Earnest</div>
+<div style="flex:1;display:flex;justify-content:center"><div style="display:flex;background:#E8E0D2;border-radius:9px;padding:3px;gap:2px"><div style="padding:5px 16px;background:#FBF8F2;border-radius:7px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Prep</div><div style="padding:5px 16px;color:#6F6558">Record</div><div style="padding:5px 16px;color:#6F6558">Rehearse</div></div></div>
+<div style="padding:2px 6px;border:1px solid #CDBFA8;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#6F6558">BETA</div>
+<div style="color:#6F6558">Report a Bug</div><div style="color:#6F6558">Settings</div>
+</div>
+<div style="display:flex;align-items:center;gap:14px;padding:10px 28px;background:#EFE4CF;border-bottom:1px solid rgba(60,45,30,0.12);white-space:nowrap">
+<span style="font-family:'Caveat',cursive;font-size:28px;font-weight:700;color:#5E6B78;line-height:0.8">?</span>
+<span style="font-weight:600">Flagged line 2 of 7</span>
+<span style="color:#6F6558">Name split across a page break</span>
+<div style="flex:1"></div>
+<span style="padding:5px 10px;border-radius:7px;background:#A33A2E;color:#FBF3EC;font-weight:600">Accept <span style="opacity:0.7">↵</span></span>
+<span style="padding:5px 10px;border-radius:7px;box-shadow:0 0 0 1px #CDBFA8;background:#FBF8F2">Change Speaker <span style="color:#9A8F80">S</span></span>
+<span style="padding:5px 10px;border-radius:7px;box-shadow:0 0 0 1px #CDBFA8;background:#FBF8F2">Remove <span style="color:#9A8F80">⌫</span></span>
+<span style="padding:5px 6px;color:#6F6558">‹ ›</span>
+<span style="color:#6F6558">Done</span>
+</div>
+<div style="flex:1;display:flex;min-height:0">
+<div style="width:430px;flex-shrink:0;padding:18px 0 18px 28px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;color:#6F6558;font-size:12px"><span style="font-family:'Courier Prime',monospace">earnest.pdf</span><span>Page 47 of 62</span></div>
+<div style="flex:1;border-radius:3px;background:repeating-linear-gradient(135deg,#FBF8F2 0 10px,#F3EEE4 10px 20px);box-shadow:0 0 0 1px rgba(60,45,30,0.12),0 10px 24px -14px rgba(60,35,10,0.35);position:relative;display:flex;align-items:center;justify-content:center">
+<span style="font-family:'Courier Prime',monospace;font-size:12px;color:#9A8F80">PDF page render · p. 47</span>
+<div style="position:absolute;left:56px;right:56px;top:58%;height:40px;border-radius:2px 8px 3px 9px;background:oklch(0.88 0.15 300 / 0.45)"></div>
+</div>
+</div>
+<div style="flex:1;min-width:0;padding:18px 28px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:12px;color:#6F6558;white-space:nowrap"><span style="font-family:'Courier Prime',monospace;font-weight:700;color:#2B2620;font-size:14px">09</span><span style="color:#2B2620;font-weight:600;font-size:14px">Morning-room at the Manor House</span><div style="flex:1"></div><span>64 lines</span></div>
+<div style="flex:1;background:#FBF8F2;border-radius:8px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);padding:10px 0;overflow:hidden">
+<sc-for list="{{ linesPdf }}" as="l" hint-placeholder-count="8">
+<div style="display:grid;grid-template-columns:52px minmax(0,1fr) 60px;align-items:start;padding:4px 0;background:{{ l.rowBg }};opacity:{{ l.opacity }};box-shadow:{{ l.focusRing }}">
+<div style="padding:3px 0 0 18px;color:#A69A88;font-family:'Courier Prime',monospace;font-size:12px">{{ l.icon }}</div>
+<div style="min-width:0">
+<sc-if value="{{ l.isDir }}" hint-placeholder-val="{{ false }}"><div style="font-family:'Courier Prime',monospace;font-style:italic;font-size:13.5px;line-height:1.45;color:#6F6558;padding:2px 30px 2px 40px;text-decoration:{{ l.deco }}">{{ l.text }}</div></sc-if>
+<sc-if value="{{ l.isDialog }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;align-items:center;font-family:'Courier Prime',monospace;font-size:14px;line-height:1.45">
+<span style="font-weight:700;background:{{ l.hl }};padding:0 6px;border-radius:2px 7px 3px 8px">{{ l.name }}</span>
+<sc-if value="{{ l.paren }}" hint-placeholder-val="{{ false }}"><span style="color:#6F6558;white-space:nowrap">{{ l.paren }}</span></sc-if>
+<div style="max-width:360px;width:100%;text-wrap:pretty">{{ l.text }}</div>
+</div></sc-if>
+<sc-if value="{{ l.isSim }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:center;gap:24px;font-family:'Courier Prime',monospace;font-size:14px;line-height:1.45;padding:4px 0">
+<sc-for list="{{ l.voices }}" as="v" hint-placeholder-count="2"><div style="display:flex;flex-direction:column;align-items:center;width:190px"><span style="font-weight:700;background:{{ v.hl }};padding:0 6px;border-radius:2px 7px 3px 8px">{{ v.name }}</span><span style="text-align:center">{{ l.text }}</span></div></sc-for>
+</div></sc-if>
+</div>
+<div style="padding-right:12px">
+<sc-if value="{{ l.corrected }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Caveat',cursive;font-size:18px;color:#5E6B78;display:inline-block;transform:rotate(-4deg)">fixed ✓</span></sc-if>
+<sc-if value="{{ l.flagged }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Caveat',cursive;font-size:30px;font-weight:700;color:#5E6B78;line-height:0.9">?</span></sc-if>
+<sc-if value="{{ l.added }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6A5221;background:#E7D8B3;padding:2px 6px;border-radius:3px">Added</span></sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Multi-select + Log</b> · 2 lines selected, Speaker popover “Apply to 2 lines”, Log tab with warnings</div>
+<div data-screen-label="Prep multi-select + log" style="width:1280px;height:800px;border-radius:12px;overflow:hidden;background:#F4EEE3;box-shadow:0 30px 60px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;font-size:13px">
+<div style="display:flex;align-items:center;gap:16px;height:52px;padding:0 20px;border-bottom:1px solid rgba(60,45,30,0.12);flex-shrink:0;white-space:nowrap">
+<div style="display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="color:#6F6558;font-size:18px;padding-left:8px">‹</div>
+<div style="font-family:'Young Serif',serif;font-size:17px">The Importance of Being Earnest</div>
+<div style="flex:1;display:flex;justify-content:center"><div style="display:flex;background:#E8E0D2;border-radius:9px;padding:3px;gap:2px"><div style="padding:5px 16px;background:#FBF8F2;border-radius:7px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Prep</div><div style="padding:5px 16px;color:#6F6558">Record</div><div style="padding:5px 16px;color:#6F6558">Rehearse</div></div></div>
+<div style="padding:2px 6px;border:1px solid #CDBFA8;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#6F6558">BETA</div>
+<div style="color:#6F6558">Report a Bug</div><div style="color:#6F6558">Settings</div>
+</div>
+<div style="flex:1;display:flex;min-height:0">
+<div style="flex:1;display:flex;flex-direction:column;min-width:0;position:relative">
+<div style="display:flex;align-items:center;gap:18px;padding:10px 28px;color:#6F6558;border-bottom:1px solid rgba(60,45,30,0.08);white-space:nowrap">
+<span><b style="color:#2B2620">12</b> scenes</span><span><b style="color:#2B2620">10</b> characters</span><span><b style="color:#2B2620">642</b> lines</span><div style="flex:1"></div><span>Select All</span><span>Select None</span><span>Skip Rendered</span>
+<div style="padding:3px 9px;border-radius:6px;box-shadow:0 0 0 1px #D6CCBB;color:#2B2620">Show PDF</div>
+</div>
+<div style="flex:1;overflow:hidden;padding:20px 28px 0">
+<div style="background:#FBF8F2;border-radius:8px;box-shadow:0 0 0 1px rgba(60,45,30,0.12);overflow:hidden">
+<div style="display:flex;align-items:center;gap:14px;padding:11px 16px;border-bottom:1px dashed rgba(60,45,30,0.15);white-space:nowrap">
+<div style="width:14px;height:14px;border:1.5px solid #B9AD9B;border-radius:4px"></div>
+<div style="display:flex;align-items:center;gap:6px;font-family:'Courier Prime',monospace;font-weight:700;font-size:14px">04<div style="width:6px;height:6px;border-radius:50%;background:#3E8E5A"></div></div>
+<div style="font-weight:600;font-size:14px;flex:1">The proposal</div>
+<div style="display:flex;gap:4px"><sc-for list="{{ scene04chips }}" as="c" hint-placeholder-count="3"><span style="font-family:'Courier Prime',monospace;font-size:11px;font-weight:700;padding:1px 5px;background:{{ c.hl }};border-radius:2px 5px 3px 6px">{{ c.short }}</span></sc-for></div>
+<div style="color:#6F6558;width:60px;text-align:right">58 lines</div><div style="color:#9A8F80">⌃</div>
+</div>
+<div style="padding:8px 0">
+<sc-for list="{{ lines04 }}" as="l" hint-placeholder-count="7">
+<div style="display:grid;grid-template-columns:64px minmax(0,1fr) 100px;align-items:start;padding:4px 0;background:{{ l.rowBg }}">
+<div style="display:flex;gap:9px;align-items:center;padding:3px 0 0 16px;color:#A69A88;font-family:'Courier Prime',monospace;font-size:12px"><div style="width:12px;height:12px;border:1.3px solid {{ l.cbBorder }};background:{{ l.cbFill }};border-radius:3px;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">{{ l.cbMark }}</div>{{ l.icon }}</div>
+<div style="min-width:0">
+<sc-if value="{{ l.isDir }}" hint-placeholder-val="{{ false }}"><div style="font-family:'Courier Prime',monospace;font-style:italic;font-size:13.5px;line-height:1.45;color:#6F6558;padding:2px 40px 2px 60px">{{ l.text }}</div></sc-if>
+<sc-if value="{{ l.isDialog }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;align-items:center;font-family:'Courier Prime',monospace;font-size:14px;line-height:1.45">
+<span style="font-weight:700;background:{{ l.hl }};padding:0 6px;border-radius:2px 7px 3px 8px">{{ l.name }}</span>
+<sc-if value="{{ l.paren }}" hint-placeholder-val="{{ false }}"><span style="color:#6F6558;white-space:nowrap">{{ l.paren }}</span></sc-if>
+<div style="max-width:380px;width:100%;text-wrap:pretty">{{ l.text }}</div>
+</div></sc-if>
+</div>
+<div style="padding-right:16px"><sc-if value="{{ l.flagged }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Caveat',cursive;font-size:30px;font-weight:700;color:#5E6B78;line-height:0.9">?</span></sc-if></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="position:absolute;left:50%;bottom:90px;transform:translateX(-30%);width:250px;background:#FFFFFF;border-radius:10px;box-shadow:0 12px 32px rgba(60,35,10,0.25),0 0 0 1px rgba(60,45,30,0.12);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:4">
+<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#6F6558;padding:4px 8px">Speaker</div>
+<sc-for list="{{ speakerPick }}" as="c" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;background:{{ c.bg }}"><span style="width:12px;color:#A33A2E;font-weight:700">{{ c.check }}</span><span style="font-family:'Courier Prime',monospace;font-weight:700;font-size:12.5px;background:{{ c.hl }};padding:0 5px;border-radius:2px 6px 3px 7px">{{ c.upper }}</span></div></sc-for>
+<div style="margin-top:6px;padding:7px;text-align:center;background:#A33A2E;color:#FBF3EC;border-radius:7px;font-weight:600">Apply to 2 lines</div>
+</div>
+<div style="position:absolute;left:50%;bottom:28px;transform:translateX(-50%);display:flex;align-items:center;gap:4px;background:#2B2620;color:#F4EEE3;border-radius:12px;padding:6px 6px 6px 16px;box-shadow:0 10px 30px rgba(0,0,0,0.3);white-space:nowrap">
+<span style="font-weight:600;padding-right:10px">2 selected</span>
+<div style="padding:6px 12px;border-radius:8px;background:rgba(255,255,255,0.08)">Remove</div>
+<div style="padding:6px 12px;border-radius:8px;background:rgba(255,255,255,0.08)">Simultaneous</div>
+<div style="padding:6px 12px;border-radius:8px;background:rgba(255,255,255,0.2);font-weight:600">Speaker ⌃</div>
+<div style="padding:6px 10px;color:#B5AA9A">✕</div>
+</div>
+</div>
+<div style="width:380px;flex-shrink:0;border-left:1px solid rgba(60,45,30,0.12);background:#EFE7DA;display:flex;flex-direction:column">
+<div style="display:flex;gap:18px;padding:12px 20px 0;border-bottom:1px solid rgba(60,45,30,0.1)">
+<div style="padding-bottom:10px;color:#6F6558">Cast</div>
+<div style="padding-bottom:10px;border-bottom:2px solid #A33A2E;font-weight:600;display:flex;gap:5px;align-items:center">Log<div style="width:6px;height:6px;border-radius:50%;background:#C2711F"></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;white-space:nowrap">
+<span style="color:#6F6558">48 entries</span><div style="flex:1"></div>
+<div style="display:flex;background:#E4DACB;border-radius:6px;padding:2px;font-size:12px"><span style="padding:3px 8px;background:#FBF8F2;border-radius:4px;font-weight:600">All</span><span style="padding:3px 8px">Err</span><span style="padding:3px 8px">Warn</span><span style="padding:3px 8px">Py</span></div>
+<span style="color:#6F6558">Copy</span><span style="color:#6F6558">Clear</span>
+</div>
+<div style="flex:1;margin:0 12px 12px;background:#FBF8F2;border-radius:8px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);padding:8px 0;overflow:hidden;font-family:'Courier Prime',monospace;font-size:11.5px;line-height:1.4">
+<sc-for list="{{ logRows }}" as="r" hint-placeholder-count="10">
+<div style="display:grid;grid-template-columns:62px 40px minmax(0,1fr);gap:6px;padding:4px 12px;background:{{ r.bg }}"><span style="color:#9A8F80">{{ r.t }}</span><span style="font-weight:700;color:{{ r.c }}">{{ r.lvl }}</span><span style="color:#2B2620">{{ r.m }}</span></div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Cast · OpenAI TTS</b> · privacy notice, cost estimate, voice menu open, preview preparing</div>
+<div data-screen-label="Prep cast OpenAI" style="width:1280px;height:800px;border-radius:12px;overflow:hidden;background:#F4EEE3;box-shadow:0 30px 60px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;font-size:13px">
+<div style="display:flex;align-items:center;gap:16px;height:52px;padding:0 20px;border-bottom:1px solid rgba(60,45,30,0.12);flex-shrink:0;white-space:nowrap">
+<div style="display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="color:#6F6558;font-size:18px;padding-left:8px">‹</div>
+<div style="font-family:'Young Serif',serif;font-size:17px">The Importance of Being Earnest</div>
+<div style="flex:1;display:flex;justify-content:center"><div style="display:flex;background:#E8E0D2;border-radius:9px;padding:3px;gap:2px"><div style="padding:5px 16px;background:#FBF8F2;border-radius:7px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Prep</div><div style="padding:5px 16px;color:#6F6558">Record</div><div style="padding:5px 16px;color:#6F6558">Rehearse</div></div></div>
+<div style="padding:2px 6px;border:1px solid #CDBFA8;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#6F6558">BETA</div>
+<div style="color:#6F6558">Report a Bug</div><div style="color:#6F6558">Settings</div>
+</div>
+<div style="flex:1;display:flex;min-height:0">
+<div style="flex:1;min-width:0;padding:20px 28px;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ sceneList }}" as="s" hint-placeholder-count="8">
+<div style="display:flex;align-items:center;gap:14px;background:#FBF8F2;border-radius:8px;padding:11px 16px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);white-space:nowrap">
+<div style="width:14px;height:14px;border:1.5px solid {{ s.cbBorder }};background:{{ s.cbFill }};border-radius:4px;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center">{{ s.cbMark }}</div>
+<div style="display:flex;align-items:center;gap:6px;font-family:'Courier Prime',monospace;font-weight:700;font-size:14px;width:30px">{{ s.n }}<div style="width:6px;height:6px;border-radius:50%;background:{{ s.dot }}"></div></div>
+<div style="font-weight:600;font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis">{{ s.t }}</div>
+<div style="display:flex;gap:4px"><sc-for list="{{ s.chips }}" as="c" hint-placeholder-count="4"><span style="font-family:'Courier Prime',monospace;font-size:11px;font-weight:700;padding:1px 5px;background:{{ c.hl }};border-radius:2px 5px 3px 6px">{{ c.short }}</span></sc-for></div>
+<div style="color:#6F6558;width:60px;text-align:right">{{ s.lines }} lines</div><div style="color:#9A8F80">⌄</div>
+</div>
+</sc-for>
+</div>
+<div style="width:420px;flex-shrink:0;border-left:1px solid rgba(60,45,30,0.12);background:#EFE7DA;display:flex;flex-direction:column;position:relative">
+<div style="display:flex;gap:18px;padding:12px 20px 0;border-bottom:1px solid rgba(60,45,30,0.1)"><div style="padding-bottom:10px;border-bottom:2px solid #A33A2E;font-weight:600">Cast</div><div style="padding-bottom:10px;color:#6F6558">Log</div></div>
+<div style="padding:14px 20px 0;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center;background:#FBF8F2;border-radius:7px;padding:7px 10px;box-shadow:0 0 0 1px rgba(60,45,30,0.12)">OpenAI TTS<span style="color:#9A8F80">⌄</span></div>
+<div style="background:#FBF8F2;border-radius:8px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:12px;line-height:1.45;color:#4D453B">Script text is sent to OpenAI to make the audio. Your key stays in Keychain.</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;border-top:1px dashed rgba(60,45,30,0.15);padding-top:8px">
+<div style="display:flex;flex-direction:column"><span style="font-family:'Courier Prime',monospace;font-weight:700;font-size:15px">642</span><span style="font-size:11px;color:#6F6558">requests</span></div>
+<div style="display:flex;flex-direction:column"><span style="font-family:'Courier Prime',monospace;font-weight:700;font-size:15px">~9 min</span><span style="font-size:11px;color:#6F6558">time</span></div>
+<div style="display:flex;flex-direction:column"><span style="font-family:'Courier Prime',monospace;font-weight:700;font-size:15px">41,210</span><span style="font-size:11px;color:#6F6558">characters</span></div>
+<div style="display:flex;flex-direction:column"><span style="font-family:'Courier Prime',monospace;font-weight:700;font-size:15px">$0.62</span><span style="font-size:11px;color:#6F6558">est. cost</span></div>
+</div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;padding:8px 12px">
+<sc-for list="{{ castOpenAI }}" as="c" hint-placeholder-count="10">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) auto 64px 24px;align-items:center;gap:6px;padding:5px 8px;border-radius:7px;background:{{ c.rowBg }}">
+<div style="display:flex;align-items:center;gap:7px;min-width:0"><div style="width:8px;height:8px;border-radius:50%;background:{{ c.dot }};flex-shrink:0"></div><span style="font-family:'Courier Prime',monospace;font-weight:700;font-size:12.5px;color:{{ c.ink }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.upper }}</span></div>
+<div style="display:flex;background:#E4DACB;border-radius:5px;padding:1px;font-size:10.5px;font-weight:600"><sc-for list="{{ c.g }}" as="g" hint-placeholder-count="3"><span style="padding:2px 5px;border-radius:4px;background:{{ g.bg }};color:{{ g.fg }}">{{ g.l }}</span></sc-for></div>
+<div style="font-size:12px;color:#4D453B;white-space:nowrap">{{ c.voice }} ⌄</div>
+<sc-if value="{{ c.preparing }}" hint-placeholder-val="{{ false }}"><div style="width:24px;height:24px;border-radius:50%;box-shadow:0 0 0 1px #CDBFA8;display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;border-radius:50%;border:2px solid #D6CCBB;border-top-color:#A33A2E"></div></div></sc-if>
+<sc-if value="{{ c.idle }}" hint-placeholder-val="{{ true }}"><div style="width:24px;height:24px;border-radius:50%;box-shadow:0 0 0 1px #CDBFA8;display:flex;align-items:center;justify-content:center;font-size:9px;color:#4D453B">▶</div></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="position:absolute;right:46px;top:250px;width:200px;background:#FFFFFF;border-radius:10px;box-shadow:0 12px 32px rgba(60,35,10,0.25),0 0 0 1px rgba(60,45,30,0.12);padding:6px;font-size:12.5px;z-index:3">
+<sc-for list="{{ voiceMenu }}" as="g" hint-placeholder-count="3">
+<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#9A8F80;padding:6px 8px 2px">{{ g.group }}</div>
+<sc-for list="{{ g.items }}" as="v" hint-placeholder-count="2"><div style="display:flex;gap:6px;padding:4px 8px;border-radius:5px;background:{{ v.bg }};color:{{ v.fg }}"><span style="width:12px">{{ v.check }}</span>{{ v.label }}</div></sc-for>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ================= RECORD ================= -->
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="font-family:'Young Serif',serif;font-size:30px">3 · Record</div>
+<div style="display:flex;gap:56px;flex-wrap:wrap;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Recording</b> · lit light on the active scene, line being voiced now, per-scene progress, latest log line, Pause / Cancel</div>
+<div data-screen-label="Record rendering" style="width:1280px;height:800px;border-radius:12px;overflow:hidden;background:#F4EEE3;box-shadow:0 30px 60px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;font-size:13px">
+<div style="display:flex;align-items:center;gap:16px;height:52px;padding:0 20px;border-bottom:1px solid rgba(60,45,30,0.12);flex-shrink:0;white-space:nowrap">
+<div style="display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="color:#6F6558;font-size:18px;padding-left:8px">‹</div>
+<div style="font-family:'Young Serif',serif;font-size:17px">The Importance of Being Earnest</div>
+<div style="flex:1;display:flex;justify-content:center"><div style="display:flex;background:#E8E0D2;border-radius:9px;padding:3px;gap:2px"><div style="padding:5px 16px;color:#6F6558">Prep</div><div style="padding:5px 16px;background:#FBF8F2;border-radius:7px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1);display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:50%;background:#E0432F;box-shadow:0 0 6px #E0432F"></div>Record</div><div style="padding:5px 16px;color:#6F6558">Rehearse</div></div></div>
+<div style="padding:2px 6px;border:1px solid #CDBFA8;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#6F6558">BETA</div>
+<div style="color:#6F6558">Report a Bug</div><div style="color:#6F6558">Settings</div>
+</div>
+<div style="flex:1;display:flex;min-height:0">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;padding:24px 32px;gap:18px">
+<div style="display:flex;align-items:center;gap:18px;background:#2B2620;color:#F4EEE3;border-radius:12px;padding:20px 24px">
+<div style="width:18px;height:18px;border-radius:50%;background:#FF4A33;box-shadow:0 0 0 5px rgba(255,74,51,0.18),0 0 22px #FF4A33;flex-shrink:0"></div>
+<div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:0">
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#B5AA9A;white-space:nowrap"><span>Recording · Scene 09 · line 38 of 64</span><span>Scene 3 of 4 · 1:12 elapsed · ~2:40 left</span></div>
+<div style="font-family:'Courier Prime',monospace;font-size:20px;line-height:1.35"><span style="font-weight:700;background:oklch(0.74 0.15 215 / 0.35);padding:0 6px;border-radius:2px 7px 3px 8px">CECILY</span> But I haven't got a cough.</div>
+<div style="height:4px;background:rgba(255,255,255,0.12);border-radius:2px"><div style="width:59%;height:100%;background:#FF4A33;border-radius:2px"></div></div>
+</div>
+<div style="display:flex;gap:8px;white-space:nowrap"><div style="padding:7px 14px;border-radius:8px;background:rgba(255,255,255,0.1)">Pause</div><div style="padding:7px 14px;border-radius:8px;color:#FF9B8A">Cancel</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;white-space:nowrap"><div style="font-family:'Young Serif',serif;font-size:20px">Call sheet</div><span style="color:#6F6558">4 scenes queued</span><div style="flex:1"></div><span style="color:#9A8F80">All Unrendered · Select All · Clear</span></div>
+<div style="background:#FBF8F2;border-radius:10px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);overflow:hidden">
+<sc-for list="{{ recRows }}" as="r" hint-placeholder-count="10">
+<div style="display:grid;grid-template-columns:44px 80px minmax(0,1fr) 90px 200px;align-items:center;height:36px;border-bottom:1px solid rgba(60,45,30,0.07);background:{{ r.bg }};opacity:{{ r.o }}">
+<div style="display:flex;justify-content:center"><div style="width:13px;height:13px;border:1.5px solid {{ r.cbBorder }};background:{{ r.cbFill }};border-radius:4px;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">{{ r.cbMark }}</div></div>
+<div style="display:flex;align-items:center;gap:7px;font-family:'Courier Prime',monospace;font-weight:700;white-space:nowrap"><sc-if value="{{ r.live }}" hint-placeholder-val="{{ false }}"><div style="width:8px;height:8px;border-radius:50%;background:#E0432F;box-shadow:0 0 0 3px rgba(224,67,47,0.2)"></div></sc-if>Scene {{ r.n }}</div>
+<span style="font-weight:{{ r.fw }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.t }}</span>
+<div><sc-if value="{{ r.hasTag }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:{{ r.tagBg }};color:{{ r.tagFg }}">{{ r.tag }}</span></sc-if></div>
+<div style="display:flex;align-items:center;gap:8px;padding-right:20px;color:#6F6558;font-size:12px;white-space:nowrap"><div style="flex:1;height:3px;background:#E8E0D2;border-radius:2px;opacity:{{ r.barO }}"><div style="width:{{ r.p }};height:100%;background:{{ r.barC }};border-radius:2px"></div></div><span style="width:56px;text-align:right">{{ r.status }}</span></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="width:340px;flex-shrink:0;border-left:1px solid rgba(60,45,30,0.12);background:#EFE7DA;display:flex;flex-direction:column">
+<div style="padding:14px 20px 10px;display:flex;align-items:center;gap:8px"><span style="font-weight:600">Show Log</span><span style="color:#9A8F80">⌃</span><div style="flex:1"></div><span style="color:#6F6558">Copy</span></div>
+<div style="flex:1;margin:0 12px 12px;background:#FBF8F2;border-radius:8px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);padding:8px 0;overflow:hidden;font-family:'Courier Prime',monospace;font-size:11.5px;line-height:1.4">
+<sc-for list="{{ recLog }}" as="r" hint-placeholder-count="10">
+<div style="display:grid;grid-template-columns:62px 36px minmax(0,1fr);gap:6px;padding:3px 12px;background:{{ r.bg }}"><span style="color:#9A8F80">{{ r.t }}</span><span style="font-weight:700;color:{{ r.c }}">{{ r.lvl }}</span><span>{{ r.m }}</span></div>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="height:54px;flex-shrink:0;border-top:1px solid rgba(60,45,30,0.12);background:#FBF8F2;display:flex;align-items:center;gap:16px;padding:0 20px">
+<div style="width:32px;height:32px;border-radius:50%;box-shadow:0 0 0 1px #CDBFA8;display:flex;align-items:center;justify-content:center;font-size:10px">▶</div>
+<div style="display:flex;flex-direction:column;width:240px;white-space:nowrap"><span style="font-weight:600">08 · Tea, and a misunderstanding</span><span style="font-size:11px;color:#6F6558">Paused · 0:00 / 5:02</span></div>
+<div style="flex:1;height:28px;display:flex;align-items:center;gap:2px"><sc-for list="{{ waveIdle }}" as="w" hint-placeholder-count="60"><div style="flex:1;height:{{ w.h }};background:{{ w.c }};opacity:{{ w.o }};border-radius:1px"></div></sc-for></div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Ready</b> · “Re-Render Edited Scenes (2)”, scene picks, Render 4 Scenes</div>
+<div data-screen-label="Record ready" style="width:1280px;height:800px;border-radius:12px;overflow:hidden;background:#F4EEE3;box-shadow:0 30px 60px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;font-size:13px">
+<div style="display:flex;align-items:center;gap:16px;height:52px;padding:0 20px;border-bottom:1px solid rgba(60,45,30,0.12);flex-shrink:0;white-space:nowrap">
+<div style="display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="color:#6F6558;font-size:18px;padding-left:8px">‹</div>
+<div style="font-family:'Young Serif',serif;font-size:17px">The Importance of Being Earnest</div>
+<div style="flex:1;display:flex;justify-content:center"><div style="display:flex;background:#E8E0D2;border-radius:9px;padding:3px;gap:2px"><div style="padding:5px 16px;color:#6F6558">Prep</div><div style="padding:5px 16px;background:#FBF8F2;border-radius:7px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Record</div><div style="padding:5px 16px;color:#6F6558">Rehearse</div></div></div>
+<div style="padding:2px 6px;border:1px solid #CDBFA8;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#6F6558">BETA</div>
+<div style="color:#6F6558">Report a Bug</div><div style="color:#6F6558">Settings</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;padding:24px 32px;gap:18px;min-height:0">
+<div style="display:flex;align-items:center;gap:14px;white-space:nowrap">
+<div style="width:14px;height:14px;border-radius:50%;background:#C9BFAE;box-shadow:inset 0 1px 2px rgba(0,0,0,0.25)"></div>
+<div style="font-family:'Young Serif',serif;font-size:22px">Call sheet</div>
+<span style="color:#6F6558">7 of 12 scenes recorded</span>
+<div style="flex:1"></div>
+<div style="padding:7px 14px;border-radius:8px;background:#C2711F;color:#FFF8EE;font-weight:600">Re-Render Edited Scenes (2)</div>
+<div style="padding:7px 14px;border-radius:8px;background:#A33A2E;color:#FBF3EC;font-weight:600;box-shadow:0 1px 0 rgba(0,0,0,0.2)">Render 4 Scenes</div>
+</div>
+<div style="display:flex;gap:14px;color:#6F6558"><span style="color:#2B2620;font-weight:600">All Unrendered</span><span>Select All</span><span>Clear</span></div>
+<div style="background:#FBF8F2;border-radius:10px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);overflow:hidden">
+<sc-for list="{{ readyRows }}" as="r" hint-placeholder-count="12">
+<div style="display:grid;grid-template-columns:44px 80px minmax(0,1fr) 90px 120px;align-items:center;height:42px;border-bottom:1px solid rgba(60,45,30,0.07)">
+<div style="display:flex;justify-content:center"><div style="width:13px;height:13px;border:1.5px solid {{ r.cbBorder }};background:{{ r.cbFill }};border-radius:4px;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">{{ r.cbMark }}</div></div>
+<div style="font-family:'Courier Prime',monospace;font-weight:700;white-space:nowrap">Scene {{ r.n }}</div>
+<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.t }}</span>
+<div><sc-if value="{{ r.hasTag }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:{{ r.tagBg }};color:{{ r.tagFg }}">{{ r.tag }}</span></sc-if></div>
+<span style="color:#6F6558;font-family:'Courier Prime',monospace">{{ r.dur }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ================= REHEARSE ================= -->
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="font-family:'Young Serif',serif;font-size:30px">4 · Rehearse</div>
+<div style="display:flex;gap:56px;flex-wrap:wrap;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Light</b> · role Cecily, Block My Lines on, current line lit</div>
+<div data-screen-label="Rehearse light" style="width:1280px;height:800px;border-radius:12px;overflow:hidden;background:#F4EEE3;box-shadow:0 30px 60px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);position:relative;display:flex;flex-direction:column;font-size:13px">
+<div style="display:flex;align-items:center;gap:16px;height:52px;padding:0 20px;flex-shrink:0;white-space:nowrap">
+<div style="display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="color:#6F6558;font-size:18px;padding-left:8px">‹</div>
+<div style="flex:1;display:flex;justify-content:center"><div style="display:flex;background:#E8E0D2;border-radius:9px;padding:3px;gap:2px"><div style="padding:5px 16px;color:#6F6558">Prep</div><div style="padding:5px 16px;color:#6F6558">Record</div><div style="padding:5px 16px;background:#FBF8F2;border-radius:7px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Rehearse</div></div></div>
+<div style="width:60px"></div>
+</div>
+<div style="display:flex;justify-content:center;gap:12px;padding:8px 0 0;white-space:nowrap">
+<div style="padding:7px 14px;border-radius:8px;box-shadow:0 0 0 1px #D6CCBB;background:#FBF8F2">Scene <b>09</b> · Morning-room at the Manor House ⌄</div>
+<div style="padding:7px 14px;border-radius:8px;box-shadow:0 0 0 1px #D6CCBB;background:#FBF8F2;display:flex;gap:8px;align-items:center">My Role <span style="font-family:'Courier Prime',monospace;font-weight:700;background:{{ roleL.hl }};padding:0 5px;border-radius:2px 6px 3px 7px">{{ roleL.upper }}</span> ⌄</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:28px;padding:0 160px">
+<sc-for list="{{ rehL }}" as="r" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;opacity:{{ r.opacity }};font-family:'Courier Prime',monospace;text-align:center;max-width:780px">
+<span style="font-weight:700;font-size:15px;letter-spacing:0.04em;background:{{ r.hl }};padding:0 6px;border-radius:2px 7px 3px 8px">{{ r.name }}</span>
+<sc-if value="{{ r.current }}" hint-placeholder-val="{{ false }}"><div style="font-size:40px;line-height:1.3;text-wrap:balance;color:#2B2620"><span style="background:linear-gradient(100deg,transparent 0,{{ r.hl }} 2%,{{ r.hl }} 98%,transparent);box-decoration-break:clone;-webkit-box-decoration-break:clone;padding:0 6px">{{ r.text }}</span></div></sc-if>
+<sc-if value="{{ r.notCurrent }}" hint-placeholder-val="{{ true }}"><div style="font-size:24px;line-height:1.35;text-wrap:balance;color:#4D453B;letter-spacing:{{ r.ls }}">{{ r.text }}</div></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:20px 40px 28px;gap:24px;white-space:nowrap">
+<div style="display:flex;gap:8px;width:330px">
+<div style="padding:7px 12px;border-radius:8px;box-shadow:0 0 0 1px #D6CCBB;color:#4D453B">Mute My Lines</div>
+<div style="padding:7px 12px;border-radius:8px;background:{{ blockBtn.bg }};color:{{ blockBtn.fg }};font-weight:600">Block My Lines</div>
+</div>
+<div style="display:flex;align-items:center;gap:14px">
+<div title="Previous scene" style="width:36px;height:36px;border-radius:50%;box-shadow:0 0 0 1px #CDBFA8;display:flex;align-items:center;justify-content:center;gap:1px"><div style="width:2px;height:10px;background:#2B2620"></div><div style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:8px solid #2B2620"></div></div>
+<div title="Previous line" style="width:40px;height:40px;border-radius:50%;box-shadow:0 0 0 1px #CDBFA8;display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:9px solid #2B2620"></div></div>
+<div style="width:68px;height:68px;border-radius:50%;background:#A33A2E;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 8px 18px -6px rgba(163,58,46,0.6)"><div style="width:5px;height:20px;background:#FBF3EC;border-radius:1px"></div><div style="width:5px;height:20px;background:#FBF3EC;border-radius:1px"></div></div>
+<div title="Next line" style="width:40px;height:40px;border-radius:50%;box-shadow:0 0 0 1px #CDBFA8;display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid #2B2620"></div></div>
+<div title="Next scene" style="width:36px;height:36px;border-radius:50%;box-shadow:0 0 0 1px #CDBFA8;display:flex;align-items:center;justify-content:center;gap:1px"><div style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #2B2620"></div><div style="width:2px;height:10px;background:#2B2620"></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;width:330px;justify-content:flex-end">
+<span style="color:#6F6558">Speed</span><span style="color:#4D453B;font-size:15px">−</span>
+<div style="width:140px;height:4px;background:#DDD3C3;border-radius:2px;position:relative"><div style="width:33%;height:100%;background:#2B2620;border-radius:2px"></div><div style="position:absolute;left:33%;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#FBF8F2;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div></div>
+<span style="color:#4D453B;font-size:15px">+</span>
+<span style="font-family:'Courier Prime',monospace;font-weight:700;width:48px">1.00×</span>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Dark</b> · house lights down, warm stage glow at the top</div>
+<div data-screen-label="Rehearse dark" style="width:1280px;height:800px;border-radius:12px;overflow:hidden;background:radial-gradient(90% 55% at 50% -8%,#3A3027 0%,#1E1B18 65%);box-shadow:0 30px 60px -20px rgba(0,0,0,0.5);position:relative;display:flex;flex-direction:column;font-size:13px;color:#EDE6DA">
+<div style="display:flex;align-items:center;gap:16px;height:52px;padding:0 20px;flex-shrink:0;white-space:nowrap">
+<div style="display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="color:#A39886;font-size:18px;padding-left:8px">‹</div>
+<div style="flex:1;display:flex;justify-content:center"><div style="display:flex;background:rgba(255,255,255,0.06);border-radius:9px;padding:3px;gap:2px"><div style="padding:5px 16px;color:#A39886">Prep</div><div style="padding:5px 16px;color:#A39886">Record</div><div style="padding:5px 16px;background:rgba(255,255,255,0.12);border-radius:7px;font-weight:600">Rehearse</div></div></div>
+<div style="width:60px"></div>
+</div>
+<div style="display:flex;justify-content:center;gap:12px;padding:8px 0 0;white-space:nowrap">
+<div style="padding:7px 14px;border-radius:8px;box-shadow:0 0 0 1px rgba(255,255,255,0.14);background:rgba(255,255,255,0.04)">Scene <b>09</b> · Morning-room at the Manor House ⌄</div>
+<div style="padding:7px 14px;border-radius:8px;box-shadow:0 0 0 1px rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);display:flex;gap:8px;align-items:center">My Role <span style="font-family:'Courier Prime',monospace;font-weight:700;color:{{ roleD.ink }};background:{{ roleD.hl }};padding:0 5px;border-radius:2px 6px 3px 7px">{{ roleD.upper }}</span> ⌄</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:28px;padding:0 160px">
+<sc-for list="{{ rehD }}" as="r" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;opacity:{{ r.opacity }};font-family:'Courier Prime',monospace;text-align:center;max-width:780px">
+<span style="font-weight:700;font-size:15px;letter-spacing:0.04em;color:{{ r.ink }};background:{{ r.hl }};padding:0 6px;border-radius:2px 7px 3px 8px">{{ r.name }}</span>
+<sc-if value="{{ r.current }}" hint-placeholder-val="{{ false }}"><div style="font-size:40px;line-height:1.3;text-wrap:balance;color:#FFF7EA"><span style="background:linear-gradient(100deg,transparent 0,{{ r.hl }} 2%,{{ r.hl }} 98%,transparent);box-decoration-break:clone;-webkit-box-decoration-break:clone;padding:0 6px">{{ r.text }}</span></div></sc-if>
+<sc-if value="{{ r.notCurrent }}" hint-placeholder-val="{{ true }}"><div style="font-size:24px;line-height:1.35;text-wrap:balance;color:#CFC6B8;letter-spacing:{{ r.ls }}">{{ r.text }}</div></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:20px 40px 28px;gap:24px;white-space:nowrap">
+<div style="display:flex;gap:8px;width:330px">
+<div style="padding:7px 12px;border-radius:8px;box-shadow:0 0 0 1px rgba(255,255,255,0.16);color:#CFC6B8">Mute My Lines</div>
+<div style="padding:7px 12px;border-radius:8px;background:{{ blockBtnD.bg }};color:{{ blockBtnD.fg }};font-weight:600">Block My Lines</div>
+</div>
+<div style="display:flex;align-items:center;gap:14px">
+<div style="width:36px;height:36px;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;gap:1px"><div style="width:2px;height:10px;background:#EDE6DA"></div><div style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:8px solid #EDE6DA"></div></div>
+<div style="width:40px;height:40px;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:9px solid #EDE6DA"></div></div>
+<div style="width:68px;height:68px;border-radius:50%;background:#D45A4A;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 30px rgba(212,90,74,0.35)"><div style="width:5px;height:20px;background:#1E1B18;border-radius:1px"></div><div style="width:5px;height:20px;background:#1E1B18;border-radius:1px"></div></div>
+<div style="width:40px;height:40px;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid #EDE6DA"></div></div>
+<div style="width:36px;height:36px;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;gap:1px"><div style="width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #EDE6DA"></div><div style="width:2px;height:10px;background:#EDE6DA"></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;width:330px;justify-content:flex-end">
+<span style="color:#A39886">Speed</span><span style="color:#CFC6B8;font-size:15px">−</span>
+<div style="width:140px;height:4px;background:rgba(255,255,255,0.14);border-radius:2px;position:relative"><div style="width:23%;height:100%;background:#EDE6DA;border-radius:2px"></div><div style="position:absolute;left:23%;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#EDE6DA"></div></div>
+<span style="color:#CFC6B8;font-size:15px">+</span>
+<span style="font-family:'Courier Prime',monospace;font-weight:700;width:48px">0.85×</span>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;color:#4D453B"><b>Phone width</b> · 390 pt, for the planned iPhone app</div>
+<div data-screen-label="Rehearse phone" style="width:390px;height:844px;border-radius:46px;overflow:hidden;background:radial-gradient(120% 45% at 50% -5%,#3A3027 0%,#1E1B18 70%);box-shadow:0 30px 60px -20px rgba(0,0,0,0.5),0 0 0 8px #121110;position:relative;display:flex;flex-direction:column;font-size:13px;color:#EDE6DA">
+<div style="height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-weight:600;font-size:15px"><span>9:41</span><div style="width:110px;height:32px;border-radius:20px;background:#000"></div><span style="font-size:12px">●●●</span></div>
+<div style="display:flex;flex-direction:column;gap:8px;padding:8px 20px">
+<div style="display:flex;justify-content:space-between;align-items:center;white-space:nowrap"><span style="color:#A39886;font-size:18px">‹</span><span style="font-weight:600;font-size:15px">Scene 09 ⌄</span><span style="font-family:'Courier Prime',monospace;font-weight:700;color:{{ roleD.ink }};background:{{ roleD.hl }};padding:0 6px;border-radius:2px 6px 3px 7px">{{ roleD.upper }} ⌄</span></div>
+<div style="text-align:center;color:#A39886;font-size:12px">Morning-room at the Manor House</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:22px;padding:0 24px">
+<sc-for list="{{ rehD }}" as="r" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;gap:4px;opacity:{{ r.opacity }};font-family:'Courier Prime',monospace">
+<span style="align-self:flex-start;font-weight:700;font-size:12px;letter-spacing:0.04em;color:{{ r.ink }};background:{{ r.hl }};padding:0 5px;border-radius:2px 6px 3px 7px">{{ r.name }}</span>
+<sc-if value="{{ r.current }}" hint-placeholder-val="{{ false }}"><div style="font-size:26px;line-height:1.3;color:#FFF7EA">{{ r.text }}</div></sc-if>
+<sc-if value="{{ r.notCurrent }}" hint-placeholder-val="{{ true }}"><div style="font-size:17px;line-height:1.35;color:#CFC6B8;letter-spacing:{{ r.ls }};word-break:break-word">{{ r.text }}</div></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px;padding:16px 20px 34px">
+<div style="display:flex;gap:8px;justify-content:center;white-space:nowrap"><div style="padding:10px 14px;border-radius:10px;box-shadow:0 0 0 1px rgba(255,255,255,0.16);color:#CFC6B8">Mute My Lines</div><div style="padding:10px 14px;border-radius:10px;background:{{ blockBtnD.bg }};color:{{ blockBtnD.fg }};font-weight:600">Block My Lines</div></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px">
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;gap:1px"><div style="width:2px;height:12px;background:#EDE6DA"></div><div style="width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:9px solid #EDE6DA"></div></div>
+<div style="width:48px;height:48px;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-right:10px solid #EDE6DA"></div></div>
+<div style="width:72px;height:72px;border-radius:50%;background:#D45A4A;display:flex;align-items:center;justify-content:center;gap:5px"><div style="width:6px;height:22px;background:#1E1B18;border-radius:1px"></div><div style="width:6px;height:22px;background:#1E1B18;border-radius:1px"></div></div>
+<div style="width:48px;height:48px;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:10px solid #EDE6DA"></div></div>
+<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;gap:1px"><div style="width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid #EDE6DA"></div><div style="width:2px;height:12px;background:#EDE6DA"></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px">−</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.14);border-radius:2px;position:relative"><div style="width:23%;height:100%;background:#EDE6DA;border-radius:2px"></div><div style="position:absolute;left:23%;top:50%;width:18px;height:18px;margin:-9px;border-radius:50%;background:#EDE6DA"></div></div><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px">+</span><span style="font-family:'Courier Prime',monospace;font-weight:700">0.85×</span></div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ================= EMPTY ================= -->
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="font-family:'Young Serif',serif;font-size:30px">5 · Empty and loading states</div>
+<div style="font-size:14px;color:#4D453B;max-width:900px">Striped boxes stand in for illustrations: an empty table with chairs, a closed storage box, a dark stage, pages with a moving pencil.</div>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+<sc-for list="{{ empties }}" as="e" hint-placeholder-count="5">
+<div data-screen-label="Empty state" style="width:440px;height:400px;border-radius:12px;background:{{ e.bg }};color:{{ e.fg }};box-shadow:0 20px 40px -20px rgba(40,25,10,0.35),0 0 0 1px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:32px;box-sizing:border-box;text-align:center">
+<div style="width:200px;height:130px;border-radius:8px;background:{{ e.stripe }};display:flex;align-items:center;justify-content:center;font-family:'Courier Prime',monospace;font-size:11px;color:{{ e.sub }};padding:10px;box-sizing:border-box">{{ e.art }}</div>
+<div style="font-family:'Young Serif',serif;font-size:22px;margin-top:6px">{{ e.title }}</div>
+<div style="font-size:14px;color:{{ e.sub }};max-width:300px;line-height:1.45;text-wrap:pretty">{{ e.line }}</div>
+<sc-if value="{{ e.cta }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;padding:7px 14px;background:#A33A2E;color:#FBF3EC;border-radius:8px;font-weight:600;font-size:13px">{{ e.cta }}</div></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;CECILY&quot;,&quot;GWENDOLEN&quot;,&quot;SPECTATOR&quot;],&quot;default&quot;:&quot;CECILY&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Rehearse&quot;},&quot;blockMyLines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Rehearse&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const H = { NARRATOR: null, GWENDOLEN: 300, CECILY: 215, JACK: 95, ALGERNON: 350, 'LADY BRACKNELL': 30, LANE: 150, 'MISS PRISM': 60, 'DR. CHASUBLE': 180, MERRIMAN: 125 };
+    const col = (sp, dark) => {
+      const h = H[sp];
+      if (h == null) return dark ? { hl: 'oklch(0.7 0.01 70 / 0.22)', ink: 'oklch(0.82 0.01 70)', dot: 'oklch(0.6 0.01 70)' } : { hl: 'oklch(0.72 0.01 70 / 0.28)', ink: 'oklch(0.45 0.01 70)', dot: 'oklch(0.62 0.01 70)' };
+      return dark ? { hl: `oklch(0.74 0.15 ${h} / 0.32)`, ink: `oklch(0.86 0.11 ${h})`, dot: `oklch(0.78 0.15 ${h})` } : { hl: `oklch(0.88 0.15 ${h} / 0.68)`, ink: `oklch(0.47 0.13 ${h})`, dot: `oklch(0.72 0.16 ${h})` };
+    };
+    const tc = s => s.split(' ').map(w => w[0] + w.slice(1).toLowerCase()).join(' ');
+    const short = s => tc(s).replace('Lady ', 'L. ').replace('Dr. ', 'Dr ').replace('Miss ', 'M. ');
+    const role = this.props.role ?? 'CECILY';
+    const block = (this.props.blockMyLines ?? true) && role !== 'SPECTATOR';
+    const cb = on => ({ cbBorder: on ? '#A33A2E' : '#C6BAA6', cbFill: on ? '#A33A2E' : 'transparent', cbMark: on ? '✓' : '' });
+    const chips = arr => { const o = arr.slice(0, 5).map(s => ({ short: short(s), ...col(s, false) })); if (arr.length > 5) o.push({ short: '+' + (arr.length - 5), hl: 'transparent' }); return o; };
+
+    const mk = (L, extra = {}) => L.map(l => {
+      const multi = Array.isArray(l.sp);
+      const c = col(!multi && l.sp ? l.sp : 'NARRATOR', false);
+      return {
+        ...c, name: !multi && l.sp ? l.sp : '', text: l.text, paren: l.paren || '',
+        isDir: l.k === 'dir', isDialog: l.k === 'dlg' || l.k === 'add', isSim: l.k === 'sim', added: l.k === 'add',
+        corrected: !!l.corrected, flagged: !!l.flagged, reason: l.reason || '', hover: !!l.hover, tip: !!l.tip,
+        actions: l.removed ? ['Restore'] : ['Edit', 'Remove', 'Add Line'],
+        icon: l.k === 'dir' ? '¶' : '“',
+        opacity: l.removed ? 0.45 : 1, deco: l.removed ? 'line-through' : 'none',
+        textBg: l.playing ? c.hl : 'transparent',
+        rowBg: l.sel ? 'rgba(163,58,46,0.08)' : l.playing ? 'rgba(232,180,60,0.10)' : 'transparent',
+        focusRing: l.focus ? 'inset 0 0 0 2px #A33A2E' : 'none',
+        ...cb(!!l.sel),
+        voices: multi ? l.sp.map(s => ({ name: s, ...col(s, false) })) : []
+      };
+    });
+    const L09 = [
+      { k: 'dir', text: 'Morning-room at the Manor House. GWENDOLEN and CECILY are at the window, looking out into the garden.' },
+      { k: 'dlg', sp: 'CECILY', text: 'They have been eating muffins. That looks like repentance.', corrected: true },
+      { k: 'dlg', sp: 'GWENDOLEN', paren: '(After a pause.)', text: "They don't seem to notice us at all. Couldn't you cough?" },
+      { k: 'dlg', sp: 'CECILY', text: "But I haven't got a cough.", playing: true },
+      { k: 'dir', text: 'THE IMPORTANCE OF BEING EARNEST          47', removed: true, hover: true },
+      { k: 'dlg', sp: 'GWENDOLEN', text: 'This dignified silence seems to produce an unpleasant effect.', flagged: true, reason: 'name split across a page break', tip: true },
+      { k: 'sim', sp: ['GWENDOLEN', 'CECILY'], text: 'Your Christian names are still an insuperable barrier. That is all!' },
+      { k: 'add', sp: 'NARRATOR', text: 'Gwendolen and Cecily turn away together.' }
+    ];
+    const LPDF = L09.map((l, i) => ({ ...l, playing: false, hover: false, tip: false, focus: i === 5 }));
+    const L04 = [
+      { k: 'dir', text: 'Enter LADY BRACKNELL.' },
+      { k: 'dlg', sp: 'LADY BRACKNELL', text: 'Mr. Worthing! Rise, sir, from this semi-recumbent posture. It is most indecorous.' },
+      { k: 'dlg', sp: 'GWENDOLEN', paren: '(He tries to rise; she restrains him.)', text: 'Mamma! I must beg you to retire. This is no place for you.', flagged: true },
+      { k: 'dlg', sp: 'JACK', text: 'Finished what, may I ask?', sel: true },
+      { k: 'dlg', sp: 'JACK', text: 'I am engaged to Mr. Worthing, mamma.', sel: true },
+      { k: 'dir', text: 'They rise together.' },
+      { k: 'dlg', sp: 'LADY BRACKNELL', text: 'Pardon me, you are not engaged to any one.' }
+    ];
+
+    const CAST = [['NARRATOR', 'N', 'Lewis (UK)', 'Onyx'], ['GWENDOLEN', 'F', 'Emma (UK)', 'Shimmer'], ['CECILY', 'F', 'Isabella (UK)', 'Nova'], ['JACK', 'M', 'George (UK)', 'Echo'], ['ALGERNON', 'M', 'Fable (UK)', 'Fable'], ['LADY BRACKNELL', 'F', 'Alice (UK)', 'Sage'], ['MISS PRISM', 'F', 'Lily (UK)', 'Coral'], ['DR. CHASUBLE', 'M', 'Daniel (UK)', 'Ash'], ['LANE', 'M', 'Michael (US)', 'Alloy'], ['MERRIMAN', 'M', 'Adam (US)', 'Ballad']];
+    const gsw = g => ['M', 'F', 'N'].map(x => ({ l: x, bg: x === g ? '#FBF8F2' : 'transparent', fg: x === g ? '#2B2620' : '#8C8273' }));
+    const cast = CAST.map(([s, g, v]) => ({ upper: s, voice: v, ...col(s, false), g: gsw(g) }));
+    const castOpenAI = CAST.map(([s, g, , o], i) => ({ upper: s, voice: o, ...col(s, false), g: gsw(g), preparing: i === 2, idle: i !== 2, rowBg: i === 3 ? 'rgba(255,255,255,0.6)' : 'transparent' }));
+    const voiceMenu = [
+      { group: 'Male', items: ['Ash', 'Echo', 'Onyx'] },
+      { group: 'Female', items: ['Coral', 'Nova', 'Shimmer'] },
+      { group: 'Other', items: ['Alloy', 'Ballad', 'Fable', 'Sage'] }
+    ].map(g => ({ group: g.group, items: g.items.map(v => ({ label: v, check: v === 'Echo' ? '✓' : '', bg: v === 'Onyx' ? '#A33A2E' : 'transparent', fg: v === 'Onyx' ? '#fff' : '#2B2620' })) }));
+
+    const P = [
+      ['The Importance of Being Earnest', 12, true, 'Today, 9:14', null],
+      ['Hamlet', 20, false, 'Today, 8:02', 62],
+      ['Uncle Vanya', 8, true, 'Oct 2', null],
+      ['Twelfth Night', 18, true, 'Sep 30', null],
+      ["A Doll's House", 9, false, 'Sep 27', null],
+      ['The Seagull', 11, true, 'Sep 21', null],
+      ['Much Ado About Nothing', 17, false, 'Sep 14', null],
+      ['Spring Showcase, draft 3', 6, true, 'Sep 9', null]
+    ];
+    const st = ['#E8D7AC', '#C8D5DB', '#E6C2B2', '#CAD4BA', '#E3CD8C', '#D8CEDF', '#EFE7D6', '#BECFC7'];
+    const sel = [0, 2], hov = 3;
+    const projects = P.map(([name, scenes, rendered, date, prog], i) => ({
+      name, scenes, rendered, date, rendering: prog != null, progressH: (prog || 0) + '%',
+      selected: sel.includes(i), hovered: i === hov, stock: st[i],
+      outline: sel.includes(i) ? '2px solid #A33A2E' : '0px solid transparent',
+      lift: i === hov ? 'translateY(-3px)' : 'none',
+      shadow: i === hov ? '0 16px 22px -10px rgba(60,35,10,0.5)' : '0 8px 14px -8px rgba(60,35,10,0.45)'
+    }));
+    const listRows = P.map(([name, scenes, rendered, date, prog], i) => ({
+      name, scenes, rendered, date, rendering: prog != null, progressH: (prog || 0) + '%',
+      rowBg: sel.includes(i) ? 'rgba(163,58,46,0.07)' : i === hov ? 'rgba(60,45,30,0.04)' : 'transparent',
+      ring: sel.includes(i) ? '#A33A2E' : i === hov ? '#9A8F80' : 'transparent', fill: sel.includes(i) ? '#A33A2E' : 'transparent', check: sel.includes(i) ? '✓' : '',
+      chev: i === hov ? '›' : ''
+    }));
+    const archived = [
+      ['The Cherry Orchard', 'The Cherry Orchard: A Comedy in Four Acts', true, 'Aug 30', false],
+      ['Pygmalion', 'Pygmalion: A Romance in Five Acts', true, 'Aug 22', true],
+      ['Ghosts', 'Ghosts: A Domestic Drama in Three Acts', false, 'Jul 11', false],
+      ['Spring Showcase, draft 2', 'Spring Showcase', true, 'Jun 3', false]
+    ].map(([name, title, rendered, date, working]) => ({ name, title, rendered, date, working, idle: !working }));
+
+    const seq = ['GWENDOLEN', 'GWENDOLEN', 'CECILY', 'GWENDOLEN', 'CECILY', 'CECILY', 'NARRATOR', 'GWENDOLEN', 'CECILY', 'GWENDOLEN', 'CECILY'];
+    const wv = (cut) => Array.from({ length: 64 }, (_, i) => ({ h: (25 + Math.round(70 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.31)))) + '%', c: col(seq[Math.floor(i / 6) % seq.length], false).dot, o: i < cut ? 1 : 0.32 }));
+
+    const TITLES = ['Morning-room, Half-Moon Street', 'Cucumber sandwiches', 'Bunburying', 'The proposal', 'The garden at the Manor House', 'Jack in mourning', 'Cecily and Algernon', 'Tea, and a misunderstanding', 'Morning-room at the Manor House', 'Lady Bracknell arrives', 'The handbag', 'The importance of being earnest'];
+    const DUR = ['3:48', '2:56', '4:31', '5:12', '3:20', '4:05', '6:14', '5:02', '', '', '', ''];
+    const SP = [['ALGERNON', 'LANE', 'NARRATOR'], ['ALGERNON', 'JACK', 'LANE'], ['JACK', 'ALGERNON', 'NARRATOR'], ['JACK', 'GWENDOLEN', 'LADY BRACKNELL', 'NARRATOR'], ['CECILY', 'MISS PRISM', 'DR. CHASUBLE', 'NARRATOR'], ['JACK', 'DR. CHASUBLE', 'MISS PRISM', 'CECILY', 'ALGERNON', 'NARRATOR'], ['CECILY', 'ALGERNON', 'MERRIMAN'], ['GWENDOLEN', 'CECILY', 'MERRIMAN', 'JACK', 'ALGERNON', 'NARRATOR', 'LANE'], ['GWENDOLEN', 'CECILY', 'JACK', 'ALGERNON', 'NARRATOR'], ['LADY BRACKNELL', 'JACK', 'ALGERNON', 'GWENDOLEN', 'CECILY', 'MISS PRISM', 'DR. CHASUBLE'], ['MISS PRISM', 'LADY BRACKNELL', 'JACK'], ['JACK', 'GWENDOLEN', 'LADY BRACKNELL', 'NARRATOR']];
+    const LN = [42, 37, 55, 58, 48, 51, 66, 71, 64, 112, 39, 31];
+    const n2 = i => String(i + 1).padStart(2, '0');
+    const sceneList = TITLES.slice(0, 11).map((t, i) => ({ n: n2(i), t, lines: LN[i], chips: chips(SP[i]), dot: i < 8 ? '#3E8E5A' : 'transparent', ...cb(i >= 8) }));
+
+    const tagOf = i => (i === 3 || i === 7) ? { hasTag: true, tag: 'Edited', tagBg: '#F3DDBF', tagFg: '#7A4410' } : i < 8 ? { hasTag: true, tag: 'Rendered', tagBg: '#D5E6D7', tagFg: '#2C6440' } : { hasTag: false, tag: '', tagBg: '', tagFg: '' };
+    const recRows = TITLES.map((t, i) => {
+      const done = i < 7 || (i === 7), live = i === 8, q = i > 8;
+      const doneNow = i === 3 || i === 7;
+      return {
+        n: n2(i), t, live, fw: live ? 700 : 400, bg: live ? 'rgba(224,67,47,0.06)' : 'transparent', o: q ? 0.75 : 1,
+        ...cb(doneNow || i >= 8), ...(live ? { hasTag: false } : tagOf(doneNow ? 99 : i)),
+        ...(doneNow ? { hasTag: true, tag: 'Rendered', tagBg: '#D5E6D7', tagFg: '#2C6440' } : {}),
+        p: live ? '59%' : doneNow ? '100%' : q ? '0%' : '100%',
+        barC: live ? '#E0432F' : '#3E8E5A', barO: (doneNow || live || q) ? 1 : 0,
+        status: live ? '59%' : doneNow ? 'Wrap' : q ? 'Waiting' : ''
+      };
+    });
+    const readyRows = TITLES.map((t, i) => ({ n: n2(i), t, ...tagOf(i), ...cb(i >= 8), dur: DUR[i] }));
+
+    const LOG = [
+      ['09:40:58', 'INFO', 'parse · 62 pages · 642 lines'],
+      ['09:40:59', 'WARN', 'line 311 low confidence (0.58): name split across a page break'],
+      ['09:40:59', 'WARN', 'line 318 low confidence (0.64): stage direction or parenthetical?'],
+      ['09:41:00', 'PY', 'kokoro: loading bf_isabella'],
+      ['09:41:02', 'INFO', 'voices · 54 available'],
+      ['09:41:07', 'INFO', 'generate · scene 08 · 71 elements'],
+      ['09:41:44', 'ERR', 'scene 08 el 12: voice timed out, retried'],
+      ['09:41:45', 'INFO', 'wrote 08 Tea, and a misunderstanding.m4a'],
+      ['09:42:10', 'PY', 'kokoro: cache hit 31/71'],
+      ['09:42:31', 'INFO', 'checkOutputFiles · 8 of 12 present']
+    ];
+    const lc = { INFO: '#6F6558', WARN: '#B5650F', ERR: '#B42318', PY: '#5E6B78' };
+    const lb = { WARN: 'rgba(194,113,31,0.07)', ERR: 'rgba(180,35,24,0.07)' };
+    const logRows = LOG.map(([t, lvl, m]) => ({ t, lvl, m, c: lc[lvl], bg: lb[lvl] || 'transparent' }));
+    const recLog = [
+      ['09:52:01', 'INFO', 'Places, everyone… 4 scenes'],
+      ['09:52:02', 'INFO', 'generate · scene 04 · 58 el'],
+      ['09:53:40', 'INFO', 'wrote 04 The proposal.m4a'],
+      ['09:53:41', 'INFO', 'generate · scene 08 · 71 el'],
+      ['09:55:19', 'INFO', 'wrote 08 Tea, and a misunderstanding.m4a'],
+      ['09:55:20', 'INFO', 'generate · scene 09 · 64 el'],
+      ['09:55:58', 'PY', 'kokoro: bf_isabella el 38/64']
+    ].map(([t, lvl, m]) => ({ t, lvl, m, c: lc[lvl], bg: 'transparent' }));
+
+    const speakerPick = ['NARRATOR', 'GWENDOLEN', 'JACK', 'LADY BRACKNELL', 'ALGERNON'].map(s => ({ upper: s, ...col(s, false), check: s === 'GWENDOLEN' ? '✓' : '', bg: s === 'GWENDOLEN' ? 'rgba(163,58,46,0.07)' : 'transparent' }));
+
+    const RL = [['GWENDOLEN', "They don't seem to notice us at all. Couldn't you cough?"], ['CECILY', "But I haven't got a cough."], ['GWENDOLEN', "They're looking at us. What effrontery!"], ['CECILY', "They're approaching. That's very forward of them."], ['GWENDOLEN', 'Let us preserve a dignified silence.']];
+    const reh = dark => RL.map(([sp, t], i) => {
+      const blocked = sp === role && block && i > 2;
+      return { name: sp, ...col(sp, dark), current: i === 2, notCurrent: i !== 2, text: blocked ? t.replace(/[A-Za-z]/g, '_') : t, ls: blocked ? '0.04em' : 'normal', opacity: i < 2 ? 0.4 : i === 2 ? 1 : 0.75 };
+    });
+    const roleOf = dark => role === 'SPECTATOR' ? { upper: 'Spectator', hl: 'transparent', ink: 'inherit' } : { upper: role, ...col(role, dark) };
+    const on = this.props.blockMyLines ?? true, dis = role === 'SPECTATOR';
+
+    const empties = [
+      { title: 'No projects yet', line: 'The table is set and the chairs are empty. Bring a script.', art: 'illustration: empty table, chairs', cta: 'New Project', bg: '#F4EEE3', fg: '#2B2620', sub: '#6F6558', stripe: 'repeating-linear-gradient(135deg,#EDE5D7 0 8px,#E6DCCB 8px 16px)' },
+      { title: 'No archived projects', line: 'Nothing in storage.', art: 'illustration: closed storage box', cta: '', bg: '#F4EEE3', fg: '#2B2620', sub: '#6F6558', stripe: 'repeating-linear-gradient(135deg,#EDE5D7 0 8px,#E6DCCB 8px 16px)' },
+      { title: 'Parsing script…', line: 'Reading every page, pencil in hand.', art: 'animation: pages turning, pencil moving', cta: '', bg: '#F4EEE3', fg: '#2B2620', sub: '#6F6558', stripe: 'repeating-linear-gradient(135deg,#EDE5D7 0 8px,#E6DCCB 8px 16px)' },
+      { title: 'No script loaded', line: 'Choose a PDF to get this project started.', art: 'illustration: blank title page', cta: 'Choose PDF…', bg: '#F4EEE3', fg: '#2B2620', sub: '#6F6558', stripe: 'repeating-linear-gradient(135deg,#EDE5D7 0 8px,#E6DCCB 8px 16px)' },
+      { title: 'No rendered scenes', line: 'The stage is dark. Record a scene first, then run lines here.', art: 'illustration: dark stage, headphones', cta: '', bg: '#1E1B18', fg: '#EDE6DA', sub: '#A39886', stripe: 'repeating-linear-gradient(135deg,#26221E 0 8px,#2B2622 8px 16px)' }
+    ];
+
+    return {
+      projects, listRows, archived,
+      scenesBefore: [{ n: '08', t: TITLES[7], lines: 71, chips: chips(SP[7]) }],
+      scene09chips: chips(SP[8]), scene04chips: chips(SP[3]),
+      lines09: mk(L09), linesPdf: mk(LPDF), lines04: mk(L04),
+      cast, castOpenAI, voiceMenu, wave: wv(26), waveIdle: wv(0),
+      sceneList, recRows, readyRows, logRows, recLog, speakerPick,
+      rehL: reh(false), rehD: reh(true), roleL: roleOf(false), roleD: roleOf(true),
+      blockBtn: dis ? { bg: '#E8E0D2', fg: '#B5AA9A' } : on ? { bg: '#2B2620', fg: '#F4EEE3' } : { bg: 'transparent', fg: '#4D453B' },
+      blockBtnD: dis ? { bg: 'rgba(255,255,255,0.05)', fg: '#6E6559' } : on ? { bg: '#EDE6DA', fg: '#1E1B18' } : { bg: 'transparent', fg: '#CFC6B8' },
+      empties
+    };
+  }
+}
+</script>
+</body>
+</html>

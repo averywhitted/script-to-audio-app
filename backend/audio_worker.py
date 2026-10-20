@@ -99,6 +99,16 @@ def _preview_path(engine_id: str, voice_id: str) -> Path:
     return Path("/tmp") / f"tableread_preview_{engine_id}_{safe_id}.aiff"
 
 
+def _line_preview_path(engine_id: str, voice_id: str, line: str) -> Path:
+    """Cache file for a preview of one script line in one voice (temp dir:
+    cheap to remake, never kept with the user's files)."""
+    import hashlib
+    import tempfile
+    digest = hashlib.sha256(f"{engine_id}|{voice_id}|{line}".encode("utf-8")).hexdigest()[:20]
+    ext = ".mp3" if engine_id in {"openAI", "openai"} else (".wav" if engine_id == "kokoro" else ".aiff")
+    return Path(tempfile.gettempdir()) / "tableread_line_previews" / f"{digest}{ext}"
+
+
 def _script_summary(script: script_parser.Script) -> Dict[str, Any]:
     line_count = sum(
         1 for scene in script.scenes for element in scene.elements
@@ -405,11 +415,15 @@ def _inject_user_elements(script, user_elements_map: Dict[int, List[Dict[str, An
                 # Map empty string, "Narrator", or "__NARRATOR__" to None (narrator voice).
                 narrator_values = {"", "Narrator", "__NARRATOR__"}
                 speaker = None if raw_speaker in narrator_values else raw_speaker
-                new_elements.append(_Element(
+                added = _Element(
                     kind=addition.get("kind", "dialog"),
                     speaker=speaker,
                     text=text,
-                ))
+                )
+                new_elements.append(added)
+                # Cue maps name added lines "added:<id>" so the player finds them.
+                if addition.get("id"):
+                    refs[id(added)] = "added:" + str(addition["id"])
                 matched_keys.add(after_key)
                 total_injected += 1
         scene.elements = new_elements
@@ -505,6 +519,7 @@ def _generate(payload: Dict[str, Any]) -> int:
         progress_cb=progress_cb,
         scene_filter=scene_numbers,
         cue_cb=cue_cb,
+        refs=refs,
     )
     _emit({
         "event": "done",
@@ -718,11 +733,21 @@ def _preview_voice(payload: Dict[str, Any]) -> Dict[str, Any]:
     if voice is None:
         return {"ok": False, "error": f"Unknown voice '{voice_id}'. Available: {[v.id for v in available]}"}
 
+    # In-character preview: the app may send the character's own first line.
+    # Capped so a preview stays a few seconds long.
+    line = " ".join(str(payload.get("text") or "").split())[:240]
+    is_cloud = engine_id in {"openAI", "openai"}
+    if line:
+        path = _line_preview_path(engine_id, voice.id, line)
+        if not path.exists() or is_cloud:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            engine.synthesize(line, voice.id, str(path))
+        return {"ok": True, "path": str(path)}
+
     path = _preview_path(engine_id, voice.id)
     if engine_id == "kokoro":
         KOKORO_PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
     # OpenAI previews are not cached permanently (no disk cost, always fresh).
-    is_cloud = engine_id in {"openAI", "openai"}
     if not path.exists() or is_cloud:
         engine.synthesize(_voice_preview_text(voice), voice.id, str(path))
     return {"ok": True, "path": str(path)}
@@ -732,7 +757,14 @@ def handle(payload: Dict[str, Any]) -> Dict[str, Any]:
     command = payload.get("command")
     if command == "parse":
         pdf_path = payload["pdfPath"]
-        return {"ok": True, "script": _script_summary(script_parser.parse_pdf(pdf_path))}
+        if payload.get("progress"):
+            # Stream {"event": "parseProgress"} lines before the final result line.
+            script_parser.progress_hook = lambda fraction, message: _emit(
+                {"event": "parseProgress", "fraction": round(fraction, 3), "message": message})
+        try:
+            return {"ok": True, "script": _script_summary(script_parser.parse_pdf(pdf_path))}
+        finally:
+            script_parser.progress_hook = None
     if command == "voices":
         engine_id = payload.get("engine", "mac")
         pdf_path = payload.get("pdfPath")

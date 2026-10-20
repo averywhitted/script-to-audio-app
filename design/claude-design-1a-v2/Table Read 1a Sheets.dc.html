@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Caveat:wght@500;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#DCD6CC;-webkit-font-smoothing:antialiased}
+a{color:#A33A2E}a:hover{color:#7E2A21}
+</style>
+</helmet>
+<section id="turn2-sheets" style="padding:72px 80px 140px;display:flex;flex-direction:column;gap:56px;font-family:'Hanken Grotesk',sans-serif;color:#2B2620;font-size:13px">
+<div style="display:flex;flex-direction:column;gap:10px;max-width:980px">
+<div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#6F6558;font-weight:600">Turn 2 · Direction 1a · Sheets, windows, popovers, menus, alerts</div>
+<div style="font-family:'Young Serif',serif;font-size:46px;line-height:1.1">Table Read — the smaller pieces</div>
+<div style="font-size:17px;line-height:1.5;color:#4D453B">Main windows are in <a href="Table Read 1a.dc.html">Table Read 1a</a>.</div>
+</div>
+
+<!-- SHEETS -->
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="font-family:'Young Serif',serif;font-size:30px">6 · Sheets</div>
+<div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+
+<div data-screen-label="New Project sheet" style="width:500px;background:#FBF8F2;border-radius:12px;box-shadow:0 24px 50px -16px rgba(40,25,10,0.4),0 0 0 1px rgba(0,0,0,0.08);padding:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;gap:14px;align-items:center">
+<div style="width:44px;height:56px;background:#E8D7AC;border-radius:2px 5px 5px 2px;position:relative;box-shadow:0 4px 8px -4px rgba(60,35,10,0.4);flex-shrink:0"><div style="position:absolute;left:7px;top:14px;width:6px;height:6px;border-radius:50%;background:#B8924A"></div><div style="position:absolute;left:7px;bottom:14px;width:6px;height:6px;border-radius:50%;background:#B8924A"></div></div>
+<div style="display:flex;flex-direction:column;gap:3px"><div style="font-family:'Young Serif',serif;font-size:21px">New Project</div><div style="color:#6F6558">Name it, then choose the script PDF. The folder is made when you pick the PDF.</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px"><label style="font-weight:600">Project Name</label><div style="padding:8px 10px;border-radius:7px;background:#fff;box-shadow:0 0 0 1px #D6CCBB,0 0 0 4px rgba(163,58,46,0.12);color:#9A8F80">e.g. Hamlet, The Godfather…</div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><label style="font-weight:600">Save Location</label><div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;background:#F1EADD;box-shadow:0 0 0 1px rgba(60,45,30,0.1)"><span style="font-family:'Courier Prime',monospace;flex:1">~/Documents/Table Read/</span><span style="padding:3px 10px;border-radius:6px;background:#fff;box-shadow:0 0 0 1px #D6CCBB">Choose…</span></div></div>
+<div style="display:flex;justify-content:flex-end;gap:8px;padding-top:4px"><div style="padding:7px 14px;border-radius:8px;box-shadow:0 0 0 1px #D6CCBB">Cancel</div><div style="padding:7px 14px;border-radius:8px;background:#A33A2E;color:#FBF3EC;font-weight:600">Create &amp; Choose PDF…</div></div>
+</div>
+
+<div data-screen-label="Onboarding" style="width:620px;background:#FBF8F2;border-radius:12px;box-shadow:0 24px 50px -16px rgba(40,25,10,0.4),0 0 0 1px rgba(0,0,0,0.08);padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#A33A2E">Places, everyone</div><div style="font-family:'Young Serif',serif;font-size:30px">Welcome to Table Read</div><div style="font-size:14px;color:#4D453B;line-height:1.5">Turn a screenplay or stage-play PDF into a full-cast audio drama, one voice per character.</div></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+<sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;gap:12px;padding:14px;border-radius:10px;background:#F4EEE3;box-shadow:0 0 0 1px rgba(60,45,30,0.08)">
+<div style="font-family:'Courier Prime',monospace;font-weight:700;font-size:20px;color:#A33A2E;width:22px">{{ s.n }}</div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font-weight:700;font-size:14px">{{ s.t }}</span><span style="color:#4D453B;line-height:1.4">{{ s.d }}</span></div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:10px;box-shadow:inset 0 0 0 1px rgba(60,45,30,0.12)">
+<div style="font-family:'Caveat',cursive;font-size:22px;color:#5E6B78;line-height:1">Tips</div>
+<div style="color:#4D453B;line-height:1.5">A pencil “?” marks a line the parser wasn't sure about. Removed lines stay struck through, so you can restore them. ⌘Z undoes up to 50 steps.</div>
+</div>
+<div style="display:flex;justify-content:flex-end"><div style="padding:8px 18px;border-radius:8px;background:#A33A2E;color:#FBF3EC;font-weight:600">Get Started</div></div>
+</div>
+
+<div data-screen-label="Report a Bug" style="width:500px;background:#FBF8F2;border-radius:12px;box-shadow:0 24px 50px -16px rgba(40,25,10,0.4),0 0 0 1px rgba(0,0,0,0.08);padding:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<div style="font-family:'Young Serif',serif;font-size:21px">Report a Bug</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><span style="font-family:'Courier Prime',monospace;font-size:12px;padding:3px 8px;border-radius:5px;background:#EFE7DA">Table Read 0.1.7 (beta)</span><span style="font-family:'Courier Prime',monospace;font-size:12px;padding:3px 8px;border-radius:5px;background:#EFE7DA">macOS 15.1</span></div>
+<div style="display:flex;flex-direction:column;gap:6px"><label style="font-weight:600">What happened?</label><div style="height:84px;padding:8px 10px;border-radius:7px;background:#fff;box-shadow:0 0 0 1px #D6CCBB;box-sizing:border-box;line-height:1.45">Scene 08 stopped at element 12 and the progress bar stayed at 17%.</div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><label style="font-weight:600">Steps to reproduce <span style="font-weight:400;color:#9A8F80">(optional)</span></label><div style="height:64px;padding:8px 10px;border-radius:7px;background:#fff;box-shadow:0 0 0 1px #D6CCBB;box-sizing:border-box"></div></div>
+<div style="display:flex;justify-content:flex-end;gap:8px"><div style="padding:7px 14px;border-radius:8px;box-shadow:0 0 0 1px #D6CCBB">Cancel</div><div style="padding:7px 14px;border-radius:8px;background:#A33A2E;color:#FBF3EC;font-weight:600">Review on GitHub…</div></div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:24px">
+<div data-screen-label="Update Available" style="width:500px;background:#FBF8F2;border-radius:12px;box-shadow:0 24px 50px -16px rgba(40,25,10,0.4),0 0 0 1px rgba(0,0,0,0.08);padding:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-direction:column;gap:3px"><div style="font-family:'Young Serif',serif;font-size:21px">Update Available</div><div style="color:#6F6558">Table Read 0.1.8 is ready. You have 0.1.7.</div></div>
+<div style="padding:12px 14px;border-radius:8px;background:#F4EEE3;box-shadow:0 0 0 1px rgba(60,45,30,0.08);display:flex;flex-direction:column;gap:5px;line-height:1.45;color:#4D453B"><span>• Faster parsing for long scripts</span><span>• Speaker names split across page breaks are caught more often</span><span>• Voice previews start sooner</span></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;color:#6F6558;font-size:12px"><span>Downloading…</span><span>14.2 of 38.0 MB</span></div><div style="height:5px;background:#E8E0D2;border-radius:3px"><div style="width:37%;height:100%;background:#A33A2E;border-radius:3px"></div></div></div>
+<div style="display:flex;gap:8px"><div style="padding:7px 14px;color:#A33A2E;font-weight:600">Release Notes</div><div style="flex:1"></div><div style="padding:7px 14px;border-radius:8px;box-shadow:0 0 0 1px #D6CCBB">Later</div><div style="padding:7px 14px;border-radius:8px;background:#E8E0D2;color:#9A8F80;font-weight:600">Update Now</div></div>
+</div>
+<div data-screen-label="Update failed" style="width:500px;background:#FBF8F2;border-radius:12px;box-shadow:0 24px 50px -16px rgba(40,25,10,0.4),0 0 0 1px rgba(0,0,0,0.08);padding:20px 28px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600">Update couldn't be installed</span><span style="color:#B42318;font-size:12px">Extract failed</span></div>
+<div style="display:flex;gap:8px;justify-content:flex-end"><div style="padding:7px 14px;border-radius:8px;box-shadow:0 0 0 1px #D6CCBB">Download on GitHub</div><div style="padding:7px 14px;border-radius:8px;background:#A33A2E;color:#FBF3EC;font-weight:600">Retry</div></div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- SETTINGS -->
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="font-family:'Young Serif',serif;font-size:30px">7 · Settings window</div>
+<div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+<sc-for list="{{ settings }}" as="w" hint-placeholder-count="4">
+<div data-screen-label="Settings" style="width:640px;height:560px;background:#F4EEE3;border-radius:12px;overflow:hidden;box-shadow:0 24px 50px -16px rgba(40,25,10,0.4),0 0 0 1px rgba(0,0,0,0.08);display:flex;flex-direction:column">
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid rgba(60,45,30,0.12);position:relative">
+<div style="position:absolute;left:16px;top:16px;display:flex;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#EE6A5F"></div><div style="width:12px;height:12px;border-radius:50%;background:#F5BE4F"></div><div style="width:12px;height:12px;border-radius:50%;background:#62C554"></div></div>
+<div style="font-weight:600">{{ w.name }}</div>
+<div style="display:flex;gap:4px"><sc-for list="{{ w.tabs }}" as="t" hint-placeholder-count="4"><div style="padding:5px 14px;border-radius:7px;background:{{ t.bg }};font-weight:{{ t.fw }};color:{{ t.fg }}">{{ t.l }}</div></sc-for></div>
+</div>
+<div style="flex:1;padding:18px 28px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+<sc-for list="{{ w.groups }}" as="g" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6F6558">{{ g.h }}</div>
+<div style="background:#FBF8F2;border-radius:9px;box-shadow:0 0 0 1px rgba(60,45,30,0.1);overflow:hidden">
+<sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid rgba(60,45,30,0.06);min-height:22px">
+<div style="display:flex;flex-direction:column;flex:1;min-width:0;gap:2px"><span>{{ r.l }}</span><sc-if value="{{ r.sub }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;color:{{ r.subC }}">{{ r.sub }}</span></sc-if></div>
+<sc-if value="{{ r.toggle }}" hint-placeholder-val="{{ false }}"><div style="width:34px;height:20px;border-radius:10px;background:{{ r.tBg }};position:relative;flex-shrink:0"><div style="position:absolute;top:2px;left:{{ r.tX }};width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.3)"></div></div></sc-if>
+<sc-if value="{{ r.progress }}" hint-placeholder-val="{{ false }}"><div style="width:120px;height:4px;background:#E8E0D2;border-radius:2px"><div style="width:{{ r.progress }};height:100%;background:#A33A2E;border-radius:2px"></div></div></sc-if>
+<sc-if value="{{ r.value }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Courier Prime',monospace;color:#4D453B;white-space:nowrap">{{ r.value }}</span></sc-if>
+<sc-for list="{{ r.btns }}" as="b" hint-placeholder-count="0"><span style="padding:3px 10px;border-radius:6px;background:{{ b.bg }};color:{{ b.fg }};box-shadow:0 0 0 1px {{ b.bd }};white-space:nowrap;font-weight:{{ b.fw }}">{{ b.l }}</span></sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<!-- POPOVERS -->
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="font-family:'Young Serif',serif;font-size:30px">8 · Popovers</div>
+<div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+
+<div data-screen-label="Correct this line" style="width:380px;background:#FFFFFF;border-radius:12px;box-shadow:0 16px 40px rgba(60,35,10,0.25),0 0 0 1px rgba(60,45,30,0.12);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+<div style="font-weight:700;font-size:14px">Correct this line</div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:#6F6558;font-weight:600">Type</span><div style="display:flex;background:#EFE7DA;border-radius:7px;padding:2px;font-size:12px"><span style="flex:1;text-align:center;padding:4px;background:#fff;border-radius:5px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Dialogue</span><span style="flex:1;text-align:center;padding:4px">Stage direction</span><span style="flex:1;text-align:center;padding:4px">Parenthetical</span></div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:#6F6558;font-weight:600">Speaker</span><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB"><span style="font-family:'Courier Prime',monospace;font-weight:700;background:{{ c.GWENDOLEN }};padding:0 5px;border-radius:2px 6px 3px 7px">GWENDOLEN</span><span style="color:#9A8F80">⌄</span></div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:#6F6558;font-weight:600">Lines (simultaneous)</span><div style="display:flex;gap:6px;align-items:center;font-size:12px"><span style="padding:4px 10px;border-radius:6px;box-shadow:0 0 0 1px #D6CCBB;font-weight:600">1 voice</span><span style="padding:4px 10px;border-radius:6px;color:#6F6558">2 voices</span></div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:#6F6558;font-weight:600">Text</span><div style="padding:8px 10px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB,0 0 0 4px rgba(163,58,46,0.1);font-family:'Courier Prime',monospace;line-height:1.45">This dignified silence seems to produce an unpleasant effect.</div></div>
+<div style="display:flex;gap:8px;align-items:center"><span style="color:#A33A2E;font-weight:600">Undo Changes</span><div style="flex:1"></div><span style="padding:6px 12px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB">Cancel</span><span style="padding:6px 12px;border-radius:7px;background:#A33A2E;color:#FBF3EC;font-weight:600">Save</span></div>
+</div>
+
+<div data-screen-label="Edit added line" style="width:340px;background:#FFFFFF;border-radius:12px;box-shadow:0 16px 40px rgba(60,35,10,0.25),0 0 0 1px rgba(60,45,30,0.12);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:8px;align-items:center"><span style="font-weight:700;font-size:14px">Edit added line</span><span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6A5221;background:#E7D8B3;padding:2px 6px;border-radius:3px">Added</span></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:#6F6558;font-weight:600">Type</span><div style="display:flex;background:#EFE7DA;border-radius:7px;padding:2px;font-size:12px"><span style="flex:1;text-align:center;padding:4px">Dialogue</span><span style="flex:1;text-align:center;padding:4px;background:#fff;border-radius:5px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.1)">Stage direction</span><span style="flex:1;text-align:center;padding:4px">Parenthetical</span></div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:#6F6558;font-weight:600">Speaker</span><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB"><span style="font-family:'Courier Prime',monospace;font-weight:700;background:{{ c.NARRATOR }};padding:0 5px;border-radius:2px 6px 3px 7px">NARRATOR</span><span style="color:#9A8F80">⌄</span></div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:#6F6558;font-weight:600">Text</span><div style="padding:8px 10px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB;font-family:'Courier Prime',monospace;color:#9A8F80;font-style:italic">Empty — hover and tap Edit to add text</div></div>
+<div style="display:flex;gap:8px;justify-content:flex-end"><span style="padding:6px 12px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB">Cancel</span><span style="padding:6px 12px;border-radius:7px;background:#A33A2E;color:#FBF3EC;font-weight:600">Save</span></div>
+</div>
+
+<div data-screen-label="Edit simultaneous voice" style="width:340px;background:#FFFFFF;border-radius:12px;box-shadow:0 16px 40px rgba(60,35,10,0.25),0 0 0 1px rgba(60,45,30,0.12);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+<div style="font-weight:700;font-size:14px">Edit line <span style="font-weight:400;color:#6F6558">· voice 2 of 2</span></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:#6F6558;font-weight:600">Speaker</span><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB"><span style="font-family:'Courier Prime',monospace;font-weight:700;background:{{ c.CECILY }};padding:0 5px;border-radius:2px 6px 3px 7px">CECILY</span><span style="color:#9A8F80">⌄</span></div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:#6F6558;font-weight:600">Line</span><div style="padding:8px 10px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB;font-family:'Courier Prime',monospace;line-height:1.45">Your Christian names are still an insuperable barrier. That is all!</div></div>
+<div style="display:flex;gap:8px;justify-content:flex-end"><span style="padding:6px 12px;border-radius:7px;box-shadow:0 0 0 1px #D6CCBB">Cancel</span><span style="padding:6px 12px;border-radius:7px;background:#A33A2E;color:#FBF3EC;font-weight:600">Save</span></div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:20px">
+<div data-screen-label="Engine menu" style="width:300px;background:#FFFFFF;border-radius:10px;box-shadow:0 16px 40px rgba(60,35,10,0.25),0 0 0 1px rgba(60,45,30,0.12);padding:6px">
+<sc-for list="{{ engines }}" as="e" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:{{ e.bg }};color:{{ e.fg }}"><span style="width:12px">{{ e.check }}</span><span style="flex:1">{{ e.l }}</span><span style="font-size:11px;color:{{ e.noteC }}">{{ e.note }}</span></div></sc-for>
+</div>
+<div data-screen-label="Not installed strip" style="width:300px;display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;background:#F3DDBF;color:#7A4410;font-size:12.5px;box-sizing:border-box"><span style="font-weight:700">Kokoro Local is not installed</span><div style="flex:1"></div><span style="text-decoration:underline;white-space:nowrap">Go to Settings</span></div>
+<div data-screen-label="Added line placeholder" style="width:300px;padding:10px 12px;border-radius:8px;background:#FBF8F2;box-shadow:0 0 0 1px rgba(60,45,30,0.1);display:flex;gap:8px;align-items:center;box-sizing:border-box"><span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6A5221;background:#E7D8B3;padding:2px 6px;border-radius:3px">Added</span><span style="font-family:'Courier Prime',monospace;color:#9A8F80;font-style:italic;flex:1">Empty — hover and tap Edit to add text</span></div>
+</div>
+
+</div>
+</div>
+
+<!-- MENUS -->
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="font-family:'Young Serif',serif;font-size:30px">9 · Menus</div>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+<sc-for list="{{ menus }}" as="m" hint-placeholder-count="5">
+<div data-screen-label="Menu" style="display:flex;flex-direction:column;gap:0">
+<div style="align-self:flex-start;padding:4px 10px;border-radius:5px 5px 0 0;background:rgba(43,38,32,0.1);font-weight:600">{{ m.title }}</div>
+<div style="width:290px;background:rgba(251,248,242,0.97);border-radius:0 8px 8px 8px;box-shadow:0 12px 30px rgba(60,35,10,0.22),0 0 0 1px rgba(60,45,30,0.12);padding:5px">
+<sc-for list="{{ m.items }}" as="i" hint-placeholder-count="4">
+<sc-if value="{{ i.sep }}" hint-placeholder-val="{{ false }}"><div style="height:1px;background:rgba(60,45,30,0.12);margin:4px 8px"></div></sc-if>
+<sc-if value="{{ i.row }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:5px;background:{{ i.bg }};color:{{ i.fg }}"><span style="width:12px">{{ i.check }}</span><span style="flex:1">{{ i.l }}</span><span style="color:{{ i.kc }};letter-spacing:0.04em">{{ i.k }}</span></div></sc-if>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<!-- ALERTS -->
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="font-family:'Young Serif',serif;font-size:30px">10 · Alerts and notifications</div>
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+<sc-for list="{{ alerts }}" as="a" hint-placeholder-count="4">
+<div data-screen-label="Alert" style="width:280px;background:#FBF8F2;border-radius:12px;box-shadow:0 24px 50px -16px rgba(40,25,10,0.4),0 0 0 1px rgba(0,0,0,0.08);padding:20px 18px 16px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+<div style="width:52px;height:52px;border-radius:12px;background:#A33A2E;color:#FBF3EC;font-family:'Young Serif',serif;font-size:26px;display:flex;align-items:center;justify-content:center">T</div>
+<div style="font-weight:700;font-size:14px;margin-top:4px">{{ a.title }}</div>
+<div style="color:#4D453B;line-height:1.45;font-size:12.5px;text-wrap:pretty">{{ a.body }}</div>
+<sc-if value="{{ a.code }}" hint-placeholder-val="{{ false }}"><div style="width:100%;font-family:'Courier Prime',monospace;font-size:11.5px;background:#EFE7DA;border-radius:6px;padding:6px 8px;text-align:left;box-sizing:border-box;color:#4D453B">{{ a.code }}</div></sc-if>
+<div style="display:flex;flex-direction:column;gap:6px;width:100%;margin-top:6px">
+<sc-for list="{{ a.btns }}" as="b" hint-placeholder-count="2"><div style="padding:6px;border-radius:7px;background:{{ b.bg }};color:{{ b.fg }};font-weight:600;box-shadow:0 0 0 1px {{ b.bd }}">{{ b.l }}</div></sc-for>
+</div>
+</div>
+</sc-for>
+<div style="display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ notes }}" as="n" hint-placeholder-count="3">
+<div data-screen-label="Notification" style="width:360px;display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:16px;background:rgba(251,248,242,0.92);box-shadow:0 10px 30px rgba(40,25,10,0.22),0 0 0 1px rgba(0,0,0,0.06);box-sizing:border-box">
+<div style="width:36px;height:36px;border-radius:9px;background:#A33A2E;color:#FBF3EC;font-family:'Young Serif',serif;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0">T</div>
+<div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-weight:700">{{ n.t }}</span><span style="color:#4D453B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.b }}</span></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const hl = h => h == null ? 'oklch(0.72 0.01 70 / 0.28)' : `oklch(0.88 0.15 ${h} / 0.68)`;
+    const c = { GWENDOLEN: hl(300), CECILY: hl(215), NARRATOR: hl(null) };
+    const steps = [
+      { n: '1', t: 'Import', d: 'Choose a screenplay or stage-play PDF.' },
+      { n: '2', t: 'Review', d: 'Check who says each line. Fix any in a click or two.' },
+      { n: '3', t: 'Cast', d: 'Give every character a voice. Preview before you commit.' },
+      { n: '4', t: 'Generate', d: 'Render each scene to its own .m4a, then rehearse or listen.' }
+    ];
+    const B = (l, kind) => kind === 'p' ? { l, bg: '#A33A2E', fg: '#FBF3EC', bd: '#A33A2E', fw: 600 } : kind === 'd' ? { l, bg: '#fff', fg: '#B42318', bd: '#D6CCBB', fw: 500 } : { l, bg: '#fff', fg: '#2B2620', bd: '#D6CCBB', fw: 500 };
+    const R = (l, o = {}) => ({ l, sub: o.sub || '', subC: o.subC || '#6F6558', toggle: o.t != null, tBg: o.t ? '#A33A2E' : '#D6CCBB', tX: o.t ? '16px' : '2px', value: o.v || '', progress: o.p || '', btns: o.b || [] });
+    const tabs = a => ['General', 'Engines', 'Projects', 'About'].map(l => ({ l, bg: l === a ? '#FBF8F2' : 'transparent', fw: l === a ? 600 : 400, fg: l === a ? '#2B2620' : '#6F6558' }));
+    const settings = [
+      { name: 'General', tabs: tabs('General'), groups: [
+        { h: 'Software Update', rows: [R('Check for updates', { sub: 'Last checked today, 9:02', b: [B('Check Now')] }), R('Update channel', { b: [B('Stable', 'p'), B('Beta')] })] },
+        { h: 'Output', rows: [R('Open output folder when a render finishes', { t: true }), R('Default output folder', { v: '~/Music/Table Read', b: [B('Choose…')] })] },
+        { h: 'Notifications', rows: [R('When a scene finishes', { t: false }), R('When a full render finishes', { t: true }), R('When a render fails', { t: true })] },
+        { h: 'Parser corrections', rows: [R('Contribute corrections', { t: true }), R('Saved corrections', { v: '128', b: [B('Export…'), B('Clear…', 'd')] })] }
+      ] },
+      { name: 'Engines', tabs: tabs('Engines'), groups: [
+        { h: 'OpenAI', rows: [R('API key', { v: 'sk-••••••••••••3f9a', sub: 'Key works · saved in Keychain', subC: '#2C6440' }), R('', { b: [B('Save', 'p'), B('Clear'), B('Test Key')] })] },
+        { h: 'Local engines', rows: [R('Kokoro Local', { sub: '312 MB · installing 64%', p: '64%', b: [B('Cancel')] }), R('Piper', { sub: 'Coming soon', b: [] }), R('macOS Voices', { sub: 'Built in', b: [] })] }
+      ] },
+      { name: 'Projects', tabs: tabs('Projects'), groups: [
+        { h: 'Default projects folder', rows: [R('~/Documents/Table Read/', { b: [B('Change…'), B('Reveal')] })] }
+      ] },
+      { name: 'About', tabs: tabs('About'), groups: [
+        { h: 'Table Read', rows: [R('Version', { v: '0.1.7 (beta)', b: [B('Check for Updates')] }), R('License', { b: [B('View')] }), R('Enjoying it?', { b: [B('Buy Me a Coffee', 'p')] })] }
+      ] }
+    ];
+    const engines = [['macOS Voices', ''], ['Kokoro Local', 'not installed'], ['OpenAI TTS', ''], ['Piper', 'coming soon']].map(([l, note], i) => ({ l, note, check: i === 2 ? '✓' : '', bg: i === 1 ? '#A33A2E' : 'transparent', fg: i === 1 ? '#fff' : i === 3 ? '#B5AA9A' : '#2B2620', noteC: i === 1 ? '#F6D9D3' : '#9A8F80' }));
+    const I = (l, k = '', o = {}) => ({ row: true, sep: false, l, k, check: o.c ? '✓' : '', bg: o.h ? '#A33A2E' : 'transparent', fg: o.h ? '#fff' : o.d ? '#B5AA9A' : '#2B2620', kc: o.h ? '#F6D9D3' : '#9A8F80' });
+    const S = { row: false, sep: true };
+    const menus = [
+      { title: 'Table Read', items: [I('About Table Read'), I('Check for Updates…'), S, I('Settings…', '⌘,'), S, I('Quit Table Read', '⌘Q')] },
+      { title: 'Edit', items: [I('Undo Change Speaker', '⌘Z'), I('Redo', '⇧⌘Z', { d: true })] },
+      { title: 'Script', items: [I('Render Selected Scenes', '⌘R', { h: true }), I('Preview First Scene', '⇧⌘R'), I('Pause / Resume Render', '⇧⌘J', { d: true }), I('Cancel Render', '⌘.', { d: true }), S, I('Skip Already-Rendered Scenes', '', { c: true })] },
+      { title: 'Help', items: [I('Table Read Help', '⌘?'), I('Report a Bug…', '⇧⌘B')] },
+      { title: 'Debug', items: [I('Developer builds only: items unchanged from today', '', { d: true })] }
+    ];
+    const P = l => ({ l, bg: '#A33A2E', fg: '#FBF3EC', bd: '#A33A2E' }), N = l => ({ l, bg: '#fff', fg: '#2B2620', bd: '#D6CCBB' }), D = l => ({ l, bg: '#fff', fg: '#B42318', bd: '#D6CCBB' });
+    const alerts = [
+      { title: 'Leave while recording?', body: 'Scene 09 is still being recorded.', code: '', btns: [P('Keep Rendering'), D('Cancel Render & Go Home')] },
+      { title: 'Archive 2 projects?', body: 'They move to Archived, zipped. You can unarchive them any time.', code: '', btns: [P('Archive'), N('Cancel')] },
+      { title: 'Move 2 projects to Trash?', body: 'Their scripts and rendered audio go to the Trash.', code: '', btns: [D('Move to Trash'), N('Cancel')] },
+      { title: 'Something went wrong', body: 'The engine stopped while recording scene 10.', code: 'audio_worker: voice "bf_isabella" not found', btns: [P('OK')] }
+    ];
+    const notes = [
+      { t: 'Scene 09 recorded', b: 'Morning-room at the Manor House · 4:18' },
+      { t: "That's a wrap", b: 'All 4 scenes of The Importance of Being Earnest are ready.' },
+      { t: 'Render failed', b: 'Scene 10 stopped. Open Table Read to see why.' }
+    ];
+    return { c, steps, settings, engines, menus, alerts, notes };
+  }
+}
+</script>
+</body>
+</html>
