@@ -1,7 +1,7 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-19 23:50 EDT · branch `ios-rehearsal` @ `cd676a5` · working tree: uncommitted label kit (Oct 17: `scripts/label_kit.py`, `scripts/side_by_side.py`, `label_sample.py`, `.gitignore`, `CLAUDE.md`, `.claude/launch.json`; not part of the iOS work, don't commit it with it) + two kept sidetrack notes_
+_Updated 2026-10-20 00:37 EDT · branch `ios-rehearsal` @ `a3ee5ca` (not pushed) · working tree: uncommitted label kit (Oct 17: `scripts/label_kit.py`, `scripts/side_by_side.py`, `label_sample.py`, `.gitignore`, `CLAUDE.md`, `.claude/launch.json`; not part of the iOS work, don't commit it with it) + two kept sidetrack notes_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas with TTS. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); it is being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 still open) that drives the same Python worker.
 **Current goal:** milestone **iOS rehearsal** (GitHub milestone 4, issues #88–#94): an iPhone version of the Flutter app for rehearsing and learning lines. Planned with `/grilling` on Oct 19; Avery said go.
@@ -15,20 +15,24 @@ _Updated 2026-10-19 23:50 EDT · branch `ios-rehearsal` @ `cd676a5` · working t
 - #88 spike app: `spikes/icloud_folder/` (Flutter, bundle id `com.averywhitted.icloudFolderTest`, team TX98CU7F96). Native code in `ios/Runner/AppDelegate.swift` (`FolderAccessPlugin`, channel `tableread/folder`: pick/status/list/read/write; bookmark in UserDefaults; coordinated reads that ask iCloud to download).
 - **#88 PASSED and closed (Oct 19)** on Avery's iPhone 15 Pro Max (UDID 00008130-000475601803401C), free team: folder kept across relaunch, 2.3 MB scene read, phone→Mac and Mac→phone (~30 s) both work. No iCloud entitlement needed. **The iCloud Drive approach is a go.**
 - Mac-side test folder `~/Library/Mobile Documents/com~apple~CloudDocs/Table Read Sync Test/` kept for #90 testing; delete when the real app reads real projects.
+- **#89 code done (`a3ee5ca`), issue left open until Avery runs the real move.** Installed in `/Applications/Table Read Preview.app`. New `app/lib/services/project_files.dart`: `script.json` (worker parse; edits stay in project.json and are applied on top), `Rehearsal/<deviceId>.json` (one file per device, newest `updatedAt` wins, falls back to prefs `view.<id>`; also saves loop + position for #93, not restored yet), `rebaseEdits` (edits keyed by absolute PDF path get re-pointed on open). `ProjectStore.moveProjectsTo` + Settings → Projects → iPhone section. `NativePlatform.downloadFolder` on open. Re-render fingerprint no longer includes the PDF path; fingerprints are now actually saved (they never were).
 - Parser-quality milestone is paused, not dropped: it resumes when Avery's exam labels come in (Avery's call, Oct 19).
 
 **Next steps:**
-1. #89 Mac app changes: write the full parsed script to the project folder (`script.json`), move rehearsal settings from prefs `view.<id>` (`app_state.dart` `loadView`/`saveView`) into a project file, add "Move projects to iCloud Drive" (projects + archives, repoint `projectsBaseURL`), handle not-yet-downloaded files. Tests: `bash scripts/test.sh flutter`.
-2. #90 iOS target in `app/`, reusing the spike's `FolderAccessPlugin`.
+1. Avery: open Table Read Preview → Settings → Projects → Move to iCloud Drive… (close any open project first). Then check: projects open, corrections still applied, nothing newly marked for re-render, `script.json` + `Rehearsal/` appear in a project folder after opening it. Then close #89.
+2. #90 iOS target in `app/`: reuse the spike's `FolderAccessPlugin` (`spikes/icloud_folder/ios/Runner/AppDelegate.swift`), read `script.json` + project.json + cues; `Platform.environment['HOME']`, `/usr/bin/zip`, `NativePlatform` Mac-only calls need iOS guards.
 3. #91 needs a mockup shown to Avery before building.
 
 **Waiting on the user / open questions:**
 - Labelling the exams (offline kit `Test PDFs/label-kit/Label lines.html`) for the parser milestone.
 - Merge PR #78 (`flutter-mac-app` → `main`).
+- Run the move to iCloud Drive (#89 step above).
 
 **Watch out for:**
 - Avery asked (Oct 19): use the local models on linux-box for grunt work and supervise (skill `linux-box-llm`). Used so far for the issue drafts and the spike's Dart UI; both needed review (one real bug: error logs interpolated a function).
 - **Installing on the iPhone:** `flutter build ios` / `flutter devices` don't see the phone. What works: `xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -destination 'id=00008130-000475601803401C' -allowProvisioningUpdates -allowProvisioningDeviceRegistration build`, then `xcrun devicectl device install app --device <udid> <DerivedData>/Release-iphoneos/Runner.app`. Xcode is now signed in to Avery's Apple ID; the developer is trusted on the phone. Free-team apps expire after 7 days: reinstall.
+- **Swift tests hang at launch** ("test runner hung before establishing connection"), issue #95; started Oct 20 after Xcode sign-in / first iPhone attach; not caused by code. Full suite otherwise passes.
+- Screen tests: rehearsal settings are files in the fixture project now; `_makeState` deletes `Rehearsal/` folders so tests don't leak into each other.
 - Simulator: the iOS sim tool only has access to the `iPhone 17` sim (3F48D6A2…); the iPhone 18 Pro sim was declined. Its screenshots lag taps by a second or two: wait before screenshotting.
 - `sidetrack-*.md` notes are ephemeral: delete once confirmed done; never commit them.
 - Avery catches UI regressions by eye (options cluster top-right, scroll-follow on play).
@@ -41,6 +45,13 @@ _Updated 2026-10-19 23:50 EDT · branch `ios-rehearsal` @ `cd676a5` · working t
 
 ## History
 <!-- newest first -->
+
+### 2026-10-20 00:37 — #89: Mac app makes projects ready for the iPhone
+**Asked:** Step 2 of the iOS plan, the Mac app changes.
+**Done:** `a3ee5ca`. script.json snapshot, per-device rehearsal files, Move to iCloud Drive (Settings → Projects → iPhone; UI contract updated), iCloud prefetch on open. Two problems found in passing: edits are keyed by the PDF's absolute path, so a move would orphan every correction (now re-pointed on open, and the path is out of the re-render fingerprint); render fingerprints were never saved to project.json (`_syncToProject` skipped them), so reopening forgot pending re-renders. Rebuilt `/Applications/Table Read Preview.app`. Filed #95.
+**Decisions:** script.json holds the raw parse, not the edited script, so there's one source of truth for edits (project.json) and the phone shares the Mac's display code. One rehearsal file per device instead of one shared file: iCloud never has to merge. Position/loop are saved now, restored in #93.
+**State:** Flutter 48/48 (8 new tests drafted by qwen-big; 4 real bugs fixed in review), worker test round-trips every test PDF, Python + answer keys unchanged, Mac app builds. Swift tests hang (#95). The move itself hasn't run on Avery's real projects.
+**Next:** Avery runs the move; then #90.
 
 ### 2026-10-19 23:50 — #88 passed on the real iPhone: iCloud Drive approach is a go
 **Asked:** Run the iCloud folder test on Avery's iPhone.
