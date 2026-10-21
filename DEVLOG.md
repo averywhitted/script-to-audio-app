@@ -1,7 +1,7 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-21 15:50 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed) · working tree: ADRs and the spike committed (see git log); uncommitted: Oct 17 label-kit files and two sidetrack notes that are not part of this work (don't commit them with it)_
+_Updated 2026-10-21 16:30 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed) · working tree: ADRs and the spike committed (see git log); uncommitted: Oct 17 label-kit files and two sidetrack notes that are not part of this work (don't commit them with it)_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 open) that drives the Python worker. iPhone companion exists in `app/` (iOS rehearsal milestone, #89-#94, rounds 1-2 installed on Avery's phone).
 **Current goal:** milestone **Rust core** (GitHub milestone 9, issues #98-#109; later engines/languages/cloud parked in milestone 10, #110-#112). Planned with `/grilling` Oct 21; Avery said go.
@@ -16,6 +16,8 @@ _Updated 2026-10-21 15:50 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 
 **Order of work:** #98 skeleton/CI (needs rustup) and #99 PDFium spike alongside the #93 sync gaps (#103-#105) -> #100 Rust parser -> #101 Mac cutover -> #102 iPhone import/parse -> sync features -> #106 desktop Rust renderer -> #107 Mac render cutover. #108 (remove OpenAI) and #109 (LICENSE) are small separate PRs.
 
+**Parser port (#100) stage 1 done:** `rust/crates/parser` (lib `table_read_parser`, bin `parser_stage`): `pystr.rs` (Python `strip`/`isalpha`/`len` semantics), `types.rs`, `blocks.rs` = `_split_raw_block`, `_make_text_block`, `_merge_open_parentheticals`, cue helpers. `python3 scripts/rust_parser_diff.py [stage] [pdf...]` runs the Rust extractor once per PDF, feeds the SAME JSON to Python's parser functions and to `parser_stage`, and diffs every field (floats to 1e-9): **identical on all 31 PDFs / 43,628 blocks**; mutation tests showed it catches changes (lookahead, caps threshold). It runs inside `bash scripts/test.sh rust`. Next stage: 2 (layout profile + DocumentModel), see the plan in the #100 comment; add each stage to `STAGES` in the diff script and a `parser_stage` case.
+
 **Workspace (#98 skeleton, done):** `rust/` is the Rust workspace (`rust/Cargo.toml`, crate `rust/crates/extract` = lib `table_read_extract` + bin `pdfium_extract`, `rust/cargo-offline.sh`). `bash scripts/test.sh rust` (needs `MIRROR=<dir>` on this Mac, see below) runs: 12 cargo unit tests (line and block rules), `scripts/check_licenses.py` (ADR 0001 tier 1: 61 dependencies all permissive; Python tests in `backend/tests/test_check_licenses.py` prove it rejects GPL/AGPL/LGPL/NC), and the answer-key gate with the Rust extractor (fails if anything got worse; verified by breaking the binary). Not part of `all` yet. Still open on #98: Licenses screen generator, `flutter_rust_bridge` hello-world on macOS and iPhone.
 
 **Where things stand (#99 PDFium extraction; the Python prototype and notes are in `spikes/pdfium_extract/`, its README lists what the builder has to do):**
@@ -29,7 +31,7 @@ _Updated 2026-10-21 15:50 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 **Next steps:**
 1. #99 remaining: a static PDFium for macOS and iOS with `pdfium-render`'s `static` feature (needs a download; bblanchon/pdfium-binaries ships dynamic libs only, paulocoutinhox/pdfium-lib or building PDFium are the static routes; ask Avery before downloading), and `flutter_rust_bridge` hello-world on macOS + iPhone (#98: static linking, Xcode symbol stripping). Check page rotation, more PDFs than the corpus (exam sample, other producers), and port-side details: trailing-space width, non-standard non-embedded font metrics.
 2. #98 rest: Licenses screen generator (from `cargo metadata`, with license texts), `flutter_rust_bridge` hello-world.
-3. Then #100 (parser port): port `backend/parser.py` (consumes exactly the page > block > line > span structure the Rust extractor now produces) and point `answer_key.py` at it.
+3. #100 stage 2: `_infer_layout_profile`, `_build_document_model`, `_learn_cue_labels`, `_body_region`, `_compute_doc_stats` (parser.py lines ~656-1100); then stages 3-6. Python parser stays frozen; Python dumps of each stage's state go in `rust_parser_diff.py`.
 4. Still waiting from the iPhone milestone: Avery runs the Mac "Move to iCloud Drive" (#89), tries round 2 on the phone incl. lock screen + AirPods (#92), renews Xcode's Apple ID sign-in to reinstall (`bash scripts/install_iphone.sh`, weekly).
 
 **Waiting on the user / open questions:**
@@ -59,6 +61,13 @@ _Updated 2026-10-21 15:50 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 
 ## History
 <!-- newest first -->
+
+### 2026-10-21 16:30 — Rust parser port, stage 1 (text blocks) identical to Python
+**Asked:** (continuing; "you decide" on next steps)
+**Done:** surveyed parser.py (2565 lines, no regex lookarounds, pdfplumber only for the title) and posted the six-stage plan on #100. Wrote `rust/crates/parser` stage 1 and the exact differential harness `scripts/rust_parser_diff.py` (same extractor JSON into Python and Rust, field-by-field diff). 11 Rust unit tests for the helpers (expected values taken from Python). Wired into `scripts/test.sh rust`.
+**Decisions:** none new. Python semantics are reproduced explicitly (`pystr.rs`), not assumed to match Rust's `str`.
+**State:** committed, not pushed. cargo 23 tests pass, stage diff identical (31 PDFs), license check ok (65 deps), extraction gate unchanged. Python parser untouched.
+**Next:** see Resume block.
 
 ### 2026-10-21 15:50 — Rust workspace skeleton, license check, `test.sh rust`
 **Asked:** "Not sure you decide" (what to do next after the Rust extractor passed).

@@ -1,0 +1,21 @@
+[package]
+name = "table-read-parser"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Screenplay parser: text blocks from PDF extraction -> scenes, speakers, dialogue (port of backend/parser.py)"
+
+[package.metadata]
+license-tier = "permissive"
+
+[lib]
+name = "table_read_parser"
+
+[[bin]]
+name = "parser_stage"
+path = "src/bin/parser_stage.rs"
+
+[dependencies]
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

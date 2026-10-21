@@ -6,7 +6,7 @@
 #   bash scripts/test.sh python   # Python backend only
 #   bash scripts/test.sh swift    # Swift build + unit tests only
 #   bash scripts/test.sh flutter  # Flutter app: analyze + tests (logic, screens, real worker)
-#   bash scripts/test.sh rust     # Rust core: cargo tests, license policy, PDFium extraction vs the answer keys
+#   bash scripts/test.sh rust     # Rust core: cargo tests, license policy, Rust parser vs Python, extraction vs the answer keys
 #
 # Exit code is non-zero if any suite fails.
 
@@ -158,6 +158,14 @@ run_rust() {
     if ! (cd rust && "$CARGO_RUN" build --release 2>&1 | tail -2); then
         fail "Rust release build FAILED"
         return
+    fi
+    rc=0
+    out=$("$PYTHON" scripts/rust_parser_diff.py 2>&1) || rc=$?
+    echo "$out" | grep -v '^\[parser\]' | tail -3
+    if [ "$rc" -eq 0 ]; then
+        ok "Rust parser stages identical to Python"
+    else
+        fail "Rust parser differs from Python"
     fi
     rc=0
     out=$(EXTRACTOR=rust "$PYTHON" spikes/pdfium_extract/scripts/pdfium_answer_key.py --check 2>&1) || rc=$?
