@@ -9,7 +9,7 @@ use std::sync::LazyLock;
 /// `_PAREN_MERGE_LOOKAHEAD`
 const PAREN_MERGE_LOOKAHEAD: usize = 1;
 
-static PAGE_MARKER_RE: LazyLock<Regex> =
+pub(crate) static PAGE_MARKER_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\[.{1,40}\]\s*\d{1,4}\.?\s*$|^\d{1,4}\.?\s*$").unwrap());
 static CONTINUED_CUE_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)^(.+?)\s*\(\s*(?:cont(?:inued|['\u{2019}]?d|\.)?)\s*\)\s*:?\s*$").unwrap()

@@ -6,6 +6,7 @@ parser is deterministic given those blocks, so any difference is a porting bug. 
 
   text_blocks   _split_raw_block + _merge_open_parentheticals  ->  list of TextBlock
   doc_model     _build_document_model + _compute_doc_stats       ->  profile, cast, columns, furniture, doc stats
+  classified_nostyle  _classify_blocks without the learned-style pass ->  role/speaker/aside per block
 
 Usage:
   python3 scripts/rust_parser_diff.py [-v] [stage] [pdf ...]      (default: every PDF in Test PDFs/ and Test PDFs/synthetic/)
@@ -68,7 +69,22 @@ def py_doc_model(doc: dict) -> dict:
     }
 
 
-STAGES = {"text_blocks": py_text_blocks, "doc_model": py_doc_model}
+def py_classified_nostyle(doc: dict) -> list:
+    """_classify_blocks with the learned-style pass switched off (that is stage 4)."""
+    blocks = _py_blocks(doc)
+    page_widths = [b.x1 for b in blocks if b.x1 > 200]
+    model = P._build_document_model(blocks, page_width=max(page_widths) + 90.0 if page_widths else 612.0)
+    saved = P._apply_learned_style
+    P._apply_learned_style = lambda result, model: None
+    try:
+        out = P._classify_blocks(blocks, model)
+    finally:
+        P._apply_learned_style = saved
+    return [{"page": c.block.page, "x0": c.block.x0, "y0": c.block.y0, "text": c.block.text,
+             "role": c.role, "speaker": c.speaker, "aside": c.aside} for c in out]
+
+
+STAGES = {"text_blocks": py_text_blocks, "doc_model": py_doc_model, "classified_nostyle": py_classified_nostyle}
 
 
 def extract(pdf: Path) -> Path:

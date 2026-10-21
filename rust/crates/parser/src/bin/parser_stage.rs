@@ -1,8 +1,8 @@
 //! Dump one parser stage as JSON for the Python-vs-Rust comparison (scripts/rust_parser_diff.py).
-//! usage: parser_stage <stage> <extractor-blocks.json>      stages: text_blocks, doc_model
+//! usage: parser_stage <stage> <extractor-blocks.json>      stages: text_blocks, doc_model, classified_nostyle
 
 use serde_json::json;
-use table_read_parser::{blocks, model, types::RawDoc};
+use table_read_parser::{blocks, classify, model, types::RawDoc};
 
 fn sorted(s: &std::collections::HashSet<String>) -> Vec<String> {
     let mut v: Vec<String> = s.iter().cloned().collect();
@@ -31,6 +31,19 @@ fn main() {
                     "doc_stats": model::compute_doc_stats(&tb),
                 })
             );
+        }
+        "classified_nostyle" => {
+            // roles and speakers before the learned-style pass (stage 4)
+            let tb = blocks::text_blocks(&doc);
+            let m = model::build_document_model(&tb, model::page_width_of(&tb));
+            let mut r = classify::classify_core(tb, &m);
+            classify::silence_bare_names(&mut r, &m);
+            let out: Vec<_> = r
+                .iter()
+                .map(|c| json!({"page": c.block.page, "x0": c.block.x0, "y0": c.block.y0, "text": c.block.text,
+                                "role": c.role, "speaker": c.speaker, "aside": c.aside}))
+                .collect();
+            println!("{}", serde_json::to_string(&out).unwrap());
         }
         other => {
             eprintln!("unknown stage {other}");
