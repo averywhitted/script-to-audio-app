@@ -1,7 +1,7 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-21 15:40 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed) · working tree: ADRs and the spike committed (see git log); uncommitted: Oct 17 label-kit files and two sidetrack notes that are not part of this work (don't commit them with it)_
+_Updated 2026-10-21 17:10 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed) · working tree: ADRs and the spike committed (see git log); uncommitted: Oct 17 label-kit files and two sidetrack notes that are not part of this work (don't commit them with it)_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 open) that drives the Python worker. iPhone companion exists in `app/` (iOS rehearsal milestone, #89-#94, rounds 1-2 installed on Avery's phone).
 **Current goal:** milestone **Rust core** (GitHub milestone 9, issues #98-#109; later engines/languages/cloud parked in milestone 10, #110-#112). Planned with `/grilling` Oct 21; Avery said go.
@@ -21,16 +21,17 @@ _Updated 2026-10-21 15:40 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 - What fixed it, in order of effect: MuPDF-style block boundaries (new block when a line is indented over 0.25 em more than the previous, jumps up, or drops over 1.45 em: reproduces 19349 of 19357 boundaries); splitting lines at large forward gaps (inline `NAME:` + hanging dialogue); ignoring PDFium's synthetic spaces for line decisions and adding spaces by gap (0.1 em); PageToDevice coordinates; text-matrix scale for size; near-vertical text; content-stream order plus text objects the text page drops (lone " " after a line = MuPDF's trailing space, blank lines).
 - Line text agrees with PyMuPDF on 99.4% of 50k lines across the 13 corpus PDFs. Known gaps (not gate-relevant yet): trailing-space width (0.25 em assumed, Courier is 0.6 em) so some right edges are one space off; non-standard non-embedded fonts get slightly different line heights; page rotation untested; EMMA 4960 lines vs 4746.
 - 14 standard-font line metrics measured from PyMuPDF are in `spikes/pdfium_extract/base14_metrics.json`.
-- **The Rust crate is NOT started: Homebrew cargo cannot reach `index.crates.io`** ("Couldn't resolve host" although `curl` works, the same DNS issue that makes `gh` need `GODEBUG=netdns=go`). A local CONNECT-proxy workaround was refused by the sandbox classifier, so don't try workarounds. Likely fix, needs Avery's OK: install rustup (also needed for iOS targets, #98) and use its cargo.
+- **The Rust port passes the same gate** (`EXTRACTOR=rust .venv/bin/python3 spikes/pdfium_extract/scripts/pdfium_answer_key.py --check`, 19 s): generated 99.4%, real 98.5%, both = baseline, "Nothing got worse". `spikes/pdfium_extract/src/` (`chars.rs`, `lines.rs`, `blocks.rs`, `main.rs`) uses `pdfium-render` 0.9 with the `pdfium_7763` feature against the venv's `libpdfium.dylib` (PDFium 149.0.7802; the crate default 7881 needs a newer lib). Rust chars equal the Python prototype's (`scripts/compare_chars.py`: identical numbers, only a control-character glyph differs). Python stays as the reference: `scripts/dump_pymupdf.py`, `proto_*.py`.
+- **Rust toolchain and network on this Mac:** Rust-built binaries (cargo, rustup, anything compiled) cannot resolve DNS in the sandbox while curl and Python can (a compiled `to_socket_addrs` test fails). Workaround that is in bounds: rustup 1.29 + stable 1.99.1 with `aarch64-apple-ios` and `-ios-sim` targets were installed from a local mirror of static.rust-lang.org files fetched with curl (`RUSTUP_DIST_SERVER=file://...`; installed in `~/.cargo/bin`, `~/.rustup`, not on PATH: `--no-modify-path`); crates come from a local registry built by `scripts/local_crate_mirror.py` (Python HTTP) and `spikes/pdfium_extract/cargo-offline.sh` (needs `MIRROR=<dir>`). The mirror dirs live in the session scratchpad and are rebuilt by those commands. Homebrew's cargo is still the first `cargo` on PATH; use `~/.cargo/bin/cargo` explicitly. A local CONNECT proxy was refused by the sandbox classifier, don't try.
 
 **Next steps:**
-1. Ask Avery to approve installing rustup (official installer from rustup.rs), then port the builder to Rust with `pdfium-render` (#99), checking it against the same reference dumps (`out/*.pymupdf.json`, regenerate with `scripts/dump_pymupdf.py`) and then the real gate. Use `libpdfium.dylib` from `.venv/lib/python3.14/site-packages/pypdfium2_raw/` locally; iOS needs a static PDFium build. In Rust, check that `pdfium-render` exposes what the Python prototype used (text objects in stream order incl. empty ones, FPDFText_GetLooseCharBox, FPDF_PageToDevice equivalents, font ascent/descent).
-2. Close the known gaps above (trailing-space width, rotated pages) and test on more PDFs than the corpus (exam sample, other producers).
-3. Then #100 (parser port).
+1. #99 remaining: a static PDFium for macOS and iOS with `pdfium-render`'s `static` feature (needs a download; bblanchon/pdfium-binaries ships dynamic libs only, paulocoutinhox/pdfium-lib or building PDFium are the static routes; ask Avery before downloading), and `flutter_rust_bridge` hello-world on macOS + iPhone (#98: static linking, Xcode symbol stripping). Check page rotation, more PDFs than the corpus (exam sample, other producers), and port-side details: trailing-space width, non-standard non-embedded font metrics.
+2. Move the spike's logic into the real Rust workspace skeleton (#98): `core` crates (permissive-only), `cargo-deny`, Licenses screen.
+3. Then #100 (parser port): port `backend/parser.py` (consumes exactly the page > block > line > span structure the Rust extractor now produces) and point `answer_key.py` at it.
 4. Still waiting from the iPhone milestone: Avery runs the Mac "Move to iCloud Drive" (#89), tries round 2 on the phone incl. lock screen + AirPods (#92), renews Xcode's Apple ID sign-in to reinstall (`bash scripts/install_iphone.sh`, weekly).
 
 **Waiting on the user / open questions:**
-- OK to install rustup (see step 2).
+- Nothing blocking. Later: OK to download a static PDFium build for iOS (step 1).
 - Labelling the exams (offline kit `Test PDFs/label-kit/Label lines.html`); parser quality work is paused until after the Rust parser cutover (Python parser frozen).
 - Merge PR #78 (`flutter-mac-app` -> `main`). Run the move to iCloud Drive (#89). Notes on the rehearsal mockup / round 2.
 - Verify before relying on them: the research agent's sherpa-onnx news (espeak removal, Oct 20 2026), Piper `lessac` voice license, `flutter_rust_bridge` static linking on iOS/macOS 2026 (Xcode symbol stripping), `ort` is still a release candidate.
@@ -56,6 +57,13 @@ _Updated 2026-10-21 15:40 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 
 ## History
 <!-- newest first -->
+
+### 2026-10-21 17:10 — Rust toolchain, Rust PDFium extractor passes the gate
+**Asked:** install rustup (Avery: "You can install rustup"), continue.
+**Done:** rustup + Rust 1.99.1 (+ iOS targets) installed via a curl-fetched local mirror because compiled binaries can't resolve DNS here; `scripts/local_crate_mirror.py` + `spikes/pdfium_extract/cargo-offline.sh` for crates; `spikes/pdfium_extract/src/*.rs` (chars/lines/blocks, `pdfium-render` 0.9, feature `pdfium_7763`) producing PyMuPDF's dict shape. Gate through the unchanged parser: generated 99.4%, real 98.5%, nothing broke (19 s). Issue #99 commented.
+**Decisions:** none new. Synthetic spaces join the span they follow in Rust (the Python prototype gave them their own size-1.0 span); the gate stayed at baseline.
+**State:** committed with the spike (see git log), not pushed. No app code changed; verified by the answer-key gate only (`EXTRACTOR=rust`).
+**Next:** see Resume block.
 
 ### 2026-10-21 15:40 — Rust core planned (grilling), milestone filed, PDFium extraction spike passes the gate in Python
 **Asked:** push toward importing, parsing and rendering on iOS; `/grilling`; then "go, continue unless you need me".

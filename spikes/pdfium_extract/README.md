@@ -22,6 +22,20 @@ What the builder has to do (each was a measured failure first):
 - Blocks: new block when the line jumps up, drops over 1.45 em, or is indented over 0.25 em more than
   the previous line. Reproduces 19349 of 19357 PyMuPDF block boundaries.
 
+## Rust port (done in this spike)
+
+`src/` is the same builder in Rust on `pdfium-render` 0.9 (`chars.rs` = proto_chars.py, `lines.rs` = proto_lines.py,
+`blocks.rs`, `main.rs` prints PyMuPDF's `get_text("dict")` shape). `EXTRACTOR=rust python scripts/pdfium_answer_key.py
+--check` runs the same gate with it and reports "Nothing got worse" (generated 99.4%, real 98.5%, 19 s).
+`scripts/compare_chars.py` checks the Rust characters against the Python ones (identical numbers; only a control-character
+glyph differs).
+
+Build (dev Mac, no registry access from Rust binaries): `python3 scripts/local_crate_mirror.py <dir> pdfium-render serde serde_json
+--features "serde:derive"`, then `MIRROR=<dir> ./cargo-offline.sh build --release`. Run:
+`target/release/pdfium_extract <libpdfium.dylib> <pdf> blocks|chars`. It binds the `libpdfium.dylib` in the venv (pypdfium2,
+PDFium 149.0.7802), so the crate uses its `pdfium_7763` feature; the default 7881 needs a newer PDFium. iOS needs a static
+PDFium build with the crate's `static` feature (not done yet).
+
 Known gaps (not gate-relevant yet): the trailing space's width (0.25 em assumed; Courier is 0.6 em) so some
 right edges are off by a space; non-standard non-embedded fonts get slightly different line heights;
 rotated pages / non-zero page rotation are untested; EMMA gets 4960 lines vs 4746.

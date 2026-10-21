@@ -3,7 +3,7 @@
 Patches backend/parser._extract_blocks with a builder that rebuilds PyMuPDF's page->block->line->span
 "dict" structure from PDFium (pypdfium2 here; pdfium-render in the Rust port) and feeds it through the
 unchanged _split_raw_block. Compares against the committed PyMuPDF baselines (never saves them).
-Usage: python pdfium_answer_key.py [--check]   env BLOCKS=mupdf|gap|line (default mupdf), GAP=1.45, TOL=0.25
+Usage: [EXTRACTOR=rust] python pdfium_answer_key.py [--check]   env BLOCKS=mupdf|gap|line (default mupdf), GAP=1.45, TOL=0.25
 """
 import os
 import sys
@@ -73,7 +73,21 @@ def extract_blocks_pdfium(pdf_path):
     return out
 
 
-P._extract_blocks = extract_blocks_pdfium
+def extract_blocks_rust(pdf_path):
+    """Same gate, with the Rust builder (spikes/pdfium_extract/src) doing the extraction."""
+    import json
+    import subprocess
+    lib = os.environ.get("PDFIUM_LIB", str(ROOT / ".venv/lib/python3.14/site-packages/pypdfium2_raw/libpdfium.dylib"))
+    exe = os.environ.get("PDFIUM_EXTRACT", str(HERE.parent / "target/release/pdfium_extract"))
+    res = subprocess.run([exe, lib, pdf_path, "blocks"], capture_output=True, check=True)
+    out = []
+    for pi, page in enumerate(json.loads(res.stdout)["pages"]):
+        for blk in page["blocks"]:
+            out.extend(P._split_raw_block(blk, pi))
+    return out
+
+
+P._extract_blocks = extract_blocks_rust if os.environ.get("EXTRACTOR") == "rust" else extract_blocks_pdfium
 
 if __name__ == "__main__":
     sys.exit(AK.main())
