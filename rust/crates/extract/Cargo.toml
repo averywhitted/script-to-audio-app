@@ -1,8 +1,19 @@
 [package]
-name = "pdfium_extract"
+name = "table-read-extract"
 version = "0.1.0"
 edition = "2021"
 publish = false
+description = "PDF text extraction (PDFium) producing the page/block/line/span structure the screenplay parser reads"
+
+[package.metadata]
+license-tier = "permissive"
+
+[lib]
+name = "table_read_extract"
+
+[[bin]]
+name = "pdfium_extract"
+path = "src/main.rs"
 
 [dependencies]
 # pdfium_7763: the local libpdfium (pypdfium2, 149.0.7802) predates the crate default (7881)

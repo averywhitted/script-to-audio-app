@@ -19,7 +19,7 @@ GPL obligations apply to distribution through any channel, and Apple's terms do 
    reports only for now).
 4. Both apps are free. Non-commercial-licensed voices are only usable while that stays true; they
    must be removed before any change. CC BY-NC-SA voices (Piper `ryan`) are excluded regardless.
-5. CI enforces tier 1 with `cargo-deny` (licenses) and fails the build on a violation.
+5. `scripts/check_licenses.py` enforces tier 1 (runs in `bash scripts/test.sh rust`; crates opt in with `[package.metadata] license-tier = "permissive"`). It reads `cargo metadata`, evaluates each crate's SPDX expression (`A OR B` needs one allowed side, `A AND B` both) and fails on anything else. We wrote it instead of using `cargo-deny` because Rust binaries cannot be installed or fetch crates on the sandboxed dev Mac; swap to `cargo-deny` later if wanted.
 6. PDF extraction is PDFium (`pdfium-render`, BSD/Apache + MIT/Apache), not PyMuPDF.
 
 ## Consequences

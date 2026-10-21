@@ -5,7 +5,7 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parent.parent / "out"
 # MuPDF's own line-box metrics for the 14 standard (non-embedded) PDF fonts, as ascent/descent in em
 # above/below the baseline. Measured from PyMuPDF output (scripts in this spike); embedded fonts use PDFium's.
-BASE14 = json.load(open(Path(__file__).resolve().parent.parent / "base14_metrics.json"))
+BASE14 = json.load(open(Path(__file__).resolve().parents[3] / "rust/crates/extract/base14_metrics.json"))
 
 
 def rotated(c):

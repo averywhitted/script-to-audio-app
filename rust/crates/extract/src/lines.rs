@@ -119,3 +119,94 @@ fn make_line(ln: &[Ch]) -> Option<Line> {
     }
     Some(Line { bbox, spans })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ch(c: char, l: f64, y: f64) -> Ch {
+        Ch {
+            c, l, r: l + 6.0, t: y - 9.0, b: y + 3.0, ox: l, oy: y, size: 12.0, font: "Embedded".into(),
+            italic: false, bold: false, generated: false, ang: 0.0, asc: 0.9, desc: -0.3,
+        }
+    }
+
+    fn word(text: &str, l: f64, y: f64) -> Vec<Ch> {
+        text.chars().enumerate().map(|(i, c)| ch(c, l + 6.0 * i as f64, y)).collect()
+    }
+
+    fn texts(lines: &[Line]) -> Vec<String> {
+        lines.iter().map(|l| l.spans.iter().map(|s| s.text.as_str()).collect()).collect()
+    }
+
+    #[test]
+    fn same_baseline_is_one_line_and_a_gap_gets_a_space() {
+        let mut cs = word("Hi", 72.0, 100.0);
+        cs.extend(word("there", 72.0 + 12.0 + 3.0, 100.0)); // 3 pt gap: PDFium inserted no space glyph
+        let lines = build_lines(&cs, &HashMap::new());
+        assert_eq!(texts(&lines), vec!["Hi there"]);
+    }
+
+    #[test]
+    fn hanging_indent_on_the_same_baseline_is_two_lines() {
+        // "TESS:" at the margin, the speech hanging at x=162: MuPDF reports them as separate lines
+        let mut cs = word("TESS:", 72.0, 100.0);
+        cs.extend(word("Look", 162.0, 100.0));
+        let lines = build_lines(&cs, &HashMap::new());
+        assert_eq!(texts(&lines), vec!["TESS:", "Look"]);
+    }
+
+    #[test]
+    fn a_new_baseline_is_a_new_line() {
+        let mut cs = word("one", 72.0, 100.0);
+        cs.extend(word("two", 72.0, 112.0));
+        assert_eq!(texts(&build_lines(&cs, &HashMap::new())), vec!["one", "two"]);
+    }
+
+    #[test]
+    fn pdfium_inserted_space_joins_the_span_and_never_breaks_the_line() {
+        // PDFium reports its own spaces at the start of the previous glyph with size 1.0
+        let mut cs = word("ab", 72.0, 100.0);
+        let mut sp = ch(' ', 72.0 + 6.0, 100.0); // overlaps the previous glyph: a "backwards jump"
+        sp.generated = true;
+        sp.size = 1.0;
+        cs.push(sp);
+        cs.extend(word("cd", 72.0 + 15.0, 100.0));
+        let lines = build_lines(&cs, &HashMap::new());
+        assert_eq!(texts(&lines), vec!["ab cd"]);
+        assert_eq!(lines[0].spans.len(), 1, "the inserted space must not start a size-1.0 span");
+    }
+
+    #[test]
+    fn near_vertical_text_is_one_line_along_its_baseline_but_italic_shear_is_not_rotation() {
+        let mut v: Vec<Ch> = Vec::new();
+        for (i, c) in "Side".chars().enumerate() {
+            let mut x = ch(c, 949.0, 840.0 - 10.0 * i as f64); // reads bottom to top
+            x.ang = 4.712;
+            v.push(x);
+        }
+        assert_eq!(texts(&build_lines(&v, &HashMap::new())), vec!["Side"]);
+        let mut sheared = word("it", 72.0, 100.0);
+        for c in &mut sheared {
+            c.ang = 0.322; // PDFium reports italic shear as an angle; the baseline is still horizontal
+        }
+        sheared.extend(word("ic", 84.0, 100.0));
+        assert_eq!(texts(&build_lines(&sheared, &HashMap::new())), vec!["itic"]);
+    }
+
+    #[test]
+    fn standard_font_metrics_override_pdfiums() {
+        let mut m = HashMap::new();
+        m.insert("Courier".to_string(), (0.932, 0.317));
+        let mut cs = word("a", 72.0, 100.0);
+        cs[0].font = "Courier".into();
+        let l = &build_lines(&cs, &m)[0];
+        assert!((l.bbox[1] - (100.0 - 0.932 * 12.0)).abs() < 1e-9);
+        assert!((l.bbox[3] - (100.0 + 0.317 * 12.0)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn base14_table_loads() {
+        assert!(base14().contains_key("Times-Roman"));
+    }
+}

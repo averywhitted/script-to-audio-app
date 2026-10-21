@@ -78,7 +78,7 @@ def extract_blocks_rust(pdf_path):
     import json
     import subprocess
     lib = os.environ.get("PDFIUM_LIB", str(ROOT / ".venv/lib/python3.14/site-packages/pypdfium2_raw/libpdfium.dylib"))
-    exe = os.environ.get("PDFIUM_EXTRACT", str(HERE.parent / "target/release/pdfium_extract"))
+    exe = os.environ.get("PDFIUM_EXTRACT", str(ROOT / "rust/target/release/pdfium_extract"))
     res = subprocess.run([exe, lib, pdf_path, "blocks"], capture_output=True, check=True)
     out = []
     for pi, page in enumerate(json.loads(res.stdout)["pages"]):
