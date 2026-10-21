@@ -44,6 +44,25 @@ pub fn caps_ratio(s: &str) -> f64 {
     upper as f64 / alpha.max(1) as f64
 }
 
+/// Python's `sum()` of floats (CPython >= 3.12 uses Neumaier compensated summation), start value 0.
+pub fn py_sum(values: impl IntoIterator<Item = f64>) -> f64 {
+    let mut f = 0.0f64;
+    let mut c = 0.0f64;
+    for x in values {
+        let t = f + x;
+        if f.abs() >= x.abs() {
+            c += (f - t) + x;
+        } else {
+            c += (x - t) + f;
+        }
+        f = t;
+    }
+    if c != 0.0 && c.is_finite() {
+        f += c;
+    }
+    f
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,6 +79,14 @@ mod tests {
         assert_eq!(caps_ratio("AB cd 12"), 0.5);
         assert_eq!(caps_ratio("123"), 0.0);
         assert_eq!(caps_ratio("É é"), 0.5);
+    }
+
+    #[test]
+    fn py_sum_is_compensated_like_python() {
+        // Python 3.12+: sum([0.1] * 10) == 1.0 exactly; a naive loop gives 0.9999999999999999
+        assert_eq!(py_sum(std::iter::repeat(0.1).take(10)), 1.0);
+        assert_eq!(py_sum([]), 0.0);
+        assert_eq!(py_sum([1e100, 1.0, -1e100]), 1.0);
     }
 
     #[test]

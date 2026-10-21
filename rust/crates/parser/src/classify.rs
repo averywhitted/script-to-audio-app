@@ -4,7 +4,7 @@
 
 use crate::blocks::PAGE_MARKER_RE;
 use crate::model::{compute_doc_stats, normalize_speaker, DocStats, DocumentModel, LayoutProfile, X_TOLERANCE};
-use crate::pystr::{is_alpha, is_upper, len, strip};
+use crate::pystr::{is_alpha, is_upper, len, py_sum, strip};
 use crate::types::TextBlock;
 use regex::Regex;
 use serde::Serialize;
@@ -165,7 +165,7 @@ pub fn score_block(block: &TextBlock, profile: &LayoutProfile, stats: &DocStats)
     }
     let mn = raw.iter().cloned().fold(f64::INFINITY, f64::min);
     let shifted: Vec<f64> = raw.iter().map(|v| v - mn).collect();
-    let total = shifted.iter().fold(0.0, |a, v| a + v);
+    let total = py_sum(shifted.iter().cloned());
     let total = if total == 0.0 { 1.0 } else { total };
     ScoredBlock { scores: raw, best_type: best, confidence: shifted[best] / total }
 }
@@ -352,4 +352,12 @@ pub fn silence_bare_names(result: &mut [ClassifiedBlock], model: &DocumentModel)
             }
         }
     }
+}
+
+/// The complete `_classify_blocks`: scoring, speaker attribution, learned style, bare-name silencing.
+pub fn classify_blocks(blocks: Vec<TextBlock>, model: &DocumentModel) -> Vec<ClassifiedBlock> {
+    let mut result = classify_core(blocks, model);
+    crate::style::apply_learned_style(&mut result, model);
+    silence_bare_names(&mut result, model);
+    result
 }

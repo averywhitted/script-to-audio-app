@@ -7,6 +7,8 @@ parser is deterministic given those blocks, so any difference is a porting bug. 
   text_blocks   _split_raw_block + _merge_open_parentheticals  ->  list of TextBlock
   doc_model     _build_document_model + _compute_doc_stats       ->  profile, cast, columns, furniture, doc stats
   classified_nostyle  _classify_blocks without the learned-style pass ->  role/speaker/aside per block
+  style         _learn_style (prior, evidence, both feature tables)
+  classified    the complete _classify_blocks (style pass + bare-name silencing)
 
 Usage:
   python3 scripts/rust_parser_diff.py [-v] [stage] [pdf ...]      (default: every PDF in Test PDFs/ and Test PDFs/synthetic/)
@@ -84,7 +86,37 @@ def py_classified_nostyle(doc: dict) -> list:
              "role": c.role, "speaker": c.speaker, "aside": c.aside} for c in out]
 
 
-STAGES = {"text_blocks": py_text_blocks, "doc_model": py_doc_model, "classified_nostyle": py_classified_nostyle}
+def _py_model(doc: dict):
+    blocks = _py_blocks(doc)
+    page_widths = [b.x1 for b in blocks if b.x1 > 200]
+    return blocks, P._build_document_model(blocks, page_width=max(page_widths) + 90.0 if page_widths else 612.0)
+
+
+def py_style(doc: dict):
+    """The fitted style model, captured where _classify_blocks calls it (before bare names are silenced)."""
+    blocks, model = _py_model(doc)
+    captured = {}
+    saved = P._apply_learned_style
+    P._apply_learned_style = lambda result, m: captured.update(learned=P._learn_style(result, m))
+    try:
+        P._classify_blocks(blocks, model)
+    finally:
+        P._apply_learned_style = saved
+    l = captured["learned"]
+    if l is None:
+        return None
+    return {"prior": l["prior"], "evidence": l["evidence"], "pool_size": len(l["pool"]),
+            "dialog": [dict(t) for t in l["dialog"]], "direction": [dict(t) for t in l["direction"]]}
+
+
+def py_classified(doc: dict) -> list:
+    blocks, model = _py_model(doc)
+    return [{"page": c.block.page, "x0": c.block.x0, "y0": c.block.y0, "text": c.block.text,
+             "role": c.role, "speaker": c.speaker, "aside": c.aside} for c in P._classify_blocks(blocks, model)]
+
+
+STAGES = {"text_blocks": py_text_blocks, "doc_model": py_doc_model, "classified_nostyle": py_classified_nostyle,
+          "style": py_style, "classified": py_classified}
 
 
 def extract(pdf: Path) -> Path:
@@ -124,8 +156,10 @@ def diff(a, b, path="", out=None, limit=8):
 
 def main() -> int:
     args = [a for a in sys.argv[1:] if a != "-v"]
-    stage = args.pop(0) if args and args[0] in STAGES else None
-    stages = [stage] if stage else list(STAGES)
+    stages = []
+    while args and args[0] in STAGES:
+        stages.append(args.pop(0))
+    stages = stages or list(STAGES)
     pdfs = [Path(a) for a in args] or sorted((ROOT / "Test PDFs").glob("*.pdf")) + sorted((ROOT / "Test PDFs" / "synthetic").glob("*.pdf"))
     verbose = "-v" in sys.argv
     bad_total = 0
