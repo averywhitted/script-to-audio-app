@@ -1,0 +1,58 @@
+{
+ "Helvetica": [
+  1.075,
+  0.299
+ ],
+ "Helvetica-Oblique": [
+  1.07,
+  0.284
+ ],
+ "Helvetica-Bold": [
+  1.07,
+  0.307
+ ],
+ "Helvetica-BoldOblique": [
+  1.073,
+  0.309
+ ],
+ "Courier": [
+  0.932,
+  0.317
+ ],
+ "Courier-Oblique": [
+  0.92,
+  0.317
+ ],
+ "Courier-Bold": [
+  1.007,
+  0.393
+ ],
+ "Courier-BoldOblique": [
+  0.997,
+  0.393
+ ],
+ "Times-Roman": [
+  1.053,
+  0.281
+ ],
+ "Times-Italic": [
+  0.951,
+  0.27
+ ],
+ "Times-Bold": [
+  1.044,
+  0.341
+ ],
+ "Times-BoldItalic": [
+  0.972,
+  0.324
+ ],
+ "Symbol": [
+  1.01,
+  0.293
+ ],
+ "ZapfDingbats": [
+  0.85,
+  0.15
+ ]
+}

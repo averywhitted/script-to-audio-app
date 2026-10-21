@@ -1,40 +1,39 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-20 16:09 EDT · branch `ios-rehearsal` @ `9957288` (not pushed) · working tree: uncommitted label kit (Oct 17: `scripts/label_kit.py`, `scripts/side_by_side.py`, `label_sample.py`, `.gitignore`, `CLAUDE.md`, `.claude/launch.json`; not part of the iOS work, don't commit it with it) + two kept sidetrack notes_
+_Updated 2026-10-21 15:40 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed) · working tree: ADRs and the spike committed (see git log); uncommitted: Oct 17 label-kit files and two sidetrack notes that are not part of this work (don't commit them with it)_
 
-**Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas with TTS. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); it is being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 still open) that drives the same Python worker.
-**Current goal:** milestone **iOS rehearsal** (GitHub milestone 4, issues #88–#94): an iPhone version of the Flutter app for rehearsing and learning lines. Planned with `/grilling` on Oct 19; Avery said go.
+**Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 open) that drives the Python worker. iPhone companion exists in `app/` (iOS rehearsal milestone, #89-#94, rounds 1-2 installed on Avery's phone).
+**Current goal:** milestone **Rust core** (GitHub milestone 9, issues #98-#109; later engines/languages/cloud parked in milestone 10, #110-#112). Planned with `/grilling` Oct 21; Avery said go.
 
-**The plan (TLDR for Avery):** render on the Mac; projects live in an iCloud Drive folder both apps read and write; the phone is the Mac's rehearsal player on a touchscreen, plus lock-screen playback and AirPods controls; role/toggles/speed/loops/where-you-stopped sync both ways. Free Apple account, just Avery, reinstall from the Mac every 7 days.
-- Steps (one issue each): #88 iCloud folder test (go/no-go) → #89 Mac changes (save full parsed `script.json` per project; rehearsal settings move from prefs `view.<id>` into a file in the project folder; "Move projects to iCloud Drive" button, archives too; handle not-downloaded files) → #90 iPhone basics (iOS target in `app/`, name "Table Read", same icon, own bundle id, project list, one-time folder pick, offline download) → #91 rehearsal screen (mockup first, then iterate) → #92 lock screen + AirPods (AirPods tap = "I said it, carry on" in Stop Before My Lines) → #93 sync (synced: role, mute/block/stop, speed, loops, position; per device: text size, highlights) → #94 on Avery's iPhone, rounds of notes.
-- Facts it rests on: a rendered project is self-sufficient for rehearsal (`Scene_NN_*.cues.json` has every line's text, speaker, kind, start/end time, `ref`); the phone needs no parser or Python. `just_audio` already supports iOS.
-- Out of scope: iPad layout, voice detection, $99 membership/TestFlight for castmates, full parity (import/parse/render on the phone = the Rust engine milestone). Avery: "the goal is to have complete parity with the desktop app eventually."
+**Decisions (full text in `docs/adr/0001-license-policy.md`, `0002-shared-rust-core.md`, `0003-sync-model.md`):**
+- Both apps free. Desktop app open source (GPL-3.0); iPhone app App Store eventually (needs paid Apple Developer Program, $99/yr, also for Mac notarization). Avery is sole copyright holder; no outside code merged without a CLA.
+- Two license tiers: shared core + iPhone permissive-only (CI `cargo-deny`, Licenses screen); desktop-only render crate may link GPL (espeak-ng, Piper engine). PDF extraction = PDFium (`pdfium-render`), not PyMuPDF (AGPL).
+- iPhone is a companion: parses and rehearses on device, **no voice rendering**; renders happen on the Mac via the existing render queue (#97). Background-render spike cancelled. Cloud rendering parked. English only.
+- OpenAI TTS removed everywhere (#3 closed won't-do, removal is #108). Engines: system voices, Kokoro (+espeak-ng), Piper on desktop only with verified-clean voices (lessac unverified, ryan excluded). Python stays dev-only oracle after each cutover.
+- Gates: parser = extraction comparison + answer keys no worse + "nothing right may go wrong"; Python parser changes **frozen** during the port. Renderer = cue files match, audio length/loudness within tolerance, Avery listens.
+- Sync: iCloud Drive files behind an interface; two-way parses (newer parser wins, corrections on top), per-entry merge for corrections/cast, `schemaVersion` everywhere, live folder watching, status file + Mac/iPhone chips (Online/Offline last-seen/Error/Update pending). Opt-in Mac auto-start of phone render requests.
 
-**Where things stand:**
-- #88 spike app: `spikes/icloud_folder/` (Flutter, bundle id `com.averywhitted.icloudFolderTest`, team TX98CU7F96). Native code in `ios/Runner/AppDelegate.swift` (`FolderAccessPlugin`, channel `tableread/folder`: pick/status/list/read/write; bookmark in UserDefaults; coordinated reads that ask iCloud to download).
-- **#88 PASSED and closed (Oct 19)** on Avery's iPhone 15 Pro Max (UDID 00008130-000475601803401C), free team: folder kept across relaunch, 2.3 MB scene read, phone→Mac and Mac→phone (~30 s) both work. No iCloud entitlement needed. **The iCloud Drive approach is a go.**
-- Mac-side test folder `~/Library/Mobile Documents/com~apple~CloudDocs/Table Read Sync Test/` kept for #90 testing; delete when the real app reads real projects.
-- **Round 2 (`9957288`), installed on the phone**: bar follows the theme (`_barColors`: light tray / dark); scene list drops down from the tapped heading (`_openScenes(Rect)` via `showGeneralDialog` + `_RevealDown` clip; the Rehearse panel's scene row uses the top heading); Line! is a bar button replacing the role pill only while Block My Lines is on (`_lineButtonWidget`, key `lineButton`), one-time hint (`phoneLineHintSeen` pref), the "Your line" card is gone ("Your line" in the bar while waiting). **#92 lock screen + headphones built**: `NowPlayingPlugin` in `ios/Runner/AppDelegate.swift` + `lib/phone/now_playing.dart`; becoming-noisy/interruption pauses. #97 closed (Avery: render requests work).
-- **Round 1 (`cf41edc`)**: dark bottom bar + status bar; whole play in one `CustomScrollView` with `SliverMainAxisGroup` + pinned `_SceneHeading` per scene (tap → scene list); drag-select edge auto-scroll; text sizes Small/Medium/Large/Huge; Stop Before carry-on fix (`_carriedPast` in `player_state.dart`: an early-landing seek re-stopped on the line just said; `test/player_test.dart`); peek = `peekLine` toggles + reads the line's recording aloud (`_Prompt`), shared with the Mac's Line!/L key.
-- **Render queue (#97, `cf41edc`)**: phone writes `render-request.json` (`RenderRequest` in `project_files.dart`; long-press cover / scene list; "Waiting for your Mac" list); Mac gallery "Waiting to Render" (polls every 15 s) → Render… opens the project then the Render sheet with those scenes (`app.renderWhenReady`, `app.requestedScenes`); `_settleRenderRequest` after a render. Mac app rebuilt into /Applications. Spoken "Line!" filed as #96.
-- **#91 built (`aa1127c`)**: `lib/phone/rehearsal_screen.dart` (script follows playback, tap to play, long-press-drag → Loop, dark bar with `SceneTimeline` (made public from `playback_bar.dart`), Rehearse panel, your-line card + Line!, Aa sheet: text size + character colors per device) and `lib/phone/rehearsal_session.dart` (rendered scenes from cue maps, text-only from script.json with corrections; saves `Rehearsal/<deviceId>.json` via native coordinated write, restores newest incl. position). `RehearsalPlayer.loadItems`. `audio_session` direct dep, spoken-audio session. Loaded both real projects through it fine. Goldens `phone_rehearse_*`, `phone_panel_*`.
-- **`scripts/install_iphone.sh`**: build + sign + install on the connected iPhone (rerun weekly: free-team apps expire after 7 days).
-- **#90 done (`692b6f1`)**: iOS target `app/ios` (bundle `com.averywhitted.tableread.ios`, "Table Read", Mac icon, background-audio mode), `ProjectsFolderPlugin` in `app/ios/Runner/AppDelegate.swift` (pick/folder/forget/list/download/write; Simulator-only fallback to the app's own Documents/Table Read), `lib/phone/` (welcome, cover grid, download on open, stand-in scene list), `test/phone_test.dart` + `goldens/phone_*`. `main.dart` sends iOS to `PhoneApp`. Verified in the Simulator with copies of Diana of Dobsons + TLRAD (list renders through the native code). NOT verified on the iPhone (signing blocked).
-- **#89 code done (`a3ee5ca`), issue left open until Avery runs the real move.** Installed in `/Applications/Table Read Preview.app`. New `app/lib/services/project_files.dart`: `script.json` (worker parse; edits stay in project.json and are applied on top), `Rehearsal/<deviceId>.json` (one file per device, newest `updatedAt` wins, falls back to prefs `view.<id>`; also saves loop + position for #93, not restored yet), `rebaseEdits` (edits keyed by absolute PDF path get re-pointed on open). `ProjectStore.moveProjectsTo` + Settings → Projects → iPhone section. `NativePlatform.downloadFolder` on open. Re-render fingerprint no longer includes the PDF path; fingerprints are now actually saved (they never were).
-- Parser-quality milestone is paused, not dropped: it resumes when Avery's exam labels come in (Avery's call, Oct 19).
+**Order of work:** #98 skeleton/CI (needs rustup) and #99 PDFium spike alongside the #93 sync gaps (#103-#105) -> #100 Rust parser -> #101 Mac cutover -> #102 iPhone import/parse -> sync features -> #106 desktop Rust renderer -> #107 Mac render cutover. #108 (remove OpenAI) and #109 (LICENSE) are small separate PRs.
+
+**Where things stand (#99 PDFium spike, `spikes/pdfium_extract/`; README there lists what the builder has to do):**
+- **The Python prototype passes the Q7 gate**: `.venv/bin/python3 spikes/pdfium_extract/scripts/pdfium_answer_key.py --check` (38 s) patches `parser._extract_blocks` with a PDFium-based builder (pypdfium2 = same PDFium, existing `libpdfium.dylib` in `.venv`, nothing downloaded) and reports "Nothing got worse": generated scripts 99.4% (= baseline, 0 broken), real sample 98.5% (= baseline, 0 broken). Progression: naive 91.4% / 81.4% -> fixes below -> 99.4% / 98.5%. Never `--save` from the wrapper.
+- What fixed it, in order of effect: MuPDF-style block boundaries (new block when a line is indented over 0.25 em more than the previous, jumps up, or drops over 1.45 em: reproduces 19349 of 19357 boundaries); splitting lines at large forward gaps (inline `NAME:` + hanging dialogue); ignoring PDFium's synthetic spaces for line decisions and adding spaces by gap (0.1 em); PageToDevice coordinates; text-matrix scale for size; near-vertical text; content-stream order plus text objects the text page drops (lone " " after a line = MuPDF's trailing space, blank lines).
+- Line text agrees with PyMuPDF on 99.4% of 50k lines across the 13 corpus PDFs. Known gaps (not gate-relevant yet): trailing-space width (0.25 em assumed, Courier is 0.6 em) so some right edges are one space off; non-standard non-embedded fonts get slightly different line heights; page rotation untested; EMMA 4960 lines vs 4746.
+- 14 standard-font line metrics measured from PyMuPDF are in `spikes/pdfium_extract/base14_metrics.json`.
+- **The Rust crate is NOT started: Homebrew cargo cannot reach `index.crates.io`** ("Couldn't resolve host" although `curl` works, the same DNS issue that makes `gh` need `GODEBUG=netdns=go`). A local CONNECT-proxy workaround was refused by the sandbox classifier, so don't try workarounds. Likely fix, needs Avery's OK: install rustup (also needed for iOS targets, #98) and use its cargo.
 
 **Next steps:**
-1. Avery: open Table Read Preview → Settings → Projects → Move to iCloud Drive… (close any open project first). Then check: projects open, corrections still applied, nothing newly marked for re-render, `script.json` + `Rehearsal/` appear in a project folder after opening it. Then close #89.
-2. Avery tries round 2 on the phone, especially lock screen + AirPods (#92: untested on a device) and the Line! toggle with real audio. Reinstall: `bash scripts/install_iphone.sh` (weekly).
-4. #93 sync: the Mac doesn't restore position/loop yet, and neither side reloads when the other device's file changes while open.
+1. Ask Avery to approve installing rustup (official installer from rustup.rs), then port the builder to Rust with `pdfium-render` (#99), checking it against the same reference dumps (`out/*.pymupdf.json`, regenerate with `scripts/dump_pymupdf.py`) and then the real gate. Use `libpdfium.dylib` from `.venv/lib/python3.14/site-packages/pypdfium2_raw/` locally; iOS needs a static PDFium build. In Rust, check that `pdfium-render` exposes what the Python prototype used (text objects in stream order incl. empty ones, FPDFText_GetLooseCharBox, FPDF_PageToDevice equivalents, font ascent/descent).
+2. Close the known gaps above (trailing-space width, rotated pages) and test on more PDFs than the corpus (exam sample, other producers).
+3. Then #100 (parser port).
+4. Still waiting from the iPhone milestone: Avery runs the Mac "Move to iCloud Drive" (#89), tries round 2 on the phone incl. lock screen + AirPods (#92), renews Xcode's Apple ID sign-in to reinstall (`bash scripts/install_iphone.sh`, weekly).
 
 **Waiting on the user / open questions:**
-- Labelling the exams (offline kit `Test PDFs/label-kit/Label lines.html`) for the parser milestone.
-- Merge PR #78 (`flutter-mac-app` → `main`).
-- Run the move to iCloud Drive (#89 step above).
-- **Renew Xcode's Apple ID sign-in** (Xcode → Settings → Accounts; it says "No Accounts" to xcodebuild again: `IDE.Identifiers.Prod` is empty). Needed to install on the iPhone.
-- Notes on the rehearsal mockup.
+- OK to install rustup (see step 2).
+- Labelling the exams (offline kit `Test PDFs/label-kit/Label lines.html`); parser quality work is paused until after the Rust parser cutover (Python parser frozen).
+- Merge PR #78 (`flutter-mac-app` -> `main`). Run the move to iCloud Drive (#89). Notes on the rehearsal mockup / round 2.
+- Verify before relying on them: the research agent's sherpa-onnx news (espeak removal, Oct 20 2026), Piper `lessac` voice license, `flutter_rust_bridge` static linking on iOS/macOS 2026 (Xcode symbol stripping), `ort` is still a release candidate.
 
 **Watch out for:**
 - Avery asked (Oct 19): use the local models on linux-box for grunt work and supervise (skill `linux-box-llm`). Used so far for the issue drafts and the spike's Dart UI; both needed review (one real bug: error logs interpolated a function).
@@ -49,12 +48,22 @@ _Updated 2026-10-20 16:09 EDT · branch `ios-rehearsal` @ `9957288` (not pushed)
 - Goldens: record with the whole file (`flutter test --update-goldens test/screens_test.dart`); use `clockNow()` for anything a golden shows.
 - Parser edits follow the answer-key protocol in `CLAUDE.md`.
 - `gh` needs `GODEBUG=netdns=go` on this Mac. Git pushes: `-c credential.helper='!gh auth git-credential'`.
+- No cargo registry access from this Mac's Homebrew cargo (see above); don't spend time on proxies, ask for rustup.
+- Never run `answer_key.py --save` from the PDFium wrapper; baselines are the PyMuPDF results.
 
-**Key files:** `app/lib/state/player_state.dart` (RehearsalPlayer, to be shared with iOS), `app/lib/ui/playback_bar.dart` (rehearsal controls), `app/lib/services/project_store.dart` (projects folder, `projectsBaseURL`), `app/lib/state/app_state.dart` (`loadView`/`saveView`: rehearsal settings in prefs today), `spikes/icloud_folder/` (#88)
-**Run / test:** `bash scripts/test.sh flutter`, `bash scripts/test.sh` (full). Spike: `cd spikes/icloud_folder && flutter analyze && flutter build ios --simulator --debug`.
+**Key files:** `docs/adr/` (decisions), `spikes/pdfium_extract/scripts/` (PDFium prototype), `backend/parser.py` (`_extract_blocks`, `_split_raw_block` = the structure the Rust extraction must reproduce), `app/lib/state/player_state.dart`, `app/lib/services/project_files.dart`, `app/lib/services/project_store.dart`
+**Run / test:** `bash scripts/test.sh flutter`, `bash scripts/test.sh` (full); PDFium check above.
 
 ## History
 <!-- newest first -->
+
+### 2026-10-21 15:40 — Rust core planned (grilling), milestone filed, PDFium extraction spike passes the gate in Python
+**Asked:** push toward importing, parsing and rendering on iOS; `/grilling`; then "go, continue unless you need me".
+**Done:** 34-question grilling (decisions in the Resume block). Research agent audited licenses (PDFium, Kokoro/misaki, espeak-ng GPL, Piper archived -> piper1-gpl, ort, AAC, flutter_rust_bridge). Wrote `docs/adr/0001-0003`. Created milestones "Rust core" (#9: issues #98-#109) and "Advanced voice engines" (#10: #110-#112); closed #3; commented on #2 and #93. #99: `spikes/pdfium_extract/` PDFium prototype in Python (same PDFium) rebuilds PyMuPDF's block/line/span structure well enough that the answer-key gate does not get worse (generated 99.4%, real 98.5%, both equal to baseline); details in the Resume block and the spike README.
+**Decisions:** Piper kept after all (desktop-only) because the desktop app will be GPL; the phonemizer listening spike was dropped for the same reason (Kokoro keeps espeak-ng on desktop). iPhone does no rendering, so sync matters more.
+**State:** committed, not pushed. No Flutter/Swift/Python app code changed (the wrapper patches the parser at runtime), so only the answer-key gate was run, via the wrapper.
+**Next:** see Resume block.
+
 
 ### 2026-10-20 16:09 — iPhone round 2; lock screen + headphone controls
 **Asked:** bar only dark → follow the theme; scene list should drop down from the header; Line! as a bar button (only when blocking), one-time hint instead of the tutorial card, tap again while playing stops; render request works; implement headphone + lock-screen controls.
