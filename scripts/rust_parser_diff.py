@@ -5,9 +5,10 @@ Both parsers read the same input: the Rust PDFium extractor's output (the PyMuPD
 parser is deterministic given those blocks, so any difference is a porting bug. Stages (grows with the port):
 
   text_blocks   _split_raw_block + _merge_open_parentheticals  ->  list of TextBlock
+  doc_model     _build_document_model + _compute_doc_stats       ->  profile, cast, columns, furniture, doc stats
 
 Usage:
-  python3 scripts/rust_parser_diff.py [stage] [pdf ...]      (default: every PDF in Test PDFs/ and Test PDFs/synthetic/)
+  python3 scripts/rust_parser_diff.py [-v] [stage] [pdf ...]      (default: every PDF in Test PDFs/ and Test PDFs/synthetic/)
 Needs the release builds (cd rust && cargo build --release; see scripts/test.sh rust for the MIRROR note).
 """
 from __future__ import annotations
@@ -39,7 +40,35 @@ def py_text_blocks(doc: dict) -> list:
     return [dataclasses.asdict(b) for b in P._merge_open_parentheticals(blocks)]
 
 
-STAGES = {"text_blocks": py_text_blocks}
+def _py_blocks(doc: dict) -> list:
+    blocks = []
+    for page_num, page in enumerate(doc["pages"]):
+        for raw in page["blocks"]:
+            if raw.get("type", 0) == 0:
+                blocks.extend(P._split_raw_block(raw, page_num))
+    return P._merge_open_parentheticals(blocks)
+
+
+def py_doc_model(doc: dict) -> dict:
+    blocks = _py_blocks(doc)
+    page_widths = [b.x1 for b in blocks if b.x1 > 200]
+    page_width = max(page_widths) + 90.0 if page_widths else 612.0
+    m = P._build_document_model(blocks, page_width=page_width)
+    s = P._compute_doc_stats(blocks)
+    return {
+        "profile": dataclasses.asdict(m.profile), "cast_lexicon": dict(m.cast_lexicon), "cast": sorted(m.cast),
+        "cue_columns": m.cue_columns, "dialog_columns": m.dialog_columns,
+        "furniture": sorted(m.furniture), "cue_labels": sorted(m.cue_labels),
+        "doc_stats": {
+            "x_bin_count": {str(k): v for k, v in s.x_bin_count.items()},
+            "x_bin_caps_avg": {str(k): v for k, v in s.x_bin_caps_avg.items()},
+            "text_frequency": dict(s.text_frequency), "max_x_count": s.max_x_count,
+            "total_blocks": s.total_blocks, "body_top": s.body_top, "body_bottom": s.body_bottom,
+        },
+    }
+
+
+STAGES = {"text_blocks": py_text_blocks, "doc_model": py_doc_model}
 
 
 def extract(pdf: Path) -> Path:
@@ -78,24 +107,29 @@ def diff(a, b, path="", out=None, limit=8):
 
 
 def main() -> int:
-    args = sys.argv[1:]
-    stage = args.pop(0) if args and args[0] in STAGES else "text_blocks"
+    args = [a for a in sys.argv[1:] if a != "-v"]
+    stage = args.pop(0) if args and args[0] in STAGES else None
+    stages = [stage] if stage else list(STAGES)
     pdfs = [Path(a) for a in args] or sorted((ROOT / "Test PDFs").glob("*.pdf")) + sorted((ROOT / "Test PDFs" / "synthetic").glob("*.pdf"))
-    bad = 0
-    for pdf in pdfs:
-        blocks_json = extract(pdf)
-        doc = json.loads(blocks_json.read_text())
-        expected = STAGES[stage](doc)
-        got = json.loads(subprocess.run([str(RELEASE / "parser_stage"), stage, str(blocks_json)],
-                                        capture_output=True, check=True).stdout)
-        d = diff(expected, got)
-        status = "ok" if not d else "DIFFERS"
-        print(f"{status:8} {pdf.stem[:48]:48} {len(expected)} {stage}")
-        for line in d:
-            print("         ", line)
-        bad += bool(d)
-    print(f"\n{'✓ identical' if not bad else f'✗ {bad} of {len(pdfs)} differ'} ({stage})")
-    return 1 if bad else 0
+    verbose = "-v" in sys.argv
+    bad_total = 0
+    for st in stages:
+        bad = 0
+        for pdf in pdfs:
+            blocks_json = extract(pdf)
+            doc = json.loads(blocks_json.read_text())
+            expected = STAGES[st](doc)
+            got = json.loads(subprocess.run([str(RELEASE / "parser_stage"), st, str(blocks_json)],
+                                            capture_output=True, check=True).stdout)
+            d = diff(expected, got)
+            if d or verbose:
+                print(f"{'ok' if not d else 'DIFFERS':8} {st:12} {pdf.stem[:48]}")
+            for line in d:
+                print("         ", line)
+            bad += bool(d)
+        print(f"{'✓ identical' if not bad else f'✗ {bad} of {len(pdfs)} differ'}: {st} on {len(pdfs)} PDFs")
+        bad_total += bad
+    return 1 if bad_total else 0
 
 
 if __name__ == "__main__":

@@ -3,5 +3,6 @@
 //! cutover (docs/adr/0002-shared-rust-core.md).
 
 pub mod blocks;
+pub mod model;
 pub mod pystr;
 pub mod types;
