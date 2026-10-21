@@ -390,6 +390,7 @@ mod tests {
 
     fn raw_line(text: &str, x0: f64, y0: f64, italic: bool) -> RawLine {
         RawLine {
+            title_text: None,
             bbox: [x0, y0, x0 + 100.0, y0 + 12.0],
             spans: vec![RawSpan { text: text.into(), font: "F".into(), size: 12.0, flags: if italic { 2 } else { 0 } }],
         }

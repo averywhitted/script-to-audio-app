@@ -48,6 +48,9 @@ pub struct RawSpan {
 #[derive(Clone, Debug, Deserialize)]
 pub struct RawLine {
     pub bbox: [f64; 4],
+    /// the line read with pdfplumber-style word spacing (for the title); absent in PyMuPDF input
+    #[serde(default, rename = "titleText")]
+    pub title_text: Option<String>,
     pub spans: Vec<RawSpan>,
 }
 

@@ -1,8 +1,8 @@
-//! Group lines into blocks the way MuPDF does (reproduces 19349 of 19357 PyMuPDF block boundaries).
+//! Group lines into blocks the way MuPDF does (reproduces 19349 of 19357 PyMuPDF block boundaries, 135 false splits).
 
 use crate::lines::Line;
 
-const GAP: f64 = 1.45; // a drop of more than this many em starts a new block
+const GAP: f64 = 1.5; // a drop of more than this many em starts a new block (Kill Floor's double spacing is exactly 1.5)
 const INDENT: f64 = 0.25; // a line indented more than this many em beyond the previous one starts a new block
 
 pub struct Block {
@@ -49,6 +49,7 @@ mod tests {
     fn line(x: f64, y: f64) -> Line {
         Line {
             bbox: [x, y, x + 100.0, y + 15.0],
+            title_text: String::new(),
             spans: vec![Span { text: "x".into(), font: "F".into(), size: 12.0, italic: false, bold: false }],
         }
     }
@@ -72,6 +73,12 @@ mod tests {
     fn a_big_drop_or_a_jump_up_starts_a_block() {
         assert_eq!(sizes(vec![line(90.0, 100.0), line(90.0, 150.0)]), vec![1, 1]); // > 1.45 em
         assert_eq!(sizes(vec![line(90.0, 300.0), line(90.0, 100.0)]), vec![1, 1]); // moved up
+    }
+
+    #[test]
+    fn double_spacing_of_exactly_one_and_a_half_em_stays_in_one_block() {
+        assert_eq!(sizes(vec![line(72.0, 617.9), line(72.0, 635.9)]), vec![2]); // 18.0 pt at 12 pt
+        assert_eq!(sizes(vec![line(72.0, 617.9), line(72.0, 636.2)]), vec![1, 1]); // 18.3 pt: a new paragraph
     }
 
     #[test]

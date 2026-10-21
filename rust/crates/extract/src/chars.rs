@@ -104,6 +104,13 @@ pub fn page_chars(page: &PdfPage) -> Result<PageChars, PdfiumError> {
             .ok()
             .filter(|det| *det > 0.0)
             .map_or(1.0, f64::sqrt);
+        // Some PDFs encode their word spaces as TAB, and PDFium marks an end-of-line hyphen as U+0002; MuPDF reports
+        // a space and a hyphen for these.
+        let c = match c {
+            '\t' => ' ',
+            '\u{2}' => '-',
+            other => other,
+        };
         let tight = ch.tight_bounds()?;
         let loose = ch.loose_bounds()?; // advance-based extent, as MuPDF uses
         let (l, t) = to_dev(loose.left().value as f64, tight.top().value as f64)?;
@@ -132,6 +139,73 @@ pub fn page_chars(page: &PdfPage) -> Result<PageChars, PdfiumError> {
         }));
     }
     keyed.sort_by_key(|(k, _)| *k); // stable: keeps text-page order inside an object
-    let out = keyed.into_iter().map(|(_, c)| c).collect();
+    let out = merge_ligatures(keyed.into_iter().map(|(_, c)| c).collect());
     Ok(PageChars { w, h, chars: out })
+}
+
+/// PDFium reports a ligature glyph ("ﬁ") as its letters ('f','i') sharing one box; MuPDF reports the ligature
+/// character itself. Put them back so the text matches what the Python worker has always stored (corrections are
+/// keyed on it).
+pub fn merge_ligatures(chars: Vec<Ch>) -> Vec<Ch> {
+    fn same_box(a: &Ch, b: &Ch) -> bool {
+        !a.generated && !b.generated && (a.l - b.l).abs() < 0.011 && (a.r - b.r).abs() < 0.011 && (a.oy - b.oy).abs() < 0.011 && a.r > a.l
+    }
+    let mut out: Vec<Ch> = Vec::with_capacity(chars.len());
+    let mut i = 0;
+    while i < chars.len() {
+        let c = &chars[i];
+        let lig = |n: usize| -> Option<char> {
+            if i + n > chars.len() || !(1..n).all(|k| same_box(&chars[i], &chars[i + k])) {
+                return None;
+            }
+            let s: String = chars[i..i + n].iter().map(|x| x.c).collect();
+            match s.as_str() {
+                "ffi" => Some('\u{FB03}'),
+                "ffl" => Some('\u{FB04}'),
+                "ff" => Some('\u{FB00}'),
+                "fi" => Some('\u{FB01}'),
+                "fl" => Some('\u{FB02}'),
+                _ => None,
+            }
+        };
+        if c.c == 'f' {
+            if let Some(l) = lig(3).map(|l| (l, 3)).or_else(|| lig(2).map(|l| (l, 2))) {
+                let mut m = c.clone();
+                m.c = l.0;
+                out.push(m);
+                i += l.1;
+                continue;
+            }
+        }
+        out.push(c.clone());
+        i += 1;
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ch(c: char, l: f64, r: f64) -> Ch {
+        Ch { c, l, r, t: 90.0, b: 103.0, ox: l, oy: 100.0, size: 12.0, font: "F".into(), italic: false, bold: false, generated: false, ang: 0.0, asc: 0.9, desc: -0.3 }
+    }
+
+    fn text(cs: &[Ch]) -> String {
+        cs.iter().map(|c| c.c).collect()
+    }
+
+    #[test]
+    fn letters_sharing_one_box_become_the_ligature() {
+        let cs = vec![ch('a', 0.0, 6.0), ch('f', 6.0, 14.4), ch('i', 6.0, 14.4), ch('n', 14.4, 20.0), ch('e', 20.0, 26.0)];
+        assert_eq!(text(&merge_ligatures(cs)), "a\u{FB01}ne");
+        let cs = vec![ch('f', 0.0, 9.0), ch('f', 0.0, 9.0), ch('i', 0.0, 9.0), ch('x', 9.0, 15.0)];
+        assert_eq!(text(&merge_ligatures(cs)), "\u{FB03}x");
+    }
+
+    #[test]
+    fn ordinary_neighbours_are_left_alone() {
+        let cs = vec![ch('o', 0.0, 6.0), ch('f', 6.0, 10.0), ch('i', 10.0, 14.0), ch('f', 14.0, 18.0), ch('f', 18.0, 22.0)];
+        assert_eq!(text(&merge_ligatures(cs)), "ofiff");
+    }
 }

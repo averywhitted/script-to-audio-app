@@ -25,6 +25,24 @@ impl From<PdfiumError> for ParseError {
     }
 }
 
+/// Open PDFium: linked in statically (feature `static-pdfium`) or loaded from `dylib_path` (default: next to the
+/// executable / on the library search path).
+pub fn open_pdfium(dylib_path: Option<&str>) -> Result<Pdfium, ParseError> {
+    #[cfg(feature = "static-pdfium")]
+    {
+        let _ = dylib_path;
+        Ok(Pdfium::new(Pdfium::bind_to_statically_linked_library()?))
+    }
+    #[cfg(not(feature = "static-pdfium"))]
+    {
+        let bindings = match dylib_path {
+            Some(p) => Pdfium::bind_to_library(p)?,
+            None => Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name())?,
+        };
+        Ok(Pdfium::new(bindings))
+    }
+}
+
 /// Read a PDF with PDFium into the page/block/line/span structure the parser consumes.
 pub fn extract_document(pdfium: &Pdfium, pdf_path: &str) -> Result<RawDoc, ParseError> {
     let doc = pdfium.load_pdf_from_file(pdf_path, None)?;
@@ -45,7 +63,7 @@ fn first_page_lines(doc: &RawDoc) -> Vec<String> {
             p.blocks
                 .iter()
                 .flat_map(|b| b.lines.iter())
-                .map(|l| l.spans.iter().map(|s| s.text.as_str()).collect::<String>())
+                .map(|l| l.title_text.clone().unwrap_or_else(|| l.spans.iter().map(|s| s.text.as_str()).collect::<String>()))
                 .collect()
         })
         .unwrap_or_default()

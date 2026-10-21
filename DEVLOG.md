@@ -1,7 +1,7 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-21 18:10 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed) · working tree: ADRs and the spike committed (see git log); uncommitted: Oct 17 label-kit files and two sidetrack notes that are not part of this work (don't commit them with it)_
+_Updated 2026-10-21 20:00 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed) · working tree: ADRs and the spike committed (see git log); uncommitted: Oct 17 label-kit files and two sidetrack notes that are not part of this work (don't commit them with it)_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 open) that drives the Python worker. iPhone companion exists in `app/` (iOS rehearsal milestone, #89-#94, rounds 1-2 installed on Avery's phone).
 **Current goal:** milestone **Rust core** (GitHub milestone 9, issues #98-#109; later engines/languages/cloud parked in milestone 10, #110-#112). Planned with `/grilling` Oct 21; Avery said go.
@@ -28,15 +28,17 @@ _Updated 2026-10-21 18:10 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 - **The Rust port passes the same gate** (`EXTRACTOR=rust .venv/bin/python3 spikes/pdfium_extract/scripts/pdfium_answer_key.py --check`, 19 s): generated 99.4%, real 98.5%, both = baseline, "Nothing got worse". `rust/crates/extract/src/` (`chars.rs`, `lines.rs`, `blocks.rs`, `lib.rs`, `main.rs`) uses `pdfium-render` 0.9 with the `pdfium_7763` feature against the venv's `libpdfium.dylib` (PDFium 149.0.7802; the crate default 7881 needs a newer lib). Rust chars equal the Python prototype's (`scripts/compare_chars.py`: identical numbers, only a control-character glyph differs). Python stays as the reference: `scripts/dump_pymupdf.py`, `proto_*.py`.
 - **Rust toolchain and network on this Mac:** Rust-built binaries (cargo, rustup, anything compiled) cannot resolve DNS in the sandbox while curl and Python can (a compiled `to_socket_addrs` test fails). Workaround that is in bounds: rustup 1.29 + stable 1.99.1 with `aarch64-apple-ios` and `-ios-sim` targets were installed from a local mirror of static.rust-lang.org files fetched with curl (`RUSTUP_DIST_SERVER=file://...`; installed in `~/.cargo/bin`, `~/.rustup`, not on PATH: `--no-modify-path`); crates come from a local registry built by `scripts/local_crate_mirror.py` (Python HTTP) and `rust/cargo-offline.sh` (needs `MIRROR=<dir>`). The mirror dirs live in the session scratchpad and are rebuilt by those commands. Homebrew's cargo is still the first `cargo` on PATH; use `~/.cargo/bin/cargo` explicitly. A local CONNECT proxy was refused by the sandbox classifier, don't try.
 
-**Next steps:**
-1. **Interface to the apps (decided, not built): a tiny C ABI + `dart:ffi`, not `flutter_rust_bridge`.** The apps already speak JSON (script.json), so `tr_parse_pdf(pdf_path, config_json) -> char*` (JSON) + `tr_free(char*)` in a `staticlib`/`cdylib` crate is enough: no codegen, fewer moving parts, works with iOS static linking via `DynamicLibrary.process()`. Add it as `rust/crates/ffi`; note the change in ADR 0002.
-2. **PDFium that ships:** the dev builds use the venv's `libpdfium.dylib` (pypdfium2, 149.0.7802, feature `pdfium_7763`). Shipping needs: macOS dylib bundled in the Mac app (bblanchon/pdfium-binaries is dynamic only) and a **static iOS** PDFium (paulocoutinhox/pdfium-lib or build it). Both are downloads: ask Avery first.
-3. **#101 Mac cutover:** Flutter Mac app parses through the Rust core (FFI) instead of the Python worker's parse; Python parse stays as dev oracle; then parser-quality work resumes in Rust.
-4. **#102 iPhone import and parse:** share-sheet / file picker, parse on device into the iCloud folder, text-only rehearsal; needs steps 1-2 and an iOS build of the core (`aarch64-apple-ios` target is installed).
-5. Gaps: compare `derive_title` with the worker's titles; page rotation / non-corpus PDFs through the whole pipeline; trailing-space width.
-6. Then sync features (#103-#105), then the desktop Rust renderer (#106-#107).
+**Rust core is wired into the Mac app code (not yet cut over for good):** `rust/crates/ffi` (`libtable_read_ffi.dylib` / `.a`; C ABI `tr_parse_pdf`/`tr_version`/`tr_free`, PDFium opened once per process) and `app/lib/services/rust_core.dart` (`dart:ffi` on a background isolate; `RustCore.locate`). `AppState.importPDF` now parses with the Rust core when the libraries are found and falls back to the Python worker (logged). `flutter test` 76 pass incl. `test/rust_core_test.dart`. iOS static libs build: `cd rust && ./cargo-offline.sh rustc --release --target aarch64-apple-ios[-sim] -p table-read-ffi --features static-pdfium --crate-type staticlib` (~34 MB each; needs only PDFium's static lib at the final link: 432 FPDF symbols).
+**Parity with the worker** (`python3 scripts/rust_vs_worker.py`, element-level text overlap vs PyMuPDF+Python on 31 PDFs): 25 of 31 at 99-100%, titles identical 31/31, scene/line/character counts within 1; lowest: Untitled 94.6% (PyMuPDF glues page-break "(MORE)" into a parenthetical, Rust doesn't), EMMA 97.1%, Burns 98.8% (side-by-side layouts; some Rust results are better). Bugs this found and fixed in the extractor: doubled spaces (generated + real space), TAB used as space, U+0002 hyphen, split `fi` ligatures (recombined to ﬁ to keep stored text identical), dropped duplicate space glyphs, block gap 1.45 -> 1.5 em, letter-spaced titles.
 
-**To try on the phone:** nothing new is installable yet (the Rust core is not wired into the app). The earliest phone-testable build is step 4. It also needs Avery to renew Xcode's Apple ID sign-in (below) so `bash scripts/install_iphone.sh` works.
+**Next steps:**
+1. **PDFium that ships (needs Avery's OK to download):** macOS dylib for the Mac app (bblanchon/pdfium-binaries, dynamic only) and a static iOS PDFium (paulocoutinhox/pdfium-lib or build). Dev builds use the venv's `libpdfium.dylib` (pypdfium2 149.0.7802, crate feature `pdfium_7763`).
+2. **#101 Mac cutover:** bundle `libtable_read_ffi.dylib` + `libpdfium.dylib` into the .app (Contents/Frameworks, signed), then drop the Python parse fallback from the shipped app (keep as oracle); parser-quality work then resumes in Rust.
+3. **#102 iPhone import and parse:** Xcode: link `libtable_read_ffi.a` + static PDFium into the Runner target for device and simulator; PhoneApp import (file picker / share sheet), `RustCore().parse`, write `script.json` into the iCloud project folder, text-only rehearsal; bundle `corrections_config.json` as an asset. Needs step 1 and Avery's Xcode sign-in.
+4. Gaps: page rotation / non-corpus PDFs through the whole pipeline; trailing-space width; side-by-side layouts (#81-#83) now in Rust.
+5. Then sync features (#103-#105), then the desktop Rust renderer (#106-#107).
+
+**To try on the phone:** nothing new is installable yet (iOS needs the static PDFium, step 1, and the Runner link, step 3). It also needs Avery to renew Xcode's Apple ID sign-in (below) so `bash scripts/install_iphone.sh` works.
 
 **Waiting on the user / open questions:**
 - **OK to download PDFium builds** (macOS dylib for the Mac app; static iOS lib) from bblanchon/pdfium-binaries and/or paulocoutinhox/pdfium-lib (next steps 2).
@@ -65,6 +67,13 @@ _Updated 2026-10-21 18:10 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 
 ## History
 <!-- newest first -->
+
+### 2026-10-21 20:00 — Rust core wired into the Flutter app (FFI), parity with the worker measured and fixed
+**Asked:** (continuing after a usage-limit reset)
+**Done:** `rust/crates/ffi` + `rust_core.dart` + `AppState` hook (Rust first, Python fallback) + `test/rust_core_test.dart`; iOS device/simulator static libs build; new `scripts/rust_vs_worker.py` (element-level overlap vs the worker) which exposed text differences the answer keys could not see, all fixed in `rust/crates/extract` (see Resume block); titles 31/31 identical; ADR 0002 addendum.
+**Decisions:** C ABI + dart:ffi (not flutter_rust_bridge). Recombine ligatures to match stored text. Keep PDFium's cleaner results where PyMuPDF has quirks ("(MORE)").
+**State:** committed, not pushed. cargo tests (extract 18, parser 20, ffi 3), license check, six stage diffs, Rust-only answer keys (99.4% / 98.5%), `flutter test` 76 pass.
+**Next:** see Resume block (PDFium downloads need Avery's OK).
 
 ### 2026-10-21 18:10 — Rust parser port finished: all stages identical, answer keys at baseline
 **Asked:** "continue unless you need me; tell me when it's ready to load on my phone".

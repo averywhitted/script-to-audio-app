@@ -41,6 +41,8 @@ dependencies:
   audio_session: ^0.2.4
   shared_preferences: ^2.5.6
   path: ^1.9.1
+  # dart:ffi string helpers for the Rust core (rust/crates/ffi); already in the tree via the audio plugins.
+  ffi: ^2.1.0
   uuid: ^4.6.0
   intl: ^0.20.3
   characters: ^1.4.1

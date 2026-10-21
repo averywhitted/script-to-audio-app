@@ -516,8 +516,11 @@ pub fn finalise(mut script: Script) -> Script {
 pub fn derive_title(first_page_lines: &[String], filename_stem: &str) -> String {
     static BAD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)https?://|@|\d{4}|draft|revision").unwrap());
     static ONLY_DIGITS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\d\s\.]+$").unwrap());
+    static WS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").unwrap());
     for line in first_page_lines {
-        let candidate = strip(line);
+        // pdfplumber returns single-spaced lines; PDFium leaves runs of spaces and tabs where text was positioned
+        let collapsed = WS.replace_all(line, " ");
+        let candidate = strip(&collapsed);
         if candidate.chars().count() >= 3 && !BAD.is_match(candidate) && !ONLY_DIGITS.is_match(candidate) {
             return candidate.chars().take(80).collect();
         }

@@ -24,6 +24,18 @@ and the result must be at least as good as the Python worker it replaces. Python
   are a later milestone.
 - The iPhone does no voice rendering. Cloud rendering is parked.
 
+## Addendum 2026-10-21: interface and parity findings
+- **Interface to Flutter is a small C ABI plus `dart:ffi`, not `flutter_rust_bridge`.** The apps already exchange JSON
+  with the worker, so `rust/crates/ffi` exports `tr_parse_pdf(pdf, config_json, pdfium_path) -> JSON`, `tr_version`,
+  `tr_free`; no code generation, and static linking on iOS is just a library the process already contains.
+- **PDFium is bound once per process** (pdfium-render allows one instance), opened on the first successful call.
+- **Extraction parity is measured on whole scripts, not only line text** (`scripts/rust_vs_worker.py`): doubled spaces,
+  tabs used as spaces, split ligatures, dropped duplicate spaces, a 1.5 em block gap and letter-spaced titles each
+  changed the stored text or element count until fixed. Text must match the worker's because corrections are keyed on
+  the first 60 characters of a line.
+- Side-by-side and simultaneous-dialogue layouts still differ from the worker (sometimes better); that is the parser-quality
+  work (#81-#83), now done once, in Rust.
+
 ## Consequences
 - Early risks: PDFium block builder vs PyMuPDF blocks, italic detection, `flutter_rust_bridge` static
   linking on iOS/macOS (Xcode symbol stripping), `ort` still a release candidate.

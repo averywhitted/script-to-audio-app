@@ -17,6 +17,7 @@ import '../services/platform.dart';
 import '../services/project_files.dart';
 import '../services/project_store.dart';
 import '../services/python_bridge.dart';
+import '../services/rust_core.dart';
 import '../services/settings.dart';
 import '../theme/tokens.dart' show characterColorsEnabled;
 
@@ -41,6 +42,8 @@ class AppState extends ChangeNotifier {
     bridge = PythonBridge(onPythonLog: (line) => dlog('[py] $line', LogStyle.debug));
     _loadSettings();
     if (startBackgroundTasks) {
+      rustCore = RustCore.locate(repoRoot: bridge.repoRoot);
+      dlog(rustCore == null ? 'parsing with the Python worker (no Rust core found)' : 'parsing with the Rust core', LogStyle.debug);
       unawaited(refreshEngineStatus());
       Future.delayed(const Duration(seconds: 6), checkForUpdates);
     }
@@ -49,6 +52,10 @@ class AppState extends ChangeNotifier {
   final Settings settings;
   final ProjectStore store;
   late final PythonBridge bridge;
+
+  /// The shared Rust core (rust/crates/ffi), when this build has it. Parsing prefers it; the Python worker stays as
+  /// the fallback until the cutover is complete (docs/adr/0002-shared-rust-core.md).
+  RustCore? rustCore;
 
   // Script
   String? pdfPath;
@@ -393,6 +400,30 @@ class AppState extends ChangeNotifier {
   // Parse
   // ---------------------------------------------------------------------------
 
+  Future<ScriptSummary> _parse(String path) async {
+    final core = rustCore;
+    if (core != null) {
+      try {
+        parseMessage = 'Reading the script';
+        notifyListeners();
+        final root = bridge.repoRoot;
+        final configFile = root == null ? null : File('$root/backend/corrections_config.json');
+        final config = configFile != null && configFile.existsSync() ? configFile.readAsStringSync() : null;
+        return await core.parse(path, correctionsJson: config);
+      } catch (e) {
+        dlog('the Rust core could not parse this ($e); trying the Python worker', LogStyle.error);
+      }
+    }
+    return bridge.parse(
+      path,
+      onProgress: (f, m) {
+        parseFraction = f;
+        parseMessage = m;
+        notifyListeners();
+      },
+    );
+  }
+
   Future<void> importPDF(String path) async {
     dlog('importPDF: ${path.split('/').last}', LogStyle.info);
     pdfPath = path;
@@ -406,14 +437,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     final sw = Stopwatch()..start();
     try {
-      final parsed = await bridge.parse(
-        path,
-        onProgress: (f, m) {
-          parseFraction = f;
-          parseMessage = m;
-          notifyListeners();
-        },
-      );
+      final parsed = await _parse(path);
       parseFraction = 1;
       script = parsed;
       final folder = currentProjectFolder;

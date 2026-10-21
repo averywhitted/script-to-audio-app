@@ -14,12 +14,15 @@ pub struct Span {
 pub struct Line {
     pub bbox: [f64; 4],
     pub spans: Vec<Span>,
+    /// The line as pdfplumber would read it (a gap over 3 pt between glyph advance boxes is a space): used for the title.
+    pub title_text: String,
 }
 
 /// Tuned against PyMuPDF's lines on the corpus (see README).
 const BACK: f64 = 0.5; // how far a character may sit behind the previous one's right edge, in em
 const DRIFT: f64 = 0.3; // baseline wobble allowed within a line, in em
 const JUMP: f64 = 2.0; // a forward gap over this many em starts a new line (hanging indents, columns)
+const PLUMBER_X_TOLERANCE: f64 = 3.0; // pdfplumber's default word gap, in points
 const SPACE_GAP: f64 = 0.1; // a gap over this many em with no space glyph gets a space, as MuPDF does
 
 /// MuPDF's own line-box metrics for the 14 standard (non-embedded) PDF fonts: (above, below) the baseline in em.
@@ -43,11 +46,15 @@ pub fn build_lines(chars: &[Ch], metrics: &HashMap<String, (f64, f64)>) -> Vec<L
             c.desc = -d;
         }
         if c.generated {
-            // PDFium-inserted space: joins the current line, never decides a break
-            if !cur.is_empty() {
+            // PDFium-inserted space: joins the current line, never decides a break. Skipped when a real space
+            // already sits there (it also inserts one between font runs, next to the PDF's own space).
+            if !cur.is_empty() && cur.last().map_or(true, |x| x.c != ' ') {
                 cur.push(c);
             }
             continue;
+        }
+        if c.c == ' ' && cur.last().map_or(false, |x| x.generated && x.c == ' ') {
+            cur.pop(); // the real space replaces the one PDFium inserted before it
         }
         if let Some(p) = cur.iter().rev().find(|x| !x.generated).cloned() {
             let sz = c.size.max(p.size).max(1.0); // PDFium's inserted spaces report size 1.0
@@ -59,10 +66,30 @@ pub fn build_lines(chars: &[Ch], metrics: &HashMap<String, (f64, f64)>) -> Vec<L
                 let across = -dx * uy + dy * ux;
                 (c.ang - a).abs() < 0.05 && across.abs() <= DRIFT * sz && -BACK * sz <= along && along <= (1.0 + JUMP) * sz
             } else {
-                (c.oy - p.oy).abs() <= DRIFT * sz && c.l >= p.r - BACK * sz && (c.l - p.r) <= JUMP * sz
+                // c.l >= p.l: PDFium splits a ligature ("fi") into two characters with the same box, which is one glyph
+                (c.oy - p.oy).abs() <= DRIFT * sz && (c.l >= p.r - BACK * sz || c.l >= p.l - 0.01) && (c.l - p.r) <= JUMP * sz
             };
             if !same {
                 groups.push(std::mem::take(&mut cur));
+            } else if !rotated(&c) && c.c == ' ' {
+                // nothing to add
+            } else if !rotated(&c) && c.c != ' ' && p.c == ' ' && cur.last().map_or(false, |x| x.c == ' ') {
+                // PDFium keeps one of two consecutive space glyphs. If the hole after this space is a whole number
+                // of space widths, the missing glyphs were real: MuPDF reports them, so put them back.
+                let w = p.r - p.l;
+                let gap = c.l - p.r;
+                if w > 0.5 && gap > SPACE_GAP * sz {
+                    let n = (gap / w).round();
+                    if n >= 1.0 && (gap - n * w).abs() < 0.25 * w {
+                        for _ in 0..(n as usize).min(8) {
+                            let mut sp = p.clone();
+                            sp.generated = true;
+                            sp.l = p.r;
+                            sp.r = p.r + w;
+                            cur.push(sp);
+                        }
+                    }
+                }
             } else if !rotated(&c) && c.c != ' ' && p.c != ' ' && cur.last().map_or(false, |x| x.c != ' ') && (c.l - p.r) > SPACE_GAP * sz {
                 let mut sp = p.clone();
                 sp.c = ' ';
@@ -117,7 +144,20 @@ fn make_line(ln: &[Ch]) -> Option<Line> {
             spans.push(Span { text: c.c.to_string(), font: c.font.clone(), size: c.size, italic: c.italic, bold: c.bold });
         }
     }
-    Some(Line { bbox, spans })
+    // The line as pdfplumber reads it: the same text, plus a space wherever the gap between two glyphs' advance boxes
+    // exceeds its word tolerance (letter-spaced titles: "E M M A").
+    let mut title_text = String::new();
+    let mut prev: Option<&Ch> = None;
+    for c in ln.iter() {
+        if let Some(p) = prev {
+            if c.c != ' ' && p.c != ' ' && !rotated(c) && c.l - p.r > PLUMBER_X_TOLERANCE {
+                title_text.push(' ');
+            }
+        }
+        title_text.push(c.c);
+        prev = Some(c);
+    }
+    Some(Line { bbox, spans, title_text })
 }
 
 #[cfg(test)]
@@ -154,6 +194,50 @@ mod tests {
         cs.extend(word("Look", 162.0, 100.0));
         let lines = build_lines(&cs, &HashMap::new());
         assert_eq!(texts(&lines), vec!["TESS:", "Look"]);
+    }
+
+    #[test]
+    fn an_inserted_space_next_to_a_real_space_is_dropped() {
+        // "word", PDFium's inserted space (font change), then the PDF's own space, then "next": one space, not two
+        let mut cs = word("dash", 72.0, 100.0);
+        let mut gen = ch(' ', 72.0 + 24.0, 100.0);
+        gen.generated = true;
+        gen.size = 1.0;
+        cs.push(gen);
+        cs.push(ch(' ', 72.0 + 24.0, 100.0));
+        cs.extend(word("next", 72.0 + 30.0, 100.0));
+        assert_eq!(texts(&build_lines(&cs, &HashMap::new())), vec!["dash next"]);
+    }
+
+    #[test]
+    fn a_dropped_second_space_is_put_back() {
+        // "end." + one space glyph + a hole exactly one space wide + "She": the PDF had two spaces
+        let mut cs = word("end.", 72.0, 100.0);
+        let mut sp = ch(' ', 72.0 + 24.0, 100.0);
+        sp.r = sp.l + 3.0;
+        cs.push(sp);
+        cs.extend(word("She", 72.0 + 24.0 + 6.0, 100.0)); // 3 pt hole after the 3 pt space
+        assert_eq!(texts(&build_lines(&cs, &HashMap::new())), vec!["end.  She"]);
+        // a hole that is not a whole number of space widths (justified text) is left alone
+        let mut cs = word("end.", 72.0, 100.0);
+        let mut sp = ch(' ', 72.0 + 24.0, 100.0);
+        sp.r = sp.l + 3.0;
+        cs.push(sp);
+        cs.extend(word("She", 72.0 + 24.0 + 4.5, 100.0));
+        assert_eq!(texts(&build_lines(&cs, &HashMap::new())), vec!["end. She"]);
+    }
+
+    #[test]
+    fn a_ligature_split_into_two_characters_stays_on_the_line() {
+        // PDFium reports "fi" as 'f' and 'i' with the same wide box
+        let mut cs = word("a", 72.0, 100.0);
+        let (mut f, mut i) = (ch('f', 78.0, 100.0), ch('i', 78.0, 100.0));
+        f.r = 78.0 + 8.4;
+        i.r = 78.0 + 8.4;
+        cs.push(f);
+        cs.push(i);
+        cs.extend(word("ne", 78.0 + 8.4, 100.0));
+        assert_eq!(texts(&build_lines(&cs, &HashMap::new())), vec!["afine"]);
     }
 
     #[test]

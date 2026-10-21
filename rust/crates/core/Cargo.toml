@@ -15,6 +15,10 @@ name = "table_read_core"
 name = "table_read_parse"
 path = "src/bin/table_read_parse.rs"
 
+[features]
+# Link PDFium statically (iOS, and anywhere a bundled dylib is unwanted). Without it, PDFium is loaded from a dylib.
+static-pdfium = ["pdfium-render/static"]
+
 [dependencies]
 table-read-extract = { path = "../extract" }
 table-read-parser = { path = "../parser" }

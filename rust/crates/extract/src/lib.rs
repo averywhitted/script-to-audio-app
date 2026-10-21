@@ -15,7 +15,7 @@ pub fn page_blocks_json(pc: &chars::PageChars, metrics: &std::collections::HashM
             json!({
                 "type": 0, "bbox": b.bbox,
                 "lines": b.lines.iter().map(|l| json!({
-                    "bbox": l.bbox,
+                    "bbox": l.bbox, "titleText": l.title_text,
                     "spans": l.spans.iter().map(|s| json!({
                         "text": s.text, "font": s.font, "size": s.size,
                         "flags": (if s.italic { 1 << 1 } else { 0 }) | (if s.bold { 1 << 4 } else { 0 }),
