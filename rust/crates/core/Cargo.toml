@@ -1,0 +1,22 @@
+[package]
+name = "table-read-core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Table Read's shared core: PDF in, parsed script out (PDFium extraction + screenplay parser)"
+
+[package.metadata]
+license-tier = "permissive"
+
+[lib]
+name = "table_read_core"
+
+[[bin]]
+name = "table_read_parse"
+path = "src/bin/table_read_parse.rs"
+
+[dependencies]
+table-read-extract = { path = "../extract" }
+table-read-parser = { path = "../parser" }
+pdfium-render = { version = "0.9", default-features = false, features = ["pdfium_7763", "thread_safe"] }
+serde_json = "1"

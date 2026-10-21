@@ -281,7 +281,7 @@ mod tests {
 
     #[test]
     fn family_regex_strips_style_suffixes() {
-        assert_eq!(FAMILY_RE.replace("TimesNewRomanPS-BoldMT", ""), "TimesNewRoman");
+        assert_eq!(FAMILY_RE.replace("TimesNewRomanPS-BoldMT", ""), "TimesNewRomanPS"); // as Python does
         assert_eq!(FAMILY_RE.replace("Courier-Oblique", ""), "Courier");
         assert_eq!(FAMILY_RE.replace("Sylfaen", ""), "Sylfaen");
     }

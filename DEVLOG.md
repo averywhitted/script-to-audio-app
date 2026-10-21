@@ -1,7 +1,7 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-21 16:30 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed) · working tree: ADRs and the spike committed (see git log); uncommitted: Oct 17 label-kit files and two sidetrack notes that are not part of this work (don't commit them with it)_
+_Updated 2026-10-21 18:10 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed) · working tree: ADRs and the spike committed (see git log); uncommitted: Oct 17 label-kit files and two sidetrack notes that are not part of this work (don't commit them with it)_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 open) that drives the Python worker. iPhone companion exists in `app/` (iOS rehearsal milestone, #89-#94, rounds 1-2 installed on Avery's phone).
 **Current goal:** milestone **Rust core** (GitHub milestone 9, issues #98-#109; later engines/languages/cloud parked in milestone 10, #110-#112). Planned with `/grilling` Oct 21; Avery said go.
@@ -16,7 +16,7 @@ _Updated 2026-10-21 16:30 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 
 **Order of work:** #98 skeleton/CI (needs rustup) and #99 PDFium spike alongside the #93 sync gaps (#103-#105) -> #100 Rust parser -> #101 Mac cutover -> #102 iPhone import/parse -> sync features -> #106 desktop Rust renderer -> #107 Mac render cutover. #108 (remove OpenAI) and #109 (LICENSE) are small separate PRs.
 
-**Parser port (#100) stage 1 done:** `rust/crates/parser` (lib `table_read_parser`, bin `parser_stage`): `pystr.rs` (Python `strip`/`isalpha`/`len` semantics), `types.rs`, `blocks.rs` = `_split_raw_block`, `_make_text_block`, `_merge_open_parentheticals`, cue helpers. `python3 scripts/rust_parser_diff.py [stage] [pdf...]` runs the Rust extractor once per PDF, feeds the SAME JSON to Python's parser functions and to `parser_stage`, and diffs every field (floats to 1e-9): **identical on all 31 PDFs / 43,628 blocks**; mutation tests showed it catches changes (lookahead, caps threshold). It runs inside `bash scripts/test.sh rust`. Next stage: 2 (layout profile + DocumentModel), see the plan in the #100 comment; add each stage to `STAGES` in the diff script and a `parser_stage` case.
+**Parser port (#100) DONE, gate passed:** `rust/crates/parser` (stages 1-5: `blocks.rs`, `model.rs`, `classify.rs`, `style.rs`, `script.rs`, plus `pystr.rs` for Python string/rounding/`sum` semantics) and `rust/crates/core` (`table_read_core::parse_pdf`, bin `table_read_parse <libpdfium> <pdf> [corrections_config.json]` printing the worker's script-summary JSON + `parserVersion: "rust-0.1.0"`). `python3 scripts/rust_parser_diff.py [-v] [stage...]` diffs every stage against `backend/parser.py` on the same extractor JSON: **identical on all 31 PDFs** for text_blocks, doc_model, classified_nostyle, style, classified, script (mutation tests prove it catches changes). **`python3 scripts/answer_key_rust.py --check` (PDFium + Rust parser only, no PyMuPDF, no Python parser): generated 99.4%, real 98.5%, "Nothing got worse"** (15 s). All run by `MIRROR=<dir> bash scripts/test.sh rust` (23 + 8 cargo tests, license check 65 deps). Gotchas learned: Python `round` is half-even (`round_ties_even`), `x or fallback` also falls back on 0.0, `Counter.most_common(1)` keeps the first max, Python 3.12+ `sum()` of floats is compensated. Title uses `script::derive_title` on page-1 lines (pdfplumber is gone), not yet compared. Python parser is still the reference and still frozen until the Mac cutover (#101).
 
 **Workspace (#98 skeleton, done):** `rust/` is the Rust workspace (`rust/Cargo.toml`, crate `rust/crates/extract` = lib `table_read_extract` + bin `pdfium_extract`, `rust/cargo-offline.sh`). `bash scripts/test.sh rust` (needs `MIRROR=<dir>` on this Mac, see below) runs: 12 cargo unit tests (line and block rules), `scripts/check_licenses.py` (ADR 0001 tier 1: 61 dependencies all permissive; Python tests in `backend/tests/test_check_licenses.py` prove it rejects GPL/AGPL/LGPL/NC), and the answer-key gate with the Rust extractor (fails if anything got worse; verified by breaking the binary). Not part of `all` yet. Still open on #98: Licenses screen generator, `flutter_rust_bridge` hello-world on macOS and iPhone.
 
@@ -29,13 +29,17 @@ _Updated 2026-10-21 16:30 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 - **Rust toolchain and network on this Mac:** Rust-built binaries (cargo, rustup, anything compiled) cannot resolve DNS in the sandbox while curl and Python can (a compiled `to_socket_addrs` test fails). Workaround that is in bounds: rustup 1.29 + stable 1.99.1 with `aarch64-apple-ios` and `-ios-sim` targets were installed from a local mirror of static.rust-lang.org files fetched with curl (`RUSTUP_DIST_SERVER=file://...`; installed in `~/.cargo/bin`, `~/.rustup`, not on PATH: `--no-modify-path`); crates come from a local registry built by `scripts/local_crate_mirror.py` (Python HTTP) and `rust/cargo-offline.sh` (needs `MIRROR=<dir>`). The mirror dirs live in the session scratchpad and are rebuilt by those commands. Homebrew's cargo is still the first `cargo` on PATH; use `~/.cargo/bin/cargo` explicitly. A local CONNECT proxy was refused by the sandbox classifier, don't try.
 
 **Next steps:**
-1. #99 remaining: a static PDFium for macOS and iOS with `pdfium-render`'s `static` feature (needs a download; bblanchon/pdfium-binaries ships dynamic libs only, paulocoutinhox/pdfium-lib or building PDFium are the static routes; ask Avery before downloading), and `flutter_rust_bridge` hello-world on macOS + iPhone (#98: static linking, Xcode symbol stripping). Check page rotation, more PDFs than the corpus (exam sample, other producers), and port-side details: trailing-space width, non-standard non-embedded font metrics.
-2. #98 rest: Licenses screen generator (from `cargo metadata`, with license texts), `flutter_rust_bridge` hello-world.
-3. #100 stage 2: `_infer_layout_profile`, `_build_document_model`, `_learn_cue_labels`, `_body_region`, `_compute_doc_stats` (parser.py lines ~656-1100); then stages 3-6. Python parser stays frozen; Python dumps of each stage's state go in `rust_parser_diff.py`.
-4. Still waiting from the iPhone milestone: Avery runs the Mac "Move to iCloud Drive" (#89), tries round 2 on the phone incl. lock screen + AirPods (#92), renews Xcode's Apple ID sign-in to reinstall (`bash scripts/install_iphone.sh`, weekly).
+1. **Interface to the apps (decided, not built): a tiny C ABI + `dart:ffi`, not `flutter_rust_bridge`.** The apps already speak JSON (script.json), so `tr_parse_pdf(pdf_path, config_json) -> char*` (JSON) + `tr_free(char*)` in a `staticlib`/`cdylib` crate is enough: no codegen, fewer moving parts, works with iOS static linking via `DynamicLibrary.process()`. Add it as `rust/crates/ffi`; note the change in ADR 0002.
+2. **PDFium that ships:** the dev builds use the venv's `libpdfium.dylib` (pypdfium2, 149.0.7802, feature `pdfium_7763`). Shipping needs: macOS dylib bundled in the Mac app (bblanchon/pdfium-binaries is dynamic only) and a **static iOS** PDFium (paulocoutinhox/pdfium-lib or build it). Both are downloads: ask Avery first.
+3. **#101 Mac cutover:** Flutter Mac app parses through the Rust core (FFI) instead of the Python worker's parse; Python parse stays as dev oracle; then parser-quality work resumes in Rust.
+4. **#102 iPhone import and parse:** share-sheet / file picker, parse on device into the iCloud folder, text-only rehearsal; needs steps 1-2 and an iOS build of the core (`aarch64-apple-ios` target is installed).
+5. Gaps: compare `derive_title` with the worker's titles; page rotation / non-corpus PDFs through the whole pipeline; trailing-space width.
+6. Then sync features (#103-#105), then the desktop Rust renderer (#106-#107).
+
+**To try on the phone:** nothing new is installable yet (the Rust core is not wired into the app). The earliest phone-testable build is step 4. It also needs Avery to renew Xcode's Apple ID sign-in (below) so `bash scripts/install_iphone.sh` works.
 
 **Waiting on the user / open questions:**
-- Nothing blocking. Later: OK to download a static PDFium build for iOS (step 1).
+- **OK to download PDFium builds** (macOS dylib for the Mac app; static iOS lib) from bblanchon/pdfium-binaries and/or paulocoutinhox/pdfium-lib (next steps 2).
 - Labelling the exams (offline kit `Test PDFs/label-kit/Label lines.html`); parser quality work is paused until after the Rust parser cutover (Python parser frozen).
 - Merge PR #78 (`flutter-mac-app` -> `main`). Run the move to iCloud Drive (#89). Notes on the rehearsal mockup / round 2.
 - Verify before relying on them: the research agent's sherpa-onnx news (espeak removal, Oct 20 2026), Piper `lessac` voice license, `flutter_rust_bridge` static linking on iOS/macOS 2026 (Xcode symbol stripping), `ort` is still a release candidate.
@@ -61,6 +65,13 @@ _Updated 2026-10-21 16:30 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 
 ## History
 <!-- newest first -->
+
+### 2026-10-21 18:10 — Rust parser port finished: all stages identical, answer keys at baseline
+**Asked:** "continue unless you need me; tell me when it's ready to load on my phone".
+**Done:** stages 2-5 of the parser port (`model.rs`, `classify.rs`, `style.rs`, `script.rs`), `rust/crates/core` (PDF in, script JSON out), `scripts/answer_key_rust.py`; the diff harness covers six stages on 31 PDFs; `test.sh rust` runs everything. Commits per stage (a0246b0 stage 2, a1e9da1 stage 3, 8aca197 stage 4, then stage 5 + core). Issues #99/#100 commented.
+**Decisions:** C ABI + dart:ffi instead of flutter_rust_bridge (JSON in and out matches how the apps already work). Own license checker instead of cargo-deny (earlier).
+**State:** committed, not pushed. cargo tests pass, license check ok, stage diffs identical, Rust-only answer keys = baseline (generated 99.4%, real 98.5%). Python parser untouched. Not installable on the phone yet.
+**Next:** see Resume block (FFI crate; PDFium builds need Avery's OK to download).
 
 ### 2026-10-21 16:30 — Rust parser port, stage 1 (text blocks) identical to Python
 **Asked:** (continuing; "you decide" on next steps)

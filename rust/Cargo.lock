@@ -414,6 +414,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "table-read-core"
+version = "0.1.0"
+dependencies = [
+ "pdfium-render",
+ "serde_json",
+ "table-read-extract",
+ "table-read-parser",
+]
+
+[[package]]
 name = "table-read-extract"
 version = "0.1.0"
 dependencies = [

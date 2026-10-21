@@ -153,7 +153,7 @@ run_rust() {
     else
         fail "License check FAILED"
     fi
-    section "PDFium extraction vs the answer keys"
+    section "Rust core vs the answer keys (PDFium extraction + Rust parser)"
     PYTHON=".venv/bin/python3"
     if ! (cd rust && "$CARGO_RUN" build --release 2>&1 | tail -2); then
         fail "Rust release build FAILED"
@@ -168,12 +168,12 @@ run_rust() {
         fail "Rust parser differs from Python"
     fi
     rc=0
-    out=$(EXTRACTOR=rust "$PYTHON" spikes/pdfium_extract/scripts/pdfium_answer_key.py --check 2>&1) || rc=$?
+    out=$("$PYTHON" scripts/answer_key_rust.py --check 2>&1) || rc=$?
     echo "$out" | grep -v '^\[parser\]' | tail -6
     if [ "$rc" -eq 0 ]; then
-        ok "Extraction gate: nothing got worse"
+        ok "Rust core answer keys: nothing got worse"
     else
-        fail "Extraction gate: something got worse"
+        fail "Rust core answer keys: something got worse"
     fi
 }
 

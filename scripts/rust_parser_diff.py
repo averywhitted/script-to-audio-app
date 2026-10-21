@@ -9,6 +9,7 @@ parser is deterministic given those blocks, so any difference is a porting bug. 
   classified_nostyle  _classify_blocks without the learned-style pass ->  role/speaker/aside per block
   style         _learn_style (prior, evidence, both feature tables)
   classified    the complete _classify_blocks (style pass + bare-name silencing)
+  script        _build_script_from_blocks + _finalise + corrections config  ->  the worker's script summary
 
 Usage:
   python3 scripts/rust_parser_diff.py [-v] [stage] [pdf ...]      (default: every PDF in Test PDFs/ and Test PDFs/synthetic/)
@@ -115,8 +116,18 @@ def py_classified(doc: dict) -> list:
              "role": c.role, "speaker": c.speaker, "aside": c.aside} for c in P._classify_blocks(blocks, model)]
 
 
+def py_script(doc: dict) -> dict:
+    """The assembled Script (as the worker serialises it) for the fixed title "TITLE" and the real corrections config."""
+    sys.path.insert(0, str(ROOT / "backend"))
+    import audio_worker
+    blocks, model = _py_model(doc)
+    classified = P._classify_blocks(blocks, model)
+    script = P._build_script_from_blocks(classified, title="TITLE", config=P._load_corrections_config(), cast=model.cast)
+    return audio_worker._script_summary(script)
+
+
 STAGES = {"text_blocks": py_text_blocks, "doc_model": py_doc_model, "classified_nostyle": py_classified_nostyle,
-          "style": py_style, "classified": py_classified}
+          "style": py_style, "classified": py_classified, "script": py_script}
 
 
 def extract(pdf: Path) -> Path:
@@ -169,7 +180,8 @@ def main() -> int:
             blocks_json = extract(pdf)
             doc = json.loads(blocks_json.read_text())
             expected = STAGES[st](doc)
-            got = json.loads(subprocess.run([str(RELEASE / "parser_stage"), st, str(blocks_json)],
+            extra = [str(ROOT / "backend" / "corrections_config.json")] if st == "script" else []
+            got = json.loads(subprocess.run([str(RELEASE / "parser_stage"), st, str(blocks_json)] + extra,
                                             capture_output=True, check=True).stdout)
             d = diff(expected, got)
             if d or verbose:

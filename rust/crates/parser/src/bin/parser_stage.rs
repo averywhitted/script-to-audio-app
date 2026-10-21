@@ -1,8 +1,9 @@
 //! Dump one parser stage as JSON for the Python-vs-Rust comparison (scripts/rust_parser_diff.py).
-//! usage: parser_stage <stage> <extractor-blocks.json>      stages: text_blocks, doc_model, classified_nostyle, style, classified
+//! usage: parser_stage <stage> <extractor-blocks.json>      stages: text_blocks, doc_model, classified_nostyle, style, classified, script
+//! (script takes a third argument: the corrections_config.json path)
 
 use serde_json::json;
-use table_read_parser::{blocks, classify, model, types::RawDoc};
+use table_read_parser::{blocks, classify, model, script, types::RawDoc};
 
 fn sorted(s: &std::collections::HashSet<String>) -> Vec<String> {
     let mut v: Vec<String> = s.iter().cloned().collect();
@@ -67,6 +68,14 @@ fn main() {
                                   "dialog": l.dialog, "direction": l.direction}),
             };
             println!("{}", out);
+        }
+        "script" => {
+            let tb = blocks::text_blocks(&doc);
+            let m = model::build_document_model(&tb, model::page_width_of(&tb));
+            let r = classify::classify_blocks(tb, &m);
+            let cfg = args.get(3).map(|p| script::Config::from_json(&serde_json::from_str(&std::fs::read_to_string(p).expect("read config")).expect("parse config")));
+            let s = script::build_script_from_blocks(&r, "TITLE", cfg.as_ref(), &m.cast);
+            println!("{}", script::script_summary_json(&s));
         }
         other => {
             eprintln!("unknown stage {other}");

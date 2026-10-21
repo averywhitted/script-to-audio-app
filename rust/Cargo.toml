@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/extract", "crates/parser"]
+members = ["crates/extract", "crates/parser", "crates/core"]
 
 # Tiers (docs/adr/0001-license-policy.md): crates marked `license-tier = "permissive"` and everything they depend
 # on must be permissively licensed (scripts/check_licenses.py enforces it). Desktop-only crates may be marked "gpl".

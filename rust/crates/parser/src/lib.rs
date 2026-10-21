@@ -6,5 +6,6 @@ pub mod blocks;
 pub mod classify;
 pub mod model;
 pub mod pystr;
+pub mod script;
 pub mod style;
 pub mod types;
