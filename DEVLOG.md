@@ -1,7 +1,7 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-30 14:10 EDT · branch `ios-rehearsal` @ `7ddc283` (not pushed) · working tree: UNCOMMITTED phone-import work (see History 2026-10-30) plus Avery's earlier edits (`.claude/launch.json`, `.gitignore`, `CLAUDE.md`, `scripts/label_sample.py`) and Oct 17 label-kit files / sidetrack notes (don't commit those with it)_
+_Updated 2026-11-01 11:46 EST · branch `ios-rehearsal` @ `107a8a0` (not pushed) · working tree: clean except two untracked `sidetrack-*.md` notes (ephemeral, never commit)_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 open) that drives the Python worker. iPhone companion exists in `app/` (iOS rehearsal milestone, #89-#94, rounds 1-2 installed on Avery's phone).
 **Current goal:** milestone **Rust core** (GitHub milestone 9, issues #98-#109; later engines/languages/cloud parked in milestone 10, #110-#112). Planned with `/grilling` Oct 21; Avery said go.
@@ -33,7 +33,7 @@ _Updated 2026-10-30 14:10 EDT · branch `ios-rehearsal` @ `7ddc283` (not pushed)
 
 **Next steps:**
 1. **Avery: re-sign in to Xcode's Apple ID** (Xcode > Settings > Accounts; the device build fails with "No Accounts"). Then `MIRROR=<dir> bash scripts/build_ios_native.sh` is already done in `app/ios/native/` (rerun only if the Rust code changes), and install: `cd app && flutter build ios --config-only --release`, then the `xcodebuild ... -destination 'id=00008130-000475601803401C'` + `devicectl install` commands under Watch out for. Then on the phone: `+` > pick a PDF > check the project shows and opens (text-only rehearsal).
-2. Run the full gate before committing: `bash scripts/test.sh` (flutter 78 pass already); commit the phone-import work (pbxproj, AppDelegate.swift, phone_*.dart, rust_core.dart, build_ios_native.sh, assets/corrections_config.json, 3 goldens, local_crate_mirror.py, DEVLOG).
+2. Push `ios-rehearsal` / open a PR to `main` when Avery wants it (commits `a50a16d` phone import, `107a8a0` labelling kit; full gate passed before them).
 3. **Mac side of imported projects:** open a phone-imported project on the Mac (it has PDF + script.json + project.json) and confirm it loads without re-importing; decide whether the Mac re-parses (ADR 0003: newer parser wins).
 4. **#101 Mac cutover:** bundle `libtable_read_ffi.dylib` + the downloaded `pdfium-mac-arm64` (`libpdfium.dylib`, same 149.0.7802) into the .app (Contents/Frameworks, signed), then drop the Python parse fallback from the shipped app (keep as oracle).
 5. Gaps: page rotation / non-corpus PDFs; share-sheet import ("Open in Table Read"); import progress text; the iPhone's Release build never ran on a device yet; PDF import needs iOS 26+ (PDFium minos 26.0).
@@ -71,6 +71,13 @@ _Updated 2026-10-30 14:10 EDT · branch `ios-rehearsal` @ `7ddc283` (not pushed)
 ## History
 <!-- newest first -->
 
+### 2026-11-01 11:46 — Committed the phone-import work and the labelling kit
+**Asked:** "Commit the working tree changes with a sensible message."
+**Done:** ran the full `bash scripts/test.sh` (passed), then two commits: `a50a16d` (iPhone native libs + PDF import, DEVLOG, `.gitignore` `app/ios/native/` line) and `107a8a0` (`label_kit.py`, `side_by_side.py`, `label_sample.py` sbs sample, `CLAUDE.md` rows, `launch.json` entry, `.gitignore` kit line). The shared `.gitignore` was split between them.
+**Decisions:** left the two `sidetrack-*.md` notes untracked (they are ephemeral by rule).
+**State:** committed, not pushed. Phone install still blocked on Xcode's Apple ID sign-in.
+**Next:** see Resume block.
+
 ### 2026-10-30 13:55 — PDFium downloaded; Rust core embedded in the iPhone app; PDF import on the phone (#99, #102)
 **Asked:** "Yes, download" (OK to fetch PDFium builds); goal: a new version for the phone.
 **Done:**
@@ -80,7 +87,7 @@ _Updated 2026-10-30 14:10 EDT · branch `ios-rehearsal` @ `7ddc283` (not pushed)
 - Phone import (#102): `+` in the Projects header -> Files picker (`pickPdf` in `AppDelegate.swift`, copy into the app sandbox) -> `RustCore.parse` with the bundled `assets/corrections_config.json` (copy of the backend's; a test keeps them equal) -> `PhoneStore.importPdf` writes `<project>/<pdf>`, `script.json`, `project.json` into the projects folder (new `copyIn` plugin op, coordinated writes). Phone goldens re-recorded (only the new "+").
 - `scripts/local_crate_mirror.py` now accepts yanked versions for exact pins; mirror can be rebuilt from `rust/Cargo.lock` (see Gotchas).
 **Decisions:** dylibs embedded in Frameworks instead of static linking (simpler, smaller; App Store packaging of loose dylibs is to be revisited with the Apple Developer Program step). PDFium's iOS builds have minos 26.0: fine for the phone (iOS 27.0.1), the app's own target stays 15.0 but PDF import needs iOS 26+.
-**State:** uncommitted. `flutter test` 78 pass (incl. import test through the Rust core on macOS). Simulator: Debug build embeds both dylibs (signed); with a temporary startup hook (removed) the app located them in Frameworks and imported a PDF end to end (project folder written). The Files picker is blank in the simulator, so it is untried. **Device build fails at signing: "No Accounts" in Xcode, Avery must re-sign in to the Apple ID.**
+**State:** committed as `a50a16d`, not pushed. Full `bash scripts/test.sh` passed (Python, Swift, Flutter analyze, `flutter test` 78 pass incl. import test through the Rust core on macOS). Simulator: Debug build embeds both dylibs (signed); with a temporary startup hook (removed) the app located them in Frameworks and imported a PDF end to end (project folder written). The Files picker is blank in the simulator, so it is untried. **Device build fails at signing: "No Accounts" in Xcode, Avery must re-sign in to the Apple ID.**
 **Next:** see Resume block.
 
 ### 2026-10-21 20:00 — Rust core wired into the Flutter app (FFI), parity with the worker measured and fixed
