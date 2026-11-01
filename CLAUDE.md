@@ -93,6 +93,8 @@ scripts/
   synth_generate.py    # Generated scripts with exact answers (6 layout families)
   synth_score.py       # Scores the parser on them: right voice per unit
   label_sample.py      # Local page to hand-label a random sample of real PDF lines
+  label_kit.py         # Both open exams as an offline page (no server); --import its export
+  side_by_side.py      # Finds side-by-side text without the parser (draws the side-by-side exam)
   real_score.py        # Scores the parser on the labelled sample (95% range)
   scorecard.py         # LEGACY oracle (rule-made ground truth); no longer gates
   extract_independent.py  # Builds parser-independent ground truth (Test PDFs/reference/*_independent.json)

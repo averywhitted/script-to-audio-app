@@ -50,7 +50,11 @@ LABELS = PDF_DIR / "reference" / "real_sample.json"
 # The final exam: a second, independent sample (different seed, no line shared
 # with the first) labelled only after the parser work it judges is done, so
 # nothing was ever tuned against it. Select with --sample exam.
-SAMPLES = {"main": ("real_sample.json", 2026), "exam": ("real_sample.exam.json", 2027)}
+# The side-by-side exam (drawn by label_kit.py from side_by_side.py's regions)
+# judges side-by-side speech: who says each line, and whether it's spoken at the
+# same time as the text beside it ("together").
+SAMPLES = {"main": ("real_sample.json", 2026), "exam": ("real_sample.exam.json", 2027),
+           "sbs": ("real_sample.sbs.json", 2028)}
 
 
 def use_sample(name: str) -> None:
