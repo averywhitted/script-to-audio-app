@@ -4,7 +4,7 @@
 // Where the native code lives:
 //   macOS   libtable_read_ffi.dylib + libpdfium.dylib, next to the app (Contents/Frameworks) or, in a development
 //           build, rust/target/release and the venv's pypdfium2 copy of PDFium.
-//   iPhone  linked into the app (static library with PDFium), so the process itself is searched.
+//   iPhone  the same two dylibs in the .app's Frameworks folder (scripts/build_ios_native.sh builds them).
 
 import 'dart:convert';
 import 'dart:ffi';
@@ -29,7 +29,7 @@ typedef _FreeDart = void Function(Pointer<Utf8>);
 class RustCore {
   RustCore({this.libraryPath, this.pdfiumPath});
 
-  /// The core's dylib; null means the symbols are linked into this process (iPhone).
+  /// The core's dylib; null means the symbols are linked into this process.
   final String? libraryPath;
 
   /// PDFium's dylib; null when PDFium is linked in statically.
@@ -38,7 +38,12 @@ class RustCore {
   /// Finds the native libraries, or null when this build has none (the caller then uses the Python worker).
   static RustCore? locate({String? repoRoot}) {
     final env = Platform.environment;
-    if (Platform.isIOS) return RustCore();
+    if (Platform.isIOS) {
+      // .../Runner.app/Runner -> .../Runner.app/Frameworks (the "Embed native libraries" build phase puts them there)
+      final frameworks = '${File(Platform.resolvedExecutable).parent.path}/Frameworks';
+      final lib = '$frameworks/libtable_read_ffi.dylib', pdfium = '$frameworks/libpdfium.dylib';
+      return File(lib).existsSync() && File(pdfium).existsSync() ? RustCore(libraryPath: lib, pdfiumPath: pdfium) : null;
+    }
     if (!Platform.isMacOS) return null;
     final exeDir = File(Platform.resolvedExecutable).parent.path; // .../Contents/MacOS
     final candidates = <(String, String?)>[

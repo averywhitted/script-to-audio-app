@@ -4,6 +4,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:table_read/phone/phone_store.dart';
+import 'package:table_read/services/project_files.dart';
 import 'package:table_read/services/python_bridge.dart';
 import 'package:table_read/services/rust_core.dart';
 
@@ -36,4 +38,32 @@ void main() {
   test('a missing PDF is an error message, not a crash', () async {
     expect(core!.parse('/nonexistent/none.pdf'), throwsA(isA<RustCoreException>()));
   }, skip: skip);
+
+  test('the phone imports a PDF: a project folder with the PDF, script.json and project.json, and a second import gets its own folder', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final dir = Directory.systemTemp.createTempSync('tr_import');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final store = PhoneStore(folderAccess: false)..folder = dir.path;
+    final first = await store.importPdf(pickedPath: pdf('synthetic/screenplay_letter.pdf'), core: core);
+    expect(store.error, isNull);
+    expect(first, isNotNull);
+    final folder = first!.folderPath!;
+    expect(File('$folder/screenplay_letter.pdf').existsSync(), isTrue);
+    final snapshot = loadScriptSnapshot(folder);
+    expect(snapshot, isNotNull);
+    expect(snapshot!.scenes, isNotEmpty);
+    expect(first.pdfFilename, 'screenplay_letter.pdf');
+    expect(store.projects.map((p) => p.id), contains(first.id));
+    final second = await store.importPdf(pickedPath: pdf('synthetic/screenplay_letter.pdf'), core: core);
+    expect(second!.folderPath, isNot(first.folderPath));
+    expect(store.projects.length, 2);
+  }, skip: skip, timeout: const Timeout(Duration(minutes: 2)));
+
+  test('the corrections config bundled for the phone is the backend\'s', () {
+    expect(
+      File('assets/corrections_config.json').readAsStringSync(),
+      File('../backend/corrections_config.json').readAsStringSync(),
+      reason: 'copy backend/corrections_config.json to app/assets/ after changing it',
+    );
+  });
 }

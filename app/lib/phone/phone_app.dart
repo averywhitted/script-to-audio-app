@@ -225,6 +225,14 @@ class _Projects extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(child: Text('Projects', style: TextStyles.display(t, size: 32))),
+                  if (store.importing)
+                    const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5)))
+                  else
+                    IconButton(
+                      tooltip: 'Import a PDF',
+                      icon: Icon(Icons.add_rounded, color: t.ink2),
+                      onPressed: store.folder == null ? null : () => store.importPdf(),
+                    ),
                   IconButton(
                     tooltip: 'More',
                     icon: Icon(Icons.more_horiz_rounded, color: t.ink2),
@@ -253,7 +261,7 @@ class _Projects extends StatelessWidget {
                 padding: const EdgeInsets.all(32),
                 child: Center(
                   child: Text(
-                    'No projects in this folder yet.\nRender a script on your Mac and it shows up here.',
+                    'No projects in this folder yet.\nTap + to import a screenplay PDF, or render a script on your Mac and it shows up here.',
                     textAlign: TextAlign.center,
                     style: TextStyles.ui(t, size: 16, color: t.muted, height: 1.5),
                   ),

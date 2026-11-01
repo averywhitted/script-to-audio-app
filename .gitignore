@@ -50,3 +50,6 @@ Test PDFs/reference/real_sample.tmp
 
 # ML training data (names the corpus PDFs in its script column)
 ml/data/
+
+# iPhone native libraries (Rust core + PDFium), built by scripts/build_ios_native.sh
+app/ios/native/

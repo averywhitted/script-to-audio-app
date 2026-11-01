@@ -157,6 +157,7 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				7A1B2C3D4E5F60718293A4B5 /* Embed native libraries */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 			);
 			buildRules = (
@@ -235,6 +236,21 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		7A1B2C3D4E5F60718293A4B5 /* Embed native libraries */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Embed native libraries";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# The Rust core and PDFium (built by scripts/build_ios_native.sh) go into Frameworks, signed with the app's identity.\nSRC=\"$SRCROOT/native/$PLATFORM_NAME\"\nif [ ! -f \"$SRC/libtable_read_ffi.dylib\" ]; then\n  echo \"warning: $SRC has no native libraries; run scripts/build_ios_native.sh (PDF import will be unavailable)\"\n  exit 0\nfi\nDEST=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH\"\nmkdir -p \"$DEST\"\nfor lib in libtable_read_ffi.dylib libpdfium.dylib; do\n  cp -f \"$SRC/$lib\" \"$DEST/$lib\"\n  if [ -n \"$EXPANDED_CODE_SIGN_IDENTITY\" ] && [ \"$CODE_SIGNING_ALLOWED\" != \"NO\" ]; then\n    /usr/bin/codesign --force --sign \"$EXPANDED_CODE_SIGN_IDENTITY\" --timestamp=none \"$DEST/$lib\"\n  fi\ndone\n";
+		};
 		3B06AD1E1E4923F5004D2608 /* Thin Binary */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;

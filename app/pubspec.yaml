@@ -66,6 +66,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/app_icon.png
+    - assets/corrections_config.json
     - assets/sounds/
   fonts:
     - family: Hanken

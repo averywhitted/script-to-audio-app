@@ -143,7 +143,8 @@ def main():
         name, req = queue.pop()
         if name not in cache:
             cache[name] = [json.loads(l) for l in get(f"{INDEX}/{index_path(name)}").decode().splitlines() if l.strip()]
-        cands = [e for e in cache[name] if not e["yanked"] and matches(e["vers"], req)]
+        # An exact pin (`name==1.2.3`, from Cargo.lock) may be yanked: cargo still builds a locked yanked version.
+        cands = [e for e in cache[name] if (req.startswith("=") or not e["yanked"]) and matches(e["vers"], req)]
         if not cands:
             print(f"warn: no version of {name} matches {req}", file=sys.stderr)
             continue

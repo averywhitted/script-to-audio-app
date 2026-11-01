@@ -36,6 +36,8 @@ class ProjectsFolderPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate {
 
   private let bookmarkKey = "projectsFolderBookmark"
   private var pendingPick: FlutterResult?
+  private var pendingPdf: FlutterResult?
+  private var pdfPicker: UIDocumentPickerViewController?
   private var accessed: URL?
 
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -63,6 +65,12 @@ class ProjectsFolderPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate {
     case "delete":
       let path = args["path"] as? String ?? ""
       background(result) { try self.delete(URL(fileURLWithPath: path)) }
+    case "pickPdf":
+      pickPdf(result)
+    case "copyIn":
+      let from = args["from"] as? String ?? ""
+      let to = args["to"] as? String ?? ""
+      background(result) { try self.copyIn(URL(fileURLWithPath: from), URL(fileURLWithPath: to)) }
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -77,7 +85,37 @@ class ProjectsFolderPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate {
     topViewController()?.present(picker, animated: true)
   }
 
+  /// Choose a screenplay PDF in Files. The picker hands back a copy inside the app's own temporary folder, so no
+  /// security scope is needed; Dart parses it from there.
+  private func pickPdf(_ result: @escaping FlutterResult) {
+    let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf], asCopy: true)
+    picker.delegate = self
+    pendingPdf = result
+    pdfPicker = picker
+    topViewController()?.present(picker, animated: true)
+  }
+
+  private func finishPdf(_ value: Any?) {
+    pendingPdf?(value)
+    pendingPdf = nil
+    pdfPicker = nil
+  }
+
+  /// Copies a local file into the projects folder (coordinated, so iCloud picks it up cleanly).
+  private func copyIn(_ from: URL, _ to: URL) throws -> Bool {
+    try FileManager.default.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
+    let data = try Data(contentsOf: from)
+    var coordError: NSError?
+    var writeError: Error?
+    NSFileCoordinator().coordinate(writingItemAt: to, options: .forReplacing, error: &coordError) { u in
+      do { try data.write(to: u, options: .atomic) } catch { writeError = error }
+    }
+    if let e = coordError ?? writeError { throw e }
+    return true
+  }
+
   func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+    if controller === pdfPicker { return finishPdf(urls.first?.path) }
     guard let url = urls.first else { return finishPick(nil) }
     let ok = url.startAccessingSecurityScopedResource()
     defer { if ok { url.stopAccessingSecurityScopedResource() } }
@@ -92,7 +130,9 @@ class ProjectsFolderPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate {
     }
   }
 
-  func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { finishPick(nil) }
+  func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+    if controller === pdfPicker { finishPdf(nil) } else { finishPick(nil) }
+  }
 
   private func finishPick(_ value: Any?) {
     pendingPick?(value)

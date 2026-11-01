@@ -31,11 +31,15 @@ void writeFileAtomic(String path, String text) {
 /// Saves the parse next to project.json. Corrections and added lines stay in
 /// project.json and are applied on top, the same way on every device.
 void saveScriptSnapshot(String folder, ScriptSummary script, {required String pdfFilename}) {
-  writeFileAtomic(
-    '$folder/$scriptSnapshotFile',
-    _encoder.convert({'schemaVersion': 1, 'pdfFilename': pdfFilename, 'script': script.toJson()}),
-  );
+  writeFileAtomic('$folder/$scriptSnapshotFile', scriptSnapshotText(script, pdfFilename: pdfFilename));
 }
+
+/// The text of script.json (also written by the iPhone, through the Files plugin).
+String scriptSnapshotText(ScriptSummary script, {required String pdfFilename}) =>
+    _encoder.convert({'schemaVersion': 1, 'pdfFilename': pdfFilename, 'script': script.toJson()});
+
+/// The text of project.json, formatted as the Mac writes it.
+String projectManifestText(Project p) => _encoder.convert(p.toJson());
 
 ScriptSummary? loadScriptSnapshot(String folder) {
   try {

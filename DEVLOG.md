@@ -1,7 +1,7 @@
 # Dev Log — Table Read
 
 ## Resume here
-_Updated 2026-10-21 20:00 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed) · working tree: ADRs and the spike committed (see git log); uncommitted: Oct 17 label-kit files and two sidetrack notes that are not part of this work (don't commit them with it)_
+_Updated 2026-10-30 14:10 EDT · branch `ios-rehearsal` @ `7ddc283` (not pushed) · working tree: UNCOMMITTED phone-import work (see History 2026-10-30) plus Avery's earlier edits (`.claude/launch.json`, `.gitignore`, `CLAUDE.md`, `scripts/label_sample.py`) and Oct 17 label-kit files / sidetrack notes (don't commit those with it)_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Shipped app is SwiftUI (`Sources/TableRead/`) + Python backend (`backend/`); being rebuilt as a Flutter app (`app/`, beta v0.3.0, PR #78 open) that drives the Python worker. iPhone companion exists in `app/` (iOS rehearsal milestone, #89-#94, rounds 1-2 installed on Avery's phone).
 **Current goal:** milestone **Rust core** (GitHub milestone 9, issues #98-#109; later engines/languages/cloud parked in milestone 10, #110-#112). Planned with `/grilling` Oct 21; Avery said go.
@@ -32,21 +32,24 @@ _Updated 2026-10-21 20:00 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 **Parity with the worker** (`python3 scripts/rust_vs_worker.py`, element-level text overlap vs PyMuPDF+Python on 31 PDFs): 25 of 31 at 99-100%, titles identical 31/31, scene/line/character counts within 1; lowest: Untitled 94.6% (PyMuPDF glues page-break "(MORE)" into a parenthetical, Rust doesn't), EMMA 97.1%, Burns 98.8% (side-by-side layouts; some Rust results are better). Bugs this found and fixed in the extractor: doubled spaces (generated + real space), TAB used as space, U+0002 hyphen, split `fi` ligatures (recombined to ﬁ to keep stored text identical), dropped duplicate space glyphs, block gap 1.45 -> 1.5 em, letter-spaced titles.
 
 **Next steps:**
-1. **PDFium that ships (needs Avery's OK to download):** macOS dylib for the Mac app (bblanchon/pdfium-binaries, dynamic only) and a static iOS PDFium (paulocoutinhox/pdfium-lib or build). Dev builds use the venv's `libpdfium.dylib` (pypdfium2 149.0.7802, crate feature `pdfium_7763`).
-2. **#101 Mac cutover:** bundle `libtable_read_ffi.dylib` + `libpdfium.dylib` into the .app (Contents/Frameworks, signed), then drop the Python parse fallback from the shipped app (keep as oracle); parser-quality work then resumes in Rust.
-3. **#102 iPhone import and parse:** Xcode: link `libtable_read_ffi.a` + static PDFium into the Runner target for device and simulator; PhoneApp import (file picker / share sheet), `RustCore().parse`, write `script.json` into the iCloud project folder, text-only rehearsal; bundle `corrections_config.json` as an asset. Needs step 1 and Avery's Xcode sign-in.
-4. Gaps: page rotation / non-corpus PDFs through the whole pipeline; trailing-space width; side-by-side layouts (#81-#83) now in Rust.
-5. Then sync features (#103-#105), then the desktop Rust renderer (#106-#107).
+1. **Avery: re-sign in to Xcode's Apple ID** (Xcode > Settings > Accounts; the device build fails with "No Accounts"). Then `MIRROR=<dir> bash scripts/build_ios_native.sh` is already done in `app/ios/native/` (rerun only if the Rust code changes), and install: `cd app && flutter build ios --config-only --release`, then the `xcodebuild ... -destination 'id=00008130-000475601803401C'` + `devicectl install` commands under Watch out for. Then on the phone: `+` > pick a PDF > check the project shows and opens (text-only rehearsal).
+2. Run the full gate before committing: `bash scripts/test.sh` (flutter 78 pass already); commit the phone-import work (pbxproj, AppDelegate.swift, phone_*.dart, rust_core.dart, build_ios_native.sh, assets/corrections_config.json, 3 goldens, local_crate_mirror.py, DEVLOG).
+3. **Mac side of imported projects:** open a phone-imported project on the Mac (it has PDF + script.json + project.json) and confirm it loads without re-importing; decide whether the Mac re-parses (ADR 0003: newer parser wins).
+4. **#101 Mac cutover:** bundle `libtable_read_ffi.dylib` + the downloaded `pdfium-mac-arm64` (`libpdfium.dylib`, same 149.0.7802) into the .app (Contents/Frameworks, signed), then drop the Python parse fallback from the shipped app (keep as oracle).
+5. Gaps: page rotation / non-corpus PDFs; share-sheet import ("Open in Table Read"); import progress text; the iPhone's Release build never ran on a device yet; PDF import needs iOS 26+ (PDFium minos 26.0).
+6. Then sync features (#103-#105), then the desktop Rust renderer (#106-#107).
 
-**To try on the phone:** nothing new is installable yet (iOS needs the static PDFium, step 1, and the Runner link, step 3). It also needs Avery to renew Xcode's Apple ID sign-in (below) so `bash scripts/install_iphone.sh` works.
+**To try on the phone:** not installable until step 1 (Apple ID sign-in). Verified instead on the iPhone 17 simulator (`flutter run -d 3F48D6A2-E8BF-4769-8B17-6B26617FAC0B`): the Rust core and PDFium load from `Runner.app/Frameworks` and a PDF imports end to end (project folder with PDF, script.json, project.json). The Files picker itself renders blank in the simulator (Apple remote view), so the `+` > picker path is only verified on a real phone later.
 
 **Waiting on the user / open questions:**
-- **OK to download PDFium builds** (macOS dylib for the Mac app; static iOS lib) from bblanchon/pdfium-binaries and/or paulocoutinhox/pdfium-lib (next steps 2).
+- Re-sign in to Xcode (step 1). Done: OK to download PDFium (fetched Oct 30).
 - Labelling the exams (offline kit `Test PDFs/label-kit/Label lines.html`); parser quality work is paused until after the Rust parser cutover (Python parser frozen).
 - Merge PR #78 (`flutter-mac-app` -> `main`). Run the move to iCloud Drive (#89). Notes on the rehearsal mockup / round 2.
 - Verify before relying on them: the research agent's sherpa-onnx news (espeak removal, Oct 20 2026), Piper `lessac` voice license, `flutter_rust_bridge` static linking on iOS/macOS 2026 (Xcode symbol stripping), `ort` is still a release candidate.
 
 **Watch out for:**
+- **Rust builds for iOS:** put `~/.cargo/bin` first on PATH (Homebrew's `rustc` has no iOS targets and cargo picks it up: "can't find crate for core"). The crate mirror is rebuilt per session: pin every crate from `rust/Cargo.lock` (`name==version`) into `scripts/local_crate_mirror.py <dir> ...`, then `MIRROR=<dir>`. `cargo-offline.sh` appends `--config` after your args, so don't use `cargo rustc -- <flags>`; use `RUSTFLAGS`.
+- Flutter debug builds only run via `flutter run` (a debug app launched from the home screen / `simctl launch` shows white).
 - Avery asked (Oct 19): use the local models on linux-box for grunt work and supervise (skill `linux-box-llm`). Used so far for the issue drafts and the spike's Dart UI; both needed review (one real bug: error logs interpolated a function).
 - **Installing on the iPhone:** `flutter build ios` / `flutter devices` don't see the phone. What works: `xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -destination 'id=00008130-000475601803401C' -allowProvisioningUpdates -allowProvisioningDeviceRegistration build`, then `xcrun devicectl device install app --device <udid> <DerivedData>/Release-iphoneos/Runner.app`. Xcode is now signed in to Avery's Apple ID; the developer is trusted on the phone. Free-team apps expire after 7 days: reinstall.
 - **Swift tests hang at launch** ("test runner hung before establishing connection"), issue #95; started Oct 20 after Xcode sign-in / first iPhone attach; not caused by code. Full suite otherwise passes.
@@ -67,6 +70,18 @@ _Updated 2026-10-21 20:00 EDT · branch `ios-rehearsal` @ `342c1e9` (not pushed)
 
 ## History
 <!-- newest first -->
+
+### 2026-10-30 13:55 — PDFium downloaded; Rust core embedded in the iPhone app; PDF import on the phone (#99, #102)
+**Asked:** "Yes, download" (OK to fetch PDFium builds); goal: a new version for the phone.
+**Done:**
+- Downloaded bblanchon/pdfium-binaries `chromium/7802` (PDFium 149.0.7802.0 = the dev dylib's version): `pdfium-ios-device-arm64`, `-ios-simulator-arm64`, `-mac-arm64`, ~3.3 MB each. **They are dylibs, not static libs** (so the plan to link a static PDFium is dropped; the paulocoutinhox static build was not needed). Downloaded copies are in the old session scratchpad; `scripts/build_ios_native.sh` re-downloads.
+- `scripts/build_ios_native.sh`: builds `libtable_read_ffi.dylib` (cdylib, install name `@rpath/...`) for device and simulator and puts it with `libpdfium.dylib` in `app/ios/native/{iphoneos,iphonesimulator}/` (gitignored). New Xcode build phase "Embed native libraries" in `Runner` (`project.pbxproj`) copies the matching pair into `Runner.app/Frameworks` and signs them.
+- `rust_core.dart`: on iOS `RustCore.locate` finds them in `<app>/Frameworks`.
+- Phone import (#102): `+` in the Projects header -> Files picker (`pickPdf` in `AppDelegate.swift`, copy into the app sandbox) -> `RustCore.parse` with the bundled `assets/corrections_config.json` (copy of the backend's; a test keeps them equal) -> `PhoneStore.importPdf` writes `<project>/<pdf>`, `script.json`, `project.json` into the projects folder (new `copyIn` plugin op, coordinated writes). Phone goldens re-recorded (only the new "+").
+- `scripts/local_crate_mirror.py` now accepts yanked versions for exact pins; mirror can be rebuilt from `rust/Cargo.lock` (see Gotchas).
+**Decisions:** dylibs embedded in Frameworks instead of static linking (simpler, smaller; App Store packaging of loose dylibs is to be revisited with the Apple Developer Program step). PDFium's iOS builds have minos 26.0: fine for the phone (iOS 27.0.1), the app's own target stays 15.0 but PDF import needs iOS 26+.
+**State:** uncommitted. `flutter test` 78 pass (incl. import test through the Rust core on macOS). Simulator: Debug build embeds both dylibs (signed); with a temporary startup hook (removed) the app located them in Frameworks and imported a PDF end to end (project folder written). The Files picker is blank in the simulator, so it is untried. **Device build fails at signing: "No Accounts" in Xcode, Avery must re-sign in to the Apple ID.**
+**Next:** see Resume block.
 
 ### 2026-10-21 20:00 — Rust core wired into the Flutter app (FFI), parity with the worker measured and fixed
 **Asked:** (continuing after a usage-limit reset)

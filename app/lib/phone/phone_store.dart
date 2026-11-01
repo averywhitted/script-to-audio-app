@@ -6,9 +6,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/models.dart';
 import '../services/project_files.dart';
+import '../services/rust_core.dart';
 import 'folder_access.dart';
 
 class PhoneStore extends ChangeNotifier {
@@ -115,6 +117,66 @@ class PhoneStore extends ChangeNotifier {
     }
     loading = false;
     notifyListeners();
+  }
+
+  /// True while a PDF is being read (the import button shows progress).
+  bool importing = false;
+
+  /// Import a screenplay (#102): pick a PDF in Files (or take [pickedPath]), parse it here with the shared Rust core,
+  /// and add it to the projects folder as a new project (PDF, script.json, project.json) that the Mac picks up. The
+  /// phone doesn't render voices: the Mac does, when asked. Returns the new project, or null if cancelled or failed
+  /// ([error] says why).
+  Future<Project?> importPdf({String? pickedPath, RustCore? core}) async {
+    final base = folder;
+    if (base == null || importing) return null;
+    importing = true;
+    error = null;
+    notifyListeners();
+    try {
+      final path = pickedPath ?? await FolderAccess.pickPdf();
+      if (path == null) return null;
+      core ??= RustCore.locate();
+      if (core == null) throw 'This build has no PDF reader. Reinstall the app from your Mac.';
+      final script = await core.parse(path, correctionsJson: await rootBundle.loadString('assets/corrections_config.json'));
+      final pdfName = path.split('/').last;
+      final stem = pdfName.replaceFirst(RegExp(r'\.pdf$', caseSensitive: false), '');
+      final name = script.title.trim().isNotEmpty ? script.title.trim() : (stem.isEmpty ? 'Untitled Project' : stem);
+      final taken = {for (final e in await _list(base)) e.name};
+      final clean = name.replaceAll(RegExp(r'[^\p{L}\p{N} \-_]', unicode: true), '').trim();
+      var dirName = clean.isEmpty ? 'Untitled Project' : clean;
+      for (var n = 2; taken.contains(dirName); n++) {
+        dirName = '${clean.isEmpty ? 'Untitled Project' : clean} $n';
+      }
+      final dir = '$base/$dirName';
+      final project = Project.newProject(name, dir)
+        ..pdfFilename = pdfName
+        ..scriptTitle = script.title;
+      final files = {
+        scriptSnapshotFile: scriptSnapshotText(script, pdfFilename: pdfName),
+        'project.json': projectManifestText(project), // last: the project exists for other devices once this is there
+      };
+      if (folderAccess) {
+        await FolderAccess.copyIn(path, '$dir/$pdfName');
+        for (final f in files.entries) {
+          await FolderAccess.write('$dir/${f.key}', f.value);
+        }
+      } else {
+        Directory(dir).createSync(recursive: true);
+        File(path).copySync('$dir/$pdfName');
+        for (final f in files.entries) {
+          writeFileAtomic('$dir/${f.key}', f.value);
+        }
+      }
+      importing = false;
+      await refresh();
+      return projects.where((p) => p.id == project.id).firstOrNull ?? project;
+    } catch (e) {
+      error = 'Couldn’t import that PDF: $e';
+      return null;
+    } finally {
+      importing = false;
+      notifyListeners();
+    }
   }
 
   /// Scenes the Mac hasn't rendered yet, when the Mac has saved the script

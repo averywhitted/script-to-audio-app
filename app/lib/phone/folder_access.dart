@@ -36,6 +36,12 @@ class FolderAccess {
 
   static Future<void> delete(String path) => _channel.invokeMethod('delete', {'path': path});
 
+  /// Shows the Files picker for a screenplay PDF. Returns a copy of it in the app's temporary folder, or null if cancelled.
+  static Future<String?> pickPdf() => _channel.invokeMethod<String>('pickPdf');
+
+  /// Copies a local file into the projects folder (coordinated).
+  static Future<void> copyIn(String from, String to) => _channel.invokeMethod('copyIn', {'from': from, 'to': to});
+
   /// Coordinated write, so iCloud picks the change up cleanly.
   static Future<void> write(String path, String text) => _channel.invokeMethod('write', {'path': path, 'text': text});
 }
