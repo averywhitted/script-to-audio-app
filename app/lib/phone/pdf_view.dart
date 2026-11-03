@@ -108,6 +108,10 @@ class PdfController extends ChangeNotifier {
   bool markup = false;
   bool finger = false;
 
+  /// Whether the page last drawn on has something to undo / redo.
+  bool canUndo = false;
+  bool canRedo = false;
+
   /// Search: how many matches, and which one is showing (1-based; 0 = none).
   int searchCount = 0;
   int searchIndex = 0;
@@ -133,6 +137,10 @@ class PdfController extends ChangeNotifier {
           notifyListeners();
         case 'markup':
           onMarkup?.call(a['page'] as int, a['data'] as String);
+        case 'history':
+          canUndo = a['undo'] as bool;
+          canRedo = a['redo'] as bool;
+          notifyListeners();
       }
     });
     () async {
@@ -164,8 +172,11 @@ class PdfController extends ChangeNotifier {
     await _ch?.invokeMethod('setMode', {'continuous': on});
   }
 
-  Future<void> search(String query) async {
-    final r = Map<String, dynamic>.from(await _ch?.invokeMethod('search', {'query': query}) as Map? ?? const {'count': 0, 'index': 0});
+  /// Highlights every match; [reveal] also scrolls to the first (off when the script's own search is steering).
+  Future<void> search(String query, {bool reveal = true}) async {
+    final r = Map<String, dynamic>.from(
+      await _ch?.invokeMethod('search', {'query': query, 'reveal': reveal}) as Map? ?? const {'count': 0, 'index': 0},
+    );
     searchCount = r['count'] as int;
     searchIndex = r['index'] as int;
     notifyListeners();
@@ -183,6 +194,10 @@ class PdfController extends ChangeNotifier {
     notifyListeners();
     await _ch?.invokeMethod('clearSearch');
   }
+
+  Future<void> undo() async => _ch?.invokeMethod('undo');
+  Future<void> redo() async => _ch?.invokeMethod('redo');
+  Future<void> clearPage() async => _ch?.invokeMethod('clearPage');
 
   Future<void> setMarkup({bool? enabled, bool? finger}) async {
     markup = enabled ?? markup;

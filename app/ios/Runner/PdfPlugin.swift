@@ -10,7 +10,7 @@ import PencilKit
 /// `tableread/pdf`            pageTexts(path) -> [String]   (the text of every page, to line the script up with its pages)
 /// `tableread/pdfview`        the platform view; creation args: path, dark
 /// `tableread/pdfview_<id>`   per view. Dart -> native: state, goToPage, setMode, search, searchStep, clearSearch,
-///                            setMarkup, loadMarkup. Native -> Dart: page, markup.
+///                            setMarkup, loadMarkup, undo, redo, clearPage. Native -> Dart: page, markup, history.
 final class PdfPlugin: NSObject, FlutterPlugin {
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "tableread/pdf", binaryMessenger: registrar.messenger())
@@ -77,6 +77,8 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
   private lazy var toolPicker = PKToolPicker()
   private var saveTimers: [Int: Timer] = [:]
   private var loading = false
+  // The canvas drawn on last: Undo, Redo and Clear page act on it.
+  private weak var activeCanvas: PKCanvasView?
 
   init(frame: CGRect, viewId: Int64, args: [String: Any], messenger: FlutterBinaryMessenger) {
     channel = FlutterMethodChannel(name: "tableread/pdfview_\(viewId)", binaryMessenger: messenger)
@@ -134,7 +136,7 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
       setContinuous(args["continuous"] as? Bool ?? true)
       result(nil)
     case "search":
-      result(search(args["query"] as? String ?? ""))
+      result(search(args["query"] as? String ?? "", reveal: args["reveal"] as? Bool ?? true))
     case "searchStep":
       result(stepSearch(forward: args["forward"] as? Bool ?? true))
     case "clearSearch":
@@ -149,6 +151,21 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
       result(nil)
     case "loadMarkup":
       loadMarkup(args["pages"] as? [String: String] ?? [:])
+      result(nil)
+    case "undo":
+      editCanvas { $0.undoManager?.undo() }
+      result(nil)
+    case "redo":
+      editCanvas { $0.undoManager?.redo() }
+      result(nil)
+    case "clearPage":
+      // One undoable step, so a slip of the finger can be taken back.
+      editCanvas { c in
+        let old = c.drawing
+        guard !old.strokes.isEmpty else { return }
+        c.undoManager?.registerUndo(withTarget: c) { $0.drawing = old }
+        c.drawing = PKDrawing()
+      }
       result(nil)
     default:
       result(FlutterMethodNotImplemented)
@@ -174,7 +191,7 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
     applyMarkupState()
   }
 
-  private func search(_ query: String) -> [String: Any] {
+  private func search(_ query: String, reveal: Bool) -> [String: Any] {
     results = []
     resultIndex = 0
     pdfView.highlightedSelections = nil
@@ -183,7 +200,7 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
     results = doc.findString(q, withOptions: [.caseInsensitive, .diacriticInsensitive])
     for r in results { r.color = UIColor.systemYellow.withAlphaComponent(0.55) }
     pdfView.highlightedSelections = results
-    showResult()
+    if reveal { showResult() }
     return ["count": results.count, "index": results.isEmpty ? 0 : 1]
   }
 
@@ -262,8 +279,24 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
     drawings[doc.index(for: page)] = c.drawing
   }
 
+  /// Runs an edit on the canvas drawn on last (or the one on the page showing).
+  private func editCanvas(_ edit: (PKCanvasView) -> Void) {
+    guard let c = activeCanvas ?? pdfView.currentPage.flatMap({ canvases[$0] }) else { return }
+    activeCanvas = c
+    edit(c)
+    reportHistory()
+  }
+
+  private func reportHistory() {
+    let m = activeCanvas?.undoManager
+    channel.invokeMethod("history", arguments: ["undo": m?.canUndo ?? false, "redo": m?.canRedo ?? false])
+  }
+
   func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
     guard !loading, let page = canvases.first(where: { $0.value === canvasView })?.key, let doc = pdfView.document else { return }
+    activeCanvas = canvasView
+    // The undo manager is updated just after this callback.
+    DispatchQueue.main.async { [weak self] in self?.reportHistory() }
     let i = doc.index(for: page)
     drawings[i] = canvasView.drawing
     // Tell Dart once the pen has paused: it saves the page into the project.

@@ -562,8 +562,12 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       _hitsByLine = const {};
       _hit = 0;
     });
+    if (_pdfBesideScript) pdf.clearSearch();
     _keyFocus.requestFocus();
   }
+
+  /// The PDF sits beside the script: one search covers both.
+  bool get _pdfBesideScript => _pdfOpen && _canSplit && _pdfPath.isNotEmpty;
 
   void _runSearch(String q) {
     // A line blanked for practice stays blank: searching can't be used to read it.
@@ -577,6 +581,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       _hitsByLine = by;
       _hit = 0;
     });
+    if (_pdfBesideScript) pdf.search(q, reveal: false);
     if (hits.isNotEmpty) _revealHit();
   }
 
@@ -590,6 +595,9 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     final h = _hits[_hit];
     _userScrolled = DateTime.now();
     _revealLine(h.scene, h.line);
+    // Beside the script, the PDF turns to the page the match is on.
+    final page = _pageOf?[session.scenes[h.scene].lines[h.line].key];
+    if (_pdfBesideScript && page != null && page != pdf.page) pdf.goToPage(page);
   }
 
   /// Scrolls to a line even when it is far away and not built yet: jumps to about where it should be (by how many
@@ -720,8 +728,14 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     if (_canSplit) {
       setState(() => _pdfOpen = true);
       SharedPreferences.getInstance().then((p) => p.setBool(_pdfOpenKey, true));
-      pdf.onReady = () => pdf.goToPage(at);
-      if (pdf.pageCount > 0) pdf.goToPage(at);
+      pdf.onReady = () {
+        pdf.goToPage(at);
+        if (_searching && _queryCtl.text.trim().isNotEmpty) pdf.search(_queryCtl.text, reveal: false);
+      };
+      if (pdf.pageCount > 0) {
+        pdf.goToPage(at);
+        if (_searching && _queryCtl.text.trim().isNotEmpty) pdf.search(_queryCtl.text, reveal: false);
+      }
     } else {
       await Navigator.of(context).push(
         MaterialPageRoute(
@@ -768,6 +782,8 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     pad: isPadDisplay(context),
     folderAccess: widget.folderAccess,
     onClose: _closePdf,
+    linkedQuery: _searching ? _queryCtl.text : null,
+    onSearch: _openSearch,
   );
 
   Future<void> _setShowPages(bool on) async {

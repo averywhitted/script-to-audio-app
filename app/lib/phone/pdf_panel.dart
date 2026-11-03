@@ -3,6 +3,7 @@
 // switch (#120) and Apple Pencil markup (#119), the last two on iPad only.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/tokens.dart';
 import 'pdf_view.dart';
@@ -17,6 +18,8 @@ class PdfPanel extends StatefulWidget {
     required this.pad,
     this.onClose,
     this.folderAccess = true,
+    this.linkedQuery,
+    this.onSearch,
   });
 
   final String pdfPath;
@@ -27,6 +30,10 @@ class PdfPanel extends StatefulWidget {
   final bool pad;
   final VoidCallback? onClose;
   final bool folderAccess;
+
+  /// Beside the script there is one search for both: this is its text (the PDF highlights it too), and [onSearch] opens it.
+  final String? linkedQuery;
+  final VoidCallback? onSearch;
 
   @override
   State<PdfPanel> createState() => _PdfPanelState();
@@ -104,9 +111,29 @@ class _PdfPanelState extends State<PdfPanel> {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
+    return Focus(
+      // ⌘F on a keyboard: this panel's own search, or the script's when it is beside it.
+      onKeyEvent: (_, e) {
+        if (e is! KeyDownEvent || e.logicalKey != LogicalKeyboardKey.keyF || !HardwareKeyboard.instance.isMetaPressed) {
+          return KeyEventResult.ignored;
+        }
+        if (widget.onSearch != null) {
+          widget.onSearch!();
+        } else {
+          setState(() => _searching = true);
+          WidgetsBinding.instance.addPostFrameCallback((_) => _queryFocus.requestFocus());
+        }
+        return KeyEventResult.handled;
+      },
+      child: _body(t),
+    );
+  }
+
+  Widget _body(Tokens t) {
     return Column(
       children: [
-        _searching ? _searchBar(t) : _toolbar(t),
+        _searching && widget.onSearch == null ? _searchBar(t) : _toolbar(t),
+        if (widget.linkedQuery != null && widget.linkedQuery!.trim().isNotEmpty) _linkedStrip(t),
         Expanded(
           child: Stack(
             children: [
@@ -162,6 +189,7 @@ class _PdfPanelState extends State<PdfPanel> {
             child: Text('Script PDF', style: TextStyles.ui(t, size: 16, weight: FontWeight.w600)),
           ),
           btn(Icons.search_rounded, 'Search the PDF', () {
+            if (widget.onSearch != null) return widget.onSearch!();
             setState(() => _searching = true);
             WidgetsBinding.instance.addPostFrameCallback((_) => _queryFocus.requestFocus());
           }),
@@ -177,18 +205,67 @@ class _PdfPanelState extends State<PdfPanel> {
               () => c.setMarkup(enabled: !c.markup),
               on: c.markup,
             ),
-            if (c.markup)
+            if (c.markup) ...[
+              btn(Icons.undo_rounded, 'Undo', c.canUndo ? c.undo : null),
+              btn(Icons.redo_rounded, 'Redo', c.canRedo ? c.redo : null),
+              btn(Icons.layers_clear_rounded, 'Clear this page’s markup', _confirmClear),
               btn(
                 Icons.touch_app_rounded,
                 c.finger ? 'Draw with Pencil only' : 'Draw with a finger too',
                 () => c.setMarkup(finger: !c.finger),
                 on: c.finger,
               ),
+            ],
           ],
         ],
       ),
     );
   }
+
+  /// Clearing can be undone (Undo), so one tap is enough.
+  void _confirmClear() {
+    c.clearPage();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Cleared this page’s markup'),
+        action: SnackBarAction(label: 'Undo', onPressed: c.undo),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  /// The script's search is running: how many times the PDF has the same words, with its own previous / next.
+  Widget _linkedStrip(Tokens t) => Container(
+    key: const Key('pdfLinkedSearch'),
+    height: 40,
+    padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
+    decoration: BoxDecoration(
+      color: t.panel,
+      border: Border(bottom: BorderSide(color: t.rule)),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            c.searchCount == 0 ? 'Not in the PDF' : '${c.searchIndex} of ${c.searchCount} in the PDF',
+            style: TextStyles.ui(t, size: 13, color: t.muted),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Previous in the PDF',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.keyboard_arrow_up_rounded),
+          onPressed: c.searchCount == 0 ? null : () => c.searchStep(false),
+        ),
+        IconButton(
+          tooltip: 'Next in the PDF',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          onPressed: c.searchCount == 0 ? null : () => c.searchStep(true),
+        ),
+      ],
+    ),
+  );
 
   Widget _searchBar(Tokens t) => Container(
     height: 52,

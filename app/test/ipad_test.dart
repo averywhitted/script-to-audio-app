@@ -281,9 +281,33 @@ void main() {
       await tester.tap(find.byTooltip('Mark up with Apple Pencil'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('Draw with a finger too'), findsOneWidget);
+      // The Pencil's own tools: undo / redo (greyed until there is something) and clearing the page.
+      expect(find.byTooltip('Undo'), findsOneWidget);
+      expect(find.byTooltip('Redo'), findsOneWidget);
+      expect(find.byTooltip('Clear this page’s markup'), findsOneWidget);
       await tester.tap(find.byTooltip('Close PDF'));
       await tester.pumpAndSettle();
       expect(find.text('Script PDF'), findsNothing);
+    });
+
+    testWidgets('one search covers the script and the PDF beside it', (tester) async {
+      await _pump(tester, size: const Size(1366, 1024));
+      await _openEarnest(tester);
+      await tester.tap(find.byTooltip('Show PDF'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pdfLinkedSearch')), findsNothing);
+      // Searching from the PDF's toolbar opens the script's search bar...
+      await tester.tap(find.byTooltip('Search the PDF'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('scriptSearchField')), findsOneWidget);
+      // ...and what is typed there is looked for in the PDF too.
+      await tester.enterText(find.byKey(const Key('scriptSearchField')), 'Algernon');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pdfLinkedSearch')), findsOneWidget);
+      expect(find.byKey(const Key('pdfSearchField')), findsNothing);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pdfLinkedSearch')), findsNothing);
     });
 
     testWidgets('a narrower window gives up the scenes sidebar for the PDF; a phone window has neither', (tester) async {
