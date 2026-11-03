@@ -20,10 +20,13 @@ import '../theme/tokens.dart';
 import '../ui/dashboard.dart' show blockText;
 import '../ui/playback_bar.dart' show SceneTimeline;
 import '../ui/widgets.dart' show NameChip, titleCaseName;
+import '../services/project_files.dart' show RehearsalState, loadNewestRehearsal, rehearsalFolder;
 import 'adaptive.dart';
+import 'bookmarks.dart';
 import 'folder_access.dart';
 import 'line_notes.dart';
 import 'now_playing.dart';
+import 'outline_rail.dart';
 import 'page_align.dart';
 import 'pdf_panel.dart';
 import 'pdf_view.dart';
@@ -75,7 +78,7 @@ class PhoneRehearsalScreen extends StatefulWidget {
   State<PhoneRehearsalScreen> createState() => _PhoneRehearsalScreenState();
 }
 
-class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
+class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with WidgetsBindingObserver {
   late final RehearsalSession session = RehearsalSession.load(widget.project);
   late final RehearsalPlayer player = RehearsalPlayer(audioEnabled: widget.audio);
   final scroll = ScrollController();
@@ -105,6 +108,20 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   // Notes (#117)
   LineNotes? notes;
 
+  // Bookmarks
+  Bookmarks? bookmarks;
+
+  // The outline along the edge: the scene being read (follows the scroll), and the widget to fold away when scrolling.
+  final ValueNotifier<int?> _viewScene = ValueNotifier(null);
+  final GlobalKey<OutlineRailState> _railKey = GlobalKey();
+
+  // Position sync: this device's id, and the newest rehearsal file we have already dealt with (applied, dismissed or written).
+  String? _myDeviceId;
+  DateTime _syncSeen = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  RehearsalState? _incoming;
+  Timer? _syncTimer;
+  bool _restored = false;
+
   // Search (#113)
   bool _searching = false;
   final _queryCtl = TextEditingController();
@@ -128,12 +145,24 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    session.deviceLabel = 'iPhone'; // set to iPad in the first build, once the screen size is known
     RehearsalSession.deviceId().then((id) {
       final n = LineNotes(folder: session.folder, deviceId: id, folderAccess: widget.folderAccess)..load();
       n.addListener(() {
         if (mounted) setState(() {});
       });
-      if (mounted) setState(() => notes = n);
+      final b = Bookmarks(folder: session.folder, deviceId: id, folderAccess: widget.folderAccess)..load();
+      b.addListener(() {
+        if (mounted) setState(() {});
+      });
+      if (mounted) {
+        setState(() {
+          _myDeviceId = id;
+          notes = n;
+          bookmarks = b;
+        });
+      }
     });
     if (widget.audio) {
       AudioSession.instance
@@ -155,10 +184,19 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     player.addListener(_onPlayer);
     session.restore(player).then((_) {
       if (!mounted) return;
+      final newest = loadNewestRehearsal(session.folder);
+      if (newest != null) _syncSeen = newest.updatedAt;
       setState(() {});
       player.onSettingsChanged = () => session.scheduleSave(player, folderAccess: widget.folderAccess);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent(animate: false));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Where the script was last being read (on any device), else where playback stopped.
+        final rr = session.restoredReading;
+        if (rr == null || !_jumpToReading(rr.$1, rr.$2, animate: false)) _scrollToCurrent(animate: false);
+        _restored = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) => _updateViewScene());
+      });
     });
+    if (widget.folderAccess) _syncTimer = Timer.periodic(const Duration(seconds: 20), (_) => _checkOtherDevices());
     SharedPreferences.getInstance().then((p) {
       if (mounted) {
         setState(() {
@@ -174,6 +212,10 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _syncTimer?.cancel();
+    _viewScene.dispose();
+    bookmarks?.dispose();
     if (widget.audio) nowPlaying.detach();
     for (final sub in _audioSubs) {
       sub.cancel();
@@ -199,7 +241,12 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     if (player.currentCueIndex != _lastCue || scene != _lastScene) {
       _lastCue = player.currentCueIndex;
       _lastScene = scene;
-      if (player.isPlaying && _following) WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
+      if (player.isPlaying && _following) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToCurrent();
+          _noteReading(playing: true);
+        });
+      }
       _followPdf();
     }
     setState(() {});
@@ -365,26 +412,24 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
                 final size = sizeClassOf(box.maxWidth);
                 _canSplit = box.maxWidth >= splitPdfMinWidth;
                 final pane = _pdfOpen && _canSplit && _pdfPath.isNotEmpty;
-                final sidebar = size != SizeClass.compact && !(pane && box.maxWidth < sidebarWithPdfMinWidth);
+                session.deviceLabel = isPadDisplay(context) ? 'iPad' : 'iPhone';
                 final center = Column(
                   children: [
-                    _searching ? _searchBar(t) : _header(t, sidebar: sidebar, wide: size != SizeClass.compact),
+                    _searching ? _searchBar(t) : _header(t, wide: size != SizeClass.compact),
+                    if (_incoming != null) _syncChip(t),
                     Expanded(child: session.scenes.isEmpty ? _empty(t) : _script(t)),
                     if (_selA != null) _selectionBar(t),
                     if (_showLineHint) _lineHint(t),
                     if (player.scenes.isNotEmpty) _bar(t),
                   ],
                 );
-                if (size == SizeClass.compact) return center;
+                if (!pane) return center;
                 final pdfWidth = (box.maxWidth * 0.42).clamp(340.0, 620.0);
                 return Row(
                   children: [
-                    if (sidebar) ...[
-                      SizedBox(width: size == SizeClass.wide ? 300 : 250, child: _sidebar(t)),
-                      VerticalDivider(width: 1, color: t.rule),
-                    ],
                     Expanded(child: center),
-                    if (pane) ...[VerticalDivider(width: 1, color: t.rule), SizedBox(width: pdfWidth, child: _pdfPane())],
+                    VerticalDivider(width: 1, color: t.rule),
+                    SizedBox(width: pdfWidth, child: _pdfPane()),
                   ],
                 );
               },
@@ -440,7 +485,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
 
   // Header ---------------------------------------------------------------------
 
-  Widget _header(Tokens t, {required bool sidebar, required bool wide}) {
+  Widget _header(Tokens t, {required bool wide}) {
     final hasRole = player.myRole.isNotEmpty;
     Widget icon(IconData i, String tip, VoidCallback? onTap, {bool on = false}) => IconButton(
       tooltip: tip,
@@ -454,23 +499,23 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       padding: const EdgeInsets.fromLTRB(4, 4, 8, 2),
       child: Row(
         children: [
-          if (!sidebar) ...[
-            IconButton(
-              tooltip: 'Projects',
-              icon: Icon(Icons.arrow_back_ios_new_rounded, color: t.accent, size: 22),
-              onPressed: () => Navigator.of(context).maybePop(),
+          IconButton(
+            tooltip: 'Projects',
+            icon: Icon(Icons.arrow_back_ios_new_rounded, color: t.accent, size: 22),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          Expanded(
+            child: Text(
+              widget.project.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyles.ui(t, size: 17, weight: FontWeight.w600),
             ),
-            Expanded(
-              child: Text(
-                widget.project.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyles.ui(t, size: 17, weight: FontWeight.w600),
-              ),
-            ),
-          ] else
-            const Spacer(),
+          ),
           icon(Icons.search_rounded, 'Search the script', _openSearch),
+          // With a playback bar the bookmarks live there; a text-only project has no bar.
+          if (player.scenes.isEmpty && bookmarks != null)
+            icon((bookmarks?.count ?? 0) > 0 ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, 'Bookmarks', _openBookmarks),
           if (wide)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -500,41 +545,6 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       ),
     );
   }
-
-  /// The scenes, always in view (iPad): the project's name and a way back, then every scene.
-  Widget _sidebar(Tokens t) => Material(
-    color: t.bg,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 4, 8, 6),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'Projects',
-                icon: Icon(Icons.arrow_back_ios_new_rounded, color: t.accent, size: 22),
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
-              Expanded(
-                child: Text(
-                  widget.project.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyles.ui(t, size: 16, weight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _SceneList(session: session, viewing: _topScene, controller: _sidebarScroll, store: widget.store, onScene: _jumpToScene),
-        ),
-      ],
-    ),
-  );
-
-  final _sidebarScroll = ScrollController();
 
   Widget _empty(Tokens t) => Padding(
     padding: const EdgeInsets.all(32),
@@ -792,6 +802,306 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     if (on && _pageOf == null) await _preparePdf(open: false);
   }
 
+  // Where am I in the script, and position sync ------------------------------------
+
+  /// The first line showing under the pinned heading, as (scene index, line index). Only lines already built are known,
+  /// which is all of those on screen.
+  (int, int)? _topLine() {
+    final vp = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (vp == null || !vp.attached) return null;
+    final top = vp.localToGlobal(Offset.zero).dy + _headingHeight;
+    for (final (si, s) in session.scenes.indexed) {
+      final box = _keys['${s.number}']?.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached) continue;
+      if (box.localToGlobal(Offset.zero).dy + box.size.height <= top) continue;
+      for (var i = 0; i < s.lines.length; i++) {
+        final lb = _keys['${s.number}:$i']?.currentContext?.findRenderObject() as RenderBox?;
+        if (lb != null && lb.attached && lb.localToGlobal(Offset.zero).dy + lb.size.height > top) return (si, i);
+      }
+      return (si, 0);
+    }
+    return null;
+  }
+
+  /// Keeps the outline on the scene being read.
+  void _updateViewScene() {
+    if (!mounted) return;
+    final top = _topLine();
+    if (top != null) _viewScene.value = session.scenes[top.$1].number;
+  }
+
+  /// Remembers the line being read (in the rehearsal file other devices read). While playback is followed, that is the
+  /// playing line; otherwise the first line on screen.
+  void _noteReading({bool playing = false}) {
+    if (!mounted || !_restored) return;
+    PhoneScene? scene;
+    PhoneLine? line;
+    if (playing) {
+      scene = _sceneNumbered(player.currentScene?.sceneNumber);
+      line = scene?.lines.where((l) => l.cueIndex != null && l.cueIndex == player.currentCueIndex).firstOrNull;
+    } else {
+      final top = _topLine();
+      if (top != null) {
+        scene = session.scenes[top.$1];
+        line = scene.lines.isEmpty ? null : scene.lines[top.$2];
+      }
+    }
+    if (scene == null || line == null) return;
+    if (session.readScene == scene.number && session.readLine == line.key) return;
+    session.readScene = scene.number;
+    session.readLine = line.key;
+    _syncSeen = clockNow().toUtc();
+    session.scheduleSave(player, folderAccess: widget.folderAccess, after: const Duration(seconds: 2));
+  }
+
+  /// Scrolls to the line with [key] in scene [number]. False if the script has no such line.
+  bool _jumpToReading(int number, String key, {bool animate = true}) {
+    final si = session.scenes.indexWhere((s) => s.number == number);
+    if (si < 0) return false;
+    final li = session.scenes[si].lines.indexWhere((l) => l.key == key);
+    if (li < 0) return false;
+    _userScrolled = DateTime.now();
+    _revealLine(si, li, alignment: 0.1);
+    return true;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _checkOtherDevices();
+  }
+
+  /// Asks iCloud for the other devices' rehearsal files, then looks for one that has read further on than this device.
+  Future<void> _checkOtherDevices() async {
+    if (!mounted || _myDeviceId == null || !_restored) return;
+    if (widget.folderAccess) {
+      try {
+        final dir = '${session.folder}/$rehearsalFolder';
+        final stale = [
+          for (final e in await FolderAccess.list(dir))
+            if (!e.isDir && !e.downloaded) '$dir/${e.name}',
+        ];
+        if (stale.isNotEmpty) await FolderAccess.download(stale);
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    final r = loadNewestRehearsal(session.folder);
+    if (r == null || r.fileId == _myDeviceId || !r.updatedAt.isAfter(_syncSeen)) return;
+    if (r.readScene == null || r.readLine.isEmpty || r.readLine == session.readLine) return;
+    // Only offer a place this script has.
+    final there = session.scenes.where((s) => s.number == r.readScene).firstOrNull;
+    if (there == null || !there.lines.any((l) => l.key == r.readLine)) return;
+    setState(() => _incoming = r);
+  }
+
+  @visibleForTesting
+  Future<void> checkOtherDevicesForTest() => _checkOtherDevices();
+
+  void _dismissIncoming() => setState(() {
+    _syncSeen = _incoming?.updatedAt ?? _syncSeen;
+    _incoming = null;
+  });
+
+  void _followIncoming() {
+    final r = _incoming;
+    if (r == null) return;
+    _jumpToReading(r.readScene!, r.readLine);
+    final si = player.scenes.indexWhere((i) => i.sceneNumber == r.readScene);
+    if (si >= 0 && si != player.currentSceneIndex) player.switchToScene(si);
+    _dismissIncoming();
+  }
+
+  /// "Your iPhone is at Scene 12": one tap to go there.
+  Widget _syncChip(Tokens t) {
+    final r = _incoming!;
+    final scene = _sceneNumbered(r.readScene);
+    final where = scene == null ? 'further on' : 'at scene ${scene.number}${scene.title.isEmpty ? '' : ' · ${scene.title}'}';
+    return Container(
+      key: const Key('syncChip'),
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
+      decoration: BoxDecoration(
+        color: t.sheet,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: t.shadow,
+        border: Border.all(color: t.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.sync_rounded, size: 18, color: t.accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${r.device.isEmpty ? 'Another device' : r.device} is $where',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyles.ui(t, size: 14, weight: FontWeight.w600),
+            ),
+          ),
+          TextButton(onPressed: _followIncoming, child: const Text('Jump there')),
+          IconButton(
+            tooltip: 'Dismiss',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.close_rounded, size: 18),
+            onPressed: _dismissIncoming,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Bookmarks ------------------------------------------------------------------
+
+  /// The line a new bookmark would mark: the one playing, else the first on screen.
+  (PhoneScene, PhoneLine)? _spotLine() {
+    if (player.isPlaying) {
+      final s = _sceneNumbered(player.currentScene?.sceneNumber);
+      final l = s?.lines.where((l) => l.cueIndex != null && l.cueIndex == player.currentCueIndex).firstOrNull;
+      if (s != null && l != null) return (s, l);
+    }
+    final top = _topLine();
+    if (top != null) {
+      final s = session.scenes[top.$1];
+      if (s.lines.isNotEmpty) return (s, s.lines[top.$2]);
+    }
+    final s = session.scenes.where((s) => s.lines.isNotEmpty).firstOrNull;
+    return s == null ? null : (s, s.lines.first);
+  }
+
+  /// Goes to a bookmarked line (and, if its scene is rendered, parks playback there).
+  void _goToBookmark(String key, Bookmark b) {
+    final s = _sceneNumbered(b.scene);
+    if (s == null) return;
+    _jumpToReading(b.scene, key);
+    final l = s.lines.where((l) => l.key == key).firstOrNull;
+    final si = player.scenes.indexWhere((i) => i.sceneNumber == s.number);
+    if (si >= 0 && l?.cueIndex != null) player.switchToScene(si, startAt: player.scenes[si].cues[l!.cueIndex!].startTime);
+  }
+
+  Future<void> _openBookmarks() async {
+    final bm = bookmarks;
+    if (bm == null) return;
+    final t = Tokens.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: t.sheet,
+      showDragHandle: true,
+      constraints: sheetConstraints(context),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => ListenableBuilder(
+        listenable: bm,
+        builder: (ctx, _) {
+          final spot = _spotLine();
+          final here = spot != null && bm.has(spot.$2.key);
+          // In script order.
+          final order = <String, int>{};
+          for (final s in session.scenes) {
+            for (final l in s.lines) {
+              order[l.key] = order.length;
+            }
+          }
+          final items = bm.live.entries.toList()..sort((a, b) => (order[a.key] ?? 1 << 30).compareTo(order[b.key] ?? 1 << 30));
+          return SafeArea(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.8),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text('Bookmarks', style: TextStyles.ui(t, size: 22, weight: FontWeight.w700)),
+                        ),
+                        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Done')),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (spot != null)
+                      FilledButton.icon(
+                        key: const Key('bookmarkHere'),
+                        onPressed: () => bm.toggle(spot.$2.key, spot.$1.number, spot.$2.text),
+                        icon: Icon(here ? Icons.bookmark_remove_rounded : Icons.bookmark_add_rounded, size: 20),
+                        label: Text(here ? 'Remove the bookmark here' : 'Bookmark this spot', overflow: TextOverflow.ellipsis),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: here ? t.panel : t.accent,
+                          foregroundColor: here ? t.ink : t.onAccent,
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                      ),
+                    if (spot != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6, left: 4),
+                        child: Text(
+                          '${player.isPlaying ? 'Where it is playing' : 'Top of the screen'}: scene ${spot.$1.number} · ${spot.$2.text}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyles.ui(t, size: 13, color: t.muted),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    if (items.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Text(
+                          'No bookmarks yet. You can also long-press a line and tap Bookmark.',
+                          textAlign: TextAlign.center,
+                          style: TextStyles.ui(t, size: 15, color: t.muted, height: 1.4),
+                        ),
+                      )
+                    else
+                      Flexible(
+                        child: ListView(
+                          shrinkWrap: true,
+                          children: [
+                            for (final e in items)
+                              Dismissible(
+                                key: ValueKey(e.key),
+                                direction: DismissDirection.endToStart,
+                                onDismissed: (_) => bm.remove(e.key),
+                                background: Container(
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(right: 20),
+                                  color: t.panel,
+                                  child: const Icon(Icons.delete_outline_rounded),
+                                ),
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(Icons.bookmark_rounded, color: t.dark ? t.highlighter : t.highlighterEdge),
+                                  title: Text(e.value.text, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyles.script(t, size: 15)),
+                                  subtitle: Text(
+                                    'Scene ${e.value.scene}${_sceneNumbered(e.value.scene)?.title.isEmpty ?? true ? '' : ' · ${_sceneNumbered(e.value.scene)!.title}'}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyles.ui(t, color: t.muted),
+                                  ),
+                                  trailing: IconButton(
+                                    tooltip: 'Remove bookmark',
+                                    icon: const Icon(Icons.close_rounded, size: 20),
+                                    onPressed: () => bm.remove(e.key),
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    _goToBookmark(e.key, e.value);
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    _keyFocus.requestFocus();
+  }
+
   // Notes (#117) ---------------------------------------------------------------
 
   Future<void> _editNote(PhoneLine l) async {
@@ -820,40 +1130,70 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       builder: (context, box) {
         // On a big window the script keeps a readable width, centred.
         final side = ((box.maxWidth - 800) / 2).clamp(0.0, double.infinity);
-        return NotificationListener<UserScrollNotification>(
-          onNotification: (n) {
-            if (n.direction != ScrollDirection.idle) _userScrolled = DateTime.now();
-            return false;
-          },
-          child: CustomScrollView(
-            key: _viewportKey,
-            controller: scroll,
-            slivers: [
-              for (final s in session.scenes)
-                SliverMainAxisGroup(
-                  slivers: [
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _SceneHeading(scene: s, tokens: t, side: side, onTap: _openScenesFrom),
-                    ),
-                    SliverPadding(
-                      padding: EdgeInsets.fromLTRB(20 + side, 4, 20 + side, 28),
-                      // Not lazy within a scene: playback can scroll to any line.
-                      sliver: SliverToBoxAdapter(
-                        child: Column(
-                          key: _key('${s.number}'),
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [for (final (i, l) in s.lines.indexed) _line(t, s, i, l, scale)],
-                        ),
-                      ),
-                    ),
-                  ],
+        return Stack(
+          children: [
+            Positioned.fill(child: _scrollView(t, scale, side)),
+            if (session.scenes.length > 1)
+              Positioned(
+                top: _headingHeight + 8,
+                bottom: 8,
+                left: 0,
+                right: 0,
+                child: OutlineRail(
+                  key: _railKey,
+                  scenes: session.scenes,
+                  current: _viewScene,
+                  onPick: _jumpToScene,
+                  bookmarked: {for (final b in bookmarks?.live.values ?? const <Bookmark>[]) b.scene},
                 ),
-              const SliverToBoxAdapter(child: SizedBox(height: 40)),
-            ],
-          ),
+              ),
+          ],
         );
       },
+    );
+  }
+
+  Widget _scrollView(Tokens t, double scale, double side) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        if (n is UserScrollNotification && n.direction != ScrollDirection.idle) {
+          _userScrolled = DateTime.now();
+          _railKey.currentState?.collapse();
+        }
+        if (n is ScrollUpdateNotification) _updateViewScene();
+        if (n is ScrollEndNotification) {
+          _updateViewScene();
+          _noteReading();
+        }
+        return false;
+      },
+      child: CustomScrollView(
+        key: _viewportKey,
+        controller: scroll,
+        slivers: [
+          for (final s in session.scenes)
+            SliverMainAxisGroup(
+              slivers: [
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SceneHeading(scene: s, tokens: t, side: side, onTap: _openScenesFrom),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(20 + side, 4, 20 + side, 28),
+                  // Not lazy within a scene: playback can scroll to any line.
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      key: _key('${s.number}'),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [for (final (i, l) in s.lines.indexed) _line(t, s, i, l, scale)],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        ],
+      ),
     );
   }
 
@@ -899,6 +1239,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     final hasCurrentHit = hit != null && hits != null && hits.any((h) => identical(h, hit));
     final note = notes?[l.key];
     final noteOpen = note != null && notes!.expanded.contains(l.key);
+    final marked = bookmarks?.has(l.key) ?? false;
     final breakPage = _showPages ? _breakBefore[l.key] : null;
     final textStyle = TextStyles.script(
       t,
@@ -956,7 +1297,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
             AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               margin: const EdgeInsets.symmetric(vertical: 4),
-              padding: EdgeInsets.fromLTRB(10, 8, note == null ? 10 : 34, 8),
+              padding: EdgeInsets.fromLTRB(10, 8, 10 + (note == null ? 0 : 24) + (marked ? 22 : 0), 8),
               decoration: BoxDecoration(
                 color: fill,
                 borderRadius: BorderRadius.circular(6),
@@ -968,6 +1309,12 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
               ),
               child: SizedBox(width: double.infinity, child: body),
             ),
+            if (marked)
+              Positioned(
+                top: 6,
+                right: note == null ? 6 : 30,
+                child: Icon(Icons.bookmark_rounded, size: 18, color: t.dark ? t.highlighter : t.highlighterEdge),
+              ),
             if (note != null)
               Positioned(
                 top: 6,
@@ -1064,6 +1411,16 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
             child: Text('$n line${n == 1 ? '' : 's'} selected', style: TextStyles.ui(t, size: 15, weight: FontWeight.w600)),
           ),
           TextButton(onPressed: () => setState(_clearSelection), child: const Text('Cancel')),
+          if (single != null && bookmarks != null)
+            IconButton(
+              key: const Key('bookmarkLine'),
+              tooltip: bookmarks!.has(single.key) ? 'Remove bookmark' : 'Bookmark',
+              icon: Icon(bookmarks!.has(single.key) ? Icons.bookmark_rounded : Icons.bookmark_border_rounded),
+              onPressed: () {
+                bookmarks!.toggle(single.key, scene!.number, single.text);
+                setState(_clearSelection);
+              },
+            ),
           if (single != null && notes != null)
             TextButton.icon(
               onPressed: () {
@@ -1162,10 +1519,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
             children: [
               // The side buttons share what the transport leaves.
               Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _lineButton ? _lineButtonWidget(t) : pill(player.myRole.isEmpty ? 'My Role' : titleCaseName(player.myRole), _openPanel),
-                ),
+                child: Align(alignment: Alignment.centerLeft, child: _lineButton ? _lineButtonWidget(t) : _bookmarksButton(t, c)),
               ),
               const SizedBox(width: 8),
               round(Icons.fast_rewind_rounded, 'Previous line', player.prevLine, size: 44),
@@ -1192,6 +1546,42 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  /// Bottom left: the bookmarks (My Role is already in the header and in Rehearse).
+  Widget _bookmarksButton(Tokens t, ({Color bg, Color edge, Color ink, Color btn, Color btnOn}) c) {
+    final n = bookmarks?.count ?? 0;
+    return Semantics(
+      button: true,
+      label: 'Bookmarks',
+      child: Material(
+        color: c.btn,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          key: const Key('bookmarksButton'),
+          borderRadius: BorderRadius.circular(22),
+          onTap: _openBookmarks,
+          child: Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(n > 0 ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, size: 22, color: c.ink),
+                if (n > 0) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '$n',
+                    style: TextStyles.ui(t, size: 14, weight: FontWeight.w600, color: c.ink),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1238,7 +1628,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
         builder: (ctx, _) => _RehearsePanel(
           player: player,
           session: session,
-          viewing: _topScene,
+          viewing: _viewScene.value ?? _topScene,
           onPickScene: () {
             Navigator.pop(ctx);
             Future.delayed(const Duration(milliseconds: 250), () {
@@ -1306,7 +1696,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
                   constraints: BoxConstraints(maxHeight: room.clamp(160.0, media.size.height * 0.62)),
                   child: _SceneList(
                     session: session,
-                    viewing: _topScene,
+                    viewing: _viewScene.value ?? _topScene,
                     controller: list,
                     store: widget.store,
                     onScene: (n) => Navigator.pop(ctx, n),

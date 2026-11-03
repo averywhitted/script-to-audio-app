@@ -55,6 +55,16 @@ class RehearsalSession {
 
   String get folder => project.folderPath!;
 
+  /// What this device calls itself in the shared rehearsal file (shown on the other devices' "jump" chips).
+  String deviceLabel = 'iPhone';
+
+  /// Where the script is being read, saved with the rehearsal settings so another device can pick it up (position sync).
+  int? readScene;
+  String readLine = '';
+
+  /// Where the newest settings (from any device) said the script was being read, when the session was opened.
+  (int, String)? restoredReading;
+
   static final _sceneFile = RegExp(r'^Scene_(\d+)_.*\.m4a$');
 
   /// Reads the project folder (already on the phone: PhoneStore.download).
@@ -145,6 +155,7 @@ class RehearsalSession {
   Future<void> restore(RehearsalPlayer player) async {
     final r = loadNewestRehearsal(folder);
     if (r == null) return;
+    if (r.readScene != null && r.readLine.isNotEmpty) restoredReading = (r.readScene!, r.readLine);
     if (r.role.isNotEmpty && characters.contains(r.role)) {
       player.myRole = r.role;
       player.muteMyLines = r.mute;
@@ -168,9 +179,9 @@ class RehearsalSession {
   Timer? _saveTimer;
 
   /// Saves this phone's settings, half a second after the last change.
-  void scheduleSave(RehearsalPlayer player, {bool folderAccess = true}) {
+  void scheduleSave(RehearsalPlayer player, {bool folderAccess = true, Duration after = const Duration(milliseconds: 500)}) {
     _saveTimer?.cancel();
-    _saveTimer = Timer(const Duration(milliseconds: 500), () => save(player, folderAccess: folderAccess));
+    _saveTimer = Timer(after, () => save(player, folderAccess: folderAccess));
   }
 
   Future<void> save(RehearsalPlayer player, {bool folderAccess = true}) async {
@@ -186,7 +197,9 @@ class RehearsalSession {
       loopEnd: player.loopEnd,
       sceneNumber: player.currentScene?.sceneNumber,
       time: player.currentTime,
-      device: 'iPhone',
+      readScene: readScene,
+      readLine: readLine,
+      device: deviceLabel,
     );
     final id = await deviceId();
     try {

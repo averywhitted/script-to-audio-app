@@ -133,6 +133,7 @@ class _PdfPanelState extends State<PdfPanel> {
     return Column(
       children: [
         _searching && widget.onSearch == null ? _searchBar(t) : _toolbar(t),
+        if (widget.pad && c.markup) _inkStrip(t),
         if (widget.linkedQuery != null && widget.linkedQuery!.trim().isNotEmpty) _linkedStrip(t),
         Expanded(
           child: Stack(
@@ -205,19 +206,105 @@ class _PdfPanelState extends State<PdfPanel> {
               () => c.setMarkup(enabled: !c.markup),
               on: c.markup,
             ),
-            if (c.markup) ...[
-              btn(Icons.undo_rounded, 'Undo', c.canUndo ? c.undo : null),
-              btn(Icons.redo_rounded, 'Redo', c.canRedo ? c.redo : null),
-              btn(Icons.layers_clear_rounded, 'Clear this page’s markup', _confirmClear),
-              btn(
-                Icons.touch_app_rounded,
-                c.finger ? 'Draw with Pencil only' : 'Draw with a finger too',
-                () => c.setMarkup(finger: !c.finger),
-                on: c.finger,
-              ),
-            ],
           ],
         ],
+      ),
+    );
+  }
+
+  /// Pen, highlighter and eraser; the ink's color and thickness; undo, redo, clear. Shown while marking up.
+  Widget _inkStrip(Tokens t) {
+    Widget tool(IconData icon, String tip, InkTool which) => IconButton(
+      key: Key('ink_${which.name}'),
+      tooltip: tip,
+      icon: Icon(icon, color: c.tool == which && !c.systemPalette ? t.onAccent : t.ink2),
+      style: c.tool == which && !c.systemPalette ? IconButton.styleFrom(backgroundColor: t.accent) : null,
+      onPressed: () => c.setTool(tool: which),
+    );
+    Widget action(IconData icon, String tip, VoidCallback? onTap, {bool on = false}) => IconButton(
+      tooltip: tip,
+      icon: Icon(icon, color: on ? t.onAccent : t.ink2),
+      style: on ? IconButton.styleFrom(backgroundColor: t.accent) : null,
+      onPressed: onTap,
+    );
+    final pen = c.tool == InkTool.pen;
+    final colors = pen ? penColors : markerColors;
+    final picked = pen ? c.penColor : c.markerColor;
+    final thick = pen ? c.penWidth : c.markerWidth;
+    final inking = c.tool != InkTool.eraser && !c.systemPalette;
+    return Container(
+      key: const Key('inkStrip'),
+      height: 52,
+      decoration: BoxDecoration(
+        color: t.panel,
+        border: Border(bottom: BorderSide(color: t.rule)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(
+          children: [
+            tool(Icons.edit_rounded, 'Pen', InkTool.pen),
+            tool(Icons.border_color_rounded, 'Highlighter', InkTool.marker),
+            tool(Icons.auto_fix_normal_rounded, 'Eraser', InkTool.eraser),
+            if (inking) ...[
+              const SizedBox(width: 6),
+              for (final (i, col) in colors.indexed)
+                GestureDetector(
+                  key: Key('ink_color_$i'),
+                  onTap: () => c.setTool(color: i),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: col,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: i == picked ? t.accent : t.rule, width: i == picked ? 3 : 1),
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 6),
+              for (var i = 0; i < 3; i++)
+                GestureDetector(
+                  key: Key('ink_width_$i'),
+                  onTap: () => c.setTool(width: i),
+                  child: Container(
+                    width: 36,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: i == thick ? t.accentSoft : null, borderRadius: BorderRadius.circular(8)),
+                    child: Container(
+                      width: 6.0 + i * 5,
+                      height: pen ? 2.0 + i * 2 : 5.0 + i * 3,
+                      decoration: BoxDecoration(color: t.ink2, borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                ),
+            ],
+            const SizedBox(width: 10),
+            SizedBox(height: 28, child: VerticalDivider(width: 1, color: t.rule)),
+            action(Icons.undo_rounded, 'Undo', c.canUndo ? c.undo : null),
+            action(Icons.redo_rounded, 'Redo', c.canRedo ? c.redo : null),
+            action(Icons.layers_clear_rounded, 'Clear this page’s markup', _confirmClear),
+            action(
+              Icons.touch_app_rounded,
+              c.finger ? 'Draw with Pencil only' : 'Draw with a finger too',
+              () => c.setMarkup(finger: !c.finger),
+              on: c.finger,
+            ),
+            action(
+              Icons.palette_outlined,
+              c.systemPalette ? 'Use these tools' : 'Use Apple’s tool palette',
+              () => c.setSystemPalette(!c.systemPalette),
+              on: c.systemPalette,
+            ),
+          ],
+        ),
       ),
     );
   }

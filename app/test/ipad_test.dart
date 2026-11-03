@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_read/models/models.dart';
+import 'package:table_read/phone/bookmarks.dart';
 import 'package:table_read/phone/line_notes.dart';
 import 'package:table_read/phone/phone_app.dart';
 import 'package:table_read/phone/phone_store.dart';
@@ -78,7 +79,7 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    for (final d in [rehearsalFolder, notesFolder, 'Markup']) {
+    for (final d in [rehearsalFolder, notesFolder, 'Markup', bookmarksFolder]) {
       final dir = Directory('$folder/$d');
       if (dir.existsSync()) dir.deleteSync(recursive: true);
     }
@@ -260,11 +261,12 @@ void main() {
         await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/ipad_projects_$mode.png'));
       });
 
-      testWidgets('rehearsal: scenes beside the script $mode', (tester) async {
+      testWidgets('rehearsal: the script centred, with the outline along the edge $mode', (tester) async {
         await _pump(tester, size: const Size(1194, 834), b: b);
         await _openEarnest(tester);
-        expect(find.byTooltip('Projects'), findsOneWidget); // the sidebar's back button; the script's own is gone
-        expect(find.text('Morning-room, Half-Moon Street'), findsNWidgets(2)); // sidebar row and the pinned heading
+        expect(find.byTooltip('Projects'), findsOneWidget); // same header as the phone: back button, no sidebar
+        expect(find.text('Morning-room, Half-Moon Street'), findsOneWidget); // the pinned heading only
+        expect(find.byKey(const Key('outlineRail')), findsOneWidget);
         await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/ipad_rehearse_$mode.png'));
       });
     }
@@ -277,7 +279,6 @@ void main() {
       expect(find.text('Script PDF'), findsOneWidget);
       expect(find.byTooltip('Mark up with Apple Pencil'), findsOneWidget);
       expect(find.byTooltip('Read one page at a time'), findsOneWidget);
-      expect(find.text('Morning-room, Half-Moon Street'), findsNWidgets(2)); // the scenes stay on a 13-inch landscape window
       await tester.tap(find.byTooltip('Mark up with Apple Pencil'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('Draw with a finger too'), findsOneWidget);
@@ -310,7 +311,7 @@ void main() {
       expect(find.byKey(const Key('pdfLinkedSearch')), findsNothing);
     });
 
-    testWidgets('a narrower window gives up the scenes sidebar for the PDF; a phone window has neither', (tester) async {
+    testWidgets('the PDF takes its pane on a wide window and gives the screen back when closed', (tester) async {
       await _pump(tester, size: const Size(1194, 834));
       await _openEarnest(tester);
       await tester.tap(find.byTooltip('Show PDF'));
@@ -319,19 +320,123 @@ void main() {
       expect(find.text('Morning-room, Half-Moon Street'), findsOneWidget);
       await tester.tap(find.byTooltip('Close PDF'));
       await tester.pumpAndSettle();
-      _size(tester, 402, 874);
-      await tester.pumpAndSettle();
-      expect(find.text('Morning-room, Half-Moon Street'), findsOneWidget);
+      expect(find.text('Script PDF'), findsNothing);
     });
 
-    testWidgets('picking a scene in the sidebar jumps the script to it', (tester) async {
+    testWidgets('the outline: dashes for the scenes; tap opens the headings, picking one jumps there and folds it', (tester) async {
       await _pump(tester, size: const Size(1194, 834));
       await _openEarnest(tester);
-      final target = sceneTitles[4];
-      await tester.tap(find.text(target).first);
+      expect(find.byKey(const Key('outlineOpen')), findsNothing);
+      await tester.tap(find.byKey(const Key('outlineRail')));
       await tester.pumpAndSettle();
-      expect(find.text(target), findsWidgets);
+      expect(find.byKey(const Key('outlineOpen')), findsOneWidget);
+      final target = sceneTitles[4];
+      await tester.tap(find.descendant(of: find.byKey(const Key('outlineOpen')), matching: find.text(target)));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('outlineOpen')), findsNothing);
       expect(find.textContaining('of scene 5,'), findsWidgets);
+    });
+
+    testWidgets('the outline folds away when the script is scrolled', (tester) async {
+      await _pump(tester, size: const Size(1194, 834));
+      await _openEarnest(tester);
+      await tester.tap(find.byKey(const Key('outlineRail')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('outlineOpen')), findsOneWidget);
+      await tester.drag(find.text(_line3), const Offset(0, -150));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('outlineOpen')), findsNothing);
+    });
+  });
+
+  group('Bookmarks', () {
+    testWidgets('bookmark a line from the selection bar; it is marked, listed, saved, and removable', (tester) async {
+      await _pump(tester);
+      await _openEarnest(tester);
+      await tester.longPress(find.text(_line3));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bookmarkLine')));
+      await tester.pumpAndSettle();
+      final files = Directory('$folder/Bookmarks').listSync();
+      expect(files.length, 1);
+      expect((jsonDecode(File(files.single.path).readAsStringSync()) as Map)['bookmarks'], hasLength(1));
+      await tester.tap(find.byTooltip('Bookmarks')); // a text-only project has the button in the header
+      await tester.pumpAndSettle();
+      expect(find.text('Bookmarks'), findsOneWidget);
+      expect(find.text(_line3), findsNWidgets(2)); // the line, and its row in the list
+      await tester.tap(find.byTooltip('Remove bookmark'));
+      await tester.pumpAndSettle();
+      expect(find.text('No bookmarks yet. You can also long-press a line and tap Bookmark.'), findsOneWidget);
+    });
+
+    testWidgets('"Bookmark this spot" marks the line at the top of the screen', (tester) async {
+      await _pump(tester);
+      await _openEarnest(tester);
+      await tester.tap(find.byTooltip('Bookmarks'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bookmarkHere')));
+      await tester.pumpAndSettle();
+      expect(find.text('Remove the bookmark here'), findsOneWidget);
+      expect(find.textContaining('scene 1'), findsWidgets);
+    });
+
+    test('bookmarks from two devices merge, newest wins, a removal beats an older copy', () async {
+      final dir = Directory.systemTemp.createTempSync('tr_bm');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      var now = DateTime.utc(2026, 11, 3, 10);
+      clockNow = () => now;
+      final a = Bookmarks(folder: dir.path, deviceId: 'A', folderAccess: false);
+      final b = Bookmarks(folder: dir.path, deviceId: 'B', folderAccess: false);
+      await a.add('k1', 1, 'first');
+      await a.add('k2', 2, 'second');
+      now = now.add(const Duration(minutes: 5));
+      b.load();
+      await b.remove('k1'); // B removes it later than A made it
+      a.load();
+      expect(a.live.keys, ['k2']);
+      expect(b.live.keys, ['k2']);
+      clockNow = () => DateTime(2026, 10, 10, 9, 14);
+    });
+  });
+
+  group('Position sync', () {
+    testWidgets('opening the project goes to where the script was last being read, on any device', (tester) async {
+      // Another device was reading scene 5.
+      final script = loadScriptSnapshot(folder)!;
+      final scene = script.scenes[4];
+      final screenState = RehearsalSession.load((await _store()).projects.first);
+      final target = screenState.scenes.firstWhere((s) => s.number == scene.number);
+      writeRehearsal(
+        folder,
+        'OTHER',
+        RehearsalState(readScene: target.number, readLine: target.lines.first.key, device: 'iPhone', updatedAt: DateTime.utc(2026, 11, 3, 12)),
+      );
+      await _pump(tester, size: const Size(1194, 834));
+      await _openEarnest(tester);
+      expect(find.textContaining('of scene ${target.number},'), findsWidgets);
+    });
+
+    testWidgets('another device reading further on offers a jump; Jump there goes, dismiss keeps still', (tester) async {
+      await _pump(tester, size: const Size(1194, 834));
+      await _openEarnest(tester);
+      final session = RehearsalSession.load((await _store()).projects.first);
+      final target = session.scenes[6];
+      expect(find.byKey(const Key('syncChip')), findsNothing);
+      // The other device writes (its file is newer than anything this one has).
+      writeRehearsal(
+        folder,
+        'OTHER',
+        RehearsalState(readScene: target.number, readLine: target.lines.first.key, device: 'iPhone', updatedAt: DateTime.utc(2099, 1, 1)),
+      );
+      final state = tester.state(find.byType(PhoneRehearsalScreen));
+      await ((state as dynamic).checkOtherDevicesForTest() as Future<void>);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('syncChip')), findsOneWidget);
+      expect(find.textContaining('iPhone is at scene ${target.number}'), findsOneWidget);
+      await tester.tap(find.text('Jump there'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('syncChip')), findsNothing);
+      expect(find.textContaining('of scene ${target.number},'), findsWidgets);
     });
   });
 }

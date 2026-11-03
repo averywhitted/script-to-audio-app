@@ -175,7 +175,11 @@ void main() {
     await tester.pumpAndSettle();
     final sheet = find.byKey(const Key('sceneDropdown'));
     final row = find.descendant(of: sheet, matching: find.text('Tea, and a misunderstanding')); // scene 8: 41 lines
-    await tester.scrollUntilVisible(row, 120, scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)));
+    await tester.scrollUntilVisible(
+      row,
+      120,
+      scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)),
+    );
     await tester.tap(row);
     await tester.pumpAndSettle();
     final list = find.byType(CustomScrollView);
@@ -279,10 +283,10 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
     final saved = loadNewestRehearsal(earnestFolder);
     expect(saved?.role, 'JACK');
-    expect(saved?.device, 'iPhone');
+    expect(saved?.device, anyOf('iPhone', 'iPad')); // which one depends on the screen the test pretends to have
     await _openEarnest(tester);
     await tester.pumpAndSettle();
-    expect(find.text('Jack'), findsOneWidget);
+    expect(find.byTooltip('My Character: Jack'), findsOneWidget); // the header's person icon lights up (the bar no longer repeats the role)
   });
 
   testWidgets('long-press a cover to ask the Mac to render it; it waits on the home screen', (tester) async {

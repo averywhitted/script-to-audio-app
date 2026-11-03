@@ -63,8 +63,11 @@ class RehearsalState {
     this.loopEnd = 0,
     this.sceneNumber,
     this.time = 0,
+    this.readScene,
+    this.readLine = '',
     DateTime? updatedAt,
     this.device = '',
+    this.fileId = '',
   }) : updatedAt = updatedAt ?? clockNow().toUtc();
 
   String role;
@@ -79,8 +82,17 @@ class RehearsalState {
   int? sceneNumber;
   double time;
 
+  /// Where the script was being read (position sync): the scene, and the line's identity (lineNoteKey).
+  int? readScene;
+  String readLine;
+
   DateTime updatedAt;
+
+  /// A label for the device (iPhone, iPad, Mac), shown to the user.
   String device;
+
+  /// The device id this state was read from (its file's name); not saved.
+  String fileId;
 
   factory RehearsalState.fromJson(Map<String, dynamic> j) {
     final loop = (j['loop'] as Map?) ?? const {};
@@ -96,6 +108,8 @@ class RehearsalState {
       loopEnd: (loop['end'] as num?)?.toDouble() ?? 0,
       sceneNumber: (pos['scene'] as num?)?.toInt(),
       time: (pos['time'] as num?)?.toDouble() ?? 0,
+      readScene: (j['reading'] as Map?)?['scene'] as int?,
+      readLine: (j['reading'] as Map?)?['line'] as String? ?? '',
       updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? '')?.toUtc() ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       device: j['device'] as String? ?? '',
     );
@@ -110,6 +124,7 @@ class RehearsalState {
     'speed': speed,
     'loop': {'mode': loopMode, 'start': loopStart, 'end': loopEnd},
     'position': {'scene': sceneNumber, 'time': time},
+    'reading': {'scene': readScene, 'line': readLine},
   };
 
   bool sameAs(RehearsalState o) => jsonEncode(_body()) == jsonEncode(o._body());
@@ -128,6 +143,7 @@ RehearsalState? loadNewestRehearsal(String folder) {
     if (!f.path.endsWith('.json')) continue;
     try {
       final s = RehearsalState.fromJson(Map<String, dynamic>.from(jsonDecode(f.readAsStringSync()) as Map));
+      s.fileId = f.path.split('/').last.replaceFirst(RegExp(r'\.json$'), '');
       if (best == null || s.updatedAt.isAfter(best.updatedAt)) best = s;
     } catch (_) {}
   }

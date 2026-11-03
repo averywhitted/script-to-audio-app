@@ -10,7 +10,8 @@ import PencilKit
 /// `tableread/pdf`            pageTexts(path) -> [String]   (the text of every page, to line the script up with its pages)
 /// `tableread/pdfview`        the platform view; creation args: path, dark
 /// `tableread/pdfview_<id>`   per view. Dart -> native: state, goToPage, setMode, search, searchStep, clearSearch,
-///                            setMarkup, loadMarkup, undo, redo, clearPage. Native -> Dart: page, markup, history.
+///                            setMarkup, setTool, systemPalette, loadMarkup, undo, redo, clearPage.
+///                            Native -> Dart: page, markup, history.
 final class PdfPlugin: NSObject, FlutterPlugin {
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "tableread/pdf", binaryMessenger: registrar.messenger())
@@ -75,6 +76,9 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
   private var markupOn = false
   private var fingerDraws = false
   private lazy var toolPicker = PKToolPicker()
+  // The pen in hand (our own pen / highlighter / eraser strip drives it) and whether Apple's tool palette is up instead.
+  private var tool: PKTool = PKInkingTool(.pen, color: UIColor(red: 0.11, green: 0.11, blue: 0.10, alpha: 1), width: 3)
+  private var systemPalette = false
   private var saveTimers: [Int: Timer] = [:]
   private var loading = false
   // The canvas drawn on last: Undo, Redo and Clear page act on it.
@@ -149,6 +153,14 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
       fingerDraws = args["finger"] as? Bool ?? false
       applyMarkupState()
       result(nil)
+    case "setTool":
+      tool = makeTool(args)
+      for (_, c) in canvases { c.tool = tool }
+      result(nil)
+    case "systemPalette":
+      systemPalette = args["on"] as? Bool ?? false
+      applyMarkupState()
+      result(nil)
     case "loadMarkup":
       loadMarkup(args["pages"] as? [String: String] ?? [:])
       result(nil)
@@ -189,6 +201,7 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
     pdfView.autoScales = true
     if let here = here { pdfView.go(to: here) }
     applyMarkupState()
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.configureTouches() }
   }
 
   private func search(_ query: String, reveal: Bool) -> [String: Any] {
@@ -224,11 +237,14 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
 
   /// Each canvas draws only while markup is on; off, touches pass through to scrolling and zooming.
   private func applyMarkupState() {
+    if #available(iOS 16.0, *) { pdfView.isInMarkupMode = markupOn }
     for (_, c) in canvases {
       c.drawingPolicy = policy()
       c.isUserInteractionEnabled = markupOn
+      if !systemPalette { c.tool = tool }
     }
-    if markupOn {
+    configureTouches()
+    if markupOn && systemPalette {
       showToolPicker()
     } else {
       for (_, c) in canvases {
@@ -238,10 +254,40 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
     }
   }
 
+  /// While marking up, the Pencil belongs to the drawing alone: the PDF's scrolling, text selection and zoom answer to fingers
+  /// (or, when fingers draw, to two fingers). Off, everything answers to everything again.
+  private func configureTouches() {
+    let types: [UITouch.TouchType] = [.direct, .indirect, .pencil, .indirectPointer]
+    let everything = types.map { NSNumber(value: $0.rawValue) }
+    let noPencil = types.filter { $0 != .pencil }.map { NSNumber(value: $0.rawValue) }
+    let pencilOnly = markupOn && !fingerDraws
+    func walk(_ v: UIView) {
+      for sub in v.subviews where !(sub is PKCanvasView) {
+        for g in sub.gestureRecognizers ?? [] {
+          g.allowedTouchTypes = pencilOnly ? noPencil : everything
+          if let pan = g as? UIPanGestureRecognizer, sub is UIScrollView { pan.minimumNumberOfTouches = markupOn && fingerDraws ? 2 : 1 }
+        }
+        walk(sub)
+      }
+    }
+    for g in pdfView.gestureRecognizers ?? [] { g.allowedTouchTypes = pencilOnly ? noPencil : everything }
+    walk(pdfView)
+  }
+
+  private func makeTool(_ a: [String: Any]) -> PKTool {
+    let kind = a["tool"] as? String ?? "pen"
+    if kind == "eraser" { return PKEraserTool(.vector) }
+    let argb = UInt32(truncatingIfNeeded: (a["color"] as? Int) ?? 0xFF1C1B19)
+    let color = UIColor(
+      red: CGFloat((argb >> 16) & 0xFF) / 255, green: CGFloat((argb >> 8) & 0xFF) / 255, blue: CGFloat(argb & 0xFF) / 255, alpha: 1)
+    return PKInkingTool(kind == "marker" ? .marker : .pen, color: color, width: CGFloat((a["width"] as? Double) ?? 3))
+  }
+
   private func showToolPicker() {
     guard markupOn else { return }
     let here = pdfView.currentPage.flatMap { canvases[$0] } ?? canvases.values.first
     guard let c = here else { return }
+    for other in canvases.values { toolPicker.addObserver(other) }
     toolPicker.setVisible(true, forFirstResponder: c)
     c.becomeFirstResponder()
   }
@@ -255,6 +301,9 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
     c.isScrollEnabled = false
     c.drawingPolicy = policy()
     c.isUserInteractionEnabled = markupOn
+    // The page is white whatever the theme: ink must not turn light in dark mode.
+    c.overrideUserInterfaceStyle = .light
+    c.tool = tool
     c.delegate = self
     if let doc = pdfView.document, let d = drawings[doc.index(for: page)] {
       loading = true
@@ -267,6 +316,8 @@ final class PdfPlatformView: NSObject, FlutterPlatformView, PDFPageOverlayViewPr
 
   func pdfView(_ pdfView: PDFView, willDisplayOverlayView overlayView: UIView, for page: PDFPage) {
     guard let c = overlayView as? PKCanvasView else { return }
+    configureTouches()
+    guard systemPalette else { return }
     toolPicker.addObserver(c)
     if markupOn, !canvases.values.contains(where: { $0.isFirstResponder }) {
       toolPicker.setVisible(true, forFirstResponder: c)

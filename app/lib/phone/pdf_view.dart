@@ -98,6 +98,14 @@ class PdfMarkup {
   }
 }
 
+enum InkTool { pen, marker, eraser }
+
+/// What the pen and the highlighter offer: a few colors and three thicknesses each.
+const penColors = [Color(0xFF1C1B19), Color(0xFF1F5FD9), Color(0xFFD92F2F), Color(0xFF2E8B57)];
+const penWidths = [1.5, 3.0, 6.0];
+const markerColors = [Color(0xFFFFE23D), Color(0xFF7ED957), Color(0xFFFF8FC8), Color(0xFF6EC1FF)];
+const markerWidths = [10.0, 15.0, 24.0];
+
 /// Talks to one native PDF view.
 class PdfController extends ChangeNotifier {
   MethodChannel? _ch;
@@ -107,6 +115,13 @@ class PdfController extends ChangeNotifier {
   bool continuous = true;
   bool markup = false;
   bool finger = false;
+
+  /// The pen in hand, and the color and thickness (index) each ink remembers.
+  InkTool tool = InkTool.pen;
+  int penColor = 0, penWidth = 1, markerColor = 0, markerWidth = 1;
+
+  /// Apple's own tool palette instead of ours.
+  bool systemPalette = false;
 
   /// Whether the page last drawn on has something to undo / redo.
   bool canUndo = false;
@@ -203,7 +218,41 @@ class PdfController extends ChangeNotifier {
     markup = enabled ?? markup;
     this.finger = finger ?? this.finger;
     notifyListeners();
+    await _sendTool();
     await _ch?.invokeMethod('setMarkup', {'enabled': markup, 'finger': this.finger});
+  }
+
+  Future<void> _sendTool() async {
+    final pen = tool == InkTool.pen;
+    await _ch?.invokeMethod('setTool', {
+      'tool': tool.name,
+      'color': (pen ? penColors[penColor] : markerColors[markerColor]).toARGB32(),
+      'width': pen ? penWidths[penWidth] : markerWidths[markerWidth],
+    });
+  }
+
+  /// Picks the ink, and/or its color and thickness (indexes into the lists above).
+  Future<void> setTool({InkTool? tool, int? color, int? width}) async {
+    this.tool = tool ?? this.tool;
+    if (this.tool == InkTool.pen) {
+      penColor = color ?? penColor;
+      penWidth = width ?? penWidth;
+    } else if (this.tool == InkTool.marker) {
+      markerColor = color ?? markerColor;
+      markerWidth = width ?? markerWidth;
+    }
+    systemPalette = false;
+    notifyListeners();
+    await _ch?.invokeMethod('systemPalette', {'on': false});
+    await _sendTool();
+  }
+
+  /// Apple's tool palette (pens, pencil, ruler, lasso...) in place of our strip.
+  Future<void> setSystemPalette(bool on) async {
+    systemPalette = on;
+    notifyListeners();
+    await _ch?.invokeMethod('systemPalette', {'on': on});
+    if (!on) await _sendTool();
   }
 }
 
