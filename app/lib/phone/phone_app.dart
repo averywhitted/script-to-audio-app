@@ -7,8 +7,29 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../theme/tokens.dart';
 import '../ui/gallery.dart' show ScriptCover, friendlyDate;
+import 'adaptive.dart';
+import 'folder_access.dart' show RemovedDownload;
 import 'phone_store.dart';
 import 'rehearsal_screen.dart';
+
+/// A project that is only its project.json (and a script) has nothing worth removing.
+const _smallestWorthRemoving = 200 * 1024;
+
+String _size(int bytes) => bytes >= 1024 * 1024 * 1024
+    ? '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB'
+    : bytes >= 1024 * 1024
+    ? '${(bytes / (1024 * 1024)).toStringAsFixed(bytes >= 100 * 1024 * 1024 ? 0 : 1)} MB'
+    : '${(bytes / 1024).round()} KB';
+
+String _removedMessage(Project p, RemovedDownload r) {
+  if (r.files == 0) {
+    return r.kept == 0
+        ? 'Nothing to remove for “${p.name}”.'
+        : '“${p.name}” isn’t in iCloud Drive (or hasn’t finished uploading), so its files stay on this device.';
+  }
+  final left = r.kept == 0 ? '' : ' ${r.kept} file${r.kept == 1 ? '' : 's'} not uploaded yet stayed.';
+  return 'Removed ${_size(r.freed)} of “${p.name}”. It stays in iCloud Drive.$left';
+}
 
 class PhoneApp extends StatelessWidget {
   const PhoneApp({super.key, required this.store, this.themeMode = ThemeMode.system});
@@ -136,9 +157,11 @@ class _Projects extends StatelessWidget {
     final t = Tokens.of(context);
     final asked = store.requests[p.id];
     final missing = store.missingScenes(p);
+    final local = store.localBytes(p);
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: t.sheet,
+      constraints: sheetConstraints(context),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -171,6 +194,23 @@ class _Projects extends StatelessWidget {
                   store.cancelRequest(p);
                 },
               ),
+            ListTile(
+              leading: const Icon(Icons.cloud_off_rounded),
+              title: const Text('Remove Download'),
+              subtitle: Text(
+                local < _smallestWorthRemoving
+                    ? 'Nothing downloaded to remove.'
+                    : 'Frees ${_size(local)} on this device. It stays in iCloud Drive and comes back when you open it.',
+              ),
+              enabled: local >= _smallestWorthRemoving && !store.downloading.containsKey(p.id),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final messenger = ScaffoldMessenger.of(context);
+                final r = await store.removeDownload(p);
+                if (r == null) return;
+                messenger.showSnackBar(SnackBar(content: Text(_removedMessage(p, r))));
+              },
+            ),
           ],
         ),
       ),
@@ -183,6 +223,7 @@ class _Projects extends StatelessWidget {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: t.sheet,
+      constraints: sheetConstraints(context),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -272,8 +313,9 @@ class _Projects extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                // Two covers across on a phone; as many as fit on an iPad.
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 230,
                   mainAxisSpacing: 18,
                   crossAxisSpacing: 16,
                   childAspectRatio: 196 / 258,

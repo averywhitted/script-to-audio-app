@@ -20,6 +20,9 @@ import UniformTypeIdentifiers
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "NowPlayingPlugin") {
       NowPlayingPlugin.register(with: registrar)
     }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "PdfPlugin") {
+      PdfPlugin.register(with: registrar)
+    }
   }
 }
 
@@ -65,6 +68,9 @@ class ProjectsFolderPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate {
     case "delete":
       let path = args["path"] as? String ?? ""
       background(result) { try self.delete(URL(fileURLWithPath: path)) }
+    case "evict":
+      let path = args["path"] as? String ?? ""
+      background(result) { try self.evict(URL(fileURLWithPath: path)) }
     case "pickPdf":
       pickPdf(result)
     case "copyIn":
@@ -220,6 +226,30 @@ class ProjectsFolderPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate {
     }
     if let e = coordError ?? writeError { throw e }
     return true
+  }
+
+  /// Remove Download (#118): takes a project's files off this device and leaves them in iCloud Drive (they come back
+  /// when the project is opened). project.json stays so the project still shows in the list. Files iCloud hasn't
+  /// finished uploading, or that aren't in iCloud at all, are kept: they exist nowhere else.
+  private func evict(_ folder: URL) throws -> [String: Any] {
+    let keys: [URLResourceKey] = [.isRegularFileKey, .fileSizeKey, .isUbiquitousItemKey]
+    guard let files = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles]) else {
+      return ["freed": 0, "files": 0, "kept": 0]
+    }
+    var freed: Int64 = 0, removed = 0, kept = 0
+    for case let url as URL in files {
+      guard let v = try? url.resourceValues(forKeys: Set(keys)), v.isRegularFile == true else { continue }
+      if url.lastPathComponent == "project.json", url.deletingLastPathComponent().path == folder.path { continue }
+      guard v.isUbiquitousItem == true else { kept += 1; continue }
+      do {
+        try FileManager.default.evictUbiquitousItem(at: url)
+        freed += Int64(v.fileSize ?? 0)
+        removed += 1
+      } catch {
+        kept += 1
+      }
+    }
+    return ["freed": freed, "files": removed, "kept": kept]
   }
 
   private func delete(_ url: URL) throws -> Bool {

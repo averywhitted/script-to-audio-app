@@ -15,6 +15,7 @@ import '../models/models.dart';
 import '../services/project_files.dart';
 import '../state/player_state.dart';
 import 'folder_access.dart';
+import 'line_notes.dart';
 
 /// A line on screen. [cueIndex] is its place in the scene's audio (null in a
 /// scene that isn't rendered).
@@ -24,6 +25,9 @@ class PhoneLine {
   final String speaker; // narratorKey, or slash-joined names for simultaneous lines
   final String text;
   final int? cueIndex;
+
+  /// The line's identity for notes ([lineNoteKey]); set when the session loads.
+  String key = '';
 
   bool get isDialog => kind == 'dialog' && speaker != narratorKey;
   List<String> get names => speaker.split('/');
@@ -108,6 +112,11 @@ class RehearsalSession {
             PhoneLine(kind: kind, speaker: kind == 'dialog' && (who?.isNotEmpty ?? false) ? who! : narratorKey, text: fix?.correctedText ?? el.text),
           );
         }
+      }
+      final seen = <String, int>{};
+      for (final l in lines) {
+        final repeat = seen.update(lineNoteKey(n, l.text, 0), (c) => c + 1, ifAbsent: () => 0);
+        l.key = lineNoteKey(n, l.text, repeat);
       }
       scenes.add(PhoneScene(number: n, title: titleFor(n, parsed?.title ?? ''), lines: lines, rendered: item != null));
     }

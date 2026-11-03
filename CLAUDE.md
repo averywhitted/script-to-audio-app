@@ -138,3 +138,5 @@ bash scripts/embed_python.sh
 | Visual Identity & QoL | #13 Color system, #15 Bug reporting, #17 Onboarding |
 | Parser & Core Quality | #19 Additional screenplay formats |
 | iOS | #21–26 full iOS port |
+| iOS rehearsal | #113 search, #114 My Character without audio, #115 Show PDF, #116 PDF page numbers, #117 line notes, #118 Remove Download |
+| iPadOS | #119 Apple Pencil markup, #120 page / continuous PDF, #121 the iPad app (adaptive layouts) |

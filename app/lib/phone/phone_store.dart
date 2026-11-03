@@ -231,6 +231,34 @@ class PhoneStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// How much room a project's downloaded files take on this device.
+  int localBytes(Project p) {
+    final folder = p.folderPath;
+    if (folder == null || !Directory(folder).existsSync()) return 0;
+    var total = 0;
+    for (final f in Directory(folder).listSync(recursive: true).whereType<File>()) {
+      if (f.path.split('/').last.startsWith('.')) continue;
+      total += f.lengthSync();
+    }
+    return total;
+  }
+
+  /// Remove Download (#118): frees the project's files on this device; they stay in iCloud Drive and come back when it
+  /// is opened. Returns what happened, or null if it failed ([error] says why).
+  Future<RemovedDownload?> removeDownload(Project p) async {
+    final folder = p.folderPath;
+    if (folder == null) return null;
+    try {
+      final r = folderAccess ? await FolderAccess.evict(folder) : const RemovedDownload(freed: 0, files: 0, kept: 0);
+      await refresh();
+      return r;
+    } catch (e) {
+      error = 'Couldn’t remove the download of “${p.name}”: $e';
+      notifyListeners();
+      return null;
+    }
+  }
+
   /// Brings the whole project onto the phone (audio, cues, script, rehearsal
   /// files) so it plays offline. Only files not already here are fetched.
   Future<bool> download(Project p) async {
@@ -251,7 +279,7 @@ class PhoneStore extends ChangeNotifier {
       }
 
       await walk(folder);
-      // The PDF stays on the Mac: the phone never parses.
+      // The PDF comes later, when Show PDF (or page numbers) asks for it.
       missing.removeWhere((m) => m.toLowerCase().endsWith('.pdf'));
       for (var i = 0; i < missing.length; i++) {
         await _download([missing[i]]);

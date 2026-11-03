@@ -12,6 +12,12 @@ class FolderEntry {
   final bool downloaded;
 }
 
+/// What Remove Download did: bytes freed, files removed, and files kept (not uploaded to iCloud yet, or not in iCloud).
+class RemovedDownload {
+  const RemovedDownload({required this.freed, required this.files, required this.kept});
+  final int freed, files, kept;
+}
+
 class FolderAccess {
   static const _channel = MethodChannel('tableread/folder');
 
@@ -35,6 +41,16 @@ class FolderAccess {
   static Future<void> download(List<String> paths) => _channel.invokeMethod('download', {'paths': paths});
 
   static Future<void> delete(String path) => _channel.invokeMethod('delete', {'path': path});
+
+  /// Remove Download (#118): takes a project's files off this device and leaves them in iCloud Drive.
+  static Future<RemovedDownload> evict(String path) async {
+    final r = Map<String, dynamic>.from(await _channel.invokeMethod<Map>('evict', {'path': path}) ?? const {});
+    return RemovedDownload(
+      freed: (r['freed'] as num?)?.toInt() ?? 0,
+      files: (r['files'] as num?)?.toInt() ?? 0,
+      kept: (r['kept'] as num?)?.toInt() ?? 0,
+    );
+  }
 
   /// Shows the Files picker for a screenplay PDF. Returns a copy of it in the app's temporary folder, or null if cancelled.
   static Future<String?> pickPdf() => _channel.invokeMethod<String>('pickPdf');

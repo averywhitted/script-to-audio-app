@@ -6,6 +6,7 @@
 // Playback is the Mac's RehearsalPlayer.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
@@ -19,9 +20,16 @@ import '../theme/tokens.dart';
 import '../ui/dashboard.dart' show blockText;
 import '../ui/playback_bar.dart' show SceneTimeline;
 import '../ui/widgets.dart' show NameChip, titleCaseName;
+import 'adaptive.dart';
+import 'folder_access.dart';
+import 'line_notes.dart';
 import 'now_playing.dart';
+import 'page_align.dart';
+import 'pdf_panel.dart';
+import 'pdf_view.dart';
 import 'phone_store.dart';
 import 'rehearsal_session.dart';
+import 'script_search.dart';
 
 const _textScales = [1.0, 1.15, 1.3, 1.5];
 const _textSizeLabels = ['Small', 'Medium', 'Large', 'Huge'];
@@ -31,14 +39,24 @@ const _headingHeight = 52.0;
 
 /// The bottom bar follows the theme: a light tray in light mode, dark in dark.
 ({Color bg, Color edge, Color ink, Color btn, Color btnOn}) _barColors(Tokens t) => t.dark
-    ? (bg: const Color(0xFF262624), edge: const Color(0x1FFFFFFF), ink: const Color(0xFFEFEDE8), btn: const Color(0x1CFFFFFF), btnOn: const Color(0x33FFFFFF))
+    ? (
+        bg: const Color(0xFF262624),
+        edge: const Color(0x1FFFFFFF),
+        ink: const Color(0xFFEFEDE8),
+        btn: const Color(0x1CFFFFFF),
+        btnOn: const Color(0x33FFFFFF),
+      )
     : (bg: t.panel, edge: t.border, ink: t.ink, btn: const Color(0x12000000), btnOn: const Color(0x21000000));
 
 /// Remembers that the one-time Line! hint was seen.
 const _lineHintSeenKey = 'phoneLineHintSeen';
 
+/// Page numbers in the script scroll, and whether the PDF pane is open (iPad).
+const _showPagesKey = 'phoneShowPages';
+const _pdfOpenKey = 'padPdfOpen';
+
 class PhoneRehearsalScreen extends StatefulWidget {
-  const PhoneRehearsalScreen({super.key, required this.project, this.store, this.folderAccess = true, this.audio = true});
+  const PhoneRehearsalScreen({super.key, required this.project, this.store, this.folderAccess = true, this.audio = true, this.pageTexts});
   final Project project;
 
   /// For asking the Mac to render the text-only scenes.
@@ -49,6 +67,9 @@ class PhoneRehearsalScreen extends StatefulWidget {
 
   /// Off in tests, where the audio plugin doesn't exist.
   final bool audio;
+
+  /// Reads the text of each page of the PDF; tests give their own, the phone uses PDFKit.
+  final Future<List<String>> Function(String path)? pageTexts;
 
   @override
   State<PhoneRehearsalScreen> createState() => _PhoneRehearsalScreenState();
@@ -81,9 +102,39 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
 
   int textSize = 1;
 
+  // Notes (#117)
+  LineNotes? notes;
+
+  // Search (#113)
+  bool _searching = false;
+  final _queryCtl = TextEditingController();
+  final _queryFocus = FocusNode();
+  List<SearchHit> _hits = const [];
+  int _hit = 0;
+  Map<String, List<SearchHit>> _hitsByLine = const {};
+
+  // The PDF (#115) and its pages (#116). [_pageOf] is line key → PDF page; [_breakBefore] is the lines that start a page.
+  late final PdfController pdf = PdfController();
+  bool _pdfOpen = false;
+  bool _showPages = false;
+  Map<String, int>? _pageOf;
+  Map<String, int> _breakBefore = const {};
+  bool _preparingPdf = false;
+  final _keyFocus = FocusNode();
+  String? _hover;
+
+  String get _pdfPath => widget.project.pdfPath ?? '';
+
   @override
   void initState() {
     super.initState();
+    RehearsalSession.deviceId().then((id) {
+      final n = LineNotes(folder: session.folder, deviceId: id, folderAccess: widget.folderAccess)..load();
+      n.addListener(() {
+        if (mounted) setState(() {});
+      });
+      if (mounted) setState(() => notes = n);
+    });
     if (widget.audio) {
       AudioSession.instance
           .then((s) async {
@@ -113,7 +164,10 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
         setState(() {
           textSize = (p.getInt('phoneTextSize') ?? 1).clamp(0, 3);
           _lineHintSeen = p.getBool(_lineHintSeenKey) ?? false;
+          _showPages = p.getBool(_showPagesKey) ?? false;
+          _pdfOpen = p.getBool(_pdfOpenKey) ?? false;
         });
+        if (_showPages || _pdfOpen) _preparePdf(open: false);
       }
     });
   }
@@ -125,6 +179,11 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       sub.cancel();
     }
     _edgeScroll?.cancel();
+    _queryCtl.dispose();
+    _queryFocus.dispose();
+    _keyFocus.dispose();
+    pdf.dispose();
+    notes?.dispose();
     player.removeListener(_onPlayer);
     player.onSettingsChanged = null;
     session.save(player, folderAccess: widget.folderAccess);
@@ -141,6 +200,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       _lastCue = player.currentCueIndex;
       _lastScene = scene;
       if (player.isPlaying && _following) WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
+      _followPdf();
     }
     setState(() {});
   }
@@ -240,7 +300,9 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     if (box == null) return;
     final top = box.localToGlobal(Offset.zero).dy + _headingHeight, bottom = box.localToGlobal(Offset(0, box.size.height)).dy;
     const zone = 72.0;
-    final speed = global.dy > bottom - zone ? (global.dy - (bottom - zone)) / zone : (global.dy < top + zone ? -((top + zone) - global.dy) / zone : 0.0);
+    final speed = global.dy > bottom - zone
+        ? (global.dy - (bottom - zone)) / zone
+        : (global.dy < top + zone ? -((top + zone) - global.dy) / zone : 0.0);
     if (speed == 0) {
       _edgeScroll?.cancel();
       _edgeScroll = null;
@@ -282,6 +344,9 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
 
   // Building -------------------------------------------------------------------
 
+  /// Set by the layout each build: whether the PDF can sit beside the script.
+  bool _canSplit = false;
+
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
@@ -291,48 +356,185 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
         backgroundColor: t.bg,
         body: SafeArea(
           bottom: false,
-          child: Column(
-            children: [
-              _header(t),
-              Expanded(child: session.scenes.isEmpty ? _empty(t) : _script(t)),
-              if (_selA != null) _selectionBar(t),
-              if (_showLineHint) _lineHint(t),
-              if (player.scenes.isNotEmpty) _bar(t),
-            ],
+          child: Focus(
+            focusNode: _keyFocus,
+            autofocus: true,
+            onKeyEvent: _onKey,
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final size = sizeClassOf(box.maxWidth);
+                _canSplit = box.maxWidth >= splitPdfMinWidth;
+                final pane = _pdfOpen && _canSplit && _pdfPath.isNotEmpty;
+                final sidebar = size != SizeClass.compact && !(pane && box.maxWidth < sidebarWithPdfMinWidth);
+                final center = Column(
+                  children: [
+                    _searching ? _searchBar(t) : _header(t, sidebar: sidebar, wide: size != SizeClass.compact),
+                    Expanded(child: session.scenes.isEmpty ? _empty(t) : _script(t)),
+                    if (_selA != null) _selectionBar(t),
+                    if (_showLineHint) _lineHint(t),
+                    if (player.scenes.isNotEmpty) _bar(t),
+                  ],
+                );
+                if (size == SizeClass.compact) return center;
+                final pdfWidth = (box.maxWidth * 0.42).clamp(340.0, 620.0);
+                return Row(
+                  children: [
+                    if (sidebar) ...[
+                      SizedBox(width: size == SizeClass.wide ? 300 : 250, child: _sidebar(t)),
+                      VerticalDivider(width: 1, color: t.rule),
+                    ],
+                    Expanded(child: center),
+                    if (pane) ...[VerticalDivider(width: 1, color: t.rule), SizedBox(width: pdfWidth, child: _pdfPane())],
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _header(Tokens t) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 4, 8, 2),
-    child: Row(
+  // Keyboard (iPad) ------------------------------------------------------------
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    if (e is! KeyDownEvent && e is! KeyRepeatEvent) return KeyEventResult.ignored;
+    final key = e.logicalKey;
+    final kb = HardwareKeyboard.instance;
+    final cmd = kb.isMetaPressed, shift = kb.isShiftPressed;
+    if (cmd && key == LogicalKeyboardKey.keyF) {
+      _openSearch();
+      return KeyEventResult.handled;
+    }
+    if (cmd && key == LogicalKeyboardKey.keyG) {
+      if (_hits.isEmpty) return KeyEventResult.ignored;
+      _stepHit(!shift);
+      return KeyEventResult.handled;
+    }
+    if (cmd && shift && key == LogicalKeyboardKey.keyP) {
+      _pdfOpen && _canSplit ? _closePdf() : _preparePdf();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape && _searching) {
+      _closeSearch();
+      return KeyEventResult.handled;
+    }
+    // Typing in the search field (or a note): the letters are theirs.
+    final typing = FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<EditableText>() != null;
+    if (typing || cmd) return KeyEventResult.ignored;
+    if (key == LogicalKeyboardKey.space && player.scenes.isNotEmpty) {
+      _userScrolled = DateTime.fromMillisecondsSinceEpoch(0);
+      player.togglePlayPause();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight && player.scenes.isNotEmpty) {
+      player.nextLine();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft && player.scenes.isNotEmpty) {
+      player.prevLine();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  // Header ---------------------------------------------------------------------
+
+  Widget _header(Tokens t, {required bool sidebar, required bool wide}) {
+    final hasRole = player.myRole.isNotEmpty;
+    Widget icon(IconData i, String tip, VoidCallback? onTap, {bool on = false}) => IconButton(
+      tooltip: tip,
+      icon: Icon(i, color: on ? const Color(0xFF1C1B19) : t.ink2, size: 22),
+      style: on ? IconButton.styleFrom(backgroundColor: t.highlighter) : null,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 40, minHeight: 44),
+      onPressed: onTap,
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 8, 2),
+      child: Row(
+        children: [
+          if (!sidebar) ...[
+            IconButton(
+              tooltip: 'Projects',
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: t.accent, size: 22),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+            Expanded(
+              child: Text(
+                widget.project.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyles.ui(t, size: 17, weight: FontWeight.w600),
+              ),
+            ),
+          ] else
+            const Spacer(),
+          icon(Icons.search_rounded, 'Search the script', _openSearch),
+          if (wide)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: TextButton.icon(
+                key: const Key('myCharacter'),
+                onPressed: _openRoleSheet,
+                icon: Icon(Icons.person_rounded, size: 18, color: hasRole ? const Color(0xFF1C1B19) : t.ink2),
+                label: Text(
+                  hasRole ? titleCaseName(player.myRole) : 'My Character',
+                  style: TextStyles.ui(t, size: 14, weight: FontWeight.w600, color: hasRole ? const Color(0xFF1C1B19) : t.ink2),
+                ),
+                style: TextButton.styleFrom(backgroundColor: hasRole ? t.highlighter : null, minimumSize: const Size(44, 40)),
+              ),
+            )
+          else
+            icon(Icons.person_rounded, hasRole ? 'My Character: ${titleCaseName(player.myRole)}' : 'My Character', _openRoleSheet, on: hasRole),
+          if (_pdfPath.isNotEmpty) icon(Icons.picture_as_pdf_rounded, 'Show PDF', _togglePdf, on: _pdfOpen && _canSplit),
+          TextButton(
+            onPressed: _openTextOptions,
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44), padding: const EdgeInsets.symmetric(horizontal: 8), foregroundColor: t.ink2),
+            child: Text(
+              'Aa',
+              style: TextStyles.ui(t, size: 17, weight: FontWeight.w600, color: t.ink2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The scenes, always in view (iPad): the project's name and a way back, then every scene.
+  Widget _sidebar(Tokens t) => Material(
+    color: t.bg,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        IconButton(
-          tooltip: 'Projects',
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: t.accent, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 8, 6),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: 'Projects',
+                icon: Icon(Icons.arrow_back_ios_new_rounded, color: t.accent, size: 22),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+              Expanded(
+                child: Text(
+                  widget.project.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyles.ui(t, size: 16, weight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
         ),
         Expanded(
-          child: Text(
-            widget.project.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyles.ui(t, size: 17, weight: FontWeight.w600),
-          ),
-        ),
-        TextButton(
-          onPressed: _openTextOptions,
-          style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: t.ink2),
-          child: Text(
-            'Aa',
-            style: TextStyles.ui(t, size: 17, weight: FontWeight.w600, color: t.ink2),
-          ),
+          child: _SceneList(session: session, viewing: _topScene, controller: _sidebarScroll, store: widget.store, onScene: _jumpToScene),
         ),
       ],
     ),
   );
+
+  final _sidebarScroll = ScrollController();
 
   Widget _empty(Tokens t) => Padding(
     padding: const EdgeInsets.all(32),
@@ -345,41 +547,326 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     ),
   );
 
-  Widget _script(Tokens t) {
-    final scale = _textScales[textSize];
-    return NotificationListener<UserScrollNotification>(
-      onNotification: (n) {
-        if (n.direction != ScrollDirection.idle) _userScrolled = DateTime.now();
-        return false;
-      },
-      child: CustomScrollView(
-        key: _viewportKey,
-        controller: scroll,
-        slivers: [
-          for (final s in session.scenes)
-            SliverMainAxisGroup(
-              slivers: [
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _SceneHeading(scene: s, tokens: t, onTap: _openScenesFrom),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-                  // Not lazy within a scene: playback can scroll to any line.
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      key: _key('${s.number}'),
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [for (final (i, l) in s.lines.indexed) _line(t, s, i, l, scale)],
-                    ),
-                  ),
-                ),
-              ],
+  // Search (#113) --------------------------------------------------------------
+
+  void _openSearch() {
+    setState(() => _searching = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _queryFocus.requestFocus());
+  }
+
+  void _closeSearch() {
+    setState(() {
+      _searching = false;
+      _queryCtl.clear();
+      _hits = const [];
+      _hitsByLine = const {};
+      _hit = 0;
+    });
+    _keyFocus.requestFocus();
+  }
+
+  void _runSearch(String q) {
+    // A line blanked for practice stays blank: searching can't be used to read it.
+    final hits = searchScript(session, q, skip: (l) => l.isDialog && player.blockMyLines && player.isMyLine(l.speaker));
+    final by = <String, List<SearchHit>>{};
+    for (final h in hits) {
+      by.putIfAbsent(session.scenes[h.scene].lines[h.line].key, () => []).add(h);
+    }
+    setState(() {
+      _hits = hits;
+      _hitsByLine = by;
+      _hit = 0;
+    });
+    if (hits.isNotEmpty) _revealHit();
+  }
+
+  void _stepHit(bool forward) {
+    if (_hits.isEmpty) return;
+    setState(() => _hit = (_hit + (forward ? 1 : _hits.length - 1)) % _hits.length);
+    _revealHit();
+  }
+
+  void _revealHit() {
+    final h = _hits[_hit];
+    _userScrolled = DateTime.now();
+    _revealLine(h.scene, h.line);
+  }
+
+  /// Scrolls to a line even when it is far away and not built yet: jumps to about where it should be (by how many
+  /// lines come before it), then lets the list build and settles on the line itself.
+  void _revealLine(int sceneIndex, int line, {double alignment = 0.35, int tries = 5}) {
+    final s = session.scenes[sceneIndex];
+    final key = _key('${s.number}:$line');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !scroll.hasClients) return;
+      if (key.currentContext != null) {
+        _reveal(key, alignment: alignment);
+        return;
+      }
+      if (tries == 0) return;
+      var before = 0, total = 0;
+      for (final (i, sc) in session.scenes.indexed) {
+        if (i < sceneIndex) before += sc.lines.length;
+        total += sc.lines.length;
+      }
+      before += line;
+      final pos = scroll.position;
+      pos.jumpTo((pos.maxScrollExtent * (before / (total == 0 ? 1 : total))).clamp(pos.minScrollExtent, pos.maxScrollExtent));
+      _revealLine(sceneIndex, line, alignment: alignment, tries: tries - 1);
+    });
+    // A frame has to run for the callback above.
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  Widget _searchBar(Tokens t) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 6, 4, 4),
+    child: SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          Icon(Icons.search_rounded, color: t.muted),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              key: const Key('scriptSearchField'),
+              controller: _queryCtl,
+              focusNode: _queryFocus,
+              textInputAction: TextInputAction.search,
+              style: TextStyles.ui(t, size: 16),
+              decoration: const InputDecoration(hintText: 'Search the script', border: InputBorder.none, isDense: true),
+              onChanged: _runSearch,
+              onSubmitted: (_) => _stepHit(true),
             ),
-          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+          ),
+          if (_queryCtl.text.trim().isNotEmpty)
+            Text(_hits.isEmpty ? 'No matches' : '${_hit + 1} of ${_hits.length}', style: TextStyles.ui(t, size: 13, color: t.muted)),
+          IconButton(
+            tooltip: 'Previous match',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.keyboard_arrow_up_rounded),
+            onPressed: _hits.isEmpty ? null : () => _stepHit(false),
+          ),
+          IconButton(
+            tooltip: 'Next match',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.keyboard_arrow_down_rounded),
+            onPressed: _hits.isEmpty ? null : () => _stepHit(true),
+          ),
+          TextButton(onPressed: _closeSearch, child: const Text('Done')),
         ],
       ),
+    ),
+  );
+
+  // My Character, without any audio (#114) ------------------------------------
+
+  Future<void> _openRoleSheet() async {
+    final t = Tokens.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: t.sheet,
+      showDragHandle: true,
+      constraints: sheetConstraints(context),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => ListenableBuilder(
+        listenable: player,
+        builder: (ctx, _) => _RoleSheet(player: player, session: session),
+      ),
     );
+    _keyFocus.requestFocus();
+  }
+
+  // The PDF (#115), its pages (#116) -------------------------------------------
+
+  void _togglePdf() {
+    if (_pdfOpen && _canSplit) {
+      _closePdf();
+    } else {
+      _preparePdf();
+    }
+  }
+
+  void _closePdf() {
+    setState(() => _pdfOpen = false);
+    SharedPreferences.getInstance().then((p) => p.setBool(_pdfOpenKey, false));
+    _keyFocus.requestFocus();
+  }
+
+  /// Brings the PDF onto the device if it isn't, lines the script up with its pages, and (when [open]) shows it:
+  /// beside the script on a wide window, on its own screen otherwise.
+  Future<void> _preparePdf({bool open = true, int? page}) async {
+    if (_pdfPath.isEmpty || _preparingPdf) return;
+    setState(() => _preparingPdf = true);
+    String? problem;
+    try {
+      if (!File(_pdfPath).existsSync() && widget.folderAccess) await FolderAccess.download([_pdfPath]);
+      if (!File(_pdfPath).existsSync()) throw 'The PDF isn’t on this device yet.';
+      if (_pageOf == null) {
+        final read = widget.pageTexts ?? (PdfService.available ? PdfService.pageTexts : null);
+        if (read != null) _alignPages(await read(_pdfPath));
+      }
+    } catch (e) {
+      problem = 'Couldn’t open the PDF: $e';
+    }
+    if (!mounted) return;
+    setState(() => _preparingPdf = false);
+    if (problem != null) {
+      if (open) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(problem)));
+      return;
+    }
+    if (!open) return;
+    final at = page ?? _currentPage() ?? 1;
+    if (_canSplit) {
+      setState(() => _pdfOpen = true);
+      SharedPreferences.getInstance().then((p) => p.setBool(_pdfOpenKey, true));
+      pdf.onReady = () => pdf.goToPage(at);
+      if (pdf.pageCount > 0) pdf.goToPage(at);
+    } else {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => _PdfScreen(path: _pdfPath, folder: session.folder, page: at, folderAccess: widget.folderAccess),
+        ),
+      );
+    }
+  }
+
+  void _alignPages(List<String> texts) {
+    final lines = [for (final s in session.scenes) ...s.lines];
+    final pages = alignLinesToPages(texts, [for (final l in lines) l.text]);
+    final of = <String, int>{};
+    final breaks = <String, int>{};
+    for (final (i, l) in lines.indexed) {
+      of[l.key] = pages[i];
+      if (i > 0 && pages[i] != pages[i - 1]) breaks[l.key] = pages[i];
+    }
+    _pageOf = of;
+    _breakBefore = breaks;
+  }
+
+  /// The PDF page of the line being read (or the first line on screen when nothing plays).
+  int? _currentPage() {
+    final pages = _pageOf;
+    if (pages == null) return null;
+    final s = _sceneNumbered(player.currentScene?.sceneNumber ?? _topScene);
+    if (s == null) return null;
+    final l = s.lines.where((l) => l.cueIndex != null && l.cueIndex == player.currentCueIndex).firstOrNull ?? s.lines.firstOrNull;
+    return l == null ? null : pages[l.key];
+  }
+
+  /// Keeps the PDF on the page being read while the script plays.
+  void _followPdf() {
+    if (!(_pdfOpen && _canSplit)) return;
+    final p = _currentPage();
+    if (p != null && p != pdf.page) pdf.goToPage(p);
+  }
+
+  Widget _pdfPane() => PdfPanel(
+    pdfPath: _pdfPath,
+    folder: session.folder,
+    controller: pdf,
+    pad: isPadDisplay(context),
+    folderAccess: widget.folderAccess,
+    onClose: _closePdf,
+  );
+
+  Future<void> _setShowPages(bool on) async {
+    setState(() => _showPages = on);
+    (await SharedPreferences.getInstance()).setBool(_showPagesKey, on);
+    if (on && _pageOf == null) await _preparePdf(open: false);
+  }
+
+  // Notes (#117) ---------------------------------------------------------------
+
+  Future<void> _editNote(PhoneLine l) async {
+    final n = notes;
+    if (n == null) return;
+    final t = Tokens.of(context);
+    final text = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: t.sheet,
+      showDragHandle: true,
+      constraints: sheetConstraints(context),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => _NoteSheet(line: l, existing: n[l.key]?.text),
+    );
+    if (text == null) return;
+    await n.set(l.key, text);
+    if (n.has(l.key)) n.expanded.add(l.key);
+    if (mounted) setState(() {});
+    _keyFocus.requestFocus();
+  }
+
+  Widget _script(Tokens t) {
+    final scale = _textScales[textSize];
+    return LayoutBuilder(
+      builder: (context, box) {
+        // On a big window the script keeps a readable width, centred.
+        final side = ((box.maxWidth - 800) / 2).clamp(0.0, double.infinity);
+        return NotificationListener<UserScrollNotification>(
+          onNotification: (n) {
+            if (n.direction != ScrollDirection.idle) _userScrolled = DateTime.now();
+            return false;
+          },
+          child: CustomScrollView(
+            key: _viewportKey,
+            controller: scroll,
+            slivers: [
+              for (final s in session.scenes)
+                SliverMainAxisGroup(
+                  slivers: [
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SceneHeading(scene: s, tokens: t, side: side, onTap: _openScenesFrom),
+                    ),
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(20 + side, 4, 20 + side, 28),
+                      // Not lazy within a scene: playback can scroll to any line.
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          key: _key('${s.number}'),
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [for (final (i, l) in s.lines.indexed) _line(t, s, i, l, scale)],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              const SliverToBoxAdapter(child: SizedBox(height: 40)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Search highlights inside a line's text: the current match in the highlighter, the others paler.
+  InlineSpan _spans(String text, List<SearchHit>? hits, SearchHit? current, TextStyle style, Tokens t) {
+    final inText = [
+      for (final h in hits ?? const <SearchHit>[])
+        if (h.inText) h,
+    ];
+    if (inText.isEmpty) return TextSpan(text: text, style: style);
+    final out = <InlineSpan>[];
+    var at = 0;
+    for (final h in inText) {
+      final a = h.start.clamp(0, text.length), b = h.end.clamp(0, text.length);
+      if (a < at || b <= a) continue;
+      if (a > at) out.add(TextSpan(text: text.substring(at, a)));
+      out.add(
+        TextSpan(
+          text: text.substring(a, b),
+          style: TextStyle(
+            backgroundColor: identical(h, current) ? t.highlighter : t.highlighter.withValues(alpha: 0.5),
+            color: const Color(0xFF1C1B19),
+          ),
+        ),
+      );
+      at = b;
+    }
+    if (at < text.length) out.add(TextSpan(text: text.substring(at)));
+    return TextSpan(style: style, children: out);
   }
 
   Widget _line(Tokens t, PhoneScene s, int i, PhoneLine l, double scale) {
@@ -391,6 +878,12 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
     final a = _selA, b = _selB;
     final selected = _selScene == s.number && a != null && b != null && i >= (a < b ? a : b) && i <= (a < b ? b : a);
     const onHighlighter = Color(0xFF1C1B19);
+    final hits = _hitsByLine[l.key];
+    final hit = _hits.isEmpty ? null : _hits[_hit];
+    final hasCurrentHit = hit != null && hits != null && hits.any((h) => identical(h, hit));
+    final note = notes?[l.key];
+    final noteOpen = note != null && notes!.expanded.contains(l.key);
+    final breakPage = _showPages ? _breakBefore[l.key] : null;
     final textStyle = TextStyles.script(
       t,
       size: 15 * scale,
@@ -398,6 +891,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       // The highlighter is yellow in both themes: dark ink on it.
       color: current ? onHighlighter : (blocked ? t.muted : (l.isDialog ? t.ink : t.ink2)),
     ).copyWith(height: 1.45, letterSpacing: blocked ? 0.3 : null);
+    final text = blocked ? Text(blockText(l.text), style: textStyle) : Text.rich(_spans(l.text, hits, hit, textStyle, t));
     final body = l.isDialog
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,43 +909,71 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
                 ],
               ),
               const SizedBox(height: 3),
-              Text(blocked ? blockText(l.text) : l.text, style: textStyle),
+              text,
             ],
           )
-        : Text(l.text, style: textStyle);
-    final Color? fill = current ? t.highlighter : (selected ? t.accentSoft : (mine ? t.mine : null));
-    return GestureDetector(
-      key: _key('${s.number}:$i'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () => _tapLine(s, l),
-      onLongPressStart: s.rendered && l.cueIndex != null
-          ? (d) => setState(() {
-              _selScene = s.number;
-              _selA = _selB = i;
-              _dragPoint = d.globalPosition;
-            })
-          : null,
-      onLongPressMoveUpdate: s.rendered ? (d) => _dragTo(d.globalPosition) : null,
-      onLongPressEnd: s.rendered
-          ? (_) {
-              _edgeScroll?.cancel();
-              _edgeScroll = null;
-              _dragPoint = null;
-            }
-          : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: fill,
-          borderRadius: BorderRadius.circular(6),
-          border: current
-              ? Border.all(color: t.dark ? onHighlighter : t.highlighterEdge, width: 2)
-              : (selected ? Border.all(color: t.accentLine, width: 1.5) : null),
+        : text;
+    final hovered = _hover == l.key;
+    final Color? fill = current ? t.highlighter : (selected ? t.accentSoft : (mine ? t.mine : (hovered ? t.ruleSoft : null)));
+    final row = MouseRegion(
+      onEnter: (_) => setState(() => _hover = l.key),
+      onExit: (_) => setState(() {
+        if (_hover == l.key) _hover = null;
+      }),
+      child: GestureDetector(
+        key: _key('${s.number}:$i'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _tapLine(s, l),
+        onLongPressStart: (d) => setState(() {
+          _selScene = s.number;
+          _selA = _selB = i;
+          _dragPoint = d.globalPosition;
+        }),
+        onLongPressMoveUpdate: s.rendered ? (d) => _dragTo(d.globalPosition) : null,
+        onLongPressEnd: (_) {
+          _edgeScroll?.cancel();
+          _edgeScroll = null;
+          _dragPoint = null;
+        },
+        child: Stack(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              padding: EdgeInsets.fromLTRB(10, 8, note == null ? 10 : 34, 8),
+              decoration: BoxDecoration(
+                color: fill,
+                borderRadius: BorderRadius.circular(6),
+                border: current
+                    ? Border.all(color: t.dark ? onHighlighter : t.highlighterEdge, width: 2)
+                    : (selected
+                          ? Border.all(color: t.accentLine, width: 1.5)
+                          : (hasCurrentHit ? Border.all(color: t.highlighterEdge, width: 1.5) : null)),
+              ),
+              child: SizedBox(width: double.infinity, child: body),
+            ),
+            if (note != null)
+              Positioned(
+                top: 6,
+                right: 4,
+                child: _NoteFlag(open: noteOpen, onTap: () => notes!.toggle(l.key)),
+              ),
+          ],
         ),
-        child: body,
       ),
+    );
+    if (breakPage == null && !noteOpen) return row;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (breakPage != null)
+          _PageBreakMark(
+            page: breakPage,
+            onTap: () => _preparePdf(page: breakPage),
+          ),
+        row,
+        if (noteOpen) _NoteCard(text: note.text, onEdit: () => _editNote(l), onCollapse: () => notes!.toggle(l.key)),
+      ],
     );
   }
 
@@ -509,6 +1031,8 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
 
   Widget _selectionBar(Tokens t) {
     final n = ((_selA! - _selB!).abs()) + 1;
+    final scene = _sceneNumbered(_selScene);
+    final single = n == 1 && scene != null ? scene.lines[_selA!] : null;
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 8, 14, 12),
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
@@ -524,13 +1048,24 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
             child: Text('$n line${n == 1 ? '' : 's'} selected', style: TextStyles.ui(t, size: 15, weight: FontWeight.w600)),
           ),
           TextButton(onPressed: () => setState(_clearSelection), child: const Text('Cancel')),
-          const SizedBox(width: 4),
-          FilledButton.icon(
-            onPressed: _loopSelection,
-            icon: const Icon(Icons.repeat_rounded, size: 18),
-            label: const Text('Loop'),
-            style: FilledButton.styleFrom(backgroundColor: t.accent, foregroundColor: t.onAccent),
-          ),
+          if (single != null && notes != null)
+            TextButton.icon(
+              onPressed: () {
+                setState(_clearSelection);
+                _editNote(single);
+              },
+              icon: Icon(notes!.has(single.key) ? Icons.edit_note_rounded : Icons.flag_outlined, size: 18),
+              label: Text(notes!.has(single.key) ? 'Edit Note' : 'Note'),
+            ),
+          if (scene?.rendered ?? false) ...[
+            const SizedBox(width: 4),
+            FilledButton.icon(
+              onPressed: _loopSelection,
+              icon: const Icon(Icons.repeat_rounded, size: 18),
+              label: const Text('Loop'),
+              style: FilledButton.styleFrom(backgroundColor: t.accent, foregroundColor: t.onAccent),
+            ),
+          ],
         ],
       ),
     );
@@ -680,6 +1215,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       isScrollControlled: true,
       backgroundColor: t.sheet,
       showDragHandle: true,
+      constraints: sheetConstraints(context),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => ListenableBuilder(
         listenable: player,
@@ -741,8 +1277,8 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
             ),
             Positioned(
               key: const Key('sceneDropdown'),
-              left: 8,
-              right: 8,
+              left: heading.left + 8,
+              right: media.size.width - heading.right + 8,
               top: heading.bottom,
               child: Material(
                 color: t.sheet,
@@ -752,7 +1288,13 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
                 clipBehavior: Clip.antiAlias,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxHeight: room.clamp(160.0, media.size.height * 0.62)),
-                  child: _SceneList(session: session, viewing: _topScene, controller: list, store: widget.store, onScene: (n) => Navigator.pop(ctx, n)),
+                  child: _SceneList(
+                    session: session,
+                    viewing: _topScene,
+                    controller: list,
+                    store: widget.store,
+                    onScene: (n) => Navigator.pop(ctx, n),
+                  ),
                 ),
               ),
             ),
@@ -785,6 +1327,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
       context: context,
       backgroundColor: t.sheet,
       showDragHandle: true,
+      constraints: sheetConstraints(context),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => SafeArea(
           child: Padding(
@@ -818,6 +1361,17 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
                     (await SharedPreferences.getInstance()).setBool('phoneCharacterColors', v);
                   },
                 ),
+                if (_pdfPath.isNotEmpty)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Page numbers'),
+                    subtitle: const Text('A dotted line and the PDF page at each page break'),
+                    value: _showPages,
+                    onChanged: (v) {
+                      set(() {});
+                      _setShowPages(v).then((_) => set(() {}));
+                    },
+                  ),
               ],
             ),
           ),
@@ -830,9 +1384,12 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> {
 /// A scene's heading: sticks to the top while its lines scroll under it; a
 /// tap opens the scene list to jump elsewhere (the chevron says so).
 class _SceneHeading extends SliverPersistentHeaderDelegate {
-  _SceneHeading({required this.scene, required this.tokens, required this.onTap});
+  _SceneHeading({required this.scene, required this.tokens, required this.onTap, this.side = 0});
   final PhoneScene scene;
   final Tokens tokens;
+
+  /// Extra room each side on a wide window, to line up with the script column.
+  final double side;
 
   /// Gets the heading's context, so the list can drop down from it.
   final ValueChanged<BuildContext> onTap;
@@ -854,7 +1411,7 @@ class _SceneHeading extends SliverPersistentHeaderDelegate {
           onTap: () => onTap(box),
           child: Container(
             height: _headingHeight,
-            padding: const EdgeInsets.fromLTRB(20, 0, 14, 0),
+            padding: EdgeInsets.fromLTRB(20 + side, 0, 14 + side, 0),
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: stuck ? t.rule : Colors.transparent)),
             ),
@@ -903,7 +1460,7 @@ class _SceneHeading extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(_SceneHeading old) => old.scene != scene || old.tokens != tokens;
+  bool shouldRebuild(_SceneHeading old) => old.scene != scene || old.tokens != tokens || old.side != side;
 }
 
 String _clockText(double s) {
@@ -926,21 +1483,6 @@ class _RehearsePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
     final hasRole = player.myRole.isNotEmpty;
-    Widget chip(String label, String role) {
-      final on = player.myRole == role;
-      return ChoiceChip(
-        label: Text(label),
-        selected: on,
-        showCheckmark: false,
-        onSelected: (_) => player.setRole(role),
-        labelStyle: TextStyles.ui(t, size: 15, weight: on ? FontWeight.w700 : FontWeight.w500, color: on ? const Color(0xFF1C1B19) : t.ink2),
-        selectedColor: t.highlighter,
-        backgroundColor: t.panel,
-        side: on ? const BorderSide(color: Color(0xFF1C1B19), width: 2) : BorderSide.none,
-        shape: const StadiumBorder(),
-      );
-    }
-
     Widget toggle(String title, String sub, bool value, ValueChanged<bool> set) => SwitchListTile(
       title: Text(title, style: TextStyles.ui(t, size: 16, weight: FontWeight.w600)),
       subtitle: Text(sub, style: TextStyles.ui(t, size: 13, color: t.muted)),
@@ -967,7 +1509,7 @@ class _RehearsePanel extends StatelessWidget {
               const SizedBox(height: 8),
               Text('MY ROLE', style: TextStyles.label(t)),
               const SizedBox(height: 8),
-              Wrap(spacing: 8, runSpacing: 8, children: [chip('No one', ''), for (final c in session.characters) chip(titleCaseName(c), c)]),
+              _roleChips(t, player, session),
               const SizedBox(height: 16),
               Material(
                 color: t.panel,
@@ -1117,4 +1659,351 @@ class _RevealDown extends CustomClipper<Rect> {
 
   @override
   bool shouldReclip(_RevealDown old) => old.progress != progress || old.top != top;
+}
+
+/// Everyone with a line, to pick as My Character ("No one" clears it).
+Widget _roleChips(Tokens t, RehearsalPlayer player, RehearsalSession session) {
+  Widget chip(String label, String role) {
+    final on = player.myRole == role;
+    return ChoiceChip(
+      label: Text(label),
+      selected: on,
+      showCheckmark: false,
+      onSelected: (_) => player.setRole(role),
+      labelStyle: TextStyles.ui(t, size: 15, weight: on ? FontWeight.w700 : FontWeight.w500, color: on ? const Color(0xFF1C1B19) : t.ink2),
+      selectedColor: t.highlighter,
+      backgroundColor: t.panel,
+      side: on ? const BorderSide(color: Color(0xFF1C1B19), width: 2) : BorderSide.none,
+      shape: const StadiumBorder(),
+    );
+  }
+
+  return Wrap(spacing: 8, runSpacing: 8, children: [chip('No one', ''), for (final c in session.characters) chip(titleCaseName(c), c)]);
+}
+
+/// My Character (#114): choose who you play and see their lines highlighted in every scene, rendered or not.
+class _RoleSheet extends StatelessWidget {
+  const _RoleSheet({required this.player, required this.session});
+  final RehearsalPlayer player;
+  final RehearsalSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final hasRole = player.myRole.isNotEmpty;
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('My Character', style: TextStyles.ui(t, size: 22, weight: FontWeight.w700)),
+                  ),
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
+                ],
+              ),
+              Text('Their lines are highlighted all through the script. No audio needed.', style: TextStyles.ui(t, size: 14, color: t.muted)),
+              const SizedBox(height: 14),
+              _roleChips(t, player, session),
+              const SizedBox(height: 16),
+              Material(
+                color: t.panel,
+                borderRadius: BorderRadius.circular(14),
+                clipBehavior: Clip.antiAlias,
+                child: SwitchListTile(
+                  title: Text('Block My Lines', style: TextStyles.ui(t, size: 16, weight: FontWeight.w600)),
+                  subtitle: Text('Blank them out to test memory', style: TextStyles.ui(t, size: 13, color: t.muted)),
+                  value: player.blockMyLines && hasRole,
+                  onChanged: hasRole ? player.setBlock : null,
+                ),
+              ),
+              if (!hasRole)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, left: 4),
+                  child: Text('Pick your character to use this.', style: TextStyles.ui(t, size: 13, color: t.muted)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Write, change or delete a line's note. Pops the new text, or '' to delete.
+class _NoteSheet extends StatefulWidget {
+  const _NoteSheet({required this.line, this.existing});
+  final PhoneLine line;
+  final String? existing;
+
+  @override
+  State<_NoteSheet> createState() => _NoteSheetState();
+}
+
+class _NoteSheetState extends State<_NoteSheet> {
+  late final ctl = TextEditingController(text: widget.existing ?? '');
+
+  @override
+  void dispose() {
+    ctl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Note', style: TextStyles.ui(t, size: 22, weight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(
+            widget.line.text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyles.script(t, size: 14, italic: true, color: t.muted),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('noteField'),
+            controller: ctl,
+            autofocus: true,
+            minLines: 3,
+            maxLines: 8,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(hintText: 'A reminder for this line', border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (widget.existing != null)
+                TextButton(
+                  onPressed: () => Navigator.pop(context, ''),
+                  style: TextButton.styleFrom(foregroundColor: t.danger),
+                  child: const Text('Delete'),
+                ),
+              const Spacer(),
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, ctl.text),
+                style: FilledButton.styleFrom(backgroundColor: t.accent, foregroundColor: t.onAccent),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A line's note, collapsed: a little arrow flag. Tap to open the note; open, it points down.
+class _NoteFlag extends StatelessWidget {
+  const _NoteFlag({required this.open, required this.onTap});
+  final bool open;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return Semantics(
+      button: true,
+      label: open ? 'Hide note' : 'Show note',
+      child: GestureDetector(
+        key: const Key('noteFlag'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: AnimatedRotation(
+            turns: open ? 0.25 : 0,
+            duration: const Duration(milliseconds: 150),
+            child: CustomPaint(
+              size: const Size(20, 16),
+              painter: _FlagPainter(fill: t.highlighter, edge: t.dark ? const Color(0xFF1C1B19) : t.highlighterEdge),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FlagPainter extends CustomPainter {
+  _FlagPainter({required this.fill, required this.edge});
+  final Color fill, edge;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final path = Path()
+      ..moveTo(1, 1)
+      ..lineTo(w - 6, 1)
+      ..lineTo(w - 1, h / 2)
+      ..lineTo(w - 6, h - 1)
+      ..lineTo(1, h - 1)
+      ..close();
+    canvas.drawPath(path, Paint()..color = fill);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = edge
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_FlagPainter old) => old.fill != fill || old.edge != edge;
+}
+
+/// An open note, under its line.
+class _NoteCard extends StatelessWidget {
+  const _NoteCard({required this.text, required this.onEdit, required this.onCollapse});
+  final String text;
+  final VoidCallback onEdit, onCollapse;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return Container(
+      key: const Key('noteCard'),
+      margin: const EdgeInsets.fromLTRB(18, 0, 4, 6),
+      padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+      decoration: BoxDecoration(
+        color: t.highlighter.withValues(alpha: t.dark ? 0.16 : 0.45),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(left: BorderSide(color: t.highlighterEdge, width: 3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(text, style: TextStyles.hand(t, size: 18, color: t.ink)),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Edit note',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 18, color: t.ink2),
+            onPressed: onEdit,
+          ),
+          IconButton(
+            tooltip: 'Hide note',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.keyboard_arrow_up_rounded, color: t.ink2),
+            onPressed: onCollapse,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Where a PDF page starts (#116): a dotted line across the script and the page's number.
+class _PageBreakMark extends StatelessWidget {
+  const _PageBreakMark({required this.page, required this.onTap});
+  final int page;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return Semantics(
+      label: 'Page $page begins',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: CustomPaint(size: const Size(double.infinity, 1), painter: _DottedLine(t.muted.withValues(alpha: 0.7))),
+            ),
+            GestureDetector(
+              key: Key('pageBreak$page'),
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 2, 4),
+                child: Text(
+                  'p. $page',
+                  style: TextStyles.ui(t, size: 12, weight: FontWeight.w600, color: t.muted),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DottedLine extends CustomPainter {
+  _DottedLine(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    for (var x = 0.0; x < size.width; x += 6) {
+      canvas.drawLine(Offset(x, 0), Offset(x + 0.1, 0), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DottedLine old) => old.color != color;
+}
+
+/// The PDF on its own screen (iPhone, and iPad windows too narrow to split).
+class _PdfScreen extends StatefulWidget {
+  const _PdfScreen({required this.path, required this.folder, required this.page, required this.folderAccess});
+  final String path, folder;
+  final int page;
+  final bool folderAccess;
+
+  @override
+  State<_PdfScreen> createState() => _PdfScreenState();
+}
+
+class _PdfScreenState extends State<_PdfScreen> {
+  late final PdfController controller = PdfController()..onReady = () => controller.goToPage(widget.page);
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return Scaffold(
+      backgroundColor: t.bg,
+      body: SafeArea(
+        bottom: false,
+        child: PdfPanel(
+          pdfPath: widget.path,
+          folder: widget.folder,
+          controller: controller,
+          pad: isPadDisplay(context),
+          folderAccess: widget.folderAccess,
+          onClose: () => Navigator.of(context).maybePop(),
+        ),
+      ),
+    );
+  }
 }
