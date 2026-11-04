@@ -30,10 +30,19 @@ Future<PhoneStore> _store({bool withFolder = true}) async {
   return s;
 }
 
+/// The previous test's screen is still mounted, and saves its place (rehearsal file) when it goes: let it, then wipe it.
+Future<void> _forgetLastTest(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox());
+  await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 60)));
+  final r = Directory('$earnestFolder/$rehearsalFolder');
+  if (r.existsSync()) r.deleteSync(recursive: true);
+}
+
 Future<void> _pump(WidgetTester tester, PhoneStore store, Brightness b) async {
   tester.view.physicalSize = const Size(402, 874); // iPhone 17, in points
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  await _forgetLastTest(tester);
   await tester.pumpWidget(PhoneApp(store: store, themeMode: b == Brightness.dark ? ThemeMode.dark : ThemeMode.light));
   await tester.pumpAndSettle(const Duration(milliseconds: 100));
 }
@@ -118,7 +127,7 @@ void main() {
       await _pump(tester, await _store(), b);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/phone_projects_$mode.png'));
       await _openEarnest(tester);
-      expect(find.text('Morning-room, Half-Moon Street'), findsOneWidget); // scene 1's heading
+      expect(find.text('Morning-room, Half-Moon Street'), findsNWidgets(2)); // scene 1: the bar and its title in the script
       expect(find.text('Rehearse'), findsOneWidget);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/phone_rehearse_$mode.png'));
       await tester.tap(find.text('Rehearse'));
@@ -150,15 +159,15 @@ void main() {
   testWidgets('the whole play scrolls; a scene heading jumps to another scene', (tester) async {
     await _pump(tester, await _store(), Brightness.light);
     await _openEarnest(tester);
-    await tester.tap(find.text('Morning-room, Half-Moon Street'));
+    await tester.tap(find.text('Morning-room, Half-Moon Street').first); // the scene bar
     await tester.pumpAndSettle();
     // The list drops down from the heading, not up from the bottom.
     final drop = tester.getRect(find.byKey(const Key('sceneDropdown')));
-    expect(drop.top, closeTo(tester.getRect(find.byType(CustomScrollView)).top + 52, 1));
+    expect(drop.top, closeTo(tester.getRect(find.byType(CustomScrollView)).top, 1)); // under the bar
     await tester.tap(find.descendant(of: find.byKey(const Key('sceneDropdown')), matching: find.text('Bunburying')));
     await tester.pumpAndSettle();
     // Scene 3's heading is stuck at the top, marked text only; its first line is under it.
-    final heading = tester.getRect(find.text('Bunburying'));
+    final heading = tester.getRect(find.text('Bunburying').last); // the title in the script (the bar above has it too)
     final top = tester.getRect(find.byType(CustomScrollView)).top;
     expect(heading.top - top, lessThan(_headingSlack), reason: 'scene 3 heading at the very top');
     expect(find.text('Cucumber sandwiches').hitTestable(), findsNothing, reason: "scene 2's heading has scrolled away");
@@ -171,7 +180,7 @@ void main() {
   testWidgets('dragging a selection to the bottom edge keeps scrolling and selecting', (tester) async {
     await _pump(tester, await _store(), Brightness.light);
     await _openEarnest(tester);
-    await tester.tap(find.text('Morning-room, Half-Moon Street'));
+    await tester.tap(find.text('Morning-room, Half-Moon Street').first); // the scene bar
     await tester.pumpAndSettle();
     final sheet = find.byKey(const Key('sceneDropdown'));
     final row = find.descendant(of: sheet, matching: find.text('Tea, and a misunderstanding')); // scene 8: 41 lines
@@ -195,10 +204,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 16));
     }
     expect(offset() - before, greaterThan(300), reason: 'the list scrolled under the finger');
-    final n = int.parse(RegExp(r'(\d+) lines selected').firstMatch(tester.widget<Text>(find.textContaining('lines selected')).data!)!.group(1)!);
-    expect(n, greaterThan(8), reason: 'more lines than fit on screen at once');
     await g.up();
     await tester.pumpAndSettle();
+    final n = int.parse(RegExp(r'(\d+) lines').firstMatch(tester.widget<Text>(find.textContaining(RegExp(r'^\d+ lines$'))).data!)!.group(1)!);
+    expect(n, greaterThan(8), reason: 'more lines than fit on screen at once');
   });
 
   testWidgets('Line! in the bar: only with Block My Lines; a hint the first time only', (tester) async {
@@ -263,10 +272,10 @@ void main() {
     expect(find.text('0:09'), findsOneWidget); // line 4 of the cue map starts at 9 s
     await tester.longPress(find.text('Line 2 of scene 1, spoken with great feeling and a certain amount of wit.'));
     await tester.pumpAndSettle();
-    expect(find.text('1 line selected'), findsOneWidget);
+    expect(find.text('1 line'), findsOneWidget); // the floating menu on the line
     await tester.tap(find.text('Loop'));
     await tester.pumpAndSettle();
-    expect(find.text('1 line selected'), findsNothing);
+    expect(find.text('1 line'), findsNothing);
   });
 
   testWidgets('rehearsal settings are saved in the project and come back', (tester) async {

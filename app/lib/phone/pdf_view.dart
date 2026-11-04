@@ -1,7 +1,7 @@
 // Show PDF (#115): the screenplay as a native PDFKit view (ios/Runner/PdfPlugin.swift),
 // with search, page / continuous reading (#120) and Apple Pencil markup on iPad (#119).
 // Markup is saved in the project, never in the PDF: Markup/<device>.json, one
-// PencilKit drawing per page; each device writes only its own file and reading
+// ink drawing per page; each device writes only its own file and reading
 // merges them page by page (newest wins), like the notes.
 
 import 'dart:convert';
@@ -16,6 +16,7 @@ import '../models/models.dart' show clockNow;
 import '../services/project_files.dart';
 import '../theme/tokens.dart';
 import 'folder_access.dart';
+import 'ink_layer.dart';
 
 const markupFolder = 'Markup';
 
@@ -37,7 +38,7 @@ class PdfMarkup {
   final String deviceId;
   final bool folderAccess;
 
-  // page index → (base64 PencilKit data, edited at). Empty data = erased.
+  // page index → (the page's ink as JSON, edited at). Empty data = erased.
   final Map<int, (String, DateTime)> _all = {};
   final Map<int, (String, DateTime)> _mine = {};
 
@@ -100,13 +101,19 @@ class PdfMarkup {
 
 enum InkTool { pen, marker, eraser }
 
-/// What the pen and the highlighter offer: a few colors and three thicknesses each.
+/// What the pen and the highlighter offer: a few colors and three thicknesses each (widths in points on the page).
 const penColors = [Color(0xFF1C1B19), Color(0xFF1F5FD9), Color(0xFFD92F2F), Color(0xFF2E8B57)];
 const penWidths = [1.5, 3.0, 6.0];
 const markerColors = [Color(0xFFFFE23D), Color(0xFF7ED957), Color(0xFFFF8FC8), Color(0xFF6EC1FF)];
 const markerWidths = [10.0, 15.0, 24.0];
 
-/// Talks to one native PDF view.
+class _InkEdit {
+  _InkEdit(this.page, this.before, this.after);
+  final int page;
+  final List<InkStroke> before, after;
+}
+
+/// Talks to one native PDF view, and keeps the ink drawn over it.
 class PdfController extends ChangeNotifier {
   MethodChannel? _ch;
 
@@ -116,29 +123,47 @@ class PdfController extends ChangeNotifier {
   bool markup = false;
   bool finger = false;
 
+  /// Where the current page is in the view, and its size on paper (points); from the native view.
+  Rect? pageRect;
+  double pageWidth = 612;
+
   /// The pen in hand, and the color and thickness (index) each ink remembers.
   InkTool tool = InkTool.pen;
   int penColor = 0, penWidth = 1, markerColor = 0, markerWidth = 1;
 
-  /// Apple's own tool palette instead of ours.
-  bool systemPalette = false;
-
-  /// Whether the page last drawn on has something to undo / redo.
-  bool canUndo = false;
-  bool canRedo = false;
+  Color get currentColor => tool == InkTool.pen ? penColors[penColor] : markerColors[markerColor];
+  double get currentWidth => tool == InkTool.pen ? penWidths[penWidth] : markerWidths[markerWidth];
 
   /// Search: how many matches, and which one is showing (1-based; 0 = none).
   int searchCount = 0;
   int searchIndex = 0;
 
-  /// The user drew on [page] (0-based): [data] is the page's PencilKit drawing, base64 ('' = erased).
+  /// The ink: page index (0-based) → strokes.
+  final Map<int, List<InkStroke>> ink = {};
+  InkStroke? liveStroke;
+  int inkRevision = 0;
+  final List<_InkEdit> _undo = [], _redo = [];
+  List<InkStroke>? _editBefore;
+
+  List<InkStroke> get strokesOnPage => ink[page - 1] ?? const [];
+  bool get canUndo => _undo.isNotEmpty;
+  bool get canRedo => _redo.isNotEmpty;
+
+  /// The user changed [page] (0-based): [data] is its ink as JSON ('' = none left). The panel saves it.
   void Function(int page, String data)? onMarkup;
 
-  /// Called once the view exists and has taken the saved drawings.
+  /// Called once the view exists.
   VoidCallback? onReady;
 
-  /// The saved drawings the view starts with (page index → base64).
-  Map<String, String> initialMarkup = const {};
+  /// The saved ink the view starts with (page index → JSON).
+  Map<String, String> get initialMarkup => const {};
+  set initialMarkup(Map<String, String> m) {
+    ink.clear();
+    for (final e in m.entries) {
+      final i = int.tryParse(e.key);
+      if (i != null) ink[i] = decodeInk(e.value);
+    }
+  }
 
   void attach(int viewId) {
     final ch = MethodChannel('tableread/pdfview_$viewId');
@@ -150,11 +175,9 @@ class PdfController extends ChangeNotifier {
           page = a['page'] as int;
           pageCount = a['count'] as int;
           notifyListeners();
-        case 'markup':
-          onMarkup?.call(a['page'] as int, a['data'] as String);
-        case 'history':
-          canUndo = a['undo'] as bool;
-          canRedo = a['redo'] as bool;
+        case 'geometry':
+          pageRect = Rect.fromLTWH((a['x'] as num).toDouble(), (a['y'] as num).toDouble(), (a['w'] as num).toDouble(), (a['h'] as num).toDouble());
+          pageWidth = (a['pageW'] as num).toDouble();
           notifyListeners();
       }
     });
@@ -162,8 +185,8 @@ class PdfController extends ChangeNotifier {
       final s = Map<String, dynamic>.from(await ch.invokeMethod('state') as Map);
       page = s['page'] as int;
       pageCount = s['count'] as int;
-      if (initialMarkup.isNotEmpty) await ch.invokeMethod('loadMarkup', {'pages': initialMarkup});
       if (!continuous) await ch.invokeMethod('setMode', {'continuous': false});
+      if (markup) await ch.invokeMethod('lockFit', {'on': true});
       notifyListeners();
       onReady?.call();
     }();
@@ -176,10 +199,14 @@ class PdfController extends ChangeNotifier {
   }
 
   Future<void> goToPage(int n) async {
+    if (pageCount > 0) n = n.clamp(1, pageCount);
     page = n;
     notifyListeners();
     await _ch?.invokeMethod('goToPage', {'page': n});
   }
+
+  Future<void> nextPage() => goToPage(page + 1);
+  Future<void> prevPage() => goToPage(page - 1);
 
   Future<void> setContinuous(bool on) async {
     continuous = on;
@@ -210,29 +237,20 @@ class PdfController extends ChangeNotifier {
     await _ch?.invokeMethod('clearSearch');
   }
 
-  Future<void> undo() async => _ch?.invokeMethod('undo');
-  Future<void> redo() async => _ch?.invokeMethod('redo');
-  Future<void> clearPage() async => _ch?.invokeMethod('clearPage');
+  // Marking up ------------------------------------------------------------------
 
+  /// Marking up shows one page at a time, fitted to the screen, so the ink has a fixed place to be drawn on.
   Future<void> setMarkup({bool? enabled, bool? finger}) async {
+    final was = markup;
     markup = enabled ?? markup;
     this.finger = finger ?? this.finger;
+    if (markup && !was) continuous = false;
     notifyListeners();
-    await _sendTool();
-    await _ch?.invokeMethod('setMarkup', {'enabled': markup, 'finger': this.finger});
+    if (markup && !was) await _ch?.invokeMethod('setMode', {'continuous': false});
+    if (markup != was) await _ch?.invokeMethod('lockFit', {'on': markup});
   }
 
-  Future<void> _sendTool() async {
-    final pen = tool == InkTool.pen;
-    await _ch?.invokeMethod('setTool', {
-      'tool': tool.name,
-      'color': (pen ? penColors[penColor] : markerColors[markerColor]).toARGB32(),
-      'width': pen ? penWidths[penWidth] : markerWidths[markerWidth],
-    });
-  }
-
-  /// Picks the ink, and/or its color and thickness (indexes into the lists above).
-  Future<void> setTool({InkTool? tool, int? color, int? width}) async {
+  void setTool({InkTool? tool, int? color, int? width}) {
     this.tool = tool ?? this.tool;
     if (this.tool == InkTool.pen) {
       penColor = color ?? penColor;
@@ -241,18 +259,84 @@ class PdfController extends ChangeNotifier {
       markerColor = color ?? markerColor;
       markerWidth = width ?? markerWidth;
     }
-    systemPalette = false;
     notifyListeners();
-    await _ch?.invokeMethod('systemPalette', {'on': false});
-    await _sendTool();
   }
 
-  /// Apple's tool palette (pens, pencil, ruler, lasso...) in place of our strip.
-  Future<void> setSystemPalette(bool on) async {
-    systemPalette = on;
+  void notifyInk() {
+    inkRevision++;
     notifyListeners();
-    await _ch?.invokeMethod('systemPalette', {'on': on});
-    if (!on) await _sendTool();
+  }
+
+  void _record(int pageIndex, List<InkStroke> before, List<InkStroke> after) {
+    ink[pageIndex] = after;
+    _undo.add(_InkEdit(pageIndex, before, after));
+    _redo.clear();
+    _save(pageIndex);
+    notifyInk();
+  }
+
+  void _save(int pageIndex) => onMarkup?.call(pageIndex, encodeInk(ink[pageIndex] ?? const []));
+
+  void commitStroke(InkStroke s) {
+    final i = page - 1;
+    final before = List.of(ink[i] ?? const <InkStroke>[]);
+    _record(i, before, [...before, s]);
+  }
+
+  /// The eraser removes whole strokes: [beginEdit], [eraseAt] as it moves, [endEdit] when it lifts.
+  void beginEdit() => _editBefore = List.of(strokesOnPage);
+
+  void eraseAt(Offset p) {
+    final here = ink[page - 1];
+    if (here == null) return;
+    final slop = 0.012;
+    final kept = [
+      for (final s in here)
+        if (!strokeNear(s, p, slop)) s,
+    ];
+    if (kept.length != here.length) {
+      ink[page - 1] = kept;
+      notifyInk();
+    }
+  }
+
+  void endEdit() {
+    final before = _editBefore;
+    _editBefore = null;
+    if (before == null) return;
+    final after = strokesOnPage;
+    if (after.length != before.length) {
+      _undo.add(_InkEdit(page - 1, before, List.of(after)));
+      _redo.clear();
+      _save(page - 1);
+    }
+    notifyInk();
+  }
+
+  void clearPage() {
+    final before = List.of(strokesOnPage);
+    if (before.isEmpty) return;
+    _record(page - 1, before, []);
+  }
+
+  void undo() {
+    if (_undo.isEmpty) return;
+    final e = _undo.removeLast();
+    _redo.add(e);
+    ink[e.page] = List.of(e.before);
+    _save(e.page);
+    if (e.page + 1 != page) goToPage(e.page + 1);
+    notifyInk();
+  }
+
+  void redo() {
+    if (_redo.isEmpty) return;
+    final e = _redo.removeLast();
+    _undo.add(e);
+    ink[e.page] = List.of(e.after);
+    _save(e.page);
+    if (e.page + 1 != page) goToPage(e.page + 1);
+    notifyInk();
   }
 }
 
@@ -273,9 +357,17 @@ class PdfNativeView extends StatelessWidget {
         ),
       );
     }
+    // While marking up, Flutter's ink layer takes every touch; the PDF only shows the page.
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) => IgnorePointer(ignoring: controller.markup, child: _view(t.dark)),
+    );
+  }
+
+  Widget _view(bool dark) {
     return UiKitView(
       viewType: 'tableread/pdfview',
-      creationParams: {'path': path, 'dark': t.dark},
+      creationParams: {'path': path, 'dark': dark},
       creationParamsCodec: const StandardMessageCodec(),
       onPlatformViewCreated: controller.attach,
       // The PDF scrolls, pinches and (on iPad) draws: it takes every touch that starts on it.

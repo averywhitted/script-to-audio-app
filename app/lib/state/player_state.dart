@@ -40,7 +40,9 @@ class RehearsalPlayer extends ChangeNotifier {
     final p = AudioPlayer();
     _p = p;
     // Frequent position updates keep the line highlight within ~0.1 s of the voice.
-    _posSub = p.createPositionStream(steps: 2000, minPeriod: const Duration(milliseconds: 40), maxPeriod: const Duration(milliseconds: 100)).listen(_tick);
+    _posSub = p
+        .createPositionStream(steps: 2000, minPeriod: const Duration(milliseconds: 40), maxPeriod: const Duration(milliseconds: 100))
+        .listen(_tick);
     _stateSub = p.playerStateStream.listen((s) {
       if (s.processingState == ProcessingState.completed && isPlaying) _sceneEnded();
     });
@@ -53,7 +55,10 @@ class RehearsalPlayer extends ChangeNotifier {
   bool isPlaying = false;
   double currentTime = 0;
   int currentCueIndex = -1;
-  String myRole = '';
+  /// Everyone I am playing (the phone lets you pick several); [myRole] is the first, for the places that need one.
+  Set<String> myRoles = {};
+  String get myRole => myRoles.isEmpty ? '' : myRoles.first;
+  set myRole(String v) => myRoles = v.isEmpty ? {} : {v};
   bool muteMyLines = false;
   bool blockMyLines = false;
 
@@ -378,7 +383,17 @@ class RehearsalPlayer extends ChangeNotifier {
 
   void setRole(String role) {
     myRole = role;
-    if (role.isEmpty) {
+    _rolesChanged();
+  }
+
+  /// Adds or drops one character from the ones I am playing.
+  void toggleRole(String role) {
+    if (!myRoles.remove(role)) myRoles = {...myRoles, role};
+    _rolesChanged();
+  }
+
+  void _rolesChanged() {
+    if (myRoles.isEmpty) {
       muteMyLines = false;
       blockMyLines = false;
       cueMode = false;
@@ -443,7 +458,7 @@ class RehearsalPlayer extends ChangeNotifier {
     }
   }
 
-  bool isMyLine(String speaker) => myRole.isNotEmpty && speaker.split('/').contains(myRole);
+  bool isMyLine(String speaker) => myRoles.isNotEmpty && speaker.split('/').any(myRoles.contains);
 
   void _sceneEnded() {
     if (loopMode == LoopMode.scene) {

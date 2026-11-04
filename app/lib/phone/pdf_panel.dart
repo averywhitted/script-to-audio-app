@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/tokens.dart';
+import 'ink_layer.dart';
 import 'pdf_view.dart';
 import 'rehearsal_session.dart';
 
@@ -142,6 +143,7 @@ class _PdfPanelState extends State<PdfPanel> {
                 Positioned.fill(
                   child: PdfNativeView(path: widget.pdfPath, controller: c),
                 ),
+              if (_markup != null) Positioned.fill(child: InkOverlay(controller: c)),
               if (c.pageCount > 0)
                 Positioned(
                   bottom: 14,
@@ -194,6 +196,10 @@ class _PdfPanelState extends State<PdfPanel> {
             setState(() => _searching = true);
             WidgetsBinding.instance.addPostFrameCallback((_) => _queryFocus.requestFocus());
           }),
+          if (!c.continuous) ...[
+            btn(Icons.chevron_left_rounded, 'Previous page', c.page > 1 ? c.prevPage : null),
+            btn(Icons.chevron_right_rounded, 'Next page', c.page < c.pageCount ? c.nextPage : null),
+          ],
           if (widget.pad) ...[
             btn(
               c.continuous ? Icons.view_day_outlined : Icons.auto_stories_outlined,
@@ -217,8 +223,8 @@ class _PdfPanelState extends State<PdfPanel> {
     Widget tool(IconData icon, String tip, InkTool which) => IconButton(
       key: Key('ink_${which.name}'),
       tooltip: tip,
-      icon: Icon(icon, color: c.tool == which && !c.systemPalette ? t.onAccent : t.ink2),
-      style: c.tool == which && !c.systemPalette ? IconButton.styleFrom(backgroundColor: t.accent) : null,
+      icon: Icon(icon, color: c.tool == which ? t.onAccent : t.ink2),
+      style: c.tool == which ? IconButton.styleFrom(backgroundColor: t.accent) : null,
       onPressed: () => c.setTool(tool: which),
     );
     Widget action(IconData icon, String tip, VoidCallback? onTap, {bool on = false}) => IconButton(
@@ -231,7 +237,7 @@ class _PdfPanelState extends State<PdfPanel> {
     final colors = pen ? penColors : markerColors;
     final picked = pen ? c.penColor : c.markerColor;
     final thick = pen ? c.penWidth : c.markerWidth;
-    final inking = c.tool != InkTool.eraser && !c.systemPalette;
+    final inking = c.tool != InkTool.eraser;
     return Container(
       key: const Key('inkStrip'),
       height: 52,
@@ -296,12 +302,6 @@ class _PdfPanelState extends State<PdfPanel> {
               c.finger ? 'Draw with Pencil only' : 'Draw with a finger too',
               () => c.setMarkup(finger: !c.finger),
               on: c.finger,
-            ),
-            action(
-              Icons.palette_outlined,
-              c.systemPalette ? 'Use these tools' : 'Use Apple’s tool palette',
-              () => c.setSystemPalette(!c.systemPalette),
-              on: c.systemPalette,
             ),
           ],
         ),

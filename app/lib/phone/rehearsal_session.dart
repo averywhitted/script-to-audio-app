@@ -156,8 +156,12 @@ class RehearsalSession {
     final r = loadNewestRehearsal(folder);
     if (r == null) return;
     if (r.readScene != null && r.readLine.isNotEmpty) restoredReading = (r.readScene!, r.readLine);
-    if (r.role.isNotEmpty && characters.contains(r.role)) {
-      player.myRole = r.role;
+    final chosen = [
+      for (final n in r.roles.isEmpty ? [r.role] : r.roles)
+        if (characters.contains(n)) n,
+    ];
+    if (chosen.isNotEmpty) {
+      player.myRoles = chosen.toSet();
       player.muteMyLines = r.mute;
       player.blockMyLines = r.block;
       player.cueMode = r.cue;
@@ -188,6 +192,7 @@ class RehearsalSession {
     _saveTimer?.cancel();
     final state = RehearsalState(
       role: player.myRole,
+      roles: player.myRoles.toList(),
       mute: player.muteMyLines,
       block: player.blockMyLines,
       cue: player.cueMode,

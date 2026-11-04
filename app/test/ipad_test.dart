@@ -13,7 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_read/models/models.dart';
 import 'package:table_read/phone/bookmarks.dart';
+import 'package:table_read/phone/ink_layer.dart';
 import 'package:table_read/phone/line_notes.dart';
+import 'package:table_read/phone/pdf_view.dart';
 import 'package:table_read/phone/phone_app.dart';
 import 'package:table_read/phone/phone_store.dart';
 import 'package:table_read/phone/rehearsal_screen.dart';
@@ -38,8 +40,17 @@ void _size(WidgetTester tester, double w, double h) {
   addTearDown(tester.view.reset);
 }
 
+/// The previous test's screen is still mounted, and saves its place (rehearsal file) when it goes: let it, then wipe it.
+Future<void> _forgetLastTest(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox());
+  await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 60)));
+  final r = Directory('$folder/$rehearsalFolder');
+  if (r.existsSync()) r.deleteSync(recursive: true);
+}
+
 Future<void> _pump(WidgetTester tester, {Size size = const Size(402, 874), Brightness b = Brightness.light}) async {
   _size(tester, size.width, size.height);
+  await _forgetLastTest(tester);
   await tester.pumpWidget(PhoneApp(store: await _store(), themeMode: b == Brightness.dark ? ThemeMode.dark : ThemeMode.light));
   await tester.pumpAndSettle(const Duration(milliseconds: 100));
 }
@@ -265,7 +276,7 @@ void main() {
         await _pump(tester, size: const Size(1194, 834), b: b);
         await _openEarnest(tester);
         expect(find.byTooltip('Projects'), findsOneWidget); // same header as the phone: back button, no sidebar
-        expect(find.text('Morning-room, Half-Moon Street'), findsOneWidget); // the pinned heading only
+        expect(find.text('Morning-room, Half-Moon Street'), findsNWidgets(2)); // the bar and the title in the script
         expect(find.byKey(const Key('outlineRail')), findsOneWidget);
         await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/ipad_rehearse_$mode.png'));
       });
@@ -291,33 +302,14 @@ void main() {
       expect(find.text('Script PDF'), findsNothing);
     });
 
-    testWidgets('one search covers the script and the PDF beside it', (tester) async {
-      await _pump(tester, size: const Size(1366, 1024));
-      await _openEarnest(tester);
-      await tester.tap(find.byTooltip('Show PDF'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('pdfLinkedSearch')), findsNothing);
-      // Searching from the PDF's toolbar opens the script's search bar...
-      await tester.tap(find.byTooltip('Search the PDF'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('scriptSearchField')), findsOneWidget);
-      // ...and what is typed there is looked for in the PDF too.
-      await tester.enterText(find.byKey(const Key('scriptSearchField')), 'Algernon');
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('pdfLinkedSearch')), findsOneWidget);
-      expect(find.byKey(const Key('pdfSearchField')), findsNothing);
-      await tester.tap(find.text('Done'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('pdfLinkedSearch')), findsNothing);
-    });
-
-    testWidgets('the PDF takes its pane on a wide window and gives the screen back when closed', (tester) async {
+    testWidgets('the PDF has the whole screen, also on a wide landscape window', (tester) async {
       await _pump(tester, size: const Size(1194, 834));
       await _openEarnest(tester);
       await tester.tap(find.byTooltip('Show PDF'));
       await tester.pumpAndSettle();
       expect(find.text('Script PDF'), findsOneWidget);
-      expect(find.text('Morning-room, Half-Moon Street'), findsOneWidget);
+      expect(find.byTooltip('Close PDF'), findsOneWidget);
+      expect(find.text('Morning-room, Half-Moon Street'), findsNothing); // the script is not beside it
       await tester.tap(find.byTooltip('Close PDF'));
       await tester.pumpAndSettle();
       expect(find.text('Script PDF'), findsNothing);
@@ -406,12 +398,12 @@ void main() {
       final scene = script.scenes[4];
       final screenState = RehearsalSession.load((await _store()).projects.first);
       final target = screenState.scenes.firstWhere((s) => s.number == scene.number);
+      await _pump(tester, size: const Size(1194, 834));
       writeRehearsal(
         folder,
         'OTHER',
         RehearsalState(readScene: target.number, readLine: target.lines.first.key, device: 'iPhone', updatedAt: DateTime.utc(2026, 11, 3, 12)),
       );
-      await _pump(tester, size: const Size(1194, 834));
       await _openEarnest(tester);
       expect(find.textContaining('of scene ${target.number},'), findsWidgets);
     });
@@ -437,6 +429,77 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('syncChip')), findsNothing);
       expect(find.textContaining('of scene ${target.number},'), findsWidgets);
+    });
+  });
+
+  group('Markup and characters', () {
+    test('ink: strokes save as JSON, come back, erase by stroke, undo and redo', () {
+      final c = PdfController()..pageCount = 3;
+      final saved = <int, String>{};
+      c.onMarkup = (p, d) => saved[p] = d;
+      InkStroke stroke(double x) => InkStroke(marker: false, color: 0xFF1C1B19, width: 0.005, points: [Offset(x, 0.2), Offset(x + 0.1, 0.3)]);
+      c.commitStroke(stroke(0.1));
+      c.commitStroke(stroke(0.5));
+      expect(c.strokesOnPage.length, 2);
+      expect(decodeInk(saved[0]!).length, 2);
+      c.beginEdit();
+      c.eraseAt(const Offset(0.55, 0.25)); // on the second stroke
+      c.endEdit();
+      expect(c.strokesOnPage.length, 1);
+      c.undo();
+      expect(c.strokesOnPage.length, 2);
+      c.redo();
+      expect(c.strokesOnPage.length, 1);
+      c.clearPage();
+      expect(saved[0], ''); // nothing left on the page
+      c.undo();
+      expect(c.strokesOnPage.length, 1);
+      // A new controller starts from what was saved.
+      final d = PdfController()
+        ..initialMarkup = {
+          '0': encodeInk([stroke(0.1)]),
+        };
+      expect(d.ink[0]!.single.points.length, 2);
+    });
+
+    testWidgets('several characters can be picked, and all of their lines are marked', (tester) async {
+      await _pump(tester);
+      await _openEarnest(tester);
+      await tester.tap(find.byTooltip('My Character'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Algernon'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Cecily'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Algernon')).selected, isTrue);
+      expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Cecily')).selected, isTrue);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      // Scene 1: line 1 is Algernon's, line 2 Cecily's: both are mine.
+      expect(find.text('· YOU'), findsAtLeastNWidgets(2));
+    });
+
+    testWidgets('dragging along the outline scrolls the script; a note can be deleted from the menu', (tester) async {
+      await _pump(tester, size: const Size(1194, 834));
+      await _openEarnest(tester);
+      await tester.longPress(find.text(_line3));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('floatingMenu')), findsOneWidget);
+      await tester.tap(find.text('Note'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('noteField')), 'x');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      await tester.longPress(find.text(_line3));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('deleteNote')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('noteFlag')), findsNothing);
+      final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
+      final before = scroll.position.pixels;
+      await tester.drag(find.byKey(const Key('outlineRail')), const Offset(0, 70));
+      await tester.pumpAndSettle();
+      expect(scroll.position.pixels, greaterThan(before));
     });
   });
 }

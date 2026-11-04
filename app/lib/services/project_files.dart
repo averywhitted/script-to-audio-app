@@ -54,6 +54,7 @@ ScriptSummary? loadScriptSnapshot(String folder) {
 class RehearsalState {
   RehearsalState({
     this.role = '',
+    this.roles = const [],
     this.mute = false,
     this.block = false,
     this.cue = false,
@@ -71,6 +72,9 @@ class RehearsalState {
   }) : updatedAt = updatedAt ?? clockNow().toUtc();
 
   String role;
+
+  /// Everyone being played when there are several ([role] is the first).
+  List<String> roles;
   bool mute, block, cue;
   double speed;
 
@@ -99,6 +103,7 @@ class RehearsalState {
     final pos = (j['position'] as Map?) ?? const {};
     return RehearsalState(
       role: j['role'] as String? ?? '',
+      roles: ((j['roles'] as List?) ?? const []).cast<String>(),
       mute: j['mute'] as bool? ?? false,
       block: j['block'] as bool? ?? false,
       cue: j['cue'] as bool? ?? false,
@@ -118,6 +123,7 @@ class RehearsalState {
   /// Everything but the timestamp: two states that say the same thing.
   Map<String, dynamic> _body() => {
     'role': role,
+    'roles': roles,
     'mute': mute,
     'block': block,
     'cue': cue,

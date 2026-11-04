@@ -21,7 +21,7 @@ SizeClass sizeClassOf(double width) => width >= 1100
     : SizeClass.compact;
 
 /// The PDF can sit beside the script from this width on; narrower, it takes the screen.
-const splitPdfMinWidth = 1000.0;
+const splitPdfMinWidth = double.infinity; // the PDF always has the whole screen: splitting it beside the script gave nothing
 
 /// True on an iPad (the screen is big), whatever size its window is. Apple Pencil tools and the page / continuous
 /// switch belong to the iPad.
