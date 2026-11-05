@@ -189,16 +189,30 @@ final class InkOverlays: NSObject, PDFPageOverlayViewProvider, PKCanvasViewDeleg
   }
 }
 
-/// Apple's way to mark up a PDF: a PDFView in continuous scroll, PencilKit on every page, the system tool palette.
+/// Marking up, the standard PencilKit way: one PKCanvasView (itself a scroll view) holds all the pages stacked behind its ink,
+/// and Apple's tool palette (PKToolPicker) belongs to that canvas. Ink is kept per page (PKDrawing in page points, like the
+/// project files), and laid onto the stack here.
 @available(iOS 16.0, *)
-final class MarkupViewController: UIViewController {
+final class MarkupViewController: UIViewController, PKCanvasViewDelegate {
   private let document: PDFDocument
   private let startPage: Int
   private let dark: Bool
-  private let pdfView = PDFView()
-  private let overlays: InkOverlays
-  private var pending: [Int: PKDrawing] = [:]
+  private let canvas = PKCanvasView()
+  private let toolPicker = PKToolPicker()
+  private let stack = UIView()
+  private var pageViews: [UIImageView] = []
+
+  /// Ink per page (page points, origin at the page's top left), as last saved or loaded.
+  private var pageDrawings: [Int: PKDrawing]
+  private var sent: [Int: String] = [:]
   private var timer: Timer?
+  private var loading = false
+
+  // Layout: page i sits at x = left, y = tops[i], scaled by `scale` from page points.
+  private var tops: [CGFloat] = []
+  private var scale: CGFloat = 1
+  private var left: CGFloat = 0
+  private var laidOutWidth: CGFloat = 0
 
   /// A page's drawing settled (page index, base64 data; '' = nothing left).
   var onSave: ((Int, String) -> Void)?
@@ -207,34 +221,45 @@ final class MarkupViewController: UIViewController {
   init(document: PDFDocument, page: Int, drawings: [Int: PKDrawing], dark: Bool) {
     self.document = document
     self.startPage = page
+    self.pageDrawings = drawings
     self.dark = dark
-    self.overlays = InkOverlays(drawings: drawings, interactive: true)
     super.init(nibName: nil, bundle: nil)
+    for (i, d) in drawings { sent[i] = Self.encode(d) }
   }
 
   required init?(coder: NSCoder) { fatalError() }
 
+  private static func encode(_ d: PKDrawing) -> String { d.strokes.isEmpty ? "" : d.dataRepresentation().base64EncodedString() }
+
   override func viewDidLoad() {
     super.viewDidLoad()
-    view.backgroundColor = dark ? UIColor(white: 0.1, alpha: 1) : UIColor(white: 0.9, alpha: 1)
-    pdfView.translatesAutoresizingMaskIntoConstraints = false
-    view.addSubview(pdfView)
+    view.backgroundColor = dark ? UIColor(white: 0.1, alpha: 1) : UIColor(white: 0.88, alpha: 1)
+    canvas.translatesAutoresizingMaskIntoConstraints = false
+    canvas.backgroundColor = .clear
+    canvas.isOpaque = false
+    canvas.overrideUserInterfaceStyle = .light  // the pages are white: ink must not turn light in dark mode
+    canvas.drawingPolicy = .default  // Apple's setting "Only Draw with Apple Pencil" decides about fingers
+    canvas.alwaysBounceVertical = true
+    canvas.delegate = self
+    view.addSubview(canvas)
     NSLayoutConstraint.activate([
-      pdfView.topAnchor.constraint(equalTo: view.topAnchor),
-      pdfView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      pdfView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      pdfView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      canvas.topAnchor.constraint(equalTo: view.topAnchor),
+      canvas.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+      canvas.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      canvas.trailingAnchor.constraint(equalTo: view.trailingAnchor),
     ])
-    pdfView.document = document
-    pdfView.autoScales = true
-    pdfView.displayMode = .singlePageContinuous
-    pdfView.displayDirection = .vertical
-    pdfView.pageBreakMargins = UIEdgeInsets(top: 10, left: 8, bottom: 10, right: 8)
-    pdfView.backgroundColor = view.backgroundColor ?? .systemBackground
-    overlays.pdfView = pdfView
-    overlays.onChange = { [weak self] i, d in self?.changed(i, d) }
-    pdfView.pageOverlayViewProvider = overlays
-    pdfView.isInMarkupMode = true
+    stack.isUserInteractionEnabled = false
+    canvas.insertSubview(stack, at: 0)  // behind the ink
+    for _ in 0..<document.pageCount {
+      let v = UIImageView()
+      v.backgroundColor = .white
+      v.layer.shadowOpacity = 0.25
+      v.layer.shadowRadius = 4
+      v.layer.shadowOffset = CGSize(width: 0, height: 1)
+      stack.addSubview(v)
+      pageViews.append(v)
+    }
+    toolPicker.addObserver(canvas)
 
     var config = UIButton.Configuration.filled()
     config.title = "Done"
@@ -250,33 +275,145 @@ final class MarkupViewController: UIViewController {
     ])
   }
 
+  override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+    let w = view.bounds.width
+    guard w > 0, abs(w - laidOutWidth) > 0.5 else { return }
+    let first = laidOutWidth == 0
+    if !first { pageDrawings = splitIntoPages() }  // rotation: keep the ink with its pages
+    laidOutWidth = w
+    layoutPages(width: w)
+    if first {
+      canvas.contentOffset = CGPoint(x: 0, y: max(0, tops[min(max(startPage, 0), tops.count - 1)] - 12))
+    }
+    renderVisible()
+  }
+
   override func viewDidAppear(_ animated: Bool) {
     super.viewDidAppear(animated)
-    goToStart()
-    // PDFView puts itself back on page 1 as it lays out for the first time: say it again.
-    for delay in [0.15, 0.5] { DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.goToStart() } }
+    showPalette()
+    // The palette only attaches once the canvas is really on screen: say it again a moment later.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.showPalette() }
   }
 
-  private func goToStart() {
-    guard let page = document.page(at: min(max(startPage, 0), document.pageCount - 1)) else { return }
-    pdfView.go(to: page)
+  private func showPalette() {
+    canvas.becomeFirstResponder()
+    toolPicker.setVisible(true, forFirstResponder: canvas)
   }
 
-  private func changed(_ i: Int, _ d: PKDrawing) {
-    pending[i] = d
+  // MARK: Pages
+
+  private func layoutPages(width w: CGFloat) {
+    let margin: CGFloat = 12
+    let pageWidth = min(w - 2 * margin, 1100)
+    left = (w - pageWidth) / 2
+    var y = margin
+    tops = []
+    var firstScale: CGFloat = 1
+    for (i, v) in pageViews.enumerated() {
+      let box = document.page(at: i)?.bounds(for: .cropBox) ?? CGRect(x: 0, y: 0, width: 612, height: 792)
+      let s = pageWidth / box.width
+      if i == 0 { firstScale = s }
+      tops.append(y)
+      v.frame = CGRect(x: left, y: y, width: pageWidth, height: box.height * s)
+      v.image = nil
+      y += box.height * s + margin
+    }
+    scale = firstScale
+    stack.frame = CGRect(x: 0, y: 0, width: w, height: y)
+    loading = true
+    canvas.contentSize = CGSize(width: w, height: y)
+    canvas.drawing = combined()
+    loading = false
+  }
+
+  /// Ink of all the pages as one drawing on the stack.
+  private func combined() -> PKDrawing {
+    var all = PKDrawing()
+    for (i, d) in pageDrawings where i < tops.count && !d.strokes.isEmpty {
+      let s = pageScale(i)
+      let t = CGAffineTransform(translationX: left, y: tops[i]).scaledBy(x: s, y: s)
+      all.append(d.transformed(using: t))
+    }
+    return all
+  }
+
+  private func pageScale(_ i: Int) -> CGFloat {
+    let box = document.page(at: i)?.bounds(for: .cropBox) ?? CGRect(x: 0, y: 0, width: 612, height: 792)
+    return pageViews[i].frame.width / box.width
+  }
+
+  /// The canvas's ink back into pages (page points): each stroke goes to the page it mostly lies on.
+  private func splitIntoPages() -> [Int: PKDrawing] {
+    var buckets: [Int: [PKStroke]] = [:]
+    for stroke in canvas.drawing.strokes {
+      let y = stroke.renderBounds.midY
+      var page = 0
+      for (i, top) in tops.enumerated() where top <= y { page = i }
+      buckets[page, default: []].append(stroke)
+    }
+    var out: [Int: PKDrawing] = [:]
+    for (i, strokes) in buckets {
+      let s = pageScale(i)
+      let t = CGAffineTransform(scaleX: 1 / s, y: 1 / s).translatedBy(x: -left, y: -tops[i])
+      out[i] = PKDrawing(strokes: strokes).transformed(using: t)
+    }
+    return out
+  }
+
+  /// Only the pages near the screen are drawn (a script can be 100 pages).
+  private func renderVisible() {
+    let h = canvas.bounds.height
+    let lo = canvas.contentOffset.y - h, hi = canvas.contentOffset.y + 2 * h
+    for (i, v) in pageViews.enumerated() {
+      let near = v.frame.maxY >= lo && v.frame.minY <= hi
+      if !near {
+        v.image = nil
+      } else if v.image == nil, let page = document.page(at: i) {
+        let box = page.bounds(for: .cropBox)
+        let s = v.frame.width / box.width
+        let fmt = UIGraphicsImageRendererFormat.default()
+        fmt.scale = traitCollection.displayScale
+        v.image = UIGraphicsImageRenderer(size: v.frame.size, format: fmt).image { ctx in
+          UIColor.white.setFill()
+          ctx.fill(CGRect(origin: .zero, size: v.frame.size))
+          let c = ctx.cgContext
+          c.translateBy(x: 0, y: v.frame.height)
+          c.scaleBy(x: s, y: -s)
+          c.translateBy(x: -box.minX, y: -box.minY)
+          page.draw(with: .cropBox, to: c)
+        }
+      }
+    }
+  }
+
+  func scrollViewDidScroll(_ scrollView: UIScrollView) { renderVisible() }
+
+  // MARK: Saving
+
+  func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+    guard !loading else { return }
     timer?.invalidate()
     timer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: false) { [weak self] _ in self?.flush() }
   }
 
   private func flush() {
     timer?.invalidate()
-    for (i, d) in pending { onSave?(i, d.strokes.isEmpty ? "" : d.dataRepresentation().base64EncodedString()) }
-    pending = [:]
+    timer = nil
+    let now = splitIntoPages()
+    for i in Set(now.keys).union(sent.keys) {
+      let data = now[i].map(Self.encode) ?? ""
+      if sent[i] != data {
+        sent[i] = data
+        onSave?(i, data)
+      }
+    }
+    pageDrawings = now
   }
 
   private func close() {
     flush()
-    overlays.toolPicker.setVisible(false, forFirstResponder: view)
+    toolPicker.setVisible(false, forFirstResponder: canvas)
     dismiss(animated: true) { [weak self] in self?.onClose?() }
   }
 }

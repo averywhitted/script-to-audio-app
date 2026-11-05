@@ -2,7 +2,7 @@
 
 ## Resume here
 
-> Round 5 (latest): markup is now the native PencilKit viewer (see History); round-4 notes below about the Flutter ink layer are obsolete.
+> Round 5/5b (latest): markup is now a native single-canvas PencilKit viewer, awaiting Avery's device test (see History); next: fp32 Kokoro option if wanted; round-4 notes below about the Flutter ink layer are obsolete.
 _Updated 2026-11-03 17:40 EST · branch `ipados-port` @ `1b2cc83` + round-3 commit (not pushed) · working tree: **`dart format -l 150 lib test` reformatted ~25 untouched files (lib/ui, lib/state, lib/models, phone_app.dart, other tests, ...): not committed; discard with `git checkout -- app/lib/main.dart app/lib/models app/lib/phone/phone_app.dart app/lib/services/{project_store,python_bridge,settings}.dart app/lib/state app/lib/ui app/test/{fixtures,logic_test,now_playing_test,player_test,rust_core_test,screens_test,worker_test}.dart` and `rm -rf app/test/failures` (the sandbox blocked me doing it)**; plus two untracked ephemeral `sidetrack-*.md`_
 
 **Round 4 (Nov 4): see the newest History entry: Pencil is now our own Flutter ink layer (no PencilKit), PDF is always full screen, reader rework. Not yet installed on the iPad (it was unavailable); install with the Round 2 command, then test Pencil first.**
@@ -95,6 +95,14 @@ _(old header) Updated 2026-11-01 11:46 EST · branch `ios-rehearsal` @ `107a8a0`
 
 ## History
 <!-- newest first -->
+
+### 2026-11-04 — iPad round 5b: markup viewer is one PencilKit canvas
+- Avery: the per-page-overlay viewer drew nothing and showed no iPadOS palette. Rewrote `MarkupViewController` (`ios/Runner/PdfPlugin.swift`)
+  as the standard PencilKit layout: one `PKCanvasView` (scroll view) with the PDF pages rendered lazily as image views behind the ink,
+  `PKToolPicker` attached in `viewDidAppear` (again after 0.4 s). Ink still saved per page in page points (split by stroke midY on
+  save, re-laid on load/rotation). No pinch-zoom in the viewer; pages are fit-to-width, max 1100 pt. Built and installed; not verified.
+- Kokoro question inflection: text reaches `kokoro.create` unchanged, so it is mostly a model limitation. Lead to try: we ship the
+  `int8` model (`backend/tts_engines.py`), the fp32 one may keep more prosody. Asked Avery whether to add it as an option.
 
 ### 2026-11-04 — iPad round 5: Apple's own PencilKit markup, short notices
 - Avery tried round 4 on the iPad: Pencil drew but the fit-to-page, single-page markup was unusable in landscape. Asked for the
