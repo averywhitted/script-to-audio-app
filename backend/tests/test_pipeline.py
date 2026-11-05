@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import audio_worker as aw
 import parser as p
-from audio_pipeline import _build_render_chunks, _mix_wavs, _synthesize_overlap_into, generate_script
+from audio_pipeline import _build_render_chunks, _mix_wavs, _synthesize_overlap_into, generate_script, spoken_scene_title
 from tts_engines import TTSEngine, VoiceInfo
 from voice_assignment import NARRATOR_KEY, auto_assign
 
@@ -854,3 +854,34 @@ class TestOverlapRendering:
 # Per-voice overlap text: compound cues split, chorus cues do not
 # ---------------------------------------------------------------------------
 
+
+# ---------------------------------------------------------------------------
+# What the narrator says at the start of a scene
+# ---------------------------------------------------------------------------
+
+
+class TestSpokenSceneTitle:
+    """The script's own heading, plus "part N" for a split scene; never our own scene number."""
+
+    @staticmethod
+    def _scene(number: int, title: str) -> p.Scene:
+        return p.Scene(number=number, title=title, elements=[])
+
+    def test_the_scripts_heading_is_said_without_our_number(self):
+        assert spoken_scene_title(self._scene(12, "INT. KITCHEN - NIGHT")) == "Int. Kitchen - Night."
+
+    def test_a_split_scene_says_its_heading_and_part_number_only(self):
+        # Heading is "SCENE 3" in the script; this is the third chunk it was cut into, scene number 12 overall.
+        assert spoken_scene_title(self._scene(12, "SCENE 3 (part 2)")) == "Scene 3, part 2."
+        assert "12" not in spoken_scene_title(self._scene(12, "SCENE 3 (part 2)"))
+
+    def test_the_parsers_placeholder_heading_is_not_read(self):
+        # Text before the first heading is titled "Scene 1" by the parser: that is our number.
+        assert spoken_scene_title(self._scene(1, "Scene 1")) == ""
+        assert spoken_scene_title(self._scene(2, "Scene 1 (part 2)")) == "Part 2."
+
+    def test_a_heading_that_ends_in_punctuation_is_not_doubled(self):
+        assert spoken_scene_title(self._scene(4, "ACT TWO.")) == "Act Two."
+
+    def test_nothing_to_say_without_a_title(self):
+        assert spoken_scene_title(self._scene(5, "")) == ""

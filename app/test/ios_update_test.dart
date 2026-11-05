@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_read/models/models.dart';
@@ -34,11 +35,7 @@ class FakeCloud {
   Future<List<FolderEntry>> list(String path) async => [
     for (final e in Directory(path).listSync())
       if (!e.path.split('/').last.startsWith('.'))
-        FolderEntry(
-          e.path.split('/').last,
-          isDir: e is Directory,
-          downloaded: e is Directory || !e.path.endsWith('.m4a') || have.contains(e.path),
-        ),
+        FolderEntry(e.path.split('/').last, isDir: e is Directory, downloaded: e is Directory || !e.path.endsWith('.m4a') || have.contains(e.path)),
   ];
 
   Future<void> fetch(List<String> paths) async {
@@ -195,6 +192,105 @@ void main() {
       expect(s.phaseOf(p), DownloadPhase.cloud); // it stopped before the second file
     });
 
+    testWidgets('Remove Download is only offered for projects that are on the device', (tester) async {
+      final cloud = FakeCloud();
+      final files = _audioFor(1);
+      File(files[0]).writeAsBytesSync(List.filled(300 * 1024, 1)); // enough to be worth removing, once it is here
+      final s = PhoneStore(lister: cloud.list, downloader: cloud.fetch)..folder = tmp.path;
+      await s.refresh();
+      final inCloud = s.projects.firstWhere((p) => files[0].startsWith(p.folderPath!));
+      final here = s.projects.firstWhere((p) => p.id != inCloud.id);
+      _phone(tester);
+      await tester.pumpWidget(PhoneApp(store: s, themeMode: ThemeMode.light));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.longPress(find.text(inCloud.name.toUpperCase()), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.text('Ask Mac to Render'), findsOneWidget);
+      expect(find.text('Remove Download'), findsNothing); // its icon says it is in the cloud
+      expect(find.text('Download'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10)); // dismiss
+      await tester.pumpAndSettle();
+      await tester.longPress(find.text(here.name.toUpperCase()), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.text('Remove Download'), findsOneWidget);
+    });
+
+    test('Remove Download shows in the status at once, even when iCloud still says the files are here', () async {
+      final cloud = FakeCloud();
+      final files = _audioFor(1);
+      final s = PhoneStore(lister: cloud.list, downloader: cloud.fetch)..folder = tmp.path;
+      await s.refresh();
+      final p = s.projects.firstWhere((p) => files[0].startsWith(p.folderPath!));
+      s.enqueue(p);
+      cloud.release(files[0]);
+      await _settle();
+      expect(s.phaseOf(p), DownloadPhase.device);
+      TestWidgetsFlutterBinding.ensureInitialized();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('tableread/folder'), (
+        call,
+      ) async {
+        if (call.method == 'evict')
+          return {'freed': 1000000, 'files': 1, 'kept': 0}; // iCloud has not updated its status yet: cloud.have is unchanged
+        return null;
+      });
+      addTearDown(
+        () =>
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('tableread/folder'), null),
+      );
+      await s.removeDownload(p);
+      expect(s.phaseOf(p), DownloadPhase.cloud);
+      await s.rescanDownloads(); // a look too soon does not undo it
+      expect(s.phaseOf(p), DownloadPhase.cloud);
+    });
+
+    testWidgets('downloads asked for with the icon never open the project; tapping a project opens only the one tapped last', (tester) async {
+      final cloud = FakeCloud();
+      saveScriptSnapshot(earnest, earnestScript(), pdfFilename: 'script.pdf');
+      final other = Directory(tmp.path).listSync().whereType<Directory>().firstWhere((d) => d.path.endsWith('Hamlet'));
+      final a = File('$earnest/Scene_01_Scene.m4a')..writeAsStringSync('x');
+      final b = File('${other.path}/Scene_01_Scene.m4a')..writeAsStringSync('x');
+      final s = PhoneStore(lister: cloud.list, downloader: cloud.fetch)..folder = tmp.path;
+      await s.refresh();
+      final pa = s.projects.firstWhere((p) => p.folderPath == earnest);
+      final pb = s.projects.firstWhere((p) => p.folderPath == other.path);
+      _phone(tester);
+      await tester.pumpWidget(PhoneApp(store: s, themeMode: ThemeMode.light));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+      // Both asked for with the icon: they come down, and nothing opens.
+      s.enqueue(pa);
+      s.enqueue(pb);
+      cloud.release(a.path);
+      cloud.release(b.path);
+      await tester.runAsync(_settle);
+      await tester.pumpAndSettle();
+      expect(s.phaseOf(pa), DownloadPhase.device);
+      expect(s.phaseOf(pb), DownloadPhase.device);
+      expect(find.text('Rehearse'), findsNothing);
+      expect(find.text('Projects'), findsOneWidget);
+
+      // Two not yet down, both tapped: only the second tapped opens, and only when it is here.
+      for (final f in [a, b]) {
+        cloud.have.remove(f.path);
+        cloud.gates.remove(f.path);
+      }
+      await s.rescanDownloads();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('THE IMPORTANCE OF BEING EARNEST'), warnIfMissed: false);
+      await tester.pump();
+      await tester.tap(find.text('HAMLET'), warnIfMissed: false);
+      await tester.pump();
+      cloud.release(a.path); // the first finishes first
+      await tester.runAsync(_settle);
+      await tester.pumpAndSettle();
+      expect(find.text('Rehearse'), findsNothing);
+      cloud.release(b.path);
+      await tester.runAsync(_settle);
+      await tester.pumpAndSettle();
+      expect(find.text('Rehearse'), findsOneWidget);
+      expect(s.opened, {pb.id});
+    });
+
     testWidgets('each cover shows where it is; the icon opens the options, and Download queues it', (tester) async {
       final cloud = FakeCloud();
       final files = _audioFor(2);
@@ -304,7 +400,7 @@ void main() {
 
     final line3 = find.text('Line 3 of scene 1, spoken with great feeling and a certain amount of wit.');
 
-    testWidgets('the outline is on the right edge half way down on an iPhone, and stays on the left on an iPad', (tester) async {
+    testWidgets('the outline is on the right edge half way down, on an iPhone and on an iPad', (tester) async {
       await open(tester);
       final phone = tester.getCenter(find.byKey(const Key('outlineRail')));
       expect(phone.dx, greaterThan(402 - 40));
@@ -314,7 +410,26 @@ void main() {
       expect(tester.getRect(find.byKey(const Key('outlineOpen'))).right, greaterThan(402 - 20)); // opens leftwards from the edge
 
       await open(tester, size: const Size(834, 1194));
-      expect(tester.getCenter(find.byKey(const Key('outlineRail'))).dx, lessThan(60));
+      expect(tester.getCenter(find.byKey(const Key('outlineRail'))).dx, greaterThan(834 - 40));
+    });
+
+    testWidgets('nothing is marked as the active line until Play is pressed; paused, the script looks normal again', (tester) async {
+      await open(tester);
+      final line1 = find.text('Line 1 of scene 1, spoken with great feeling and a certain amount of wit.');
+      Color? fillOf(Finder f) =>
+          (tester.widget<AnimatedContainer>(find.ancestor(of: f, matching: find.byType(AnimatedContainer)).first).decoration! as BoxDecoration).color;
+      final t = Tokens.of(tester.element(line1));
+      // The first lines sit at the start of the scene: the playhead is parked on the first line, which is not marked.
+      expect(fillOf(find.textContaining('The scene opens.')), isNot(t.highlighter));
+      await tester.tap(line1);
+      await tester.pump(const Duration(seconds: 2));
+      expect(fillOf(line1), isNot(t.highlighter)); // pointed out and faded: looks like any other line
+      await tester.tap(find.byIcon(Icons.play_arrow_rounded));
+      await tester.pump();
+      expect(fillOf(line1), t.highlighter); // playing it
+      await tester.tap(find.byIcon(Icons.pause_rounded));
+      await tester.pump();
+      expect(fillOf(line1), isNot(t.highlighter)); // stopped: normal again
     });
 
     testWidgets('tapping a line points it out for a moment and moves the playhead there; it does not play', (tester) async {
@@ -329,8 +444,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500)); // held for a moment...
       await tester.pump(const Duration(milliseconds: 300)); // ...then fading
       expect(find.byKey(const Key('lineIndicator')), findsOneWidget);
-      expect(tester.widget<FadeTransition>(find.ancestor(of: find.byKey(const Key('lineIndicator')), matching: find.byType(FadeTransition)).first).opacity.value,
-          lessThan(1));
+      expect(
+        tester
+            .widget<FadeTransition>(find.ancestor(of: find.byKey(const Key('lineIndicator')), matching: find.byType(FadeTransition)).first)
+            .opacity
+            .value,
+        lessThan(1),
+      );
       await tester.pump(const Duration(seconds: 2));
       expect(find.byKey(const Key('lineIndicator')), findsNothing); // gone
       expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
@@ -356,7 +476,11 @@ void main() {
       await tester.pumpAndSettle();
       final sheet = find.byKey(const Key('sceneDropdown'));
       final row = find.descendant(of: sheet, matching: find.text('Tea, and a misunderstanding'));
-      await tester.scrollUntilVisible(row, 120, scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)));
+      await tester.scrollUntilVisible(
+        row,
+        120,
+        scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)),
+      );
       await tester.tap(row);
       await tester.pumpAndSettle();
       expect(find.text(scene2), findsOneWidget);

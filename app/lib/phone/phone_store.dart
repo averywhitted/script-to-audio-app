@@ -49,6 +49,14 @@ class PhoneStore extends ChangeNotifier {
   final Set<String> opened = {};
   static const _openedKey = 'openedProjects';
 
+  /// The project the user tapped to open while it was still coming down: it opens when it is here (and only that one;
+  /// downloads asked for with the icon never open anything).
+  String? wantsOpen;
+
+  /// Projects whose files were just removed: iCloud is slow to say so, and a look too soon must not call them downloaded.
+  final Map<String, DateTime> _evictedAt = {};
+  bool _justEvicted(String id) => _evictedAt[id] != null && DateTime.now().difference(_evictedAt[id]!) < const Duration(seconds: 30);
+
   final Map<String, Future<bool>> _active = {};
   final Set<String> _cancelled = {};
   bool _pumping = false;
@@ -200,8 +208,9 @@ class PhoneStore extends ChangeNotifier {
     final found = await Future.wait([for (final p in list) _isOnDevice(p)]);
     var changed = false;
     for (final (i, p) in list.indexed) {
-      if (onDevice[p.id] != found[i]) {
-        onDevice[p.id] = found[i];
+      final here = found[i] && !_justEvicted(p.id);
+      if (onDevice[p.id] != here) {
+        onDevice[p.id] = here;
         changed = true;
       }
     }
@@ -366,6 +375,12 @@ class PhoneStore extends ChangeNotifier {
     if (folder == null) return null;
     try {
       final r = folderAccess ? await FolderAccess.evict(folder) : const RemovedDownload(freed: 0, files: 0, kept: 0);
+      if (r.files > 0) {
+        // Say so now: the icon should not wait for iCloud to catch up.
+        _evictedAt[p.id] = DateTime.now();
+        onDevice[p.id] = false;
+        notifyListeners();
+      }
       await refresh();
       return r;
     } catch (e) {
@@ -396,6 +411,7 @@ class PhoneStore extends ChangeNotifier {
 
   /// Takes [p] out of the queue, or stops it where it is (what has arrived stays).
   void cancelDownload(Project p) {
+    if (wantsOpen == p.id) wantsOpen = null;
     if (queue.remove(p.id)) {
       notifyListeners();
     } else if (downloading.containsKey(p.id)) {
@@ -437,6 +453,7 @@ class PhoneStore extends ChangeNotifier {
         notifyListeners();
       }
       finished = true;
+      _evictedAt.remove(p.id);
       return true;
     } catch (e) {
       error = 'Couldn\'t download “${p.name}”: $e';

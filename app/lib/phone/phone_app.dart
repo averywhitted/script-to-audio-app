@@ -13,9 +13,6 @@ import 'notice.dart';
 import 'phone_store.dart';
 import 'rehearsal_screen.dart';
 
-/// Projects waiting on their download to open (a second tap meanwhile does nothing).
-final _opening = <String>{};
-
 /// A project that is only its project.json (and a script) has nothing worth removing.
 const _smallestWorthRemoving = 200 * 1024;
 
@@ -172,17 +169,17 @@ class _Welcome extends StatelessWidget {
 class _Projects extends StatelessWidget {
   const _Projects();
 
+  /// Tapping the project itself opens it, once it is on the device (downloading it first if it is not). Only the project
+  /// tapped last opens: others that finish meanwhile, and anything asked for with the download icon, just download.
   Future<void> _open(BuildContext context, Project p) async {
     final store = context.read<PhoneStore>();
-    if (!_opening.add(p.id)) return;
-    final bool ok;
-    try {
-      // A project already coming down is waited for; one waiting its turn goes first.
-      ok = await store.download(p);
-    } finally {
-      _opening.remove(p.id);
-    }
-    if (!ok || !context.mounted) return;
+    store.wantsOpen = p.id;
+    final ok = await store.download(p);
+    final stillWanted = store.wantsOpen == p.id;
+    if (stillWanted) store.wantsOpen = null;
+    if (!ok || !stillWanted || !context.mounted) return;
+    // Not if the user has gone somewhere else (into another project, say) while it came down.
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
     store.markOpened(p);
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -234,7 +231,9 @@ class _Projects extends StatelessWidget {
                     key: const Key('downloadProject'),
                     leading: const Icon(Icons.cloud_download_outlined),
                     title: const Text('Download'),
-                    subtitle: const Text('Keeps the audio and script on this device so it plays offline. Several can be queued; they come down one after another.'),
+                    subtitle: const Text(
+                      'Keeps the audio and script on this device so it plays offline. Several can be queued; they come down one after another.',
+                    ),
                     onTap: () {
                       Navigator.pop(ctx);
                       store.enqueue(p);
@@ -332,23 +331,24 @@ class _Projects extends StatelessWidget {
                   store.enqueue(p);
                 },
               ),
-            ListTile(
-              leading: const Icon(Icons.cloud_off_rounded),
-              title: const Text('Remove Download'),
-              subtitle: Text(
-                local < _smallestWorthRemoving
-                    ? 'Nothing downloaded to remove.'
-                    : 'Frees ${_size(local)} on this device. It stays in iCloud Drive and comes back when you open it.',
+            if (store.phaseOf(p) == DownloadPhase.device)
+              ListTile(
+                leading: const Icon(Icons.cloud_off_rounded),
+                title: const Text('Remove Download'),
+                subtitle: Text(
+                  local < _smallestWorthRemoving
+                      ? 'Nothing downloaded to remove.'
+                      : 'Frees ${_size(local)} on this device. It stays in iCloud Drive and comes back when you open it.',
+                ),
+                enabled: local >= _smallestWorthRemoving && !store.downloading.containsKey(p.id),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final messenger = ScaffoldMessenger.of(context);
+                  final r = await store.removeDownload(p);
+                  if (r == null) return;
+                  showNotice(messenger, _removedMessage(p, r));
+                },
               ),
-              enabled: local >= _smallestWorthRemoving && !store.downloading.containsKey(p.id),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final messenger = ScaffoldMessenger.of(context);
-                final r = await store.removeDownload(p);
-                if (r == null) return;
-                showNotice(messenger, _removedMessage(p, r));
-              },
-            ),
           ],
         ),
       ),
@@ -536,7 +536,7 @@ class _Cover extends StatelessWidget {
                           selected: false,
                           renaming: false,
                           archiving: false,
-                          backgroundProgress: store.downloading[p.id],
+                          backgroundProgress: null, // the icon shows the download, not the spine
                           onTap: () {},
                           onSelect: () {},
                           onMenu: (_) {},

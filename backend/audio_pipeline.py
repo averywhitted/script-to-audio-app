@@ -267,6 +267,33 @@ def _write_cue_map(path: str, scene: Scene, cues: List[CueEntry], total_frames: 
 # ---------------------------------------------------------------------------
 
 
+_PART_SUFFIX_RE = re.compile(r"^(?P<head>.*?)\s*\(part (?P<n>\d+)\)\s*$", re.IGNORECASE)
+
+# The parser's stand-in heading for text before the script's first real heading (parser.py, `scene_title = "Scene 1"`):
+# it is our number, not the script's, so it is never spoken.
+_PLACEHOLDER_HEADING = "Scene 1"
+
+
+def spoken_scene_title(scene: Scene) -> str:
+    """What the narrator says at the start of a scene: the script's own heading, and "part N" when a long scene was
+    split ("<heading> (part 2)" in the title). Never our own scene number. Empty when there is nothing to say."""
+    head = (scene.title or "").strip()
+    part: Optional[int] = None
+    m = _PART_SUFFIX_RE.match(head)
+    if m:
+        head, part = m.group("head").strip(), int(m.group("n"))
+    head = head.rstrip(" .:;,")
+    if head == _PLACEHOLDER_HEADING:
+        head = ""
+    if head and part is not None:
+        return f"{head.title()}, part {part}."
+    if head:
+        return f"{head.title()}."
+    if part is not None:
+        return f"Part {part}."
+    return ""
+
+
 def generate_scene(
     scene: Scene,
     engine: TTSEngine,
@@ -301,22 +328,24 @@ def generate_scene(
         # Lead-in silence
         writer.writeframes(_silence_frames(PAUSE_AT_SCENE_START))
 
-        # Optional: announce scene title via narrator. Helpful when listening
-        # so you know where you are in the play. Keep it brief.
-        title_text = f"Scene {scene.number}. {scene.title.title()}."
+        # Optional: announce the scene heading via narrator, so you know where you
+        # are in the play. It is the script's own heading (plus a part number when
+        # a long scene was split); we never add our own scene numbers.
+        title_text = spoken_scene_title(scene)
         narrator_voice = assignment.voice_for(None)
-        try:
-            _synthesize_into(writer, title_text, narrator_voice, engine, work_dir, "title")
-        except TTSFatalError:
-            raise
-        except Exception as e:
-            # Title is decorative; don't fail the scene over it
-            if progress_cb:
-                progress_cb(GenerationProgress(
-                    scene_index, total_scenes, scene.title, -1, len(elements),
-                    f"warning: title narration failed: {e}"
-                ))
-        writer.writeframes(_silence_frames(0.6))
+        if title_text:
+            try:
+                _synthesize_into(writer, title_text, narrator_voice, engine, work_dir, "title")
+            except TTSFatalError:
+                raise
+            except Exception as e:
+                # Title is decorative; don't fail the scene over it
+                if progress_cb:
+                    progress_cb(GenerationProgress(
+                        scene_index, total_scenes, scene.title, -1, len(elements),
+                        f"warning: title narration failed: {e}"
+                    ))
+            writer.writeframes(_silence_frames(0.6))
 
         chunks = _build_render_chunks(elements, assignment)
 
@@ -685,7 +714,7 @@ def estimate_tts_requests(
         elements = [e for e in scene.elements if e.text.strip()]
         if not elements:
             continue
-        if include_scene_titles:
+        if include_scene_titles and spoken_scene_title(scene):
             total += 1
         total += len(_build_render_chunks(elements, assignment))
     return total
@@ -711,8 +740,8 @@ def estimate_tts_chars(
         if not elements:
             continue
         if include_scene_titles:
-            # Scene title is synthesized as "{title}." — add approx length
-            total_chars += len(scene.title) + 1
+            # The spoken heading (see spoken_scene_title)
+            total_chars += len(spoken_scene_title(scene))
         for chunk in _build_render_chunks(elements, assignment):
             if chunk.overlap_texts:
                 # Each overlap voice gets its own text

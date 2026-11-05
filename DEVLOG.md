@@ -2,38 +2,50 @@
 
 ## Resume here
 
-_Updated 2026-11-05 15:45 EST · branch `ipados-port` @ `eadcc64` · working tree: **uncommitted** iPhone catch-up round (see History) + ~22 files reformatted by an old `dart format` (formatting only, verified identical to formatted HEAD; discard with `git checkout -- <those files>`, the sandbox refused me; do not commit them) + two ephemeral `sidetrack-*.md` (never commit)_
+_Updated 2026-11-05 EST · branch `ipados-port` · working tree: committed and pushed at the end of this round (two ephemeral `sidetrack-*.md` stay untracked, never commit them)_
 
-**Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Mac app = Flutter UI (`app/`) + Rust core; iPhone/iPad = one universal Flutter app (`app/lib/phone/`) that rehearses on device (no voice rendering; the Mac renders). Older SwiftUI app + Python backend still in repo (`Sources/`, `backend/`).
-**Current goal:** iPhone/iPad rehearsal polish. Nov 5: Avery asked to bring the iPhone up to date with the iPad rounds 3-5 plus new notes; built, tested and installing on the iPhone.
+**Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Mac app = Flutter UI (`app/`) + Python worker for voices (Rust core parses on the phone / optionally Mac); iPhone/iPad = one universal Flutter app (`app/lib/phone/`) that rehearses on device (no voice rendering; the Mac renders). Older SwiftUI app still in `Sources/`.
+**Current goal:** iPhone/iPad rehearsal polish. Round after the iPhone catch-up (Nov 5, two History entries): Avery's notes on downloads, highlight, outline, voice scene titles are done and installed on the iPhone and the Mac (Table Read Preview); the iPad install is next (Avery plugs it in).
 
 **Where things stand:**
-- Everything in the Nov 5 History entry is built, `flutter analyze` clean for my files, **full `flutter test` = 127 pass / 3 skipped**. NOT committed. **Installed on Avery's iPhone (UDID 00008130-000475601803401C) at ~16:00 EST Nov 5; not yet tried by Avery.**
-- Never verified on a real device: the new playhead/scrub/flash behaviour, the PDF position pinning (`PdfPlugin.swift` `pinTo`), the download queue against real iCloud, the floating menu on iPhone widths. iPad Pencil markup still waiting on Avery's report from round 5b.
-- iPad PDF fixes (wrong page on open, jump to top when switching page/continuous) are code-only here; the iPad was not plugged in. Install it and check.
+- `flutter test` = 131 pass / 3 skipped; backend `pytest backend/tests/test_pipeline.py` = 54 pass. Nothing from the last two rounds has been tried on a real device by Avery yet (iPhone build installed; iPad not).
+- iPad PDF fixes (right page on open from the script; page/continuous switch keeps the place, `PinnedPDFView` in `PdfPlugin.swift`) are code only: never run on the iPad.
+- Voice: narrator now says the script's own heading, plus "part N" for split scenes (`spoken_scene_title` in `backend/audio_pipeline.py`); the parser's placeholder heading "Scene 1" is never read. Needs a listen on a real render. Scenes already rendered keep their old audio until re-rendered.
 
 **Next steps:**
-1. Avery tests the iPhone build (list in History); fix what breaks. Install on the iPad too: `cd app && xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -destination 'id=00008101-0018551A10E1401E' -allowProvisioningUpdates -allowProvisioningDeviceRegistration build`, then `xcrun devicectl device install app --device <udid> <DerivedData>/Release-iphoneos/Runner.app`.
-2. Commit the round (my files only: `app/lib/phone/*`, `app/lib/services/project_files.dart`, `app/ios/Runner/PdfPlugin.swift`, `app/test/{ios_update_test,phone_test,ipad_test}.dart`, goldens, DEVLOG) on `ipados-port`.
-3. Open issues for: download queue/status icon, NEW + progress, playhead follows page, floating menu on iPhone; comment on / close #113-#121 with what shipped; PR to `main` when Avery wants.
-4. Decide with Avery after trying: floating menu on iPhone stays? (flip `_floatingMenuOnPhone` in `rehearsal_screen.dart` to revert); script-view Pencil markup design (open question from round 3, unanswered).
+1. Install on the iPad: `cd app && flutter build ios --config-only --release`, then `xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -destination 'id=00008101-0018551A10E1401E' -allowProvisioningUpdates -allowProvisioningDeviceRegistration build`, then `xcrun devicectl device install app --device 00008101-0018551A10E1401E <DerivedData>/Build/Products/Release-iphoneos/Runner.app` (DerivedData `Runner-gaqvprvjbjsycjegltdoeiifkgpk`). Check the PDF page/continuous behaviour first.
+2. Avery's device test of downloads (queue, icon, remove download, nothing opens by itself), playhead/scrub, floating menu; fix what breaks.
+3. Open issues for the new features (download queue/status icon, NEW + progress, playhead follows page, floating menu); comment on and close #113-#121; PR to `main` when Avery wants it.
+4. Script-view Pencil markup design (open question from round 3, still unanswered).
 
 **Waiting on the user / open questions:**
-- Verdict on the iPhone floating menu; whether the download icon placement (cover top-right) and NEW pill (date row) read well.
-- iOS can evict iCloud files on its own when space is short; the app can only show the state (rescanned on launch/resume), not stop it.
+- Verdict on the floating line menu on iPhone (revert: `_floatingMenuOnPhone = false` in `rehearsal_screen.dart`) and on the download icon / NEW pill placement.
+- I could not find any code path where a queued download opens a project; opening now only happens from tapping the cover, only for the cover tapped last (`PhoneStore.wantsOpen`). If it still opens by itself, say what was tapped.
+- iOS can evict iCloud files on its own; the app shows the true state (rescans on launch/resume) but cannot stop it.
 
 **Watch out for:**
-- Never `dart format` without `-l 150`. `future.whenComplete(() => map.remove(x))` deadlocks when the map holds that very future (bit me in `PhoneStore.download`): use a block body.
-- Tests: flutter_test's default display is 800x600 so `isPadDisplay` is true; set `tester.view.display.size` to pose as an iPhone. `test/failures/` has old tracked images; don't `rm -rf` it (restore with `git restore -- test/failures`).
-- Free-team installs expire after 7 days. Simulator iPad runtime (iOS 27.0) spins the CPU; avoid booting it.
-- Rust core / Mac cutover (#98-#112) is paused, state in the History entries from Oct 21-30 and the archived block below.
+- Never `dart format` without `-l 150`. `future.whenComplete(() => map.remove(x))` deadlocks when the map holds that very future: block body.
+- Tests: flutter_test's default display is 800x600 so `isPadDisplay` is true; set `tester.view.display.size` to pose as an iPhone. `test/failures/` holds old tracked images: restore with `git restore -- test/failures`, remove new ones with `git clean -fq -- test/failures`.
+- Free-team installs expire after 7 days. The iOS 27.0 iPad simulator spins the CPU; avoid booting it.
+- Rust core / Mac cutover (#98-#112) is paused; state in the Oct 21-30 History entries and the archived block.
 
-**Key files:** `app/lib/phone/{rehearsal_screen,phone_app,phone_store,scene_timeline,outline_rail,pdf_panel,pdf_view}.dart`, `app/ios/Runner/PdfPlugin.swift`, `app/lib/services/project_files.dart` (RehearsalState incl. `readProgress`), `app/test/ios_update_test.dart` (new tests)
-**Run / test:** `cd app && flutter test` (127); `bash scripts/test.sh flutter`; goldens: `flutter test --update-goldens test/phone_test.dart test/ipad_test.dart`
-
+**Key files:** `app/lib/phone/{rehearsal_screen,phone_app,phone_store,scene_timeline,outline_rail,pdf_panel,pdf_view}.dart`, `app/ios/Runner/PdfPlugin.swift`, `app/lib/services/project_files.dart`, `backend/audio_pipeline.py`, tests `app/test/ios_update_test.dart`, `backend/tests/test_pipeline.py`
+**Run / test:** `cd app && flutter test`; `.venv/bin/python3 -m pytest backend/tests/test_pipeline.py`; goldens: `flutter test --update-goldens test/phone_test.dart test/ipad_test.dart`; Mac app: `bash scripts/build_flutter_app.sh`
 
 ## History
 <!-- newest first -->
+
+### 2026-11-05 — Download fixes, highlight only while playing, outline right on iPad, voice stops saying our scene numbers
+**Asked:** remove the spine progress while downloading; Remove Download must update the status icon at once and not be offered on cloud projects; a finished download must not open a project unless that cover was tapped (and with several downloads never open the first finisher); do not highlight the active line until Play; outline on the right halfway down on iPad too; the voice must not say "Scene 12, scene 3 part 2"; update the iPhone and Mac apps, then commit and push everything.
+**Done:**
+- `phone_app.dart`: spine fill off (`backgroundProgress: null`); long-press menu shows Remove Download only for projects on the device; `_open` uses `PhoneStore.wantsOpen` (only the cover tapped last opens, only if its screen is still the top route).
+- `phone_store.dart`: `removeDownload` marks the project cloud at once and ignores rescans for 30 s (`_evictedAt`; iCloud reports the new status late); `wantsOpen`, cleared by `cancelDownload`.
+- `rehearsal_screen.dart`: the active-line fill shows only while playing or waiting at my line; paused or parked looks normal. `outline_rail.dart`: right edge for every device.
+- `backend/audio_pipeline.py`: `spoken_scene_title` (script heading, ", part N" from the "(part N)" suffix, placeholder "Scene 1" skipped), used for the narration and the cost estimates; `TestSpokenSceneTitle` in `test_pipeline.py`.
+- Tests: `ios_update_test.dart` +4 (remove download status and visibility, nothing opens by itself, highlight, rail on iPad); goldens `phone_rehearse_*`, `phone_line_hint`, `phone_scene_jump`, `ipad_rehearse_*` re-recorded.
+**Decisions:** a heading identical to the parser's placeholder is treated as ours (a real script heading "Scene 1" in mixed case is also skipped; accepted). The old ~22 `dart format -l 150` reformatted files were committed as their own formatting-only commit because Avery said to commit everything.
+**State:** `flutter test` 131 pass; installed on the iPhone and as /Applications/Table Read Preview.app (Mac); not verified on a device by me.
+**Next:** Resume block.
 
 ### 2026-11-05 15:45 — iPhone catch-up: queueable downloads, NEW/progress, playhead follows the page, outline right, PDF position fixes
 **Asked:** Bring the iPhone up to date with the iPad rounds 3-5 (bookmarks, position sync, outline, scene bar, multi-role, note polish, notices, full-screen PDF all live in shared code, so they ride along), plus: outline on the right edge half way down on iPhone (left stays on iPad); iPad PDF bugs (wrong page when opening from the script; jump to top when switching page/continuous); cloud/device icon per project with download status and options; queued downloads; NEW + reading progress on covers; playhead follows the page and scrubs it with lines pointed out then fading; tap a line = flash, not play; my lines in the character's colour; floating line menu on iPhone as an experiment.

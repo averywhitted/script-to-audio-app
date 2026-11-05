@@ -1431,7 +1431,6 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
                   current: _viewScene,
                   onPick: _jumpToScene,
                   onScrub: _scrubToScene,
-                  right: !isPadDisplay(context),
                   bookmarked: {for (final b in bookmarks?.live.values ?? const <Bookmark>[]) b.scene},
                 ),
               ),
@@ -1625,7 +1624,9 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
 
   Widget _line(Tokens t, PhoneScene s, int i, PhoneLine l, double scale) {
     final playingHere = player.currentScene?.sceneNumber == s.number;
-    final current = playingHere && l.cueIndex != null && l.cueIndex == player.currentCueIndex;
+    // The line being read is marked only while something is being read (or it waits for you): a playhead parked by scrolling, a
+    // tap or scrubbing leaves the script looking normal.
+    final current = playingHere && l.cueIndex != null && l.cueIndex == player.currentCueIndex && (player.isPlaying || player.waitingAtCue != null);
     final mine = l.isDialog && player.isMyLine(l.speaker);
     final revealed = playingHere && l.cueIndex != null && l.cueIndex == player.revealedCue;
     final blocked = mine && player.blockMyLines && !revealed;
