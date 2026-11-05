@@ -152,7 +152,8 @@ class PlaybackBar extends StatelessWidget {
       Expanded(
         child: Text('Render a scene and its playback controls appear here.', style: TextStyles.ui(t, color: t.muted)),
       ),
-      if (app.script != null) Btn('Render…', small: true, icon: Icons.graphic_eq_rounded, onPressed: app.isGenerating ? null : () => showRenderSheet(context)),
+      if (app.script != null)
+        Btn('Render…', small: true, icon: Icons.graphic_eq_rounded, onPressed: app.isGenerating ? null : () => showRenderSheet(context)),
     ],
   );
 
@@ -207,7 +208,9 @@ class PlaybackBar extends StatelessWidget {
               else if (p.flash != null)
                 Positioned(
                   top: -6,
-                  child: IgnorePointer(child: Text(p.flash!, style: TextStyles.hand(t, size: 19, color: t.accent))),
+                  child: IgnorePointer(
+                    child: Text(p.flash!, style: TextStyles.hand(t, size: 19, color: t.accent)),
+                  ),
                 ),
             ],
           ),
@@ -215,10 +218,7 @@ class PlaybackBar extends StatelessWidget {
         const SizedBox(width: 8),
         Text(_clock(p.duration), style: TextStyles.script(t, size: 11.5, color: t.muted)),
         const SizedBox(width: 12),
-        if (p.blockMyLines && p.myRole.isNotEmpty) ...[
-          _LineButton(onTap: p.callForLine, showing: p.revealedCue != null),
-          const SizedBox(width: 6),
-        ],
+        if (p.blockMyLines && p.myRole.isNotEmpty) ...[_LineButton(onTap: p.callForLine, showing: p.revealedCue != null), const SizedBox(width: 6)],
         Builder(
           builder: (ctx) => _BarChip(
             icon: Icons.person_outline_rounded,
@@ -487,7 +487,10 @@ class _LoopPopover extends StatelessWidget {
                 },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(color: on ? t.accentSoft : (h && onTap != null ? t.ctrl : Colors.transparent), borderRadius: BorderRadius.circular(7)),
+            decoration: BoxDecoration(
+              color: on ? t.accentSoft : (h && onTap != null ? t.ctrl : Colors.transparent),
+              borderRadius: BorderRadius.circular(7),
+            ),
             child: Row(
               children: [
                 SizedBox(width: 20, child: on ? Icon(Icons.check_rounded, size: 15, color: t.accent) : null),

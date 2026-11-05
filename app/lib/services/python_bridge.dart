@@ -47,7 +47,9 @@ class PythonBridge {
   String get workerPath {
     final root = repoRoot;
     if (root == null) {
-      throw WorkerException('Could not find the Python worker (backend/audio_worker.py). Rebuild the preview with TR_REPO_ROOT set to the repository folder.');
+      throw WorkerException(
+        'Could not find the Python worker (backend/audio_worker.py). Rebuild the preview with TR_REPO_ROOT set to the repository folder.',
+      );
     }
     return '$root/backend/audio_worker.py';
   }
@@ -154,7 +156,8 @@ class PythonBridge {
       final els = userAddedElements['$pdfPath|$n'] ?? const [];
       final list = [
         for (final el in els)
-          if (el.text.trim().isNotEmpty) {'id': el.id, 'afterElementTextKey': el.afterElementTextKey, 'speaker': el.speaker, 'text': el.text, 'kind': el.kind},
+          if (el.text.trim().isNotEmpty)
+            {'id': el.id, 'afterElementTextKey': el.afterElementTextKey, 'speaker': el.speaker, 'text': el.text, 'kind': el.kind},
       ];
       if (list.isNotEmpty) byScene['$n'] = list;
     }
@@ -180,7 +183,8 @@ class PythonBridge {
     await _stream(payload, onEvent);
   }
 
-  Future<void> installEngine(EngineKind engine, void Function(GenerationEvent) onEvent) => _stream({'command': 'installEngine', 'engine': engine.id}, onEvent);
+  Future<void> installEngine(EngineKind engine, void Function(GenerationEvent) onEvent) =>
+      _stream({'command': 'installEngine', 'engine': engine.id}, onEvent);
 
   void pause() => _streamProcess?.kill(ProcessSignal.sigstop);
   void resume() => _streamProcess?.kill(ProcessSignal.sigcont);

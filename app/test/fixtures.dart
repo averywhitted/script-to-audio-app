@@ -72,7 +72,8 @@ List<Map<String, dynamic>> _generic(int n) {
   final names = characters.keys.toList();
   return [
     _n('The scene opens. ${names[n % names.length]} enters, carrying a book.'),
-    for (var i = 0; i < (n == 7 ? 40 : 6); i++) _d(names[(n + i) % names.length], 'Line ${i + 1} of scene ${n + 1}, spoken with great feeling and a certain amount of wit.'),
+    for (var i = 0; i < (n == 7 ? 40 : 6); i++)
+      _d(names[(n + i) % names.length], 'Line ${i + 1} of scene ${n + 1}, spoken with great feeling and a certain amount of wit.'),
   ];
 }
 
@@ -188,7 +189,14 @@ void loadEarnest(AppState app, String folder) {
         },
     ];
     File('$folder/${name.replaceAll('.m4a', '.cues.json')}').writeAsStringSync(
-      jsonEncode({'schemaVersion': 1, 'sceneNumber': s.number, 'sceneTitle': s.title, 'generatedAt': '2026-10-10T09:00:00Z', 'totalDuration': t, 'cues': cues}),
+      jsonEncode({
+        'schemaVersion': 1,
+        'sceneNumber': s.number,
+        'sceneTitle': s.title,
+        'generatedAt': '2026-10-10T09:00:00Z',
+        'totalDuration': t,
+        'cues': cues,
+      }),
     );
   }
   app.checkRenderedScenes();
@@ -242,7 +250,14 @@ Future<void> loadTestFonts() async {
   await family('CourierPrime', ['$fonts/CourierPrime-Regular.ttf', '$fonts/CourierPrime-Bold.ttf', '$fonts/CourierPrime-Italic.ttf']);
   await family('Caveat', ['$fonts/Caveat-SemiBold.ttf']);
   await family('YoungSerif', ['$fonts/YoungSerif-Regular.ttf']);
-  final sdk = File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path; // .../bin/cache/artifacts/engine/<host>/flutter_tester
+  final sdk = File(Platform.resolvedExecutable)
+      .parent
+      .parent
+      .parent
+      .parent
+      .parent
+      .parent
+      .path; // .../bin/cache/artifacts/engine/<host>/flutter_tester
   for (final candidate in [
     '$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
     '/opt/homebrew/share/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',

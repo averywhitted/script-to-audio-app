@@ -75,7 +75,8 @@ class _CorrectLinePopoverState extends State<CorrectLinePopover> {
     _origRemoved = removed;
   }
 
-  bool get _changed => kind != _origKind || speaker != _origSpeaker || text.text != _origText || t0.text != _o0 || t1.text != _o1 || removed != _origRemoved;
+  bool get _changed =>
+      kind != _origKind || speaker != _origSpeaker || text.text != _origText || t0.text != _o0 || t1.text != _o1 || removed != _origRemoved;
 
   @override
   Widget build(BuildContext context) {

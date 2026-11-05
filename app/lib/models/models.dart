@@ -164,11 +164,7 @@ class CharacterSummary {
   factory CharacterSummary.fromJson(Map<String, dynamic> j) =>
       CharacterSummary(name: j['name'] as String, genderHint: j['genderHint'] as String?, roleHint: j['roleHint'] as String?);
 
-  Map<String, dynamic> toJson() => {
-    'name': name,
-    if (genderHint != null) 'genderHint': genderHint,
-    if (roleHint != null) 'roleHint': roleHint,
-  };
+  Map<String, dynamic> toJson() => {'name': name, if (genderHint != null) 'genderHint': genderHint, if (roleHint != null) 'roleHint': roleHint};
 }
 
 class ScriptSummary {
@@ -594,8 +590,11 @@ class EngineStatus {
   final String sizeLabel;
   final bool canUninstall;
 
-  factory EngineStatus.fromJson(Map<String, dynamic> j) =>
-      EngineStatus(installed: j['installed'] as bool? ?? false, sizeLabel: j['sizeLabel'] as String? ?? '', canUninstall: j['canUninstall'] as bool? ?? false);
+  factory EngineStatus.fromJson(Map<String, dynamic> j) => EngineStatus(
+    installed: j['installed'] as bool? ?? false,
+    sizeLabel: j['sizeLabel'] as String? ?? '',
+    canUninstall: j['canUninstall'] as bool? ?? false,
+  );
 }
 
 class GenerationEvent {
@@ -620,7 +619,15 @@ class GenerationEvent {
 }
 
 class SceneCue {
-  SceneCue({required this.index, required this.kind, required this.speaker, required this.text, required this.startTime, required this.endTime, this.ref});
+  SceneCue({
+    required this.index,
+    required this.kind,
+    required this.speaker,
+    required this.text,
+    required this.startTime,
+    required this.endTime,
+    this.ref,
+  });
   final int index;
 
   /// The line's stable id (element ref, or "added:<id>"); null in cue maps

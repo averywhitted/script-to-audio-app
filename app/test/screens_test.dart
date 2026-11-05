@@ -247,7 +247,11 @@ void main() {
       app.renderingSceneNumbers = [9, 10, 11];
       app.generationProgress = 0.46;
       app.sceneProgress = {9: 1.0, 10: 0.4, 11: 0};
-      for (final l in ['generate · 3 scenes', 'wrote 09 Morning-room at the Manor House.m4a', 'generate · Scene 10 Lady Bracknell arrives · element 45/112']) {
+      for (final l in [
+        'generate · 3 scenes',
+        'wrote 09 Morning-room at the Manor House.m4a',
+        'generate · Scene 10 Lady Bracknell arrives · element 45/112',
+      ]) {
         app.appendLog(l, LogStyle.info);
       }
       app.refresh();
@@ -333,7 +337,10 @@ void main() {
       final lineCtx = tester.element(find.text('A most distasteful one.'));
       final s9 = app.scenes[8];
       await sheet('popover_correct_line', () => showPopover(lineCtx, (_) => CorrectLinePopover(sceneNumber: 9, element: s9.elements[5]), width: 340));
-      await sheet('popover_correct_simultaneous', () => showPopover(lineCtx, (_) => CorrectLinePopover(sceneNumber: 9, element: s9.elements[7]), width: 340));
+      await sheet(
+        'popover_correct_simultaneous',
+        () => showPopover(lineCtx, (_) => CorrectLinePopover(sceneNumber: 9, element: s9.elements[7]), width: 340),
+      );
       await sheet(
         'popover_edit_added',
         () => showPopover(lineCtx, (_) => EditAddedLinePopover(sceneNumber: 9, element: app.userAddedElements[app.addedKey(9)]!.first), width: 340),

@@ -499,7 +499,10 @@ class BarButton extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (icon != null) ...[Icon(icon, size: 14, color: danger ? t.barDangerInk : t.barInk), if (label.isNotEmpty) const SizedBox(width: 5)],
+                if (icon != null) ...[
+                  Icon(icon, size: 14, color: danger ? t.barDangerInk : t.barInk),
+                  if (label.isNotEmpty) const SizedBox(width: 5),
+                ],
                 if (label.isNotEmpty)
                   Text(
                     label,
@@ -810,7 +813,10 @@ Future<String?> showConfirm(BuildContext context, {required String title, String
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  for (final (label, kind) in buttons) ...[const SizedBox(width: 8), Btn(label, kind: kind, onPressed: () => Navigator.of(ctx).pop(label))],
+                  for (final (label, kind) in buttons) ...[
+                    const SizedBox(width: 8),
+                    Btn(label, kind: kind, onPressed: () => Navigator.of(ctx).pop(label)),
+                  ],
                 ],
               ),
             ],

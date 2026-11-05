@@ -127,12 +127,18 @@ class _VoiceRow extends StatelessWidget {
               label: voice?.display ?? 'Choose voice',
               placeholder: voice == null,
               items: [
-                if (male.isNotEmpty) ...[const MenuItemSpec.header('Male'), for (final v in male) MenuItemSpec(v.id, v.display, checked: v.id == voiceId)],
+                if (male.isNotEmpty) ...[
+                  const MenuItemSpec.header('Male'),
+                  for (final v in male) MenuItemSpec(v.id, v.display, checked: v.id == voiceId),
+                ],
                 if (female.isNotEmpty) ...[
                   const MenuItemSpec.header('Female'),
                   for (final v in female) MenuItemSpec(v.id, v.display, checked: v.id == voiceId),
                 ],
-                if (other.isNotEmpty) ...[const MenuItemSpec.header('Other'), for (final v in other) MenuItemSpec(v.id, v.display, checked: v.id == voiceId)],
+                if (other.isNotEmpty) ...[
+                  const MenuItemSpec.header('Other'),
+                  for (final v in other) MenuItemSpec(v.id, v.display, checked: v.id == voiceId),
+                ],
               ],
               onSelected: (id) => app.assignVoice(characterKey, id),
             ),
@@ -246,7 +252,10 @@ class _CastSheetState extends State<_CastSheet> {
                   Icon(Icons.warning_amber_rounded, size: 15, color: t.warn),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text('${app.selectedEngine.title} not installed — go to Settings to set it up.', style: TextStyles.ui(t, size: 12.5, color: t.ink2)),
+                    child: Text(
+                      '${app.selectedEngine.title} not installed — go to Settings to set it up.',
+                      style: TextStyles.ui(t, size: 12.5, color: t.ink2),
+                    ),
                   ),
                   Btn('Open Settings', small: true, onPressed: () => showSettingsSheet(context, initialTab: 1)),
                 ],
@@ -297,7 +306,10 @@ class _CastSheetState extends State<_CastSheet> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('You can change voices any time from Cast at the top of the window.', style: TextStyles.ui(t, size: 12, color: t.muted)),
+                  child: Text(
+                    'You can change voices any time from Cast at the top of the window.',
+                    style: TextStyles.ui(t, size: 12, color: t.muted),
+                  ),
                 ),
                 Btn(
                   'Done',

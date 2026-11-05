@@ -65,7 +65,11 @@ class _NewProjectSheetState extends State<NewProjectSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SheetHeader(icon: Icons.create_new_folder_outlined, title: 'New Project', subtitle: 'Give your project a name, then choose a screenplay PDF.'),
+        const SheetHeader(
+          icon: Icons.create_new_folder_outlined,
+          title: 'New Project',
+          subtitle: 'Give your project a name, then choose a screenplay PDF.',
+        ),
         Container(height: 1, color: t.rule),
         Padding(
           padding: const EdgeInsets.fromLTRB(26, 20, 26, 22),
@@ -356,10 +360,15 @@ class _BugReportState extends State<_BugReport> {
                     : () async {
                         final app = context.read<AppState>();
                         // Capped so the prefilled issue URL stays under GitHub's length limit.
-                        var recent = app.debugLog.reversed.take(40).toList().reversed.map((e) {
-                          final line = '[${e.timestampString}] ${e.text}';
-                          return line.length > 200 ? '${line.substring(0, 200)}…' : line;
-                        }).join('\n');
+                        var recent = app.debugLog.reversed
+                            .take(40)
+                            .toList()
+                            .reversed
+                            .map((e) {
+                              final line = '[${e.timestampString}] ${e.text}';
+                              return line.length > 200 ? '${line.substring(0, 200)}…' : line;
+                            })
+                            .join('\n');
                         if (recent.length > 4000) recent = '…${recent.substring(recent.length - 4000)}';
                         final body =
                             'App version: $version\nmacOS: ${info['os']}\n\nWhat happened:\n${what.text}\n\nSteps to reproduce:\n${steps.text.isEmpty ? '(not provided)' : steps.text}'
@@ -459,7 +468,9 @@ class _UpdateSheet extends StatelessWidget {
           Btn('Later', kind: BtnKind.plain, onPressed: busy ? null : () => Navigator.of(context).pop()),
           const SizedBox(width: 8),
           Btn(
-            busy ? 'Installing…' : (u?.hasZipAsset == false ? 'Download on GitHub' : (app.updateStage == UpdateStage.failed ? 'Retry' : 'Update Now')),
+            busy
+                ? 'Installing…'
+                : (u?.hasZipAsset == false ? 'Download on GitHub' : (app.updateStage == UpdateStage.failed ? 'Retry' : 'Update Now')),
             kind: BtnKind.primary,
             onPressed: busy || u == null
                 ? null
@@ -481,7 +492,8 @@ class _UpdateSheet extends StatelessWidget {
 // Settings (a sheet with four tabs)
 // ---------------------------------------------------------------------------
 
-Future<void> showSettingsSheet(BuildContext context, {int initialTab = 0}) => showSheet(context, (ctx) => _SettingsSheet(initialTab: initialTab), width: 560);
+Future<void> showSettingsSheet(BuildContext context, {int initialTab = 0}) =>
+    showSheet(context, (ctx) => _SettingsSheet(initialTab: initialTab), width: 560);
 
 class _SettingsSheet extends StatefulWidget {
   const _SettingsSheet({required this.initialTab});
@@ -755,8 +767,7 @@ class _GeneralTabState extends State<_GeneralTab> {
         ),
         _Section(
           header: 'Notifications',
-          footer:
-              'macOS will ask for permission the first time a notification option is enabled. Notifications appear even when Table Read is in the background.',
+          footer: 'macOS will ask for permission the first time a notification option is enabled. Notifications appear even when Table Read is in the background.',
           children: [
             _toggleLine(t, 'Notify when a scene finishes rendering', app.notifyOnSceneComplete, (v) => app.setSetting('notifyOnSceneComplete', v)),
             _toggleLine(t, 'Notify when the full render completes', app.notifyOnRenderComplete, (v) => app.setSetting('notifyOnRenderComplete', v)),
@@ -773,7 +784,8 @@ class _GeneralTabState extends State<_GeneralTab> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    app.settings.getString('lastOutputDirectory')?.replaceFirst(Platform.environment['HOME'] ?? '~', '~') ?? 'Next to the PDF (default)',
+                    app.settings.getString('lastOutputDirectory')?.replaceFirst(Platform.environment['HOME'] ?? '~', '~') ??
+                        'Next to the PDF (default)',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyles.ui(t, color: app.settings.getString('lastOutputDirectory') == null ? t.muted : t.ink),
@@ -823,7 +835,8 @@ class _GeneralTabState extends State<_GeneralTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('$count correction${count == 1 ? '' : 's'} stored locally', style: TextStyles.ui(t, color: t.ink2)),
-                      if (app.contributeCorrections && unsent > 0) Text('$unsent not yet contributed', style: TextStyles.ui(t, size: 11.5, color: t.muted)),
+                      if (app.contributeCorrections && unsent > 0)
+                        Text('$unsent not yet contributed', style: TextStyles.ui(t, size: 11.5, color: t.muted)),
                     ],
                   ),
                 ),
@@ -908,7 +921,11 @@ class _EnginesTabState extends State<_EnginesTab> {
             Row(
               children: [
                 Expanded(
-                  child: Field(controller: key, obscure: true, placeholder: app.hasStoredOpenAIKey ? 'Enter new key to replace…' : 'Paste your key here…'),
+                  child: Field(
+                    controller: key,
+                    obscure: true,
+                    placeholder: app.hasStoredOpenAIKey ? 'Enter new key to replace…' : 'Paste your key here…',
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Btn(
@@ -1146,7 +1163,12 @@ class _ICloudSectionState extends State<_ICloudSection> {
             ),
             if (!inICloud) ...[
               const SizedBox(width: 10),
-              Btn(moving ? 'Moving…' : 'Move to iCloud Drive…', small: true, kind: BtnKind.primary, onPressed: moving || busy ? null : () => _move(store)),
+              Btn(
+                moving ? 'Moving…' : 'Move to iCloud Drive…',
+                small: true,
+                kind: BtnKind.primary,
+                onPressed: moving || busy ? null : () => _move(store),
+              ),
             ],
           ],
         ),
@@ -1228,7 +1250,11 @@ class _AboutTabState extends State<_AboutTab> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Btn('View License on GitHub', small: true, onPressed: () => NativePlatform.openURL('https://github.com/averywhitted/table-read/blob/main/LICENSE')),
+            Btn(
+              'View License on GitHub',
+              small: true,
+              onPressed: () => NativePlatform.openURL('https://github.com/averywhitted/table-read/blob/main/LICENSE'),
+            ),
             const SizedBox(width: 8),
             Btn('Donate on Buy Me a Coffee', small: true, onPressed: () => NativePlatform.openURL('https://buymeacoffee.com/averywhitted')),
           ],

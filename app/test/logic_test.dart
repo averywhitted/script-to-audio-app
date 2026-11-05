@@ -17,7 +17,8 @@ import 'package:table_read/ui/dashboard.dart' show matchCuesToRows;
 
 const pdf = '/tmp/echo.pdf';
 
-ScriptSummary echoScript() => ScriptSummary.fromJson(jsonDecode('''
+ScriptSummary echoScript() => ScriptSummary.fromJson(
+  jsonDecode('''
 {"title":"Echo","sceneCount":1,"characterCount":2,"lineCount":4,
  "characters":[{"name":"LOLA","genderHint":"F"},{"name":"ELLIOT","genderHint":"M"}],
  "scenes":[{"number":1,"title":"One","elementCount":4,"elements":[
@@ -25,7 +26,8 @@ ScriptSummary echoScript() => ScriptSummary.fromJson(jsonDecode('''
    {"kind":"dialog","speaker":"ELLIOT","text":"I'm looking at you.","confidence":1},
    {"kind":"stage_direction","text":"They stare.","confidence":1},
    {"kind":"dialog","speaker":"LOLA","text":"Both of us, then.","overlapCue":["LOLA","ELLIOT"],"overlapTexts":["Both of us,","then."]}
- ]}]}''') as Map<String, dynamic>);
+ ]}]}''') as Map<String, dynamic>,
+);
 
 Future<AppState> makeApp() async {
   final dir = Directory.systemTemp.createTempSync('tr_logic');
@@ -203,7 +205,7 @@ void main() {
         'createdAt': '2026-01-01T00:00:00Z',
         'lastOpenedAt': '2026-01-01T00:00:00Z',
         'sceneTitleOverrides': {
-          '/x.pdf': [3, 'Three', 7, 'Seven']
+          '/x.pdf': [3, 'Three', 7, 'Seven'],
         },
       });
       expect(p.sceneTitleOverrides['/x.pdf'], {3: 'Three', 7: 'Seven'});
@@ -356,14 +358,28 @@ void projectFilesTests() {
 
     test("rebaseEdits re-points every edit at the PDF's new path", () {
       final corrections = <String, ParserCorrection>{};
-      final c = ParserCorrection(textKey: 'They stare.', pdfIdentifier: '/old/x.pdf', sceneNumber: 1, originalKind: 'dialog', correctedSpeaker: 'ELLIOT');
+      final c = ParserCorrection(
+        textKey: 'They stare.',
+        pdfIdentifier: '/old/x.pdf',
+        sceneNumber: 1,
+        originalKind: 'dialog',
+        correctedSpeaker: 'ELLIOT',
+      );
       corrections[c.storageKey] = c;
-      final titles = {'/old/x.pdf': {1: 'Opening'}};
-      final added = {'/old/x.pdf|1': [UserAddedElement(pdfPath: '/old/x.pdf', sceneNumber: 1, afterElementTextKey: 'They stare.', speaker: 'LOLA', text: 'Hm.', kind: 'dialog')]};
+      final titles = {
+        '/old/x.pdf': {1: 'Opening'},
+      };
+      final added = {
+        '/old/x.pdf|1': [
+          UserAddedElement(pdfPath: '/old/x.pdf', sceneNumber: 1, afterElementTextKey: 'They stare.', speaker: 'LOLA', text: 'Hm.', kind: 'dialog'),
+        ],
+      };
       expect(rebaseEdits(pdfPath: '/new/x.pdf', corrections: corrections, sceneTitleOverrides: titles, userAddedElements: added), isTrue);
       expect(corrections.keys.single, correctionKey('/new/x.pdf', 1, 'They stare.'));
       expect(c.pdfIdentifier, '/new/x.pdf');
-      expect(titles, {'/new/x.pdf': {1: 'Opening'}});
+      expect(titles, {
+        '/new/x.pdf': {1: 'Opening'},
+      });
       expect(added.keys.single, '/new/x.pdf|1');
       expect(added['/new/x.pdf|1']!.first.pdfPath, '/new/x.pdf');
       expect(rebaseEdits(pdfPath: '/new/x.pdf', corrections: corrections, sceneTitleOverrides: titles, userAddedElements: added), isFalse);
@@ -375,7 +391,12 @@ void projectFilesTests() {
       app.corrections[c.storageKey] = c;
       final fp1 = app.sceneFingerprint(1);
       app.pdfPath = '/moved/echo.pdf';
-      rebaseEdits(pdfPath: app.pdfPath!, corrections: app.corrections, sceneTitleOverrides: app.sceneTitleOverrides, userAddedElements: app.userAddedElements);
+      rebaseEdits(
+        pdfPath: app.pdfPath!,
+        corrections: app.corrections,
+        sceneTitleOverrides: app.sceneTitleOverrides,
+        userAddedElements: app.userAddedElements,
+      );
       expect(app.sceneFingerprint(1), fp1);
     });
 
@@ -418,7 +439,10 @@ void projectFilesTests() {
 
     test('moving projects carries folders and archives, renaming clashes', () async {
       TestWidgetsFlutterBinding.ensureInitialized();
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('tableread/platform'), (call) async => null);
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('tableread/platform'),
+        (call) async => null,
+      );
       final root = Directory.systemTemp.createTempSync('tr_files');
       final base = '${root.path}/Documents/Table Read';
       Directory(base).createSync(recursive: true);
@@ -431,7 +455,8 @@ void projectFilesTests() {
       Directory('$base/A').createSync();
       File('$base/A/project.json').writeAsStringSync(jsonEncode(Project.newProject('A', '$base/A').toJson()));
       File('$base/X.zip').writeAsStringSync('zip');
-      File('$base/X.archive-meta.json').writeAsStringSync(jsonEncode({'project': Project.newProject('X', '/x').toJson(), 'zipFilename': 'X.zip', 'originalFolderName': 'X'}));
+      File('$base/X.archive-meta.json')
+          .writeAsStringSync(jsonEncode({'project': Project.newProject('X', '/x').toJson(), 'zipFilename': 'X.zip', 'originalFolderName': 'X'}));
       await store.moveProjectsTo(target);
       expect(store.baseDir, target);
       expect(File('$target/A 2/project.json').existsSync(), isTrue);

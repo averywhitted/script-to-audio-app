@@ -616,7 +616,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Your ${r.device} asked to render “${p.name}”', style: TextStyles.ui(t, weight: FontWeight.w600)),
-                        Text('${r.summary[0].toUpperCase()}${r.summary.substring(1)} · ${friendlyDate(r.requestedAt)}', style: TextStyles.ui(t, size: 12, color: t.muted)),
+                        Text(
+                          '${r.summary[0].toUpperCase()}${r.summary.substring(1)} · ${friendlyDate(r.requestedAt)}',
+                          style: TextStyles.ui(t, size: 12, color: t.muted),
+                        ),
                       ],
                     ),
                   ),
@@ -953,7 +956,13 @@ class ScriptCover extends StatelessWidget {
                                     const SizedBox(width: 2),
                                     Text(
                                       'RENDERED',
-                                      style: TextStyle(fontFamily: Fonts.ui, fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: t.ok),
+                                      style: TextStyle(
+                                        fontFamily: Fonts.ui,
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.8,
+                                        color: t.ok,
+                                      ),
                                     ),
                                   ],
                                 ),

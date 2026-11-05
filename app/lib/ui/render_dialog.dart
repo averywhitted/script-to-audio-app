@@ -379,7 +379,10 @@ class _RenderSheetState extends State<_RenderSheet> {
               children: [
                 if (!ready)
                   Expanded(
-                    child: Text('${app.selectedEngine.title} not installed — go to Settings to set it up.', style: TextStyles.ui(t, size: 12, color: t.warn)),
+                    child: Text(
+                      '${app.selectedEngine.title} not installed — go to Settings to set it up.',
+                      style: TextStyles.ui(t, size: 12, color: t.warn),
+                    ),
                   )
                 else
                   const Spacer(),

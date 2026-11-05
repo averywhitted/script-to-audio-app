@@ -347,7 +347,8 @@ class ProjectStore extends ChangeNotifier {
   /// Re-reads only the request files (iCloud brings new ones while the app is open).
   void refreshRenderRequests() {
     final next = _readRenderRequests();
-    final same = next.length == renderRequests.length &&
+    final same =
+        next.length == renderRequests.length &&
         next.entries.every((e) => renderRequests[e.key]?.requestedAt == e.value.requestedAt && renderRequests[e.key]?.summary == e.value.summary);
     if (same) return;
     renderRequests = next;

@@ -38,7 +38,13 @@ class Settings {
     if (base != null) await _p.setString('projectsBaseURL', base);
     final channel = await read('updateChannel');
     if (channel != null) await _p.setString('updateChannel', channel);
-    for (final k in ['autoOpenFinderAfterRender', 'contributeCorrections', 'notifyOnSceneComplete', 'notifyOnRenderComplete', 'notifyOnRenderFailed']) {
+    for (final k in [
+      'autoOpenFinderAfterRender',
+      'contributeCorrections',
+      'notifyOnSceneComplete',
+      'notifyOnRenderComplete',
+      'notifyOnRenderFailed',
+    ]) {
       final v = await read(k);
       if (v != null) await _p.setBool(k, v == '1' || v.toLowerCase() == 'true');
     }

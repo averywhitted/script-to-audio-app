@@ -247,7 +247,11 @@ class _AppShellState extends State<AppShell> {
                   label: 'Export Audio…',
                   shortcut: const SingleActivator(LogicalKeyboardKey.keyE, meta: true, shift: true),
                   onSelected: inProject && app.hasRenderedAudio
-                      ? () => exportAudio(context, sourceFolder: app.outputDirectory ?? store.currentProject!.folderPath!, projectName: store.currentProject!.name)
+                      ? () => exportAudio(
+                          context,
+                          sourceFolder: app.outputDirectory ?? store.currentProject!.folderPath!,
+                          projectName: store.currentProject!.name,
+                        )
                       : null,
                 ),
               ],
@@ -272,7 +276,11 @@ class _AppShellState extends State<AppShell> {
         PlatformMenu(
           label: 'Debug',
           menus: [
-            PlatformMenuItem(label: 'Show Log', shortcut: const SingleActivator(LogicalKeyboardKey.keyL, meta: true, alt: true), onSelected: () => showLogSheet(context)),
+            PlatformMenuItem(
+              label: 'Show Log',
+              shortcut: const SingleActivator(LogicalKeyboardKey.keyL, meta: true, alt: true),
+              onSelected: () => showLogSheet(context),
+            ),
             PlatformMenuItem(
               label: 'Simulate Update Available',
               onSelected: () {
@@ -299,7 +307,9 @@ class _AppShellState extends State<AppShell> {
       ],
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
-        child: inProject ? const DashboardScreen(key: ValueKey('dashboard')) : _GalleryWithPlayerReset(player: player, key: const ValueKey('gallery')),
+        child: inProject
+            ? const DashboardScreen(key: ValueKey('dashboard'))
+            : _GalleryWithPlayerReset(player: player, key: const ValueKey('gallery')),
       ),
     );
   }

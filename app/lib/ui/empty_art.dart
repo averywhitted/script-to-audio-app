@@ -140,8 +140,14 @@ class _ArtPainter extends CustomPainter {
           ..strokeWidth = 3
           ..strokeCap = StrokeCap.round;
         canvas.drawArc(const Rect.fromLTWH(72, 52, 36, 36), math.pi, math.pi, false, light);
-        canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(68, 68, 9, 16), const Radius.circular(3)), Paint()..color = const Color(0xFFEFEDE8));
-        canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(103, 68, 9, 16), const Radius.circular(3)), Paint()..color = const Color(0xFFEFEDE8));
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(const Rect.fromLTWH(68, 68, 9, 16), const Radius.circular(3)),
+          Paint()..color = const Color(0xFFEFEDE8),
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(const Rect.fromLTWH(103, 68, 9, 16), const Radius.circular(3)),
+          Paint()..color = const Color(0xFFEFEDE8),
+        );
         canvas.drawLine(
           const Offset(28, 96),
           const Offset(152, 96),

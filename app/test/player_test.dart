@@ -10,7 +10,12 @@ Future<RehearsalPlayer> _player() async {
   SceneCue cue(int i, String who, double a, double b) => SceneCue(index: i, kind: 'dialog', speaker: who, text: 'Line $i', startTime: a, endTime: b);
   final p = RehearsalPlayer(audioEnabled: false);
   p.loadItems([
-    ScenePlayerItem(1, 'One', '/none.m4a', [cue(0, 'LANE', 0, 2), cue(1, 'ALGERNON', 2.5, 5), cue(2, 'LANE', 5.5, 7), cue(3, 'ALGERNON', 7.5, 10)], 10),
+    ScenePlayerItem(1, 'One', '/none.m4a', [
+      cue(0, 'LANE', 0, 2),
+      cue(1, 'ALGERNON', 2.5, 5),
+      cue(2, 'LANE', 5.5, 7),
+      cue(3, 'ALGERNON', 7.5, 10),
+    ], 10),
   ]);
   await Future<void>.delayed(Duration.zero);
   p

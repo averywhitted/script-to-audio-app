@@ -23,7 +23,8 @@ void main() {
       sent.add(call);
       return null;
     });
-    SceneCue cue(int i, String who, double a, double b) => SceneCue(index: i, kind: 'dialog', speaker: who, text: 'Line $i', startTime: a, endTime: b);
+    SceneCue cue(int i, String who, double a, double b) =>
+        SceneCue(index: i, kind: 'dialog', speaker: who, text: 'Line $i', startTime: a, endTime: b);
     final p = RehearsalPlayer(audioEnabled: false);
     p.loadItems([
       ScenePlayerItem(1, 'Morning-room', '/none.m4a', [cue(0, 'LANE', 0, 2), cue(1, 'ALGERNON', 2.5, 5), cue(2, 'LANE', 5.5, 7)], 7),

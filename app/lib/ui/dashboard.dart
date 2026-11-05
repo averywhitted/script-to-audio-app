@@ -538,7 +538,11 @@ class _ToolBar extends StatelessWidget {
             onTap: app.hasRenderedAudio
                 ? () {
                     final store = context.read<ProjectStore>();
-                    exportAudio(context, sourceFolder: app.outputDirectory ?? store.currentProject!.folderPath!, projectName: store.currentProject!.name);
+                    exportAudio(
+                      context,
+                      sourceFolder: app.outputDirectory ?? store.currentProject!.folderPath!,
+                      projectName: store.currentProject!.name,
+                    );
                   }
                 : null,
           ),
@@ -821,7 +825,9 @@ class _ScriptAreaState extends State<ScriptArea> {
             left: 0,
             right: 0,
             top: app.canUndo || app.canRedo ? 54 : 12,
-            child: Center(child: _CurtainCall(count: script.scenes.length, onClose: app.dismissCurtainCall)),
+            child: Center(
+              child: _CurtainCall(count: script.scenes.length, onClose: app.dismissCurtainCall),
+            ),
           ),
         if (sel.isEmpty ? _tipFor(app, player) : null case final tip?)
           Positioned(
@@ -999,7 +1005,10 @@ class _SceneCardState extends State<SceneCard> {
                   const SizedBox(width: 10),
                   for (final (i, sp) in speakers.take(5).indexed) ...[
                     // Plain names (highlight colors off) need a separator.
-                    if (i > 0 && !characterColorsEnabled) Text(' · ', style: TextStyles.ui(t, size: 11, color: t.faint)) else const SizedBox(width: 4),
+                    if (i > 0 && !characterColorsEnabled)
+                      Text(' · ', style: TextStyles.ui(t, size: 11, color: t.faint))
+                    else
+                      const SizedBox(width: 4),
                     NameChip(sp, allSpeakers: app.allSpeakers),
                   ],
                   if (speakers.length > 5)
@@ -1182,7 +1191,8 @@ class _Lines extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (var i = 0; i < merged.length; i++) _row(app, merged[i], ctxFor(i), i == activeRow ? activeLineKey : (currentHitRow == i ? hitKey : null)),
+          for (var i = 0; i < merged.length; i++)
+            _row(app, merged[i], ctxFor(i), i == activeRow ? activeLineKey : (currentHitRow == i ? hitKey : null)),
           if (total > initialLimit)
             Padding(
               padding: const EdgeInsets.fromLTRB(40, 6, 12, 2),
@@ -1454,7 +1464,11 @@ Gradient followSpot(Tokens t) => RadialGradient(
   radius: 0.6,
   // Stretch the circle into a wide oval across the row.
   transform: const _WideOval(),
-  colors: [t.accentSoft, t.accentSoft, t.accentSoft.withValues(alpha: t.accentSoft.a * 0.35)],
+  colors: [
+    t.accentSoft,
+    t.accentSoft,
+    t.accentSoft.withValues(alpha: t.accentSoft.a * 0.35),
+  ],
   stops: const [0, 0.45, 1],
 );
 
@@ -1538,7 +1552,10 @@ class _WrapStampState extends State<WrapStamp> with SingleTickerProviderStateMix
                 final v = Curves.easeOutBack.transform(_in.value);
                 return Opacity(
                   opacity: _in.value,
-                  child: Transform.rotate(angle: -0.08, child: Transform.scale(scale: 1.35 - 0.35 * v, child: child)),
+                  child: Transform.rotate(
+                    angle: -0.08,
+                    child: Transform.scale(scale: 1.35 - 0.35 * v, child: child),
+                  ),
                 );
               },
               child: stamp,
@@ -1602,7 +1619,10 @@ class MarginTip extends StatelessWidget {
                     cursor: SystemMouseCursors.click,
                     child: Padding(
                       padding: const EdgeInsets.only(top: 1, right: 4),
-                      child: Text('Got it', style: TextStyles.ui(t, size: 11.5, weight: FontWeight.w700, color: t.accent)),
+                      child: Text(
+                        'Got it',
+                        style: TextStyles.ui(t, size: 11.5, weight: FontWeight.w700, color: t.accent),
+                      ),
                     ),
                   ),
                 ),
@@ -1743,10 +1763,7 @@ class _LineRowState extends State<LineRow> {
                   onPlay: widget.rc.onPlay,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 120),
-                    child: Text.rich(
-                      key: ValueKey(blocked),
-                      highlightSpan(shownText, blocked ? '' : widget.rc.query, textStyle, t.accentSoft),
-                    ),
+                    child: Text.rich(key: ValueKey(blocked), highlightSpan(shownText, blocked ? '' : widget.rc.query, textStyle, t.accentSoft)),
                   ),
                 ),
               ],
@@ -1907,7 +1924,12 @@ class _SimultaneousRowState extends State<SimultaneousRow> {
                     onTap: () => app.markOverlapVoiceRemoved(n, el, i),
                   ),
                   if (i == 0) ...[
-                    Pill('Unlink', icon: Icons.link_off_rounded, tooltip: 'Split into two separate solo lines', onTap: () => app.splitParserOverlap(n, el)),
+                    Pill(
+                      'Unlink',
+                      icon: Icons.link_off_rounded,
+                      tooltip: 'Split into two separate solo lines',
+                      onTap: () => app.splitParserOverlap(n, el),
+                    ),
                     Pill(
                       'Add line',
                       icon: Icons.add_circle_outline_rounded,
@@ -2022,7 +2044,12 @@ class _ManualPairRowState extends State<ManualPairRow> {
                     fg: t.nameInk,
                     onTap: () => showPopover(
                       ctx,
-                      (_) => EditVoicePopover(sceneNumber: n, element: el, voiceIndex: first ? 0 : 1, manualPair: first ? widget.secondary : widget.primary),
+                      (_) => EditVoicePopover(
+                        sceneNumber: n,
+                        element: el,
+                        voiceIndex: first ? 0 : 1,
+                        manualPair: first ? widget.secondary : widget.primary,
+                      ),
                       width: 320,
                     ),
                   ),
@@ -2035,7 +2062,12 @@ class _ManualPairRowState extends State<ManualPairRow> {
                   onTap: () => app.toggleRemoved(n, el),
                 ),
                 if (first)
-                  Pill('Unlink', icon: Icons.link_off_rounded, tooltip: 'Split into two separate lines', onTap: () => app.breakSimultaneous(n, widget.primary)),
+                  Pill(
+                    'Unlink',
+                    icon: Icons.link_off_rounded,
+                    tooltip: 'Split into two separate lines',
+                    onTap: () => app.breakSimultaneous(n, widget.primary),
+                  ),
                 if (!first)
                   Pill(
                     'Add line',
@@ -2075,7 +2107,11 @@ class _ManualPairRowState extends State<ManualPairRow> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Gutter(checked: selected, onCheck: () => sel.toggle(n, widget.primary.ref), visible: hover || selected || sel.sceneNumber == n && !sel.isEmpty),
+          _Gutter(
+            checked: selected,
+            onCheck: () => sel.toggle(n, widget.primary.ref),
+            visible: hover || selected || sel.sceneNumber == n && !sel.isEmpty,
+          ),
           Expanded(
             child: IntrinsicHeight(
               child: Row(
@@ -2183,7 +2219,12 @@ class _AddedLineRowState extends State<AddedLineRow> {
                     _Playable(
                       onPlay: widget.rc.onPlay,
                       child: Text.rich(
-                        highlightSpan(el.text, widget.rc.query, TextStyles.script(t, italic: !isDialog, color: isDialog ? t.ink : t.ink2), t.accentSoft),
+                        highlightSpan(
+                          el.text,
+                          widget.rc.query,
+                          TextStyles.script(t, italic: !isDialog, color: isDialog ? t.ink : t.ink2),
+                          t.accentSoft,
+                        ),
                       ),
                     ),
                 ],
@@ -2213,7 +2254,9 @@ class _SelectionBar extends StatelessWidget {
     final scene = app.scenes.where((s) => s.number == n).firstOrNull;
     if (scene == null) return const SizedBox.shrink();
     final els = scene.elements.where((e) => selection.refs.contains(e.ref)).toList();
-    final added = (app.userAddedElements[app.addedKey(scene.number)] ?? const <UserAddedElement>[]).where((a) => selection.addedIds.contains(a.id)).toList();
+    final added = (app.userAddedElements[app.addedKey(scene.number)] ?? const <UserAddedElement>[])
+        .where((a) => selection.addedIds.contains(a.id))
+        .toList();
     String kindOf(SceneElement e) => app.correctionFor(scene.number, e)?.correctedKind ?? e.kind;
     final dialogEls = els.where((e) => kindOf(e) == 'dialog').toList();
     final addedDialog = added.where((a) => a.kind == 'dialog').toList();

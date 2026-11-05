@@ -77,6 +77,7 @@ class AppState extends ChangeNotifier {
   bool isFetchingVoices = false;
   Map<String, String> voiceAssignment = {};
   Map<String, String> characterGenderOverrides = {};
+
   /// Voice previews are per cast row ("<characterKey>|<voiceId>"): each
   /// character hears the voice read their own first line.
   String? previewingKey;
@@ -135,6 +136,7 @@ class AppState extends ChangeNotifier {
     }
     notifyListeners();
   }
+
   bool hasStoredOpenAIKey = false;
   String openAIKeyStatus = 'idle'; // idle | checking | valid | invalid
   String? openAIKeyError;
@@ -175,6 +177,7 @@ class AppState extends ChangeNotifier {
       correctLine(sceneNumber, el, kind: speaker == 'Narrator' ? el.kind : 'dialog', speaker: speaker, text: text, removed: removed);
     }
   }
+
   Map<int, String> _renderingFingerprints = {};
   final Set<int> _provisionalFingerprints = {};
   String? backgroundRenderProjectId;
@@ -326,7 +329,8 @@ class AppState extends ChangeNotifier {
     renderFingerprints = Map.of(p.renderFingerprints);
     checkedLines = Set.of(p.checkedLines);
     final pdf = p.pdfPath;
-    if (pdf != null && rebaseEdits(pdfPath: pdf, corrections: corrections, sceneTitleOverrides: sceneTitleOverrides, userAddedElements: userAddedElements)) {
+    if (pdf != null &&
+        rebaseEdits(pdfPath: pdf, corrections: corrections, sceneTitleOverrides: sceneTitleOverrides, userAddedElements: userAddedElements)) {
       dlog('edits re-pointed at the PDF\'s current location (the project folder moved)', LogStyle.info);
     }
     final folder = p.folderPath;
@@ -581,7 +585,9 @@ class AppState extends ChangeNotifier {
         var speaker = el.speaker ?? '';
         if (fix?.correctedSpeaker != null) speaker = fix!.correctedSpeaker!;
         final isNarration = kind != 'dialog' || speaker.isEmpty;
-        final matches = characterKey == narratorKey ? (isNarration && kind == 'stage_direction') : (!isNarration && (speaker == characterKey || (el.overlapCue?.contains(characterKey) ?? false)));
+        final matches = characterKey == narratorKey
+            ? (isNarration && kind == 'stage_direction')
+            : (!isNarration && (speaker == characterKey || (el.overlapCue?.contains(characterKey) ?? false)));
         if (!matches) continue;
         var text = (fix?.correctedText?.isNotEmpty ?? false) ? fix!.correctedText! : el.text;
         text = text.replaceAll(RegExp(r'^\s*\([^)]*\)\s*'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -834,9 +840,8 @@ class AppState extends ChangeNotifier {
   /// new folder "<name> Audio" inside [destination]. Returns the new folder
   /// and how many files were copied.
   static Future<(String, int)> exportAudio({required String sourceFolder, required String projectName, required String destination}) async {
-    final files =
-        Directory(sourceFolder).listSync().whereType<File>().where((f) => f.path.toLowerCase().endsWith('.m4a')).toList()
-          ..sort((a, b) => a.path.compareTo(b.path));
+    final files = Directory(sourceFolder).listSync().whereType<File>().where((f) => f.path.toLowerCase().endsWith('.m4a')).toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
     if (files.isEmpty) throw StateError('No rendered audio to export yet.');
     final safe = projectName.replaceAll(RegExp(r'[/:]'), '-').trim();
     var folder = '$destination/${safe.isEmpty ? 'Table Read' : safe} Audio';
@@ -1161,7 +1166,8 @@ class AppState extends ChangeNotifier {
   /// undoing an edit, or editing a line back, returns the original fingerprint.
   String sceneFingerprint(int n) {
     final pdf = pdfPath ?? '';
-    final corr = corrections.values.where((c) => c.pdfIdentifier == pdf && c.sceneNumber == n).toList()..sort((a, b) => a.storageKey.compareTo(b.storageKey));
+    final corr = corrections.values.where((c) => c.pdfIdentifier == pdf && c.sceneNumber == n).toList()
+      ..sort((a, b) => a.storageKey.compareTo(b.storageKey));
     final added = (userAddedElements[addedKey(n)] ?? const <UserAddedElement>[]).where((a) => a.text.trim().isNotEmpty).toList()
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     // Everyone who speaks in the scene, after corrections, plus the narrator.
@@ -1250,7 +1256,15 @@ class AppState extends ChangeNotifier {
   }
 
   /// Saves an edit from the "Correct this line" popover.
-  void correctLine(int sceneNumber, SceneElement el, {required String kind, String? speaker, String? text, List<String>? overlapTexts, required bool removed}) {
+  void correctLine(
+    int sceneNumber,
+    SceneElement el, {
+    required String kind,
+    String? speaker,
+    String? text,
+    List<String>? overlapTexts,
+    required bool removed,
+  }) {
     final c = _base(sceneNumber, el)..timestamp = DateTime.now();
     c.correctedKind = kind == el.kind ? null : kind;
     if (kind == 'dialog' && speaker != null) {
