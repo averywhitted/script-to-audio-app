@@ -173,6 +173,7 @@ class _Projects extends StatelessWidget {
   /// tapped last opens: others that finish meanwhile, and anything asked for with the download icon, just download.
   Future<void> _open(BuildContext context, Project p) async {
     final store = context.read<PhoneStore>();
+    if (store.phaseOf(p) == DownloadPhase.removing) return; // its files are being taken off the device: not now
     store.wantsOpen = p.id;
     final ok = await store.download(p);
     final stillWanted = store.wantsOpen == p.id;
@@ -211,6 +212,7 @@ class _Projects extends StatelessWidget {
             DownloadPhase.queued => (Icons.schedule_rounded, ahead <= 1 ? 'Waiting for a download to finish.' : 'Waiting behind $ahead downloads.'),
             DownloadPhase.downloading => (Icons.downloading_rounded, 'Downloading… $pct%'),
             DownloadPhase.device => (Icons.download_done_rounded, local > 0 ? 'On this device · ${_size(local)}' : 'On this device'),
+            DownloadPhase.removing => (Icons.cloud_off_rounded, 'Removing the download…'),
           };
           return SafeArea(
             child: Column(
@@ -511,6 +513,7 @@ class _Cover extends StatelessWidget {
         DownloadPhase.queued => 'waiting to download',
         DownloadPhase.downloading => 'downloading',
         DownloadPhase.device => 'on this device',
+        DownloadPhase.removing => 'removing the download',
       },
     ].join(', ');
     return LayoutBuilder(
@@ -646,6 +649,16 @@ class _DownloadBadge extends StatelessWidget {
         ),
       ),
       DownloadPhase.device => ('On this device. Download options', Icon(Icons.download_done_rounded, size: 17, color: t.ok)),
+      // Taking the files off the device: a throbber, so the tap is seen to have registered.
+      DownloadPhase.removing => (
+        'Removing the download',
+        SizedBox(
+          key: const Key('removingThrobber'),
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2.4, color: t.muted),
+        ),
+      ),
     };
     return Semantics(
       button: true,

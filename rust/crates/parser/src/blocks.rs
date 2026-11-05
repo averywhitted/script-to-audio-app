@@ -2,7 +2,7 @@
 //! Port of `_split_raw_block`, `_make_text_block`, `_merge_open_parentheticals` and the cue helpers.
 
 use crate::pystr::{caps_ratio, is_alpha, is_upper, len, lstrip, rstrip, strip};
-use crate::types::{RawBlock, RawDoc, TextBlock, TextSpan};
+use crate::types::{RawBlock, RawDoc, RawLine, TextBlock, TextSpan};
 use regex::Regex;
 use std::sync::LazyLock;
 
@@ -33,15 +33,114 @@ struct RawLn {
 /// `_extract_blocks` after the PDF has been read: every text block of the document, in order.
 pub fn extract_blocks(doc: &RawDoc) -> Vec<TextBlock> {
     let mut out = Vec::new();
+    let bounds = body_margins(doc);
     for (page_num, page) in doc.pages.iter().enumerate() {
         for raw in &page.blocks {
             if raw.r#type != 0 {
                 continue; // images and drawings
             }
-            out.extend(split_raw_block(raw, page_num));
+            for part in strip_margin_marks(raw, bounds) {
+                out.extend(split_raw_block(&part, page_num));
+            }
         }
     }
     out
+}
+
+// Revision marks: asterisks down the side of the page. Port of `_body_margins` / `_strip_margin_marks` (backend/parser.py);
+// see the comment there. A mark is an asterisk (or two or three) alone on a line that lies beyond the body of the script on
+// that side, or the same standing at the end of a line that reaches past it. Page junk: not read, and not allowed to split
+// or widen the text beside it.
+
+static MARK_ONLY_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\*{1,3}$").unwrap());
+static MARK_TRAILING_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s\*{1,3}$").unwrap());
+const MARK_TOLERANCE: f64 = 6.0;
+const MARK_MIN_LINES: usize = 20;
+
+fn raw_line_text(line: &RawLine) -> String {
+    line.spans.iter().map(|s| s.text.as_str()).collect()
+}
+
+/// (left, right) edge of the body: where lines start (10th percentile) and end (90th), leaving out candidate revision marks.
+fn body_margins(doc: &RawDoc) -> Option<(f64, f64)> {
+    let mut starts: Vec<f64> = Vec::new();
+    let mut ends: Vec<f64> = Vec::new();
+    for page in &doc.pages {
+        for block in &page.blocks {
+            if block.r#type != 0 {
+                continue;
+            }
+            for line in &block.lines {
+                let text = raw_line_text(line);
+                let text = strip(&text);
+                if text.is_empty() || MARK_ONLY_RE.is_match(text) || MARK_TRAILING_RE.is_match(text) {
+                    continue;
+                }
+                starts.push(line.bbox[0]);
+                ends.push(line.bbox[2]);
+            }
+        }
+    }
+    if ends.len() < MARK_MIN_LINES {
+        return None;
+    }
+    starts.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    ends.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let n = ends.len();
+    Some((starts[(0.1 * (n - 1) as f64) as usize], ends[(0.9 * (n - 1) as f64) as usize]))
+}
+
+/// The block without its revision marks, as one block or more (none if nothing is left of it). Where a mark between two lines
+/// was dropped, the indent of the line after it is measured again against the line before it, and the block starts afresh if
+/// it is indented past it.
+fn strip_margin_marks(block: &RawBlock, bounds: Option<(f64, f64)>) -> Vec<RawBlock> {
+    let Some((left, right)) = bounds else { return vec![block.clone()] };
+    let mut runs: Vec<Vec<RawLine>> = vec![Vec::new()];
+    let mut changed = false;
+    let mut after_mark = false;
+    for line in &block.lines {
+        let text = raw_line_text(line);
+        let text = strip(&text);
+        let [x0, y0, x1, y1] = line.bbox;
+        if MARK_ONLY_RE.is_match(text) && (x0 > right + MARK_TOLERANCE || x1 < left - MARK_TOLERANCE) {
+            changed = true;
+            after_mark = true;
+            continue; // a mark on its own line
+        }
+        let mut line = line.clone();
+        if MARK_TRAILING_RE.is_match(text) && x1 > right + MARK_TOLERANCE {
+            let old_len = raw_line_text(&line).chars().count();
+            while let Some(last) = line.spans.last_mut() {
+                let t = last.text.trim_end_matches(|c| c == ' ' || c == '\u{a0}' || c == '*').to_string();
+                if t == last.text {
+                    break;
+                }
+                let empty = t.is_empty();
+                last.text = t;
+                if !empty {
+                    break;
+                }
+                line.spans.pop();
+            }
+            let new_len: usize = line.spans.iter().map(|s| s.text.chars().count()).sum();
+            line.bbox = [x0, y0, x0 + (x1 - x0) * new_len as f64 / old_len as f64, y1];
+            changed = true;
+        }
+        if after_mark {
+            if let Some(prev) = runs.last().and_then(|r| r.last()).map(|l| l.bbox) {
+                let size = line.spans.iter().map(|sp| sp.size).fold(0.0, f64::max);
+                if line.bbox[1] - prev[1] > 0.3 * size && line.bbox[0] - prev[0] > 0.25 * size {
+                    runs.push(Vec::new());
+                }
+            }
+        }
+        after_mark = false;
+        runs.last_mut().unwrap().push(line);
+    }
+    if !changed {
+        return vec![block.clone()];
+    }
+    runs.into_iter().filter(|r| !r.is_empty()).map(|lines| RawBlock { r#type: block.r#type, lines }).collect()
 }
 
 /// The whole pre-classification pipeline: extract, then merge parentheticals split across blocks.
@@ -355,7 +454,7 @@ pub fn merge_open_parentheticals(blocks: Vec<TextBlock>) -> Vec<TextBlock> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{RawLine, RawSpan};
+    use crate::types::{RawLine, RawPage, RawSpan};
 
     // Expected values below were taken from backend/parser.py.
 
@@ -444,5 +543,77 @@ mod tests {
         let out = merge_open_parentheticals(vec![tb("(He leaves.", 100.0), tb("Then) more", 112.0), tb("(done)", 124.0)]);
         assert_eq!(out.len(), 3);
         assert!(out.iter().all(|b| !b.is_merged_parenthetical));
+    }
+
+    // Revision marks (mirrors TestRevisionMarks in backend/tests/test_parser.py).
+
+    fn line(x0: f64, y0: f64, x1: f64, text: &str) -> RawLine {
+        RawLine {
+            bbox: [x0, y0, x1, y0 + 14.0],
+            title_text: None,
+            spans: vec![RawSpan { text: text.to_string(), font: "Courier".to_string(), size: 12.0, flags: 0 }],
+        }
+    }
+
+    fn doc_with(block: &RawBlock) -> RawDoc {
+        let body: Vec<RawBlock> = (0..25)
+            .map(|i| RawBlock { r#type: 0, lines: vec![line(72.0, 100.0 + 20.0 * i as f64, 500.0, &format!("line {i} of the body of the script"))] })
+            .collect();
+        RawDoc { pages: vec![RawPage { blocks: body }, RawPage { blocks: vec![block.clone()] }] }
+    }
+
+    fn texts(blocks: &[RawBlock]) -> Vec<Vec<String>> {
+        blocks.iter().map(|b| b.lines.iter().map(raw_line_text).collect()).collect()
+    }
+
+    #[test]
+    fn margin_marks_on_their_own_line_are_dropped_on_either_side() {
+        let right = RawBlock { r#type: 0, lines: vec![line(72.0, 100.0, 400.0, "She leaves."), line(560.0, 100.0, 566.0, "*")] };
+        let b = body_margins(&doc_with(&right));
+        assert_eq!(texts(&strip_margin_marks(&right, b)), vec![vec!["She leaves."]]);
+        let left = RawBlock { r#type: 0, lines: vec![line(30.0, 100.0, 36.0, "*"), line(72.0, 100.0, 400.0, "She leaves.")] };
+        assert_eq!(texts(&strip_margin_marks(&left, b)), vec![vec!["She leaves."]]);
+        let alone = RawBlock { r#type: 0, lines: vec![line(580.0, 100.0, 590.0, "*")] };
+        assert!(strip_margin_marks(&alone, b).is_empty());
+    }
+
+    #[test]
+    fn a_trailing_mark_in_the_margin_is_taken_off_the_line() {
+        let block = RawBlock { r#type: 0, lines: vec![line(72.0, 100.0, 580.0, "He sits down.      *")] };
+        let out = strip_margin_marks(&block, body_margins(&doc_with(&block)));
+        assert_eq!(texts(&out), vec![vec!["He sits down."]]);
+        assert!(out[0].lines[0].bbox[2] < 580.0);
+    }
+
+    #[test]
+    fn asterisks_inside_the_text_are_left_alone() {
+        for (text, x0, x1) in [("*", 280.0, 290.0), ("She *laughs*", 72.0, 200.0), ("* * *", 250.0, 330.0), ("a footnote *", 72.0, 300.0)] {
+            let block = RawBlock { r#type: 0, lines: vec![line(x0, 100.0, x1, text)] };
+            assert_eq!(texts(&strip_margin_marks(&block, body_margins(&doc_with(&block)))), vec![vec![text.to_string()]], "{text}");
+        }
+    }
+
+    #[test]
+    fn a_hidden_indent_splits_the_block_again() {
+        let block = RawBlock {
+            r#type: 0,
+            lines: vec![
+                line(72.0, 300.0, 480.0, "Dialogue goes on and on."),
+                line(560.0, 300.0, 566.0, "*"),
+                line(180.0, 314.0, 236.0, "(to MARA)"),
+                line(560.0, 314.0, 566.0, "*"),
+                line(72.0, 328.0, 480.0, "And carries on after it."),
+            ],
+        };
+        let out = strip_margin_marks(&block, body_margins(&doc_with(&block)));
+        assert_eq!(texts(&out), vec![vec!["Dialogue goes on and on."], vec!["(to MARA)", "And carries on after it."]]);
+    }
+
+    #[test]
+    fn too_small_a_document_is_left_alone() {
+        let block = RawBlock { r#type: 0, lines: vec![line(72.0, 100.0, 400.0, "She leaves."), line(560.0, 100.0, 566.0, "*")] };
+        let doc = RawDoc { pages: vec![RawPage { blocks: vec![block.clone()] }] };
+        assert!(body_margins(&doc).is_none());
+        assert_eq!(strip_margin_marks(&block, None).len(), 1);
     }
 }

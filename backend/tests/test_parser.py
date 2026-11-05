@@ -716,3 +716,72 @@ def test_continued_name_line_is_split_off_and_its_marker_kept_silent():
     assert p._continued_cue_name("ADA (continued)") == "ADA"
     assert p._continued_cue_name("ADA (laughing)") is None       # a direction, handled elsewhere
     assert p._continued_cue_name("Ada said (cont.)") is None     # not a name line
+
+
+# ---------------------------------------------------------------------------
+# Revision marks: asterisks down the side of the page are junk
+# ---------------------------------------------------------------------------
+
+
+def _raw_line(x0, y0, x1, text, size=12.0):
+    return {"bbox": (x0, y0, x1, y0 + 14), "spans": [{"text": text, "font": "Courier", "size": size, "flags": 0}]}
+
+
+def _pages_with_body(extra_blocks=()):
+    """25 ordinary lines (x 72..500) to measure the body by, plus whatever block is under test."""
+    body = [{"type": 0, "lines": [_raw_line(72, 100 + 20 * i, 500, f"line {i} of the body of the script")]} for i in range(25)]
+    return [body, list(extra_blocks)]
+
+
+class TestRevisionMarks:
+    def _strip(self, block, pages=None):
+        pages = pages or _pages_with_body([block])
+        return p._strip_margin_marks(block, p._body_margins(pages))
+
+    def test_a_mark_on_its_own_line_in_the_right_margin_is_dropped(self):
+        block = {"type": 0, "lines": [_raw_line(72, 100, 400, "She leaves."), _raw_line(560, 100, 566, "*")]}
+        (out,) = self._strip(block)
+        assert [l["spans"][0]["text"] for l in out["lines"]] == ["She leaves."]
+
+    def test_a_mark_in_the_left_margin_is_dropped_too(self):
+        block = {"type": 0, "lines": [_raw_line(30, 100, 36, "*"), _raw_line(72, 100, 400, "She leaves.")]}
+        (out,) = self._strip(block)
+        assert [l["spans"][0]["text"] for l in out["lines"]] == ["She leaves."]
+
+    def test_a_block_that_is_only_a_mark_disappears(self):
+        assert self._strip({"type": 0, "lines": [_raw_line(580, 100, 590, "*")]}) == []
+
+    def test_a_mark_at_the_end_of_a_line_that_reaches_into_the_margin_is_taken_off(self):
+        block = {"type": 0, "lines": [_raw_line(72, 100, 580, "He sits down.      *")]}
+        (out,) = self._strip(block)
+        assert "".join(s["text"] for s in out["lines"][0]["spans"]) == "He sits down."
+        assert out["lines"][0]["bbox"][2] < 580  # no longer reaches into the margin
+
+    def test_asterisks_in_the_text_are_left_alone(self):
+        for text, x0, x1 in [("*", 280, 290), ("She *laughs*", 72, 200), ("* * *", 250, 330), ("a footnote *", 72, 300)]:
+            block = {"type": 0, "lines": [_raw_line(x0, 100, x1, text)]}
+            assert self._strip(block) == [block]
+
+    def test_a_mark_hid_an_indent_so_the_block_is_split_again_there(self):
+        # The extractor put the (indented) parenthetical in the same block as the line above because the mark between them
+        # is further out than it is: with the marks gone it starts a block of its own again.
+        block = {
+            "type": 0,
+            "lines": [
+                _raw_line(72, 300, 480, "Dialogue goes on and on."),
+                _raw_line(560, 300, 566, "*"),
+                _raw_line(180, 314, 236, "(to MARA)"),
+                _raw_line(560, 314, 566, "*"),
+                _raw_line(72, 328, 480, "And carries on after it."),
+            ],
+        }
+        out = self._strip(block)
+        assert [[l["spans"][0]["text"] for l in b["lines"]] for b in out] == [
+            ["Dialogue goes on and on."],
+            ["(to MARA)", "And carries on after it."],
+        ]
+
+    def test_too_small_a_document_to_measure_is_left_alone(self):
+        block = {"type": 0, "lines": [_raw_line(72, 100, 400, "She leaves."), _raw_line(560, 100, 566, "*")]}
+        assert p._body_margins([[block]]) is None
+        assert p._strip_margin_marks(block, None) == [block]

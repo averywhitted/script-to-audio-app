@@ -2,10 +2,11 @@
 
 ## Resume here
 
-_Updated 2026-11-05 16:10 EST · branch `ipados-port` @ `0df54a1` (pushed; round = `a88d2b1`, then formatting-only `0df54a1`) · working tree: clean (two ephemeral `sidetrack-*.md` stay untracked, never commit them)_
+_Updated 2026-11-05 16:45 EST · branch `ipados-port` · working tree: clean after the commit of the Remove Download throbber + margin-asterisk parser change (pushed; `git log -3`). iPhone and Mac (Table Read Preview) rebuilt and installed with it; `pytest backend/tests` 123 pass (two ephemeral `sidetrack-*.md` stay untracked, never commit them)_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Mac app = Flutter UI (`app/`) + Python worker for voices (Rust core parses on the phone / optionally Mac); iPhone/iPad = one universal Flutter app (`app/lib/phone/`) that rehearses on device (no voice rendering; the Mac renders). Older SwiftUI app still in `Sources/`.
-**Current goal:** iPhone/iPad rehearsal polish. Round after the iPhone catch-up (Nov 5, two History entries): Avery's notes on downloads, highlight, outline, voice scene titles are done and installed on the iPhone and the Mac (Table Read Preview); the iPad install is next (Avery plugs it in).
+**Current goal (latest, Nov 5 evening):** throbber on Remove Download (installed on the iPhone), margin asterisks (playwright revision marks) are page junk in both parsers (Python + Rust, identical on 35 PDFs); iPhone + Mac rebuilt with it; iPad install is next when Avery plugs it in.
+**Earlier goal:** iPhone/iPad rehearsal polish. Round after the iPhone catch-up (Nov 5, two History entries): Avery's notes on downloads, highlight, outline, voice scene titles are done and installed on the iPhone and the Mac (Table Read Preview); the iPad install is next (Avery plugs it in).
 
 **Where things stand:**
 - `flutter test` = 131 pass / 3 skipped; backend `pytest backend/tests/test_pipeline.py` = 54 pass. Nothing from the last two rounds has been tried on a real device by Avery yet (iPhone build installed; iPad not).
@@ -13,6 +14,7 @@ _Updated 2026-11-05 16:10 EST · branch `ipados-port` @ `0df54a1` (pushed; round
 - Voice: narrator now says the script's own heading, plus "part N" for split scenes (`spoken_scene_title` in `backend/audio_pipeline.py`); the parser's placeholder heading "Scene 1" is never read. Needs a listen on a real render. Scenes already rendered keep their old audio until re-rendered.
 
 **Next steps:**
+0. (done) The throbber + parser round is committed, pushed, and installed on iPhone and Mac. The iOS Rust dylib was rebuilt by hand (script `build_ios_native.sh` fails on macOS tar `--one-top-level` when its PDFium download folder is missing): `cargo rustc --manifest-path rust/Cargo.toml --offline --release --target aarch64-apple-ios -p table-read-ffi --lib --crate-type cdylib` with `RUSTFLAGS="-C link-arg=-Wl,-install_name,@rpath/libtable_read_ffi.dylib" IPHONEOS_DEPLOYMENT_TARGET=15.0`, copy to `app/ios/native/iphoneos/` (gitignored).
 1. Install on the iPad: `cd app && flutter build ios --config-only --release`, then `xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -destination 'id=00008101-0018551A10E1401E' -allowProvisioningUpdates -allowProvisioningDeviceRegistration build`, then `xcrun devicectl device install app --device 00008101-0018551A10E1401E <DerivedData>/Build/Products/Release-iphoneos/Runner.app` (DerivedData `Runner-gaqvprvjbjsycjegltdoeiifkgpk`). Check the PDF page/continuous behaviour first.
 2. Avery's device test of downloads (queue, icon, remove download, nothing opens by itself), playhead/scrub, floating menu; fix what breaks.
 3. Open issues for the new features (download queue/status icon, NEW + progress, playhead follows page, floating menu); comment on and close #113-#121; PR to `main` when Avery wants it.
@@ -34,6 +36,17 @@ _Updated 2026-11-05 16:10 EST · branch `ipados-port` @ `0df54a1` (pushed; round
 
 ## History
 <!-- newest first -->
+
+### 2026-11-05 evening — Remove Download throbber; margin asterisks are page junk in the parser
+**Asked:** Remove Download gave no sign the tap registered: add a throbber, update the iPhone. Parser: asterisks down the side marking the playwright's new text must be junk, not parsed or rendered.
+**Done:**
+- `DownloadPhase.removing` + `PhoneStore.removing`: the cover's badge shows a spinner from the tap until the files are off (then flips to cloud); covers ignore taps while removing; test in `ios_update_test.dart`. Installed on the iPhone.
+- Parser (`backend/parser.py` `_body_margins`, `_strip_margin_marks`, wired into `_extract_blocks`; Rust port in `rust/crates/parser/src/blocks.rs`): a line that is only `*`/`**`/`***` beyond the body edge (body = 10th pct of line starts / 90th pct of line ends in the document, +6 pt) is dropped; a trailing ` *` on a line reaching into the margin is cut off; where a mark between two lines hid an indent the block is split again. Interior asterisks ("*laughs*", centred "*", "* * *") are untouched. Corpus effect: Stereophonic p.223 lone `*` stage direction gone (reference JSON regenerated, only that diff); Cracked Open p.14 asterisk no longer splices into a stage direction.
+- `scripts/synth_generate.py`: `marks` style option (+4 scripts `revision_*`, margins drawn right/left/both); baseline saved (`--save`, nothing got worse: generated 99.4%, real 98.5%). `scripts/rust_parser_diff.py` now strips marks like `_extract_blocks`; Python and Rust identical on all 35 PDFs, all six stages.
+- Tests: `TestRevisionMarks` (7) in `backend/tests/test_parser.py`, 5 Rust unit tests in `blocks.rs`.
+**Decisions:** line-level geometry only (the Rust extractor has no span boxes), document-learned edges rather than page-size constants (parser north star). Only two real examples exist in the corpus (both lone-asterisk lines); a real revised script with marks on every page would be the proper exam.
+**State:** committed and pushed; installed on the iPhone and the Mac; `pytest backend/tests` 123 pass, `flutter test` phone suites pass. iOS Rust dylib rebuilt by hand, see Next steps 0.
+**Next:** iPad install; listen to a render with the scene-title change; try the throbber and a revised script.
 
 ### 2026-11-05 — Download fixes, highlight only while playing, outline right on iPad, voice stops saying our scene numbers
 **Asked:** remove the spine progress while downloading; Remove Download must update the status icon at once and not be offered on cloud projects; a finished download must not open a project unless that cover was tapped (and with several downloads never open the first finisher); do not highlight the active line until Play; outline on the right halfway down on iPad too; the voice must not say "Scene 12, scene 3 part 2"; update the iPhone and Mac apps, then commit and push everything.

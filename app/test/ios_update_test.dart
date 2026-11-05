@@ -215,6 +215,47 @@ void main() {
       expect(find.text('Remove Download'), findsOneWidget);
     });
 
+    testWidgets('Remove Download answers the tap with a throbber on the cover, which turns into the cloud when it is done', (tester) async {
+      final cloud = FakeCloud();
+      final f = File('$earnest/Scene_01_Scene.m4a')..writeAsBytesSync(List.filled(300 * 1024, 1));
+      cloud.have.add(f.path);
+      final s = PhoneStore(lister: cloud.list, downloader: cloud.fetch)..folder = tmp.path;
+      await s.refresh();
+      final p = s.projects.firstWhere((p) => p.folderPath == earnest);
+      expect(s.phaseOf(p), DownloadPhase.device);
+      final evicting = Completer<Map<String, Object>>();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('tableread/folder'), (
+        call,
+      ) async {
+        if (call.method == 'evict') {
+          final r = await evicting.future;
+          cloud.have.remove(f.path);
+          return r;
+        }
+        return null;
+      });
+      addTearDown(
+        () =>
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('tableread/folder'), null),
+      );
+      _phone(tester);
+      await tester.pumpWidget(PhoneApp(store: s, themeMode: ThemeMode.light));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      expect(find.byKey(const Key('removingThrobber')), findsNothing);
+      await tester.tap(find.byKey(Key('download_${p.id}')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('removeDownloadHere')));
+      await tester.pump(); // the very next frame
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byKey(const Key('removingThrobber')), findsOneWidget); // acknowledged
+      expect(s.phaseOf(p), DownloadPhase.removing);
+      evicting.complete({'freed': 300 * 1024, 'files': 1, 'kept': 0});
+      await tester.runAsync(_settle);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('removingThrobber')), findsNothing);
+      expect(s.phaseOf(p), DownloadPhase.cloud);
+    });
+
     test('Remove Download shows in the status at once, even when iCloud still says the files are here', () async {
       final cloud = FakeCloud();
       final files = _audioFor(1);

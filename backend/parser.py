@@ -460,6 +460,7 @@ def _extract_blocks(pdf_path: str) -> List[TextBlock]:
         return []
 
     result: List[TextBlock] = []
+    pages: List[List[dict]] = []
     with fitz.open(pdf_path) as doc:
         page_count = len(doc)
         for page_num, page in enumerate(doc):
@@ -468,13 +469,115 @@ def _extract_blocks(pdf_path: str) -> List[TextBlock]:
             # Default "dict" flags minus image extraction: images are skipped
             # below anyway, and extracting them made some scripts take over a
             # minute to parse (Stereophonic: 73 s). Text output is identical.
-            raw_blocks = page.get_text(
-                "dict", flags=fitz.TEXTFLAGS_DICT & ~fitz.TEXT_PRESERVE_IMAGES)["blocks"]
-            for raw_block in raw_blocks:
-                if raw_block["type"] != 0:
-                    continue  # skip image/drawing blocks
-                result.extend(_split_raw_block(raw_block, page_num))
+            pages.append(page.get_text(
+                "dict", flags=fitz.TEXTFLAGS_DICT & ~fitz.TEXT_PRESERVE_IMAGES)["blocks"])
+    bounds = _body_margins(pages)
+    for page_num, raw_blocks in enumerate(pages):
+        for raw_block in raw_blocks:
+            if raw_block["type"] != 0:
+                continue  # skip image/drawing blocks
+            for part in _strip_margin_marks(raw_block, bounds):
+                result.extend(_split_raw_block(part, page_num))
     return result
+
+
+# ---------------------------------------------------------------------------
+# Revision marks: asterisks down the side of the page
+# ---------------------------------------------------------------------------
+#
+# A playwright's revised pages carry an asterisk in the margin beside every line that is new. It is page junk, not
+# script: it is neither read nor allowed to split or widen the text it sits beside. A mark is an asterisk (or two or
+# three) on a line of its own that lies beyond the body of the script on that side, or the same standing at the end of
+# a line that reaches past it. The body edges are learned from the document itself (the 10th percentile of where lines
+# start, the 90th of where they end), so no page size or margin is assumed. An asterisk inside the text (a centred
+# "*" scene break, "*laughs*") is never beyond the body and is left alone.
+# Ported to Rust in rust/crates/parser/src/blocks.rs (strip_margin_marks); keep the two in step.
+
+_MARK_ONLY_RE = re.compile(r"^\*{1,3}$")
+_MARK_TRAILING_RE = re.compile(r"\s\*{1,3}$")
+_MARK_TOLERANCE = 6.0    # pt beyond the body edge before an asterisk counts as in the margin
+_MARK_MIN_LINES = 20     # fewer lines than this and there is no body to measure
+
+
+def _line_text(line: dict) -> str:
+    return "".join(s["text"] for s in line["spans"])
+
+
+def _body_margins(pages: List[List[dict]]) -> Optional[Tuple[float, float]]:
+    """(left, right) edge of the body: where lines start (10th percentile) and end (90th), leaving out candidate
+    revision marks. None for a document too small to measure."""
+    starts: List[float] = []
+    ends: List[float] = []
+    for blocks in pages:
+        for block in blocks:
+            if block["type"] != 0:
+                continue
+            for line in block["lines"]:
+                text = _line_text(line).strip()
+                if not text or _MARK_ONLY_RE.match(text) or _MARK_TRAILING_RE.search(text):
+                    continue
+                starts.append(line["bbox"][0])
+                ends.append(line["bbox"][2])
+    if len(ends) < _MARK_MIN_LINES:
+        return None
+    starts.sort()
+    ends.sort()
+    n = len(ends)
+    return starts[int(0.1 * (n - 1))], ends[int(0.9 * (n - 1))]
+
+
+def _strip_margin_marks(raw_block: dict, bounds: Optional[Tuple[float, float]]) -> List[dict]:
+    """The block without its revision marks, as one block or more (none if nothing is left of it).
+
+    A mark sitting between two lines hid the indent of the one after it (the extractor measured it against the mark,
+    which is further out), so where a mark was dropped the indent is measured again against the line before it, and
+    the block starts afresh if the next line is indented past it (the rule that makes blocks in the first place)."""
+    if bounds is None:
+        return [raw_block]
+    left, right = bounds
+    runs: List[List[dict]] = [[]]
+    changed = False
+    after_mark = False
+    for line in raw_block["lines"]:
+        text = _line_text(line).strip()
+        x0, y0, x1, y1 = line["bbox"]
+        if _MARK_ONLY_RE.match(text) and (x0 > right + _MARK_TOLERANCE or x1 < left - _MARK_TOLERANCE):
+            changed = True
+            after_mark = True
+            continue  # a mark on its own line
+        if _MARK_TRAILING_RE.search(text) and x1 > right + _MARK_TOLERANCE:
+            # A mark at the end of a line that reaches into the margin: take it off, and with it its share of the width.
+            old_len = len(_line_text(line))
+            spans = [dict(s) for s in line["spans"]]
+            while spans:
+                t = spans[-1]["text"].rstrip(" \u00a0*")
+                if t == spans[-1]["text"]:
+                    break
+                spans[-1]["text"] = t
+                if t:
+                    break
+                spans.pop()
+            new_len = sum(len(s["text"]) for s in spans)
+            line = dict(line)
+            line["spans"] = spans
+            line["bbox"] = (x0, y0, x0 + (x1 - x0) * new_len / old_len, y1)
+            changed = True
+        if after_mark and runs[-1]:
+            prev = runs[-1][-1]["bbox"]
+            size = max((sp["size"] for sp in line["spans"]), default=0.0)
+            if line["bbox"][1] - prev[1] > 0.3 * size and line["bbox"][0] - prev[0] > 0.25 * size:
+                runs.append([])
+        after_mark = False
+        runs[-1].append(line)
+    if not changed:
+        return [raw_block]
+    out = []
+    for run in runs:
+        if run:
+            block = dict(raw_block)
+            block["lines"] = run
+            out.append(block)
+    return out
 
 
 def _split_raw_block(raw_block: dict, page_num: int) -> List[TextBlock]:

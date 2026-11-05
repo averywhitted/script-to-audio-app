@@ -226,6 +226,9 @@ class Style:
     sd_style: str = ""
     sd_x: float = 0.0            # set per family below
     columns: int = 1
+    # Revision marks: an asterisk in the margin beside some of the lines (a playwright's new text), "right",
+    # "left" or "both". Page junk: the parser must neither read them nor let them change the text beside them.
+    marks: str = ""
 
 
 @dataclass
@@ -269,6 +272,8 @@ class Typesetter:
             self.col_lefts = [0.0]
             self.colw = pw
         self.lay = self._layout()
+        # Marks are decided by their own random stream, so the same seed gives the same script with or without them.
+        self.mark_rng = random.Random(f"marks:{content.title}:{style.marks}")
 
     # -- geometry -------------------------------------------------------------
     def _layout(self) -> Layout:
@@ -355,7 +360,22 @@ class Typesetter:
         cx = self.col_lefts[self.col] + x
         self.page.insert_text((cx * s, self.y * s), text, fontname=font, fontsize=self.size_now * s)
         self._record(unit, text)
+        self._revision_mark(unit)
         self.y += self.lh
+
+    def _revision_mark(self, unit: dict) -> None:
+        """An asterisk in the margin beside this line, on about one line in four of the script's own text."""
+        if not self.st.marks or unit["kind"] not in ("dialog", "stage_direction", "parenthetical"):
+            return
+        if self.mark_rng.random() >= 0.25:
+            return
+        pw = self.st.page[0]
+        sides = ["right", "left"] if self.st.marks == "both" else [self.st.marks]
+        side = sides[self.mark_rng.randrange(len(sides))]
+        x = pw - 36 if side == "right" else 30
+        s = self.st.scale
+        self.page.insert_text((x * s, self.y * s), "*", fontname=self.f_reg, fontsize=self.st.size * s)
+        self._record(self._unit("page_furniture"), "*")
 
     def _unit(self, kind: str, speaker: str | None = None) -> dict:
         u = {"id": len(self.units), "kind": kind, "speaker": speaker, "text": "", "pages": set()}
@@ -561,6 +581,11 @@ def standard_styles() -> list[tuple[str, Style]]:
         ("unseen_sans", Style("stage_left", sd_style="sans", sd_x=72)),
         ("unseen_bold_centered", Style("stage_centered", sd_style="bold", sd_x=72)),
         ("inline_name_courier", Style("inline_name", font="courier", sd_x=72)),
+        # Revision marks down the side: junk, whichever side and whatever the page.
+        ("revision_right_screenplay", Style("screenplay", font="courier", marks="right")),
+        ("revision_right_left_aligned", Style("stage_left", italic_sd=True, sd_x=108, marks="right")),
+        ("revision_both_centered", Style("stage_centered", paren_sd=True, sd_x=250, marks="both")),
+        ("revision_left_scaled", Style("inline_name", scale=big, italic_sd=True, paren_sd=True, marks="left")),
     ]
 
 

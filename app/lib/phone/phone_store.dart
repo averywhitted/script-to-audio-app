@@ -61,8 +61,12 @@ class PhoneStore extends ChangeNotifier {
   final Set<String> _cancelled = {};
   bool _pumping = false;
 
+  /// Project ids whose downloaded files are being taken off the device right now (the cover shows a throbber).
+  final Set<String> removing = {};
+
   /// Where a project is as far as this device goes.
   DownloadPhase phaseOf(Project p) {
+    if (removing.contains(p.id)) return DownloadPhase.removing;
     if (downloading.containsKey(p.id)) return DownloadPhase.downloading;
     if (queue.contains(p.id)) return DownloadPhase.queued;
     return (onDevice[p.id] ?? !folderAccess) ? DownloadPhase.device : DownloadPhase.cloud;
@@ -372,21 +376,27 @@ class PhoneStore extends ChangeNotifier {
   /// is opened. Returns what happened, or null if it failed ([error] says why).
   Future<RemovedDownload?> removeDownload(Project p) async {
     final folder = p.folderPath;
-    if (folder == null) return null;
+    if (folder == null || removing.contains(p.id)) return null;
+    // Acknowledge the tap at once: the cover shows a throbber until the files are gone.
+    removing.add(p.id);
+    notifyListeners();
     try {
       final r = folderAccess ? await FolderAccess.evict(folder) : const RemovedDownload(freed: 0, files: 0, kept: 0);
       if (r.files > 0) {
         // Say so now: the icon should not wait for iCloud to catch up.
         _evictedAt[p.id] = DateTime.now();
         onDevice[p.id] = false;
-        notifyListeners();
       }
+      removing.remove(p.id);
+      notifyListeners();
       await refresh();
       return r;
     } catch (e) {
       error = 'Couldn’t remove the download of “${p.name}”: $e';
-      notifyListeners();
       return null;
+    } finally {
+      removing.remove(p.id);
+      notifyListeners();
     }
   }
 
@@ -468,4 +478,4 @@ class PhoneStore extends ChangeNotifier {
 }
 
 /// Where a project is on this device.
-enum DownloadPhase { cloud, queued, downloading, device }
+enum DownloadPhase { cloud, queued, downloading, device, removing }

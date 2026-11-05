@@ -35,22 +35,20 @@ CACHE = ROOT / "rust" / "target" / "parity"
 LIB = os.environ.get("PDFIUM_LIB", str(ROOT / ".venv/lib/python3.14/site-packages/pypdfium2_raw/libpdfium.dylib"))
 
 
-def py_text_blocks(doc: dict) -> list:
-    blocks = []
-    for page_num, page in enumerate(doc["pages"]):
-        for raw in page["blocks"]:
-            if raw.get("type", 0) == 0:
-                blocks.extend(P._split_raw_block(raw, page_num))
-    return [dataclasses.asdict(b) for b in P._merge_open_parentheticals(blocks)]
-
-
 def _py_blocks(doc: dict) -> list:
+    """What `_extract_blocks` does after the PDF has been read: margin marks off, then split into text blocks."""
     blocks = []
+    bounds = P._body_margins([page["blocks"] for page in doc["pages"]])
     for page_num, page in enumerate(doc["pages"]):
         for raw in page["blocks"]:
             if raw.get("type", 0) == 0:
-                blocks.extend(P._split_raw_block(raw, page_num))
+                for part in P._strip_margin_marks(raw, bounds):
+                    blocks.extend(P._split_raw_block(part, page_num))
     return P._merge_open_parentheticals(blocks)
+
+
+def py_text_blocks(doc: dict) -> list:
+    return [dataclasses.asdict(b) for b in _py_blocks(doc)]
 
 
 def py_doc_model(doc: dict) -> dict:
