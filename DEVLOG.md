@@ -5,7 +5,8 @@
 _Updated 2026-11-05 16:45 EST · branch `ipados-port` · working tree: clean after the commit of the Remove Download throbber + margin-asterisk parser change (pushed; `git log -3`). iPhone and Mac (Table Read Preview) rebuilt and installed with it; `pytest backend/tests` 123 pass (two ephemeral `sidetrack-*.md` stay untracked, never commit them)_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Mac app = Flutter UI (`app/`) + Python worker for voices (Rust core parses on the phone / optionally Mac); iPhone/iPad = one universal Flutter app (`app/lib/phone/`) that rehearses on device (no voice rendering; the Mac renders). Older SwiftUI app still in `Sources/`.
-**Current goal (latest, Nov 5 evening):** throbber on Remove Download (installed on the iPhone), margin asterisks (playwright revision marks) are page junk in both parsers (Python + Rust, identical on 35 PDFs); iPhone + Mac rebuilt with it; iPad install is next when Avery plugs it in.
+**Latest (Nov 5 night):** Mac app keeps the parse (script.json) and no longer re-reads the PDF on open; new Re-parse button in the Mac tool bar (after Export). iPad has the full iPhone build (installed, untested). Mac app rebuilt.
+**Previous goal (Nov 5 evening):** throbber on Remove Download (installed on the iPhone), margin asterisks (playwright revision marks) are page junk in both parsers (Python + Rust, identical on 35 PDFs); iPhone + Mac rebuilt with it; (iPad install done at night.)
 **Earlier goal:** iPhone/iPad rehearsal polish. Round after the iPhone catch-up (Nov 5, two History entries): Avery's notes on downloads, highlight, outline, voice scene titles are done and installed on the iPhone and the Mac (Table Read Preview); the iPad install is next (Avery plugs it in).
 
 **Where things stand:**
@@ -15,7 +16,7 @@ _Updated 2026-11-05 16:45 EST · branch `ipados-port` · working tree: clean aft
 
 **Next steps:**
 0. (done) The throbber + parser round is committed, pushed, and installed on iPhone and Mac. The iOS Rust dylib was rebuilt by hand (script `build_ios_native.sh` fails on macOS tar `--one-top-level` when its PDFium download folder is missing): `cargo rustc --manifest-path rust/Cargo.toml --offline --release --target aarch64-apple-ios -p table-read-ffi --lib --crate-type cdylib` with `RUSTFLAGS="-C link-arg=-Wl,-install_name,@rpath/libtable_read_ffi.dylib" IPHONEOS_DEPLOYMENT_TARGET=15.0`, copy to `app/ios/native/iphoneos/` (gitignored).
-1. Install on the iPad: `cd app && flutter build ios --config-only --release`, then `xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -destination 'id=00008101-0018551A10E1401E' -allowProvisioningUpdates -allowProvisioningDeviceRegistration build`, then `xcrun devicectl device install app --device 00008101-0018551A10E1401E <DerivedData>/Build/Products/Release-iphoneos/Runner.app` (DerivedData `Runner-gaqvprvjbjsycjegltdoeiifkgpk`). Check the PDF page/continuous behaviour first.
+1. (iPad installed Nov 5 night.) Check the iPad: PDF page/continuous behaviour first. Install command was: `cd app && flutter build ios --config-only --release`, then `xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -destination 'id=00008101-0018551A10E1401E' -allowProvisioningUpdates -allowProvisioningDeviceRegistration build`, then `xcrun devicectl device install app --device 00008101-0018551A10E1401E <DerivedData>/Build/Products/Release-iphoneos/Runner.app` (DerivedData `Runner-gaqvprvjbjsycjegltdoeiifkgpk`). Check the PDF page/continuous behaviour first.
 2. Avery's device test of downloads (queue, icon, remove download, nothing opens by itself), playhead/scrub, floating menu; fix what breaks.
 3. Open issues for the new features (download queue/status icon, NEW + progress, playhead follows page, floating menu); comment on and close #113-#121; PR to `main` when Avery wants it.
 4. Script-view Pencil markup design (open question from round 3, still unanswered).
@@ -36,6 +37,16 @@ _Updated 2026-11-05 16:45 EST · branch `ipados-port` · working tree: clean aft
 
 ## History
 <!-- newest first -->
+
+### 2026-11-05 night — Mac keeps the parse; Re-parse button; iPad installed
+**Asked:** The Mac app re-parses the script every time a project is opened though the script does not change: keep the original parse, give a Re-parse option in the top bar near Cast / Render / Export. iPad plugged in: install there.
+**Done:**
+- `AppState.loadFromProject` now uses `loadSavedParse(folder, pdf)` (new, `services/project_files.dart`): the saved `script.json` is used when it was written for this PDF's file name, has scenes, and the PDF is not newer than it (+2 s); otherwise it parses as before (and saves script.json, as always). `_useSavedParse` does the post-parse steps. `AppState.reparse()` + a `Re-parse` ToolButton after Export in `ui/dashboard.dart` `_ToolBar` (disabled while parsing or rendering); no confirm dialog (corrections are keyed by line text and kept).
+- Tests: `test/saved_parse_test.dart` (5); `screens_test` goldens re-recorded (toolbar gained a button). Full `flutter test` 140 pass.
+- iPad: built Release and installed (UDID 00008101-0018551A10E1401E), same code as the iPhone.
+**Decisions:** staleness = PDF mtime newer than script.json (replaced PDF => parse again automatically); a moved/copied project can trigger one harmless re-read. No parser-version stamp in script.json yet, so after a parser improvement existing projects keep their old parse until Re-parse (ADR 0003 "newer parser wins" is not enforced on the Mac any more).
+**State:** committed and pushed; Mac app rebuilt and installed; iPad not tried by Avery.
+**Next:** Resume block.
 
 ### 2026-11-05 evening — Remove Download throbber; margin asterisks are page junk in the parser
 **Asked:** Remove Download gave no sign the tap registered: add a throbber, update the iPhone. Parser: asterisks down the side marking the playwright's new text must be junk, not parsed or rendered.

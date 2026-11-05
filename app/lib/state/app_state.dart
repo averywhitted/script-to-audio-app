@@ -337,7 +337,39 @@ class AppState extends ChangeNotifier {
     // In iCloud Drive, fetch anything this Mac has offloaded before it's needed.
     if (folder != null) NativePlatform.downloadFolder(folder);
     castPending = p.voiceAssignment.isEmpty && !settings.getBool('castConfirmed.${p.id}');
-    if (pdf != null) importPDF(pdf);
+    if (pdf != null) {
+      // The script does not change when a project is opened: keep the parse it was given (script.json) and read the PDF
+      // again only when there is none, or the PDF was replaced, or the user asks (Re-parse).
+      final saved = folder == null ? null : loadSavedParse(folder, pdf);
+      if (saved != null) {
+        _useSavedParse(saved, pdf);
+      } else {
+        importPDF(pdf);
+      }
+    }
+  }
+
+  void _useSavedParse(ScriptSummary saved, String path) {
+    dlog('opened with the saved parse of ${path.split('/').last} · ${saved.sceneCount} scenes, ${saved.lineCount} lines', LogStyle.info);
+    pdfPath = path;
+    outputDirectory = currentProjectFolder;
+    sceneFileInfo = {};
+    sceneCueFiles = {};
+    errorMessage = null;
+    script = saved;
+    selectedScenes = saved.scenes.map((s) => s.number).toSet();
+    checkRenderedScenes();
+    persistProject();
+    fetchVoices();
+    notifyListeners();
+  }
+
+  /// Reads the PDF again and keeps the new parse (the Re-parse button): for when the PDF or the parser has changed.
+  Future<void> reparse() async {
+    final path = pdfPath;
+    if (path == null || isParsing || isGenerating) return;
+    dlog('re-parsing on request', LogStyle.info);
+    await importPDF(path);
   }
 
   void resetForNewProject() {

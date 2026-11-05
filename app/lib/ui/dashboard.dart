@@ -492,7 +492,7 @@ class _WorkspaceHeader extends StatelessWidget {
   }
 }
 
-/// The tool palette under the title bar: Cast, Render, then search.
+/// The tool palette under the title bar: Cast, Render, Export, Re-parse, then search.
 class _ToolBar extends StatelessWidget {
   const _ToolBar({required this.searchFocus});
   final FocusNode searchFocus;
@@ -545,6 +545,17 @@ class _ToolBar extends StatelessWidget {
                     );
                   }
                 : null,
+          ),
+          const SizedBox(width: 6),
+          ToolButton(
+            icon: Icons.refresh_rounded,
+            label: 'Re-parse',
+            tooltip: app.isParsing
+                ? 'Reading the PDF…'
+                : app.isGenerating
+                ? 'Not while a render is running'
+                : 'Read the PDF again. The script is kept from the first read; use this when the PDF or the parser has changed',
+            onTap: app.script == null || app.isParsing || app.isGenerating ? null : app.reparse,
           ),
           Container(width: 1, height: 20, margin: const EdgeInsets.symmetric(horizontal: 12), color: t.rule),
           _SearchField(focus: searchFocus),

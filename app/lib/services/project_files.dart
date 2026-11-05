@@ -50,6 +50,23 @@ ScriptSummary? loadScriptSnapshot(String folder) {
   }
 }
 
+/// The parse kept with the project (script.json), if it is still a parse of [pdfPath]: written for that PDF's file name, and
+/// the PDF has not been replaced since (a PDF newer than the saved parse by more than a couple of seconds counts as
+/// replaced). Opening a project uses this instead of reading the PDF again; Re-parse makes a fresh one.
+ScriptSummary? loadSavedParse(String folder, String pdfPath) {
+  try {
+    final file = File('$folder/$scriptSnapshotFile');
+    final j = jsonDecode(file.readAsStringSync()) as Map;
+    if (j['pdfFilename'] != pdfPath.split('/').last) return null;
+    final pdf = File(pdfPath);
+    if (pdf.existsSync() && pdf.lastModifiedSync().isAfter(file.lastModifiedSync().add(const Duration(seconds: 2)))) return null;
+    final script = ScriptSummary.fromJson(Map<String, dynamic>.from(j['script'] as Map));
+    return script.scenes.isEmpty ? null : script;
+  } catch (_) {
+    return null;
+  }
+}
+
 /// One device's rehearsal settings for one project.
 class RehearsalState {
   RehearsalState({
