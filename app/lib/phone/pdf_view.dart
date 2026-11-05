@@ -27,11 +27,12 @@ class PdfService {
   static Future<List<String>> pageTexts(String path) async =>
       (await _channel.invokeMethod<List>('pageTexts', {'path': path}) ?? const []).cast<String>();
 
-  /// Opens the native markup viewer on [page] (0-based) and returns when it is closed. [drawings] is page index → saved
+  /// Opens the native markup viewer on [page] (0-based), [fraction] of the way down it, and returns where it was left when it is closed. [drawings] is page index → saved
   /// drawing; every drawing that settles while it is open is passed to [onSave] (page index, data; '' = nothing left).
-  static Future<void> markUp({
+  static Future<({int page, double fraction})?> markUp({
     required String path,
     required int page,
+    double fraction = 0,
     required Map<String, String> drawings,
     required bool dark,
     required void Function(int page, String data) onSave,
@@ -43,7 +44,14 @@ class PdfService {
       }
     });
     try {
-      await _channel.invokeMethod('presentMarkup', {'path': path, 'page': page, 'pages': drawings, 'dark': dark});
+      final r = await _channel.invokeMethod<Map>('presentMarkup', {
+        'path': path,
+        'page': page,
+        'fraction': fraction,
+        'pages': drawings,
+        'dark': dark,
+      });
+      return r == null ? null : (page: r['page'] as int, fraction: (r['fraction'] as num).toDouble());
     } finally {
       _channel.setMethodCallHandler(null);
     }
@@ -177,6 +185,12 @@ class PdfController extends ChangeNotifier {
     page = n;
     notifyListeners();
     await _ch?.invokeMethod('goToPage', {'page': n});
+  }
+
+  /// The page at the top of the view (0-based) and how far down it the top edge is (0...1).
+  Future<({int page, double fraction})> position() async {
+    final r = await _ch?.invokeMethod<Map>('position');
+    return r == null ? (page: page - 1, fraction: 0.0) : (page: r['page'] as int, fraction: (r['fraction'] as num).toDouble());
   }
 
   Future<void> nextPage() => goToPage(page + 1);

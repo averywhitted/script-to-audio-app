@@ -77,7 +77,7 @@ def _kokoro_installed() -> bool:
 
 def _kokoro_files_present() -> bool:
     return (
-        (KOKORO_CACHE_DIR / "kokoro-v1.0.int8.onnx").exists()
+        ((KOKORO_CACHE_DIR / "kokoro-v1.0.onnx").exists() or (KOKORO_CACHE_DIR / "kokoro-v1.0.int8.onnx").exists())
         and (KOKORO_CACHE_DIR / "voices-v1.0.bin").exists()
     )
 
@@ -644,7 +644,7 @@ def _install_engine(payload: Dict[str, Any]) -> int:
     _emit({"event": "done",
            "message": (
                f"✓ {engine_id} installed. "
-               "The neural model (~88 MB) downloads from GitHub on first voice preview."
+               "The neural model (~350 MB) downloads from GitHub on first voice preview."
            )})
     return 0
 

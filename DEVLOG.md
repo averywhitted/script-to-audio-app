@@ -96,6 +96,15 @@ _(old header) Updated 2026-11-01 11:46 EST · branch `ios-rehearsal` @ `107a8a0`
 ## History
 <!-- newest first -->
 
+### 2026-11-05 — Markup keeps your place; Kokoro full-precision model
+- Markup viewer opened at the top of the PDF. Now the reading view reports its exact top position (`position` on the platform view:
+  page + fraction), the viewer scrolls to it (re-applied after layout until a finger scrolls), and on Done reports where it was left so
+  reading carries on there (`PdfService.markUp` returns `{page, fraction}`).
+- Kokoro now uses the full-precision `kokoro-v1.0.onnx` (~326 MB; warm sentence ~1 s) instead of int8; int8 is the fallback if the
+  download fails and is deleted once the full model is cached (`backend/tts_engines.py`, `audio_worker.py`). Avery to judge whether
+  question inflection improves.
+- Built and installed on the iPad; the scroll fix is not yet confirmed on device.
+
 ### 2026-11-04 — iPad round 5b: markup viewer is one PencilKit canvas
 - Avery: the per-page-overlay viewer drew nothing and showed no iPadOS palette. Rewrote `MarkupViewController` (`ios/Runner/PdfPlugin.swift`)
   as the standard PencilKit layout: one `PKCanvasView` (scroll view) with the PDF pages rendered lazily as image views behind the ink,

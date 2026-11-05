@@ -241,40 +241,56 @@ _kokoro_instance: Optional[object] = None
 # Model files are hosted as public GitHub release assets — no HuggingFace
 # account or token needed.
 _KOKORO_RELEASE = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0"
-_KOKORO_FILES = {
-    "kokoro-v1.0.int8.onnx": "kokoro-v1.0.int8.onnx",
-    "voices-v1.0.bin":       "voices-v1.0.bin",
-}
+# The full-precision model (~326 MB) keeps more of Kokoro's intonation (questions, emphasis) than the
+# quantised int8 one (~92 MB) it replaced. A machine that only has the int8 file keeps working with it
+# until the full one has downloaded.
+_KOKORO_MODEL = "kokoro-v1.0.onnx"
+_KOKORO_MODEL_FALLBACK = "kokoro-v1.0.int8.onnx"
+_KOKORO_VOICES = "voices-v1.0.bin"
 _KOKORO_CACHE_DIR = Path.home() / ".cache" / "tableread" / "kokoro"
 
 
-def _download_kokoro_files() -> tuple[str, str]:
-    """Download (or return cached) Kokoro ONNX model and voices files."""
+def _kokoro_download(filename: str) -> Path:
+    """Download (or return cached) one Kokoro release file."""
     import shutil as _shutil
     import urllib.parse
     import urllib.request
 
     _KOKORO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    paths = {}
-    for filename in _KOKORO_FILES:
-        dest = _KOKORO_CACHE_DIR / filename
-        if not dest.exists():
-            url = f"{_KOKORO_RELEASE}/{filename}"
-            if urllib.parse.urlparse(url).scheme != "https":
-                raise RuntimeError(f"Refusing to fetch model over non-HTTPS URL: {url}")
-            print(f"Downloading {filename} from {url} …", flush=True)
-            # Download to a .part file and rename on success, so an
-            # interrupted transfer is never cached as a complete model.
-            part = dest.with_suffix(dest.suffix + ".part")
-            try:
-                with urllib.request.urlopen(url, timeout=120) as resp, open(part, "wb") as out:
-                    _shutil.copyfileobj(resp, out)
-                part.replace(dest)
-            finally:
-                if part.exists():
-                    part.unlink()
-        paths[filename] = str(dest)
-    return paths["kokoro-v1.0.int8.onnx"], paths["voices-v1.0.bin"]
+    dest = _KOKORO_CACHE_DIR / filename
+    if dest.exists():
+        return dest
+    url = f"{_KOKORO_RELEASE}/{filename}"
+    if urllib.parse.urlparse(url).scheme != "https":
+        raise RuntimeError(f"Refusing to fetch model over non-HTTPS URL: {url}")
+    print(f"Downloading {filename} from {url} …", flush=True)
+    # Download to a .part file and rename on success, so an
+    # interrupted transfer is never cached as a complete model.
+    part = dest.with_suffix(dest.suffix + ".part")
+    try:
+        with urllib.request.urlopen(url, timeout=120) as resp, open(part, "wb") as out:
+            _shutil.copyfileobj(resp, out)
+        part.replace(dest)
+    finally:
+        if part.exists():
+            part.unlink()
+    return dest
+
+
+def _download_kokoro_files() -> tuple[str, str]:
+    """The Kokoro model and voices files: downloaded once, then cached."""
+    voices = _kokoro_download(_KOKORO_VOICES)
+    try:
+        model = _kokoro_download(_KOKORO_MODEL)
+        # The full model replaces the old quantised one.
+        (_KOKORO_CACHE_DIR / _KOKORO_MODEL_FALLBACK).unlink(missing_ok=True)
+    except Exception as exc:
+        old = _KOKORO_CACHE_DIR / _KOKORO_MODEL_FALLBACK
+        if not old.exists():
+            raise
+        print(f"Could not fetch the full Kokoro model ({exc}); using the smaller one.", flush=True)
+        model = old
+    return str(model), str(voices)
 
 
 def _get_kokoro() -> object:

@@ -214,8 +214,18 @@ class _PdfPanelState extends State<PdfPanel> {
     final m = _markup;
     if (m == null) return;
     final dark = Tokens.of(context).dark;
-    await PdfService.markUp(path: widget.pdfPath, page: c.page - 1, drawings: m.drawings, dark: dark, onSave: (page, data) => m.set(page, data));
+    final at = await c.position();
+    final left = await PdfService.markUp(
+      path: widget.pdfPath,
+      page: at.page,
+      fraction: at.fraction,
+      drawings: m.drawings,
+      dark: dark,
+      onSave: (page, data) => m.set(page, data),
+    );
     c.drawings = m.drawings;
+    // Reading carries on where the marking up stopped.
+    if (left != null) await c.goToPage(left.page + 1);
   }
 
   /// The script's search is running: how many times the PDF has the same words, with its own previous / next.

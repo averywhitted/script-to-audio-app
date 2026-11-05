@@ -62,11 +62,12 @@ final class PdfPlugin: NSObject, FlutterPlugin {
     let vc = MarkupViewController(
       document: doc,
       page: args["page"] as? Int ?? 0,
+      fraction: CGFloat(args["fraction"] as? Double ?? 0),
       drawings: InkOverlays.decode(args["pages"] as? [String: String] ?? [:]),
       dark: args["dark"] as? Bool ?? false
     )
     vc.onSave = { [weak self] page, data in self?.channel.invokeMethod("markup", arguments: ["page": page, "data": data]) }
-    vc.onClose = { result(nil) }
+    vc.onClose = { page, fraction in result(["page": page, "fraction": fraction]) }
     vc.modalPresentationStyle = .fullScreen
     vc.modalTransitionStyle = .crossDissolve
     host.present(vc, animated: true)
@@ -196,7 +197,9 @@ final class InkOverlays: NSObject, PDFPageOverlayViewProvider, PKCanvasViewDeleg
 final class MarkupViewController: UIViewController, PKCanvasViewDelegate {
   private let document: PDFDocument
   private let startPage: Int
+  private let startFraction: CGFloat
   private let dark: Bool
+  private var userScrolled = false
   private let canvas = PKCanvasView()
   private let toolPicker = PKToolPicker()
   private let stack = UIView()
@@ -216,11 +219,12 @@ final class MarkupViewController: UIViewController, PKCanvasViewDelegate {
 
   /// A page's drawing settled (page index, base64 data; '' = nothing left).
   var onSave: ((Int, String) -> Void)?
-  var onClose: (() -> Void)?
+  var onClose: ((Int, Double) -> Void)?
 
-  init(document: PDFDocument, page: Int, drawings: [Int: PKDrawing], dark: Bool) {
+  init(document: PDFDocument, page: Int, fraction: CGFloat, drawings: [Int: PKDrawing], dark: Bool) {
     self.document = document
     self.startPage = page
+    self.startFraction = fraction
     self.pageDrawings = drawings
     self.dark = dark
     super.init(nibName: nil, bundle: nil)
@@ -283,9 +287,7 @@ final class MarkupViewController: UIViewController, PKCanvasViewDelegate {
     if !first { pageDrawings = splitIntoPages() }  // rotation: keep the ink with its pages
     laidOutWidth = w
     layoutPages(width: w)
-    if first {
-      canvas.contentOffset = CGPoint(x: 0, y: max(0, tops[min(max(startPage, 0), tops.count - 1)] - 12))
-    }
+    if first || !userScrolled { goToStart() }
     renderVisible()
   }
 
@@ -294,6 +296,32 @@ final class MarkupViewController: UIViewController, PKCanvasViewDelegate {
     showPalette()
     // The palette only attaches once the canvas is really on screen: say it again a moment later.
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.showPalette() }
+    // The canvas settles its own scroll position as it appears: keep the place until a finger has moved it.
+    for delay in [0.0, 0.1, 0.4] {
+      DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+        if let self = self, !self.userScrolled { self.goToStart() }
+      }
+    }
+  }
+
+  /// The place the reading view was at: the top of the screen on the same spot of the same page.
+  private func goToStart() {
+    guard !tops.isEmpty else { return }
+    let i = min(max(startPage, 0), tops.count - 1)
+    let y = tops[i] + startFraction * pageViews[i].frame.height
+    let maxY = max(0, canvas.contentSize.height - canvas.bounds.height)
+    canvas.setContentOffset(CGPoint(x: 0, y: min(max(0, y), maxY)), animated: false)
+  }
+
+  func scrollViewWillBeginDragging(_ scrollView: UIScrollView) { userScrolled = true }
+
+  /// The page at the top of the screen, and how far down it that is (0...1).
+  private func topPosition() -> (Int, Double) {
+    let y = canvas.contentOffset.y
+    var page = 0
+    for (i, top) in tops.enumerated() where top <= y + 1 { page = i }
+    let h = pageViews[page].frame.height
+    return (page, Double(min(max((y - tops[page]) / h, 0), 1)))
   }
 
   private func showPalette() {
@@ -413,8 +441,9 @@ final class MarkupViewController: UIViewController, PKCanvasViewDelegate {
 
   private func close() {
     flush()
+    let (page, fraction) = topPosition()
     toolPicker.setVisible(false, forFirstResponder: canvas)
-    dismiss(animated: true) { [weak self] in self?.onClose?() }
+    dismiss(animated: true) { [weak self] in self?.onClose?(page, fraction) }
   }
 }
 
@@ -487,6 +516,16 @@ final class PdfPlatformView: NSObject, FlutterPlatformView {
     }
   }
 
+  /// The page at the top of the view, and how far down it the top edge is (0...1).
+  private func position() -> [String: Any] {
+    let top = CGPoint(x: pdfView.bounds.midX, y: pdfView.bounds.minY + 1)
+    guard let page = pdfView.page(for: top, nearest: true), let doc = pdfView.document else { return ["page": pageIndex, "fraction": 0.0] }
+    let box = page.bounds(for: .cropBox)
+    let inPage = pdfView.convert(top, to: page)
+    let fraction = min(max(1 - (inPage.y - box.minY) / box.height, 0), 1)
+    return ["page": doc.index(for: page), "fraction": Double(fraction)]
+  }
+
   private func handle(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
     let args = call.arguments as? [String: Any] ?? [:]
     switch call.method {
@@ -495,6 +534,8 @@ final class PdfPlatformView: NSObject, FlutterPlatformView {
     case "goToPage":
       go(toPage: args["page"] as? Int ?? 1)
       result(nil)
+    case "position":
+      result(position())
     case "setMode":
       setContinuous(args["continuous"] as? Bool ?? true)
       result(nil)
