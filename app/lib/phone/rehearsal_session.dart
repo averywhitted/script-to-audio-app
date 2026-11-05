@@ -62,6 +62,9 @@ class RehearsalSession {
   int? readScene;
   String readLine = '';
 
+  /// How far through the script that line is (0...1).
+  double? readProgress;
+
   /// Where the newest settings (from any device) said the script was being read, when the session was opened.
   (int, String)? restoredReading;
 
@@ -204,6 +207,7 @@ class RehearsalSession {
       time: player.currentTime,
       readScene: readScene,
       readLine: readLine,
+      readProgress: readProgress,
       device: deviceLabel,
     );
     final id = await deviceId();

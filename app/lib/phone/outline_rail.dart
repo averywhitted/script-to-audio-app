@@ -1,4 +1,4 @@
-// A thin outline of the script on the left edge, a third of the way down: one dash per scene, the scene you are in
+// A thin outline of the script on the left edge, a third of the way down (the iPhone: right edge, half way down): one dash per scene, the scene you are in
 // longer and in the accent color, so you can see where you are without opening anything. Tap it and it opens into the
 // scene headings; hold and drag along it to run through the script. It folds itself away when you scroll or tap elsewhere.
 
@@ -16,6 +16,7 @@ class OutlineRail extends StatefulWidget {
     required this.onPick,
     required this.onScrub,
     this.bookmarked = const {},
+    this.right = false,
   });
 
   final List<PhoneScene> scenes;
@@ -31,6 +32,9 @@ class OutlineRail extends StatefulWidget {
 
   /// Scene numbers holding a bookmark (a mark on their dash).
   final Set<int> bookmarked;
+
+  /// On the right edge, half way down (the iPhone: the left edge was under the thumb); on the left, a third of the way down, otherwise.
+  final bool right;
 
   @override
   State<OutlineRail> createState() => OutlineRailState();
@@ -65,20 +69,20 @@ class OutlineRailState extends State<OutlineRail> {
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
+    final at = Alignment(widget.right ? 1 : -1, widget.right ? 0 : -0.34);
     return LayoutBuilder(
       builder: (context, box) => TapRegion(
         onTapOutside: (_) => collapse(),
         child: Align(
-          // About a third of the way down.
-          alignment: const Alignment(-1, -0.34),
+          alignment: at,
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeIn,
-            layoutBuilder: (current, previous) => Stack(alignment: const Alignment(-1, -0.34), children: [...previous, if (current != null) current]),
+            layoutBuilder: (current, previous) => Stack(alignment: at, children: [...previous, if (current != null) current]),
             transitionBuilder: (child, anim) => FadeTransition(
               opacity: anim,
-              child: ScaleTransition(scale: Tween(begin: 0.9, end: 1.0).animate(anim), alignment: Alignment.centerLeft, child: child),
+              child: ScaleTransition(scale: Tween(begin: 0.9, end: 1.0).animate(anim), alignment: widget.right ? Alignment.centerRight : Alignment.centerLeft, child: child),
             ),
             child: _open ? _expanded(t, box.maxHeight * 0.62) : _dashes(t, box.maxHeight * 0.6),
           ),
@@ -138,6 +142,7 @@ class OutlineRailState extends State<OutlineRail> {
                           idle: t.muted.withValues(alpha: 0.55),
                           here: t.accent,
                           mark: t.highlighterEdge,
+                          right: widget.right,
                         ),
                       ),
                     );
@@ -147,7 +152,8 @@ class OutlineRailState extends State<OutlineRail> {
               // While dragging: which scene the script is at.
               if (_scrubbing != null)
                 Positioned(
-                  left: 36,
+                  left: widget.right ? null : 36,
+                  right: widget.right ? 36 : null,
                   top: (slot * _scrubbing! + slot / 2 - 16).clamp(-40.0, height),
                   child: IgnorePointer(
                     child: Material(
@@ -178,7 +184,7 @@ class OutlineRailState extends State<OutlineRail> {
 
   Widget _expanded(Tokens t, double maxHeight) => Padding(
     key: const ValueKey('open'),
-    padding: const EdgeInsets.only(left: 8),
+    padding: EdgeInsets.only(left: widget.right ? 0 : 8, right: widget.right ? 8 : 0),
     child: ConstrainedBox(
       constraints: BoxConstraints(maxWidth: 300, maxHeight: maxHeight),
       child: Material(
@@ -238,13 +244,14 @@ class OutlineRailState extends State<OutlineRail> {
 }
 
 class _DashPainter extends CustomPainter {
-  _DashPainter({required this.numbers, required this.pos, required this.bookmarked, required this.idle, required this.here, required this.mark});
+  _DashPainter({required this.numbers, required this.pos, required this.bookmarked, required this.idle, required this.here, required this.mark, this.right = false});
   final List<int> numbers;
 
   /// The current scene's place (fractional while the long dash slides).
   final double pos;
   final Set<int> bookmarked;
   final Color idle, here, mark;
+  final bool right;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -259,11 +266,15 @@ class _DashPainter extends CustomPainter {
         ..color = Color.lerp(base, here, near)!
         ..strokeWidth = thick
         ..strokeCap = StrokeCap.round;
-      canvas.drawLine(Offset(5, y), Offset(5 + w, y), p);
+      if (right) {
+        canvas.drawLine(Offset(size.width - 5, y), Offset(size.width - 5 - w, y), p);
+      } else {
+        canvas.drawLine(Offset(5, y), Offset(5 + w, y), p);
+      }
     }
   }
 
   @override
   bool shouldRepaint(_DashPainter o) =>
-      o.pos != pos || o.bookmarked != bookmarked || o.numbers.length != numbers.length || o.idle != idle || o.here != here;
+      o.pos != pos || o.bookmarked != bookmarked || o.numbers.length != numbers.length || o.idle != idle || o.here != here || o.right != right;
 }

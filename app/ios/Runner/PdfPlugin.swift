@@ -449,14 +449,38 @@ final class MarkupViewController: UIViewController, PKCanvasViewDelegate {
 
 // MARK: Reading
 
+/// A PDFView that says when it has been laid out again: PDFKit puts itself back on page 1 (or the top) whenever its size or
+/// display mode changes, after any go(to:) already made, so the place has to be asked for again after each layout.
+@available(iOS 16.0, *)
+final class PinnedPDFView: PDFView {
+  var onLayout: (() -> Void)?
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    onLayout?()
+  }
+}
+
+/// Sees every touch that begins on the view (to let go of a pinned place once a finger takes over) without taking part.
+final class TouchSniffer: UIGestureRecognizer {
+  var onTouch: (() -> Void)?
+  override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    onTouch?()
+    state = .failed
+  }
+}
+
 @available(iOS 16.0, *)
 final class PdfPlatformView: NSObject, FlutterPlatformView {
-  private let pdfView = PDFView()
+  private let pdfView = PinnedPDFView()
   private let channel: FlutterMethodChannel
   private let created = Date()
   private let overlays = InkOverlays(interactive: false)
 
   private var continuous = true
+  /// The place the view was told to be at; asked for again after every layout until a finger moves the page or [pinUntil].
+  private var pin: (page: PDFPage, fraction: CGFloat)?
+  private var pinUntil = Date.distantPast
+  private var applying = false
   private var results: [PDFSelection] = []
   private var resultIndex = 0
 
@@ -479,6 +503,11 @@ final class PdfPlatformView: NSObject, FlutterPlatformView {
       swipe.cancelsTouchesInView = false
       pdfView.addGestureRecognizer(swipe)
     }
+    pdfView.onLayout = { [weak self] in self?.holdPin() }
+    let sniffer = TouchSniffer()
+    sniffer.cancelsTouchesInView = false
+    sniffer.onTouch = { [weak self] in self?.pin = nil }
+    pdfView.addGestureRecognizer(sniffer)
     channel.setMethodCallHandler { [weak self] call, result in self?.handle(call, result) }
   }
 
@@ -502,18 +531,43 @@ final class PdfPlatformView: NSObject, FlutterPlatformView {
     if g.direction == .right, pdfView.canGoToPreviousPage { pdfView.goToPreviousPage(nil) }
   }
 
-  private func go(toPage n: Int) {
+  private func go(toPage n: Int, fraction: CGFloat = 0) {
     guard let doc = pdfView.document, n >= 1, n <= doc.pageCount, let page = doc.page(at: n - 1) else { return }
-    pdfView.go(to: page)
-    // A view that has only just been created has no size yet, and PDFView puts itself back on page 1 as it lays out:
-    // during its first seconds, say it again a few times.
-    if Date().timeIntervalSince(created) < 3 {
-      for delay in [0.15, 0.5, 1.0] {
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-          if let self = self, self.pdfView.currentPage != page { self.pdfView.go(to: page) }
-        }
-      }
+    // A view that has only just been created has no size yet: hold the page for its first seconds.
+    pinTo(page: page, fraction: fraction, seconds: Date().timeIntervalSince(created) < 3 ? 3 : 1)
+  }
+
+  /// Goes to [page], [fraction] of the way down it, and keeps asking for that place through the layouts that follow
+  /// (PDFKit resets itself to the top after a size or mode change) until a finger moves the view or [seconds] pass.
+  private func pinTo(page: PDFPage, fraction: CGFloat, seconds: TimeInterval) {
+    pin = (page, continuous ? fraction : 0)
+    pinUntil = Date().addingTimeInterval(seconds)
+    applyPin()
+    for delay in [0.05, 0.15, 0.4, 0.8, 1.5, 2.5] where delay < seconds {
+      DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.holdPin() }
     }
+  }
+
+  private func applyPin() {
+    guard let pin = pin else { return }
+    applying = true
+    defer { applying = false }
+    let box = pin.page.bounds(for: .cropBox)
+    if continuous && pin.fraction > 0.001 {
+      pdfView.go(to: PDFDestination(page: pin.page, at: CGPoint(x: box.minX, y: box.maxY - pin.fraction * box.height)))
+    } else {
+      pdfView.go(to: pin.page)
+    }
+  }
+
+  /// Puts the view back on the pinned place if a layout has moved it.
+  private func holdPin() {
+    guard !applying, let pin = pin, let doc = pdfView.document else { return }
+    if Date() > pinUntil { self.pin = nil; return }
+    let here = position()
+    let page = here["page"] as? Int ?? 0
+    let fraction = CGFloat(here["fraction"] as? Double ?? 0)
+    if page != doc.index(for: pin.page) || (continuous && abs(fraction - pin.fraction) > 0.03) { applyPin() }
   }
 
   /// The page at the top of the view, and how far down it the top edge is (0...1).
@@ -532,7 +586,7 @@ final class PdfPlatformView: NSObject, FlutterPlatformView {
     case "state":
       result(["page": pageIndex + 1, "count": pdfView.document?.pageCount ?? 0])
     case "goToPage":
-      go(toPage: args["page"] as? Int ?? 1)
+      go(toPage: args["page"] as? Int ?? 1, fraction: CGFloat(args["fraction"] as? Double ?? 0))
       result(nil)
     case "position":
       result(position())
@@ -556,14 +610,16 @@ final class PdfPlatformView: NSObject, FlutterPlatformView {
     }
   }
 
-  /// One page at a time (swipe or the toolbar's arrows) or one continuous scroll; the page being read stays.
+  /// One page at a time (swipe or the toolbar's arrows) or one continuous scroll; the place being read stays.
   private func setContinuous(_ on: Bool) {
     guard on != continuous else { return }
+    let at = position()
+    let index = at["page"] as? Int ?? pageIndex
+    let fraction = CGFloat(at["fraction"] as? Double ?? 0)
     continuous = on
-    let here = pdfView.currentPage
     pdfView.displayMode = on ? .singlePageContinuous : .singlePage
     pdfView.autoScales = true
-    if let here = here { pdfView.go(to: here) }
+    if let page = pdfView.document?.page(at: index) { pinTo(page: page, fraction: fraction, seconds: 1.5) }
   }
 
   private func search(_ query: String, reveal: Bool) -> [String: Any] {

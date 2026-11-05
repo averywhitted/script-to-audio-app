@@ -2,6 +2,55 @@
 
 ## Resume here
 
+_Updated 2026-11-05 15:45 EST · branch `ipados-port` @ `eadcc64` · working tree: **uncommitted** iPhone catch-up round (see History) + ~22 files reformatted by an old `dart format` (formatting only, verified identical to formatted HEAD; discard with `git checkout -- <those files>`, the sandbox refused me; do not commit them) + two ephemeral `sidetrack-*.md` (never commit)_
+
+**Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Mac app = Flutter UI (`app/`) + Rust core; iPhone/iPad = one universal Flutter app (`app/lib/phone/`) that rehearses on device (no voice rendering; the Mac renders). Older SwiftUI app + Python backend still in repo (`Sources/`, `backend/`).
+**Current goal:** iPhone/iPad rehearsal polish. Nov 5: Avery asked to bring the iPhone up to date with the iPad rounds 3-5 plus new notes; built, tested and installing on the iPhone.
+
+**Where things stand:**
+- Everything in the Nov 5 History entry is built, `flutter analyze` clean for my files, **full `flutter test` = 127 pass / 3 skipped**. NOT committed. **Installed on Avery's iPhone (UDID 00008130-000475601803401C) at ~16:00 EST Nov 5; not yet tried by Avery.**
+- Never verified on a real device: the new playhead/scrub/flash behaviour, the PDF position pinning (`PdfPlugin.swift` `pinTo`), the download queue against real iCloud, the floating menu on iPhone widths. iPad Pencil markup still waiting on Avery's report from round 5b.
+- iPad PDF fixes (wrong page on open, jump to top when switching page/continuous) are code-only here; the iPad was not plugged in. Install it and check.
+
+**Next steps:**
+1. Avery tests the iPhone build (list in History); fix what breaks. Install on the iPad too: `cd app && xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -destination 'id=00008101-0018551A10E1401E' -allowProvisioningUpdates -allowProvisioningDeviceRegistration build`, then `xcrun devicectl device install app --device <udid> <DerivedData>/Release-iphoneos/Runner.app`.
+2. Commit the round (my files only: `app/lib/phone/*`, `app/lib/services/project_files.dart`, `app/ios/Runner/PdfPlugin.swift`, `app/test/{ios_update_test,phone_test,ipad_test}.dart`, goldens, DEVLOG) on `ipados-port`.
+3. Open issues for: download queue/status icon, NEW + progress, playhead follows page, floating menu on iPhone; comment on / close #113-#121 with what shipped; PR to `main` when Avery wants.
+4. Decide with Avery after trying: floating menu on iPhone stays? (flip `_floatingMenuOnPhone` in `rehearsal_screen.dart` to revert); script-view Pencil markup design (open question from round 3, unanswered).
+
+**Waiting on the user / open questions:**
+- Verdict on the iPhone floating menu; whether the download icon placement (cover top-right) and NEW pill (date row) read well.
+- iOS can evict iCloud files on its own when space is short; the app can only show the state (rescanned on launch/resume), not stop it.
+
+**Watch out for:**
+- Never `dart format` without `-l 150`. `future.whenComplete(() => map.remove(x))` deadlocks when the map holds that very future (bit me in `PhoneStore.download`): use a block body.
+- Tests: flutter_test's default display is 800x600 so `isPadDisplay` is true; set `tester.view.display.size` to pose as an iPhone. `test/failures/` has old tracked images; don't `rm -rf` it (restore with `git restore -- test/failures`).
+- Free-team installs expire after 7 days. Simulator iPad runtime (iOS 27.0) spins the CPU; avoid booting it.
+- Rust core / Mac cutover (#98-#112) is paused, state in the History entries from Oct 21-30 and the archived block below.
+
+**Key files:** `app/lib/phone/{rehearsal_screen,phone_app,phone_store,scene_timeline,outline_rail,pdf_panel,pdf_view}.dart`, `app/ios/Runner/PdfPlugin.swift`, `app/lib/services/project_files.dart` (RehearsalState incl. `readProgress`), `app/test/ios_update_test.dart` (new tests)
+**Run / test:** `cd app && flutter test` (127); `bash scripts/test.sh flutter`; goldens: `flutter test --update-goldens test/phone_test.dart test/ipad_test.dart`
+
+
+## History
+<!-- newest first -->
+
+### 2026-11-05 15:45 — iPhone catch-up: queueable downloads, NEW/progress, playhead follows the page, outline right, PDF position fixes
+**Asked:** Bring the iPhone up to date with the iPad rounds 3-5 (bookmarks, position sync, outline, scene bar, multi-role, note polish, notices, full-screen PDF all live in shared code, so they ride along), plus: outline on the right edge half way down on iPhone (left stays on iPad); iPad PDF bugs (wrong page when opening from the script; jump to top when switching page/continuous); cloud/device icon per project with download status and options; queued downloads; NEW + reading progress on covers; playhead follows the page and scrubs it with lines pointed out then fading; tap a line = flash, not play; my lines in the character's colour; floating line menu on iPhone as an experiment.
+**Done:**
+- `outline_rail.dart` `right:` (iPhone: right edge, y=0; iPad unchanged).
+- PDF: `_currentPage()` now = playing line, else the line at the top of the screen (was the player's line / first line of scene); `PdfPlugin.swift` `PinnedPDFView` + `pinTo/holdPin` re-apply the wanted page (and fraction in continuous) after every layout until a finger touches it (PDFKit resets to the top after mode/size changes); `goToPage(fraction:)`; markup Done keeps the fraction; page/continuous switch now on iPhone too, Pencil stays iPad-only. Reading view already showed other devices' ink read-only on iPhone.
+- Downloads (`phone_store.dart`): `DownloadPhase` cloud/queued/downloading/device, `onDevice` scan (rescan on launch/resume), serial queue (`enqueue`, `cancelDownload`; opening a project pulls it forward), `opened` set (prefs), `progress` from the newest Rehearsal file. Cover (`phone_app.dart` `_Cover`, `_DownloadBadge`): icon top-right opens a sheet (Download / Remove from Queue / Cancel / Remove Download), NEW pill in the date row, progress bar along the cover bottom. Long-press menu also gets Download. Serial not parallel on purpose: iCloud bandwidth is the limit and each project is usable sooner.
+- `RehearsalState.readProgress` (reading.progress in the Rehearsal file, written by `_noteReading`).
+- Playhead (`scene_timeline.dart` `PhoneTimeline`, rehearsal_screen `_Head`, `_probe`, `_updateHead`): paused scrolling moves a virtual playhead (line at 30 % of the view, interpolated through the line; start of script = 0:00); crossing scenes cross-fades that scene's timeline; Play/Prev/Next first park the player there (`_commitHead`). Dragging the playhead pauses audio, scrolls the script, outlines the line under it (`_indicate`, fades 800 ms after release via `_fade`), then seeks and resumes. Tapping a line outlines it (350 ms hold + fade) and parks the playhead; it no longer plays. Blanked-line peek unchanged.
+- My lines filled with `speakerColors(...).highlight` of the character (yellow stays for the line being read).
+- Floating selection menu on iPhone (`_floatingMenuOnPhone`), icon-only note button on narrow screens.
+**Decisions:** outline moved on iPhone only (Avery said iPad is fine); parked-vs-virtual playhead so scrolling never makes a yellow "current" line jump around; serial queue.
+**State:** uncommitted. Tests: new `test/ios_update_test.dart` (13) + goldens re-recorded (phone/ipad projects, waiting, line hint, scene jump); full suite 127 pass. Release build succeeded and installed on the iPhone (not launched or tried by me).
+**Next:** Resume block next steps.
+
+### Resume block as it stood before 2026-11-05 (archived)
+
 > Round 5/5b (latest): markup is now a native single-canvas PencilKit viewer, awaiting Avery's device test (see History); next: fp32 Kokoro option if wanted; round-4 notes below about the Flutter ink layer are obsolete.
 _Updated 2026-11-03 17:40 EST · branch `ipados-port` @ `1b2cc83` + round-3 commit (not pushed) · working tree: **`dart format -l 150 lib test` reformatted ~25 untouched files (lib/ui, lib/state, lib/models, phone_app.dart, other tests, ...): not committed; discard with `git checkout -- app/lib/main.dart app/lib/models app/lib/phone/phone_app.dart app/lib/services/{project_store,python_bridge,settings}.dart app/lib/state app/lib/ui app/test/{fixtures,logic_test,now_playing_test,player_test,rust_core_test,screens_test,worker_test}.dart` and `rm -rf app/test/failures` (the sandbox blocked me doing it)**; plus two untracked ephemeral `sidetrack-*.md`_
 
@@ -93,8 +142,7 @@ _(old header) Updated 2026-11-01 11:46 EST · branch `ios-rehearsal` @ `107a8a0`
 **Key files:** `docs/adr/` (decisions), `spikes/pdfium_extract/scripts/` (PDFium prototype), `backend/parser.py` (`_extract_blocks`, `_split_raw_block` = the structure the Rust extraction must reproduce), `app/lib/state/player_state.dart`, `app/lib/services/project_files.dart`, `app/lib/services/project_store.dart`
 **Run / test:** `bash scripts/test.sh flutter`, `bash scripts/test.sh` (full); PDFium check above.
 
-## History
-<!-- newest first -->
+
 
 ### 2026-11-05 — Markup keeps your place; Kokoro full-precision model
 - Markup viewer opened at the top of the PDF. Now the reading view reports its exact top position (`position` on the platform view:

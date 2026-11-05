@@ -66,6 +66,7 @@ class RehearsalState {
     this.time = 0,
     this.readScene,
     this.readLine = '',
+    this.readProgress,
     DateTime? updatedAt,
     this.device = '',
     this.fileId = '',
@@ -89,6 +90,9 @@ class RehearsalState {
   /// Where the script was being read (position sync): the scene, and the line's identity (lineNoteKey).
   int? readScene;
   String readLine;
+
+  /// How far through the script that line is (0...1), for the progress bar on the project's cover; null when unknown.
+  double? readProgress;
 
   DateTime updatedAt;
 
@@ -115,6 +119,7 @@ class RehearsalState {
       time: (pos['time'] as num?)?.toDouble() ?? 0,
       readScene: (j['reading'] as Map?)?['scene'] as int?,
       readLine: (j['reading'] as Map?)?['line'] as String? ?? '',
+      readProgress: ((j['reading'] as Map?)?['progress'] as num?)?.toDouble(),
       updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? '')?.toUtc() ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       device: j['device'] as String? ?? '',
     );
@@ -130,7 +135,7 @@ class RehearsalState {
     'speed': speed,
     'loop': {'mode': loopMode, 'start': loopStart, 'end': loopEnd},
     'position': {'scene': sceneNumber, 'time': time},
-    'reading': {'scene': readScene, 'line': readLine},
+    'reading': {'scene': readScene, 'line': readLine, if (readProgress != null) 'progress': double.parse(readProgress!.toStringAsFixed(3))},
   };
 
   bool sameAs(RehearsalState o) => jsonEncode(_body()) == jsonEncode(o._body());

@@ -264,7 +264,7 @@ void main() {
     expect(find.text(mine), findsNothing);
   });
 
-  testWidgets('tapping a line plays from it; long-press picks lines to loop', (tester) async {
+  testWidgets('tapping a line moves the playhead there (Play plays it); long-press picks lines to loop', (tester) async {
     await _pump(tester, await _store(), Brightness.light);
     await _openEarnest(tester);
     await tester.tap(find.text('Line 3 of scene 1, spoken with great feeling and a certain amount of wit.'));

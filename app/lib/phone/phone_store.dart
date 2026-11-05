@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
 import '../services/project_files.dart';
@@ -14,7 +15,11 @@ import '../services/rust_core.dart';
 import 'folder_access.dart';
 
 class PhoneStore extends ChangeNotifier {
-  PhoneStore({this.folderAccess = true});
+  PhoneStore({this.folderAccess = true, @visibleForTesting this.lister, @visibleForTesting this.downloader});
+
+  /// Tests stand in for iCloud: what a folder holds, and bringing files onto the device.
+  final Future<List<FolderEntry>> Function(String path)? lister;
+  final Future<void> Function(List<String> paths)? downloader;
 
   /// Off in tests, which set [folder] directly.
   final bool folderAccess;
@@ -30,7 +35,52 @@ class PhoneStore extends ChangeNotifier {
   /// Project id → download progress (0–1) while it's being brought onto the phone.
   final Map<String, double> downloading = {};
 
+  /// Project ids waiting for their turn to download, in order (the first goes next).
+  final List<String> queue = [];
+
+  /// Project id → every file (the PDF aside) is on this device. Missing = not known yet, taken as in iCloud only.
+  final Map<String, bool> onDevice = {};
+
+  /// Project id → how far through the script the newest rehearsal file of any device says it was read (0–1), for the
+  /// projects that have been read at all.
+  final Map<String, double> progress = {};
+
+  /// Project ids opened on this device (kept in the app's settings).
+  final Set<String> opened = {};
+  static const _openedKey = 'openedProjects';
+
+  final Map<String, Future<bool>> _active = {};
+  final Set<String> _cancelled = {};
+  bool _pumping = false;
+
+  /// Where a project is as far as this device goes.
+  DownloadPhase phaseOf(Project p) {
+    if (downloading.containsKey(p.id)) return DownloadPhase.downloading;
+    if (queue.contains(p.id)) return DownloadPhase.queued;
+    return (onDevice[p.id] ?? !folderAccess) ? DownloadPhase.device : DownloadPhase.cloud;
+  }
+
+  /// 1-based place in the queue (1 = next), or null.
+  int? queuePlace(Project p) {
+    final i = queue.indexOf(p.id);
+    return i < 0 ? null : i + 1;
+  }
+
+  /// Downloaded and never opened here, nor read on any device.
+  bool isNew(Project p) => phaseOf(p) == DownloadPhase.device && !opened.contains(p.id) && !progress.containsKey(p.id);
+
+  Future<void> markOpened(Project p) async {
+    if (!opened.add(p.id)) return;
+    notifyListeners();
+    try {
+      (await SharedPreferences.getInstance()).setStringList(_openedKey, opened.toList());
+    } catch (_) {}
+  }
+
   Future<void> start() async {
+    try {
+      opened.addAll((await SharedPreferences.getInstance()).getStringList(_openedKey) ?? const []);
+    } catch (_) {}
     if (folderAccess) {
       try {
         folder = await FolderAccess.folder();
@@ -61,6 +111,7 @@ class PhoneStore extends ChangeNotifier {
   }
 
   Future<List<FolderEntry>> _list(String path) async {
+    if (lister != null) return lister!(path);
     if (folderAccess) return FolderAccess.list(path);
     return [
       for (final e in Directory(path).listSync())
@@ -69,6 +120,7 @@ class PhoneStore extends ChangeNotifier {
   }
 
   Future<void> _download(List<String> paths) async {
+    if (downloader != null) return downloader!(paths);
     if (folderAccess && paths.isNotEmpty) await FolderAccess.download(paths);
   }
 
@@ -94,6 +146,12 @@ class PhoneStore extends ChangeNotifier {
           for (final e in entries)
             if ((e.name == 'project.json' || e.name == renderRequestFile || e.name == scriptSnapshotFile) && !e.downloaded) '$f/${d.name}/${e.name}',
         ];
+        // The small rehearsal files say how far each device has read.
+        if (entries.any((e) => e.isDir && e.name == rehearsalFolder)) {
+          for (final r in await _list('$f/${d.name}/$rehearsalFolder')) {
+            if (!r.isDir && r.name.endsWith('.json') && !r.downloaded) wanted.add('$f/${d.name}/$rehearsalFolder/${r.name}');
+          }
+        }
         await _download(wanted);
       }
       final out = <Project>[];
@@ -111,12 +169,70 @@ class PhoneStore extends ChangeNotifier {
         for (final p in out)
           if (p.folderPath case final f?) p.id: ?loadRenderRequest(f),
       };
+      progress.clear();
+      for (final p in out) {
+        final read = p.folderPath == null ? null : loadNewestRehearsal(p.folderPath!);
+        if (read != null && read.readScene != null) progress[p.id] = read.readProgress ?? 0;
+      }
       error = null;
     } catch (e) {
       error = '$e';
     }
     loading = false;
     notifyListeners();
+    await rescanDownloads();
+  }
+
+  /// Reads how far each project has been read again (a rehearsal screen just closed, or another device wrote).
+  void refreshProgress() {
+    final before = Map.of(progress);
+    progress.clear();
+    for (final p in projects) {
+      final read = p.folderPath == null ? null : loadNewestRehearsal(p.folderPath!);
+      if (read != null && read.readScene != null) progress[p.id] = read.readProgress ?? 0;
+    }
+    if (!mapEquals(before, progress)) notifyListeners();
+  }
+
+  /// Looks at every project's files again: which are wholly on this device (iOS can take them off when space is short).
+  Future<void> rescanDownloads() async {
+    final list = List.of(projects);
+    final found = await Future.wait([for (final p in list) _isOnDevice(p)]);
+    var changed = false;
+    for (final (i, p) in list.indexed) {
+      if (onDevice[p.id] != found[i]) {
+        onDevice[p.id] = found[i];
+        changed = true;
+      }
+    }
+    if (changed) notifyListeners();
+  }
+
+  /// Every file of the project but the PDF (which Show PDF fetches when asked) is on this device.
+  Future<bool> _isOnDevice(Project p) async {
+    final folder = p.folderPath;
+    if (folder == null) return false;
+    try {
+      return (await _missingFiles(folder)).isEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<List<String>> _missingFiles(String folder) async {
+    final missing = <String>[];
+    Future<void> walk(String dir) async {
+      for (final e in await _list(dir)) {
+        if (e.isDir) {
+          await walk('$dir/${e.name}');
+        } else if (!e.downloaded && !e.name.toLowerCase().endsWith('.pdf')) {
+          missing.add('$dir/${e.name}');
+        }
+      }
+    }
+
+    await walk(folder);
+    return missing;
   }
 
   /// True while a PDF is being read (the import button shows progress).
@@ -259,40 +375,80 @@ class PhoneStore extends ChangeNotifier {
     }
   }
 
-  /// Brings the whole project onto the phone (audio, cues, script, rehearsal
-  /// files) so it plays offline. Only files not already here are fetched.
-  Future<bool> download(Project p) async {
+  /// Brings the whole project onto the phone now (audio, cues, script, rehearsal files) so it plays offline: what opening
+  /// a project does. Only files not already here are fetched. A project already coming down is waited for, and one
+  /// waiting in the queue goes first.
+  Future<bool> download(Project p) {
+    queue.remove(p.id);
+    // (A block body: `() => _active.remove(...)` would hand whenComplete the very future it belongs to, and wait for it forever.)
+    return _active[p.id] ??= _run(p).whenComplete(() {
+      _active.remove(p.id);
+    });
+  }
+
+  /// Adds [p] to the downloads: they come down one after another, in the order asked.
+  void enqueue(Project p) {
+    if (phaseOf(p) != DownloadPhase.cloud) return;
+    queue.add(p.id);
+    notifyListeners();
+    _pump();
+  }
+
+  /// Takes [p] out of the queue, or stops it where it is (what has arrived stays).
+  void cancelDownload(Project p) {
+    if (queue.remove(p.id)) {
+      notifyListeners();
+    } else if (downloading.containsKey(p.id)) {
+      _cancelled.add(p.id);
+    }
+  }
+
+  Future<void> _pump() async {
+    if (_pumping) return;
+    _pumping = true;
+    try {
+      while (queue.isNotEmpty) {
+        final id = queue.first;
+        final p = projects.where((p) => p.id == id).firstOrNull;
+        if (p == null) {
+          queue.removeAt(0);
+          continue;
+        }
+        await download(p); // takes it out of the queue
+      }
+    } finally {
+      _pumping = false;
+    }
+  }
+
+  Future<bool> _run(Project p) async {
     final folder = p.folderPath;
     if (folder == null) return false;
+    _cancelled.remove(p.id);
     downloading[p.id] = 0;
     notifyListeners();
+    var finished = false;
     try {
-      final missing = <String>[];
-      Future<void> walk(String dir) async {
-        for (final e in await _list(dir)) {
-          if (e.isDir) {
-            await walk('$dir/${e.name}');
-          } else if (!e.downloaded) {
-            missing.add('$dir/${e.name}');
-          }
-        }
-      }
-
-      await walk(folder);
-      // The PDF comes later, when Show PDF (or page numbers) asks for it.
-      missing.removeWhere((m) => m.toLowerCase().endsWith('.pdf'));
+      final missing = await _missingFiles(folder);
       for (var i = 0; i < missing.length; i++) {
+        if (_cancelled.remove(p.id)) return false;
         await _download([missing[i]]);
         downloading[p.id] = (i + 1) / missing.length;
         notifyListeners();
       }
+      finished = true;
       return true;
     } catch (e) {
       error = 'Couldn\'t download “${p.name}”: $e';
       return false;
     } finally {
       downloading.remove(p.id);
+      if (finished) onDevice[p.id] = true;
       notifyListeners();
+      if (!finished) rescanDownloads();
     }
   }
 }
+
+/// Where a project is on this device.
+enum DownloadPhase { cloud, queued, downloading, device }

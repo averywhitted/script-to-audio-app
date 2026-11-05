@@ -1,6 +1,6 @@
 // The PDF and its toolbar (#115). On iPhone it fills a screen of its own; on iPad it
 // sits beside the script (#121). The toolbar has search, the page / continuous
-// switch (#120) and Apple Pencil markup (#119, Apple's own PencilKit viewer), the last two on iPad only.
+// switch (#120, iPhone too) and Apple Pencil markup (#119, Apple's own PencilKit viewer, iPad only).
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,7 +26,7 @@ class PdfPanel extends StatefulWidget {
   final String folder;
   final PdfController controller;
 
-  /// iPad: page / continuous switch and Pencil markup are on.
+  /// iPad: Pencil markup is on (the page / continuous switch is for every device).
   final bool pad;
   final VoidCallback? onClose;
   final bool folderAccess;
@@ -195,14 +195,12 @@ class _PdfPanelState extends State<PdfPanel> {
             btn(Icons.chevron_left_rounded, 'Previous page', c.page > 1 ? c.prevPage : null),
             btn(Icons.chevron_right_rounded, 'Next page', c.page < c.pageCount ? c.nextPage : null),
           ],
-          if (widget.pad) ...[
-            btn(
-              c.continuous ? Icons.view_day_outlined : Icons.auto_stories_outlined,
-              c.continuous ? 'Read one page at a time' : 'Scroll continuously',
-              () => c.setContinuous(!c.continuous),
-            ),
-            btn(Icons.draw_rounded, 'Mark up with Apple Pencil', _markUp),
-          ],
+          btn(
+            c.continuous ? Icons.view_day_outlined : Icons.auto_stories_outlined,
+            c.continuous ? 'Read one page at a time' : 'Scroll continuously',
+            () => c.setContinuous(!c.continuous),
+          ),
+          if (widget.pad) btn(Icons.draw_rounded, 'Mark up with Apple Pencil', _markUp),
         ],
       ),
     );
@@ -225,7 +223,7 @@ class _PdfPanelState extends State<PdfPanel> {
     );
     c.drawings = m.drawings;
     // Reading carries on where the marking up stopped.
-    if (left != null) await c.goToPage(left.page + 1);
+    if (left != null) await c.goToPage(left.page + 1, fraction: left.fraction);
   }
 
   /// The script's search is running: how many times the PDF has the same words, with its own previous / next.

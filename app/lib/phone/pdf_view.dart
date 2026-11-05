@@ -180,11 +180,12 @@ class PdfController extends ChangeNotifier {
     super.dispose();
   }
 
-  Future<void> goToPage(int n) async {
+  /// Goes to page [n] (1-based), [fraction] of the way down it when reading continuously.
+  Future<void> goToPage(int n, {double fraction = 0}) async {
     if (pageCount > 0) n = n.clamp(1, pageCount);
     page = n;
     notifyListeners();
-    await _ch?.invokeMethod('goToPage', {'page': n});
+    await _ch?.invokeMethod('goToPage', {'page': n, 'fraction': fraction});
   }
 
   /// The page at the top of the view (0-based) and how far down it the top edge is (0...1).

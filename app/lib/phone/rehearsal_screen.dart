@@ -19,11 +19,11 @@ import '../models/models.dart';
 import '../state/player_state.dart';
 import '../theme/tokens.dart';
 import '../ui/dashboard.dart' show blockText;
-import '../ui/playback_bar.dart' show SceneTimeline;
 import '../ui/widgets.dart' show NameChip, titleCaseName;
 import '../services/project_files.dart' show RehearsalState, loadNewestRehearsal, rehearsalFolder;
 import 'adaptive.dart';
 import 'bookmarks.dart';
+import 'scene_timeline.dart';
 import 'folder_access.dart';
 import 'line_notes.dart';
 import 'now_playing.dart';
@@ -80,7 +80,7 @@ class PhoneRehearsalScreen extends StatefulWidget {
   State<PhoneRehearsalScreen> createState() => _PhoneRehearsalScreenState();
 }
 
-class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with WidgetsBindingObserver {
+class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   late final RehearsalSession session = RehearsalSession.load(widget.project);
   late final RehearsalPlayer player = RehearsalPlayer(audioEnabled: widget.audio);
   final scroll = ScrollController();
@@ -112,6 +112,16 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
 
   // Bookmarks
   Bookmarks? bookmarks;
+
+  // The playhead while browsing. Scrolling the script moves it to where you are on the page (nothing plays or seeks until you
+  // press Play, tap a line or let go of the playhead); null: it is the player's own.
+  final ValueNotifier<_Head?> _head = ValueNotifier(null);
+  bool _scrubbing = false, _scrubWasPlaying = false;
+
+  // A line pointed out for a moment: while the playhead is dragged, or when a line is tapped. It fades after.
+  late final AnimationController _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 800), value: 0);
+  ({int scene, int line})? _indicated;
+  Timer? _fadeTimer;
 
   // The outline along the edge: the scene being read (follows the scroll), and the widget to fold away when scrolling.
   final ValueNotifier<int?> _viewScene = ValueNotifier(null);
@@ -220,6 +230,9 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
     WidgetsBinding.instance.removeObserver(this);
     _syncTimer?.cancel();
     _viewScene.dispose();
+    _head.dispose();
+    _fadeTimer?.cancel();
+    _fade.dispose();
     bookmarks?.dispose();
     if (widget.audio) nowPlaying.detach();
     for (final sub in _audioSubs) {
@@ -242,6 +255,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
 
   void _onPlayer() {
     if (!mounted) return;
+    if (player.isPlaying && _head.value != null && !_scrubbing) _head.value = null; // audio is the truth while it plays
     final scene = player.currentScene?.sceneNumber;
     if (player.currentCueIndex != _lastCue || scene != _lastScene) {
       _lastCue = player.currentCueIndex;
@@ -314,6 +328,9 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
       setState(_clearSelection);
       return;
     }
+    // A tap points the line out for a moment; it does not play it. Play does that, from here.
+    _indicate(s.number, s.lines.indexOf(l));
+    _releaseIndicator(delay: const Duration(milliseconds: 350));
     if (!s.rendered || l.cueIndex == null) return;
     final playingHere = player.currentScene?.sceneNumber == s.number;
     // My blanked line: peek (shows it and reads it aloud; tap again to hide).
@@ -325,8 +342,145 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
       player.peekLine(l.cueIndex!);
       return;
     }
-    _userScrolled = DateTime.fromMillisecondsSinceEpoch(0);
-    player.playFrom(s.number, l.cueIndex!);
+    final item = player.scenes.where((i) => i.sceneNumber == s.number).firstOrNull;
+    if (item == null || l.cueIndex! >= item.cues.length) return;
+    _head.value = null;
+    _parkAt(s.number, item.cues[l.cueIndex!].startTime);
+  }
+
+  // The playhead, and the line pointed out ----------------------------------------
+
+  /// Where the script is on the page: the line [depth] of the way down the view (0.3 is where playback puts the line it is
+  /// reading), as scene index, line index and how far through that line.
+  ({int scene, int line, double frac})? _probe([double depth = 0.3]) {
+    final vp = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (vp == null || !vp.attached || !vp.hasSize || session.scenes.isEmpty) return null;
+    final y = vp.localToGlobal(Offset.zero).dy + vp.size.height * depth;
+    var si = 0;
+    for (final (i, sc) in session.scenes.indexed) {
+      final box = _keys['h${sc.number}']?.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached || !box.hasSize) continue;
+      if (box.localToGlobal(Offset.zero).dy <= y) {
+        si = i;
+      } else {
+        break;
+      }
+    }
+    final scene = session.scenes[si];
+    for (var i = 0; i < scene.lines.length; i++) {
+      final lb = _keys['${scene.number}:$i']?.currentContext?.findRenderObject() as RenderBox?;
+      if (lb == null || !lb.attached || !lb.hasSize) continue;
+      final top = lb.localToGlobal(Offset.zero).dy;
+      if (top + lb.size.height > y) return (scene: si, line: i, frac: ((y - top) / lb.size.height).clamp(0.0, 1.0));
+    }
+    return (scene: si, line: scene.lines.isEmpty ? 0 : scene.lines.length - 1, frac: 1.0);
+  }
+
+  /// Scrolling moves the playhead to where you are on the page. Nothing plays or seeks yet.
+  void _updateHead() {
+    if (!mounted || _scrubbing) return;
+    if (player.isPlaying) {
+      if (_head.value != null) _head.value = null;
+      return;
+    }
+    // At the very top of the script the playhead is at the start, not 30 % of the way down the first screen.
+    final atTop = scroll.hasClients && scroll.offset <= 2 && session.scenes.isNotEmpty;
+    final at = atTop ? (scene: 0, line: 0, frac: 0.0) : _probe();
+    if (at == null) return;
+    final scene = session.scenes[at.scene];
+    final item = player.scenes.where((i) => i.sceneNumber == scene.number).firstOrNull;
+    final ci = scene.lines.isEmpty ? null : scene.lines[at.line].cueIndex;
+    final _Head h;
+    if (item == null || ci == null || ci >= item.cues.length) {
+      h = _Head(scene.number, 0, rendered: item != null);
+    } else {
+      final c = item.cues[ci];
+      h = _Head(scene.number, c.startTime + at.frac * (c.endTime - c.startTime), cue: ci, rendered: true);
+    }
+    final old = _head.value;
+    if (old == null || old.scene != h.scene || old.rendered != h.rendered || (old.time - h.time).abs() > 0.02) _head.value = h;
+  }
+
+  /// The scene the timeline shows (the one scrolled to, or the playing one) and its audio, if it has any.
+  ({int? number, ScenePlayerItem? item}) _shown() {
+    final h = _head.value;
+    if (h != null) return (number: h.scene, item: h.rendered ? player.scenes.where((i) => i.sceneNumber == h.scene).firstOrNull : null);
+    final it = player.currentScene;
+    return (number: it?.sceneNumber, item: it);
+  }
+
+  /// Puts the player's playhead where the script is scrolled to (what Play, Previous and Next start from).
+  Future<void> _commitHead() async {
+    final h = _head.value;
+    _head.value = null;
+    if (h == null || !h.rendered) return;
+    await _parkAt(h.scene, h.time);
+  }
+
+  /// Moves the player's playhead without starting it (a playing one carries on from there).
+  Future<void> _parkAt(int sceneNumber, double time) async {
+    final si = player.scenes.indexWhere((i) => i.sceneNumber == sceneNumber);
+    if (si < 0) return;
+    if (si != player.currentSceneIndex) {
+      await player.switchToScene(si, startAt: time);
+    } else {
+      player.seek(time);
+    }
+  }
+
+  void _scrubStart() {
+    _scrubbing = true;
+    _userScrolled = DateTime.now();
+    _scrubWasPlaying = player.isPlaying;
+    if (_scrubWasPlaying) player.pause();
+    if (_selA != null) setState(_clearSelection);
+  }
+
+  /// Dragging the playhead: the script runs to the line at that time, and the line is pointed out while the finger is down.
+  void _scrubTo(double time) {
+    final item = _shown().item;
+    final scene = _sceneNumbered(item?.sceneNumber);
+    if (item == null || scene == null) return;
+    var ci = 0;
+    for (var i = 0; i < item.cues.length; i++) {
+      if (item.cues[i].startTime <= time) ci = i;
+    }
+    _head.value = _Head(scene.number, time, cue: ci, rendered: true);
+    final line = scene.lines.indexWhere((l) => l.cueIndex == ci);
+    if (line < 0) return;
+    _indicate(scene.number, line);
+    final k = _key('${scene.number}:$line');
+    if (k.currentContext != null) _reveal(k, animate: false);
+  }
+
+  Future<void> _scrubEnd(double time) async {
+    _scrubbing = false;
+    await _commitHead();
+    if (_scrubWasPlaying) {
+      _userScrolled = DateTime.fromMillisecondsSinceEpoch(0);
+      player.play();
+    }
+    _scrubWasPlaying = false;
+    _releaseIndicator();
+  }
+
+  /// Outlines a line until [_releaseIndicator] lets it fade.
+  void _indicate(int scene, int line) {
+    if (line < 0) return;
+    _fadeTimer?.cancel();
+    _fade.stop();
+    _fade.value = 1;
+    if (_indicated?.scene != scene || _indicated?.line != line) setState(() => _indicated = (scene: scene, line: line));
+  }
+
+  void _releaseIndicator({Duration delay = Duration.zero}) {
+    _fadeTimer?.cancel();
+    _fadeTimer = Timer(delay, () {
+      if (!mounted) return;
+      _fade.animateTo(0, duration: const Duration(milliseconds: 800), curve: Curves.easeOut).then((_) {
+        if (mounted && _fade.value == 0 && _indicated != null) setState(() => _indicated = null);
+      });
+    });
   }
 
   // Loop selection -------------------------------------------------------------
@@ -797,9 +951,19 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
   int? _currentPage() {
     final pages = _pageOf;
     if (pages == null) return null;
+    // Playing: the line being read. Otherwise the line at the top of the screen, wherever the player was left.
+    if (player.isPlaying) {
+      final s = _sceneNumbered(player.currentScene?.sceneNumber);
+      final l = s?.lines.where((l) => l.cueIndex != null && l.cueIndex == player.currentCueIndex).firstOrNull;
+      if (l != null) return pages[l.key];
+    }
+    final top = _topLine();
+    if (top != null) {
+      final lines = session.scenes[top.$1].lines;
+      if (top.$2 < lines.length) return pages[lines[top.$2].key];
+    }
     final s = _sceneNumbered(player.currentScene?.sceneNumber ?? _topScene);
-    if (s == null) return null;
-    final l = s.lines.where((l) => l.cueIndex != null && l.cueIndex == player.currentCueIndex).firstOrNull ?? s.lines.firstOrNull;
+    final l = s?.lines.firstOrNull;
     return l == null ? null : pages[l.key];
   }
 
@@ -883,6 +1047,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
   /// Keeps the outline and the bar on the scene being read.
   void _updateViewScene() {
     if (!mounted) return;
+    _updateHead();
     final si = _sceneIndexAtTop();
     if (si == null) return;
     final n = session.scenes[si].number;
@@ -912,8 +1077,19 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
     if (session.readScene == scene.number && session.readLine == line.key) return;
     session.readScene = scene.number;
     session.readLine = line.key;
+    session.readProgress = _progressOf(scene, line);
     _syncSeen = clockNow().toUtc();
     session.scheduleSave(player, folderAccess: widget.folderAccess, after: const Duration(seconds: 2));
+  }
+
+  /// How far through the script [line] is, by lines (0...1): what the project's cover shows.
+  double _progressOf(PhoneScene scene, PhoneLine line) {
+    var before = 0, total = 0;
+    for (final sc in session.scenes) {
+      if (identical(sc, scene)) before = total + sc.lines.indexOf(line);
+      total += sc.lines.length;
+    }
+    return total <= 1 ? 0 : (before / (total - 1)).clamp(0.0, 1.0);
   }
 
   /// Scrolls to the line with [key] in scene [number]. False if the script has no such line.
@@ -1255,6 +1431,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
                   current: _viewScene,
                   onPick: _jumpToScene,
                   onScrub: _scrubToScene,
+                  right: !isPadDisplay(context),
                   bookmarked: {for (final b in bookmarks?.live.values ?? const <Bookmark>[]) b.scene},
                 ),
               ),
@@ -1265,8 +1442,10 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
     );
   }
 
-  /// The iPad's selection menu floats on the line; the phone's sits at the bottom.
-  bool get _floatingMenu => isPadDisplay(context);
+  /// The selection menu floats on the line, on the iPhone too (an experiment: set this false to put the iPhone's back in the
+  /// bar at the bottom of the screen).
+  static const _floatingMenuOnPhone = true;
+  bool get _floatingMenu => isPadDisplay(context) || _floatingMenuOnPhone;
 
   /// The bar at the top of the script: the name of the scene being read changes as you scroll; the Text only tag and the
   /// scenes button stay where they are.
@@ -1490,7 +1669,11 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
           )
         : text;
     final hovered = _hover == l.key;
-    final Color? fill = current ? t.highlighter : (selected ? t.accentSoft : (mine ? t.mine : (hovered ? t.ruleSoft : null)));
+    // My lines are filled in my character's own colour (the yellow stays for the line being read).
+    final myName = mine ? l.names.firstWhere(player.myRoles.contains, orElse: () => l.names.first) : null;
+    final Color? fill = current
+        ? t.highlighter
+        : (selected ? t.accentSoft : (mine ? speakerColors(myName!, session.characters, t).highlight : (hovered ? t.ruleSoft : null)));
     final row = MouseRegion(
       onEnter: (_) => setState(() => _hover = l.key),
       onExit: (_) => setState(() {
@@ -1541,6 +1724,24 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
               ),
               child: SizedBox(width: double.infinity, child: body),
             ),
+            if (_indicated != null && _indicated!.scene == s.number && _indicated!.line == i)
+              Positioned.fill(
+                top: 4,
+                bottom: 4,
+                child: IgnorePointer(
+                  child: FadeTransition(
+                    opacity: _fade,
+                    child: DecoratedBox(
+                      key: const Key('lineIndicator'),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        color: t.accent.withValues(alpha: 0.08),
+                        border: Border.all(color: t.accent.withValues(alpha: 0.75), width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             if (marked)
               Positioned(
                 top: 6,
@@ -1636,7 +1837,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
   );
 
   /// What can be done with the selected line(s): bookmark, note (edit / delete), loop.
-  List<Widget> _selectionActions(Tokens t) {
+  List<Widget> _selectionActions(Tokens t, {bool compact = false}) {
     final n = ((_selA! - _selB!).abs()) + 1;
     final scene = _sceneNumbered(_selScene);
     final single = n == 1 && scene != null ? scene.lines[_selA!] : null;
@@ -1651,7 +1852,17 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
             setState(_clearSelection);
           },
         ),
-      if (single != null && notes != null)
+      if (single != null && notes != null && compact)
+        IconButton(
+          key: const Key('noteLine'),
+          tooltip: notes!.has(single.key) ? 'Edit Note' : 'Note',
+          icon: const Icon(Icons.edit_outlined),
+          onPressed: () {
+            setState(_clearSelection);
+            _editNote(single);
+          },
+        )
+      else if (single != null && notes != null)
         TextButton.icon(
           onPressed: () {
             setState(_clearSelection);
@@ -1719,6 +1930,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
     }
     if (anchor == null || anchor.bottom < _headingHeight || anchor.top > stack.size.height) return const SizedBox.shrink();
     final n = b - a + 1;
+    final compact = !isPadDisplay(context); // the phone's card is narrow: icons only
     return Positioned.fill(
       child: CustomSingleChildLayout(
         delegate: _MenuLayout(anchor, top: _headingHeight),
@@ -1733,12 +1945,15 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '$n line${n == 1 ? '' : 's'}',
-                  style: TextStyles.ui(t, size: 14, weight: FontWeight.w600, color: t.muted),
-                ),
-                const SizedBox(width: 6),
-                ..._selectionActions(t),
+                if (!compact || n > 1) ...[
+                  Text(
+                    '$n line${n == 1 ? '' : 's'}',
+                    style: TextStyles.ui(t, size: 14, weight: FontWeight.w600, color: t.muted),
+                  ),
+                  const SizedBox(width: 6),
+                ] else
+                  const SizedBox(width: 10),
+                ..._selectionActions(t, compact: compact),
                 IconButton(tooltip: 'Cancel', icon: const Icon(Icons.close_rounded, size: 20), onPressed: () => setState(_clearSelection)),
               ],
             ),
@@ -1803,20 +2018,48 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
             Text(player.flash!, style: TextStyles.hand(t, size: 20, color: t.dark ? t.highlighter : t.accent))
           else if (waiting)
             Text('Your line', style: TextStyles.hand(t, size: 20, color: t.dark ? t.highlighter : t.accent)),
-          Row(
-            children: [
-              Text(_clockText(player.currentTime), style: clock),
-              const SizedBox(width: 10),
-              Expanded(
-                // Room for the knob at either end.
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 11),
-                  child: SceneTimeline(player: player, allSpeakers: session.characters, height: 36, knob: 11),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(_clockText(player.duration), style: clock),
-            ],
+          ValueListenableBuilder<_Head?>(
+            valueListenable: _head,
+            builder: (context, head, _) {
+              final shown = _shown();
+              final item = shown.item;
+              final isCurrent = item != null && identical(item, player.currentScene);
+              final duration = item == null ? 0.0 : (isCurrent ? player.duration : item.totalDuration);
+              final time = item == null ? 0.0 : (head?.time ?? player.currentTime);
+              final loop = isCurrent && player.loopMode == LoopMode.lines && player.loopEnd > player.loopStart ? (player.loopStart, player.loopEnd) : null;
+              return Row(
+                children: [
+                  Text(_clockText(time), style: clock),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    // Room for the knob at either end. A new scene's timeline fades in over the old one.
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 11),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 260),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        layoutBuilder: (current, previous) => Stack(alignment: Alignment.center, children: [...previous, ?current]),
+                        child: PhoneTimeline(
+                          key: ValueKey(shown.number),
+                          cues: item?.cues ?? const [],
+                          duration: duration,
+                          time: time,
+                          allSpeakers: session.characters,
+                          isMine: player.isMyLine,
+                          loop: loop,
+                          onScrubStart: _scrubStart,
+                          onScrub: _scrubTo,
+                          onScrubEnd: _scrubEnd,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(_clockText(duration), style: clock),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 8),
           Row(
@@ -1826,13 +2069,18 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
                 child: Align(alignment: Alignment.centerLeft, child: _lineButton ? _lineButtonWidget(t) : _bookmarksButton(t, c)),
               ),
               const SizedBox(width: 8),
-              round(Icons.fast_rewind_rounded, 'Previous line', player.prevLine, size: 44),
+              round(Icons.fast_rewind_rounded, 'Previous line', () async {
+                await _commitHead();
+                player.prevLine();
+              }, size: 44),
               const SizedBox(width: 8),
               round(
                 player.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                 player.isPlaying ? 'Pause' : (waiting ? 'Carry on' : 'Play'),
-                () {
+                () async {
                   _userScrolled = DateTime.fromMillisecondsSinceEpoch(0);
+                  // Plays from where the script is scrolled to (the playhead you see).
+                  await _commitHead();
                   player.togglePlayPause();
                   WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
                 },
@@ -1842,7 +2090,10 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
                 iconSize: 32,
               ),
               const SizedBox(width: 8),
-              round(Icons.fast_forward_rounded, 'Next line', player.nextLine, size: 44),
+              round(Icons.fast_forward_rounded, 'Next line', () async {
+                await _commitHead();
+                player.nextLine();
+              }, size: 44),
               const SizedBox(width: 8),
               Expanded(
                 child: Align(alignment: Alignment.centerRight, child: pill('Rehearse', _openPanel, strong: true)),
@@ -2651,4 +2902,17 @@ class _MenuLayout extends SingleChildLayoutDelegate {
 
   @override
   bool shouldRelayout(_MenuLayout old) => old.anchor != anchor || old.top != top;
+}
+
+/// Where the playhead is while the script is being browsed: a time in a scene (not the player's own, until it is committed).
+class _Head {
+  const _Head(this.scene, this.time, {this.cue, required this.rendered});
+  final int scene;
+  final double time;
+
+  /// The line (index in the scene's cues) the time falls in.
+  final int? cue;
+
+  /// False for a scene with no audio: the timeline is then bare.
+  final bool rendered;
 }

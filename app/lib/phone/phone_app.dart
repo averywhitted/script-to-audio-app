@@ -13,6 +13,9 @@ import 'notice.dart';
 import 'phone_store.dart';
 import 'rehearsal_screen.dart';
 
+/// Projects waiting on their download to open (a second tap meanwhile does nothing).
+final _opening = <String>{};
+
 /// A project that is only its project.json (and a script) has nothing worth removing.
 const _smallestWorthRemoving = 200 * 1024;
 
@@ -64,9 +67,43 @@ class PhoneHome extends StatelessWidget {
     final store = context.watch<PhoneStore>();
     return Scaffold(
       backgroundColor: t.bg,
-      body: SafeArea(child: store.folder == null && !store.loading ? const _Welcome() : const _Projects()),
+      body: SafeArea(child: store.folder == null && !store.loading ? const _Welcome() : const _OnResume(child: _Projects())),
     );
   }
+}
+
+/// When the app comes back to the front: iOS may have taken downloads off the device meanwhile, and another device may have read on.
+class _OnResume extends StatefulWidget {
+  const _OnResume({required this.child});
+  final Widget child;
+
+  @override
+  State<_OnResume> createState() => _OnResumeState();
+}
+
+class _OnResumeState extends State<_OnResume> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    final store = context.read<PhoneStore>();
+    store.rescanDownloads();
+    store.refreshProgress();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// First launch: where the projects come from, and one button.
@@ -137,12 +174,105 @@ class _Projects extends StatelessWidget {
 
   Future<void> _open(BuildContext context, Project p) async {
     final store = context.read<PhoneStore>();
-    if (store.downloading.containsKey(p.id)) return;
-    final ok = await store.download(p);
+    if (!_opening.add(p.id)) return;
+    final bool ok;
+    try {
+      // A project already coming down is waited for; one waiting its turn goes first.
+      ok = await store.download(p);
+    } finally {
+      _opening.remove(p.id);
+    }
     if (!ok || !context.mounted) return;
+    store.markOpened(p);
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PhoneRehearsalScreen(project: p, store: store, folderAccess: store.folderAccess, audio: store.folderAccess),
+      ),
+    );
+    // The screen saves where it was left as it closes.
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    store.refreshProgress();
+  }
+
+  /// The cloud / device icon on a cover: what is downloaded, and what can be done about it.
+  Future<void> _downloadSheet(BuildContext context, Project p) async {
+    final store = context.read<PhoneStore>();
+    final t = Tokens.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: t.sheet,
+      constraints: sheetConstraints(context),
+      builder: (ctx) => ListenableBuilder(
+        listenable: store,
+        builder: (ctx, _) {
+          final phase = store.phaseOf(p);
+          final local = store.localBytes(p);
+          final pct = ((store.downloading[p.id] ?? 0) * 100).round();
+          final ahead = (store.queuePlace(p) ?? 1) - 1 + (store.downloading.isEmpty ? 0 : store.downloading.length);
+          final (IconData icon, String status) = switch (phase) {
+            DownloadPhase.cloud => (Icons.cloud_outlined, 'In iCloud Drive only. Not on this device yet.'),
+            DownloadPhase.queued => (Icons.schedule_rounded, ahead <= 1 ? 'Waiting for a download to finish.' : 'Waiting behind $ahead downloads.'),
+            DownloadPhase.downloading => (Icons.downloading_rounded, 'Downloading… $pct%'),
+            DownloadPhase.device => (Icons.download_done_rounded, local > 0 ? 'On this device · ${_size(local)}' : 'On this device'),
+          };
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: Text(p.name, style: TextStyles.ui(t, size: 17, weight: FontWeight.w700)),
+                  subtitle: Row(
+                    children: [
+                      Icon(icon, size: 16, color: t.muted),
+                      const SizedBox(width: 6),
+                      Expanded(child: Text(status)),
+                    ],
+                  ),
+                ),
+                if (phase == DownloadPhase.cloud)
+                  ListTile(
+                    key: const Key('downloadProject'),
+                    leading: const Icon(Icons.cloud_download_outlined),
+                    title: const Text('Download'),
+                    subtitle: const Text('Keeps the audio and script on this device so it plays offline. Several can be queued; they come down one after another.'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      store.enqueue(p);
+                    },
+                  ),
+                if (phase == DownloadPhase.queued || phase == DownloadPhase.downloading)
+                  ListTile(
+                    key: const Key('cancelDownload'),
+                    leading: const Icon(Icons.close_rounded),
+                    title: Text(phase == DownloadPhase.queued ? 'Remove from Queue' : 'Cancel Download'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      store.cancelDownload(p);
+                    },
+                  ),
+                if (phase == DownloadPhase.device)
+                  ListTile(
+                    key: const Key('removeDownloadHere'),
+                    leading: const Icon(Icons.cloud_off_rounded),
+                    title: const Text('Remove Download'),
+                    subtitle: Text(
+                      local < _smallestWorthRemoving
+                          ? 'Nothing much to remove.'
+                          : 'Frees ${_size(local)}. It stays in iCloud Drive and comes back when you open it.',
+                    ),
+                    enabled: local >= _smallestWorthRemoving,
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final messenger = ScaffoldMessenger.of(context);
+                      final r = await store.removeDownload(p);
+                      if (r == null) return;
+                      showNotice(messenger, _removedMessage(p, r));
+                    },
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -190,6 +320,16 @@ class _Projects extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(ctx);
                   store.cancelRequest(p);
+                },
+              ),
+            if (store.phaseOf(p) == DownloadPhase.cloud)
+              ListTile(
+                leading: const Icon(Icons.cloud_download_outlined),
+                title: const Text('Download'),
+                subtitle: const Text('Keeps it on this device so it plays offline.'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  store.enqueue(p);
                 },
               ),
             ListTile(
@@ -327,37 +467,210 @@ class _Projects extends StatelessWidget {
                 ),
                 delegate: SliverChildBuilderDelegate(childCount: store.projects.length, (context, i) {
                   final p = store.projects[i];
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _open(context, p),
-                    onLongPress: () => _projectMenu(context, p),
-                    child: Semantics(
-                      button: true,
-                      label: p.name,
-                      // The Mac's cover, scaled to the column.
-                      child: IgnorePointer(
-                        child: FittedBox(
-                          alignment: Alignment.topCenter,
-                          child: ScriptCover(
-                            project: p,
-                            selected: false,
-                            renaming: false,
-                            archiving: false,
-                            backgroundProgress: store.downloading[p.id],
-                            onTap: () {},
-                            onSelect: () {},
-                            onMenu: (_) {},
-                            onRename: (_) {},
-                            onRenameCancel: () {},
-                          ),
-                        ),
-                      ),
-                    ),
+                  return _Cover(
+                    project: p,
+                    store: store,
+                    onOpen: () => _open(context, p),
+                    onMenu: () => _projectMenu(context, p),
+                    onDownloadTap: () => _downloadSheet(context, p),
                   );
                 }),
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// One project's cover with what the phone knows about it: whether it is in the cloud or on the device (and how far its
+/// download is), whether it is new, and how far it has been read.
+class _Cover extends StatelessWidget {
+  const _Cover({required this.project, required this.store, required this.onOpen, required this.onMenu, required this.onDownloadTap});
+  final Project project;
+  final PhoneStore store;
+  final VoidCallback onOpen, onMenu, onDownloadTap;
+
+  // The Mac's cover is 196 pt wide and 232 pt tall; everything here is placed against that, scaled to the column.
+  static const _w = 196.0, _h = 232.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final p = project;
+    final phase = store.phaseOf(p);
+    final known = store.onDevice.containsKey(p.id) || phase != DownloadPhase.cloud || !store.folderAccess;
+    final read = store.progress[p.id];
+    final isNew = store.isNew(p);
+    final label = [
+      p.name,
+      if (isNew) 'new',
+      if (read != null && read > 0) '${(read * 100).round()} percent read',
+      switch (phase) {
+        DownloadPhase.cloud => 'in iCloud, not downloaded',
+        DownloadPhase.queued => 'waiting to download',
+        DownloadPhase.downloading => 'downloading',
+        DownloadPhase.device => 'on this device',
+      },
+    ].join(', ');
+    return LayoutBuilder(
+      builder: (context, box) {
+        final s = box.maxWidth / _w;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onOpen,
+                onLongPress: onMenu,
+                child: Semantics(
+                  button: true,
+                  label: label,
+                  child: ExcludeSemantics(
+                    // The Mac's cover, scaled to the column.
+                    child: IgnorePointer(
+                      child: FittedBox(
+                        alignment: Alignment.topCenter,
+                        child: ScriptCover(
+                          project: p,
+                          selected: false,
+                          renaming: false,
+                          archiving: false,
+                          backgroundProgress: store.downloading[p.id],
+                          onTap: () {},
+                          onSelect: () {},
+                          onMenu: (_) {},
+                          onRename: (_) {},
+                          onRenameCancel: () {},
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (read != null && read > 0.005)
+              Positioned(
+                left: 12 * s,
+                right: 0,
+                top: _h * s - 5 * s,
+                height: 5 * s,
+                child: IgnorePointer(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.only(bottomRight: Radius.circular(8 * s)),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(child: ColoredBox(color: Colors.black.withValues(alpha: 0.28))),
+                        FractionallySizedBox(
+                          widthFactor: read.clamp(0.02, 1.0),
+                          child: ColoredBox(key: const Key('coverProgress'), color: t.dark ? t.accentLine.withValues(alpha: 1) : t.accent),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            // NEW sits in the date row under the cover, clear of the title.
+            if (isNew)
+              Positioned(
+                top: _h * s + 6 * s,
+                right: 2,
+                child: IgnorePointer(
+                  child: Container(
+                    key: const Key('coverNew'),
+                    padding: EdgeInsets.symmetric(horizontal: 7 * s.clamp(0.9, 1.2), vertical: 1.5),
+                    decoration: BoxDecoration(color: t.accent, borderRadius: BorderRadius.circular(20)),
+                    child: Text(
+                      'NEW',
+                      style: TextStyle(fontFamily: Fonts.ui, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: t.onAccent),
+                    ),
+                  ),
+                ),
+              ),
+            // The download icon takes the cover's top right corner (the title keeps clear of it).
+            if (known)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: _DownloadBadge(
+                  key: Key('download_${p.id}'),
+                  phase: phase,
+                  progress: store.downloading[p.id] ?? 0,
+                  place: store.queuePlace(p),
+                  onTap: onDownloadTap,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The round icon on a cover: a cloud with an arrow (in iCloud, tap to download), a clock (waiting its turn), a ring that
+/// fills while downloading (tap to stop), or a tick (on this device). Tapping any of them opens the download options.
+class _DownloadBadge extends StatelessWidget {
+  const _DownloadBadge({super.key, required this.phase, required this.progress, required this.place, required this.onTap});
+  final DownloadPhase phase;
+  final double progress;
+  final int? place;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    final (String tip, Widget glyph) = switch (phase) {
+      DownloadPhase.cloud => ('In iCloud. Download options', Icon(Icons.cloud_download_outlined, size: 17, color: t.ink2)),
+      DownloadPhase.queued => ('Waiting to download', Icon(Icons.schedule_rounded, size: 17, color: t.muted)),
+      DownloadPhase.downloading => (
+        'Downloading. Options',
+        SizedBox(
+          width: 22,
+          height: 22,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                value: progress.clamp(0.04, 1.0),
+                strokeWidth: 2.6,
+                color: t.accent,
+                backgroundColor: t.accent.withValues(alpha: 0.2),
+              ),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: t.accent, borderRadius: BorderRadius.circular(2)),
+              ),
+            ],
+          ),
+        ),
+      ),
+      DownloadPhase.device => ('On this device. Download options', Icon(Icons.download_done_rounded, size: 17, color: t.ok)),
+    };
+    return Semantics(
+      button: true,
+      label: tip,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        // A 44 pt target around a smaller disc.
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: (t.dark ? Colors.black : Colors.white).withValues(alpha: 0.78),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+              ),
+              child: glyph,
+            ),
+          ),
+        ),
       ),
     );
   }
