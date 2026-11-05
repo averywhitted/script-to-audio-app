@@ -2,7 +2,7 @@
 
 ## Resume here
 
-_Updated 2026-11-05 EST · branch `ipados-port` · working tree: committed and pushed at the end of this round (two ephemeral `sidetrack-*.md` stay untracked, never commit them)_
+_Updated 2026-11-05 16:10 EST · branch `ipados-port` @ `0df54a1` (pushed; round = `a88d2b1`, then formatting-only `0df54a1`) · working tree: clean (two ephemeral `sidetrack-*.md` stay untracked, never commit them)_
 
 **Project:** Table Read turns screenplay PDFs into per-scene `.m4a` audio dramas. Mac app = Flutter UI (`app/`) + Python worker for voices (Rust core parses on the phone / optionally Mac); iPhone/iPad = one universal Flutter app (`app/lib/phone/`) that rehearses on device (no voice rendering; the Mac renders). Older SwiftUI app still in `Sources/`.
 **Current goal:** iPhone/iPad rehearsal polish. Round after the iPhone catch-up (Nov 5, two History entries): Avery's notes on downloads, highlight, outline, voice scene titles are done and installed on the iPhone and the Mac (Table Read Preview); the iPad install is next (Avery plugs it in).
@@ -44,7 +44,7 @@ _Updated 2026-11-05 EST · branch `ipados-port` · working tree: committed and p
 - `backend/audio_pipeline.py`: `spoken_scene_title` (script heading, ", part N" from the "(part N)" suffix, placeholder "Scene 1" skipped), used for the narration and the cost estimates; `TestSpokenSceneTitle` in `test_pipeline.py`.
 - Tests: `ios_update_test.dart` +4 (remove download status and visibility, nothing opens by itself, highlight, rail on iPad); goldens `phone_rehearse_*`, `phone_line_hint`, `phone_scene_jump`, `ipad_rehearse_*` re-recorded.
 **Decisions:** a heading identical to the parser's placeholder is treated as ours (a real script heading "Scene 1" in mixed case is also skipped; accepted). The old ~22 `dart format -l 150` reformatted files were committed as their own formatting-only commit because Avery said to commit everything.
-**State:** `flutter test` 131 pass; installed on the iPhone and as /Applications/Table Read Preview.app (Mac); not verified on a device by me.
+**State:** committed `a88d2b1` + formatting `0df54a1`, pushed; `flutter test` 131 pass; installed on the iPhone and as /Applications/Table Read Preview.app (Mac); not verified on a device by me.
 **Next:** Resume block.
 
 ### 2026-11-05 15:45 — iPhone catch-up: queueable downloads, NEW/progress, playhead follows the page, outline right, PDF position fixes
