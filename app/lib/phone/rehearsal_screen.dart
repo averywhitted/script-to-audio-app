@@ -27,6 +27,7 @@ import 'bookmarks.dart';
 import 'folder_access.dart';
 import 'line_notes.dart';
 import 'now_playing.dart';
+import 'notice.dart';
 import 'outline_rail.dart';
 import 'page_align.dart';
 import 'pdf_panel.dart';
@@ -754,7 +755,7 @@ class _PhoneRehearsalScreenState extends State<PhoneRehearsalScreen> with Widget
     if (!mounted) return;
     setState(() => _preparingPdf = false);
     if (problem != null) {
-      if (open) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(problem)));
+      if (open) showNotice(ScaffoldMessenger.of(context), problem);
       return;
     }
     if (!open) return;

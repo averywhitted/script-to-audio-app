@@ -9,6 +9,7 @@ import '../theme/tokens.dart';
 import '../ui/gallery.dart' show ScriptCover, friendlyDate;
 import 'adaptive.dart';
 import 'folder_access.dart' show RemovedDownload;
+import 'notice.dart';
 import 'phone_store.dart';
 import 'rehearsal_screen.dart';
 
@@ -63,11 +64,7 @@ class PhoneHome extends StatelessWidget {
     final store = context.watch<PhoneStore>();
     return Scaffold(
       backgroundColor: t.bg,
-      body: SafeArea(
-        child: store.folder == null && !store.loading
-            ? const _Welcome()
-            : const _Projects(),
-      ),
+      body: SafeArea(child: store.folder == null && !store.loading ? const _Welcome() : const _Projects()),
     );
   }
 }
@@ -90,7 +87,10 @@ class _Welcome extends StatelessWidget {
             height: 26,
             alignment: Alignment.center,
             decoration: BoxDecoration(color: t.accentSoft, shape: BoxShape.circle),
-            child: Text(n, style: TextStyles.ui(t, size: 14, weight: FontWeight.w700, color: t.accent)),
+            child: Text(
+              n,
+              style: TextStyles.ui(t, size: 14, weight: FontWeight.w700, color: t.accent),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(child: Text(text, style: TextStyles.ui(t, size: 16, height: 1.4))),
@@ -101,10 +101,7 @@ class _Welcome extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 56, 24, 24),
       children: [
         Center(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(22),
-            child: Image.asset('assets/app_icon.png', width: 96, height: 96),
-          ),
+          child: ClipRRect(borderRadius: BorderRadius.circular(22), child: Image.asset('assets/app_icon.png', width: 96, height: 96)),
         ),
         const SizedBox(height: 20),
         Text('Table Read', textAlign: TextAlign.center, style: TextStyles.display(t, size: 30)),
@@ -129,10 +126,7 @@ class _Welcome extends StatelessWidget {
             textStyle: TextStyles.ui(t, size: 17, weight: FontWeight.w600),
           ),
         ),
-        if (store.error != null) ...[
-          const SizedBox(height: 16),
-          Text(store.error!, style: TextStyles.ui(t, color: t.danger)),
-        ],
+        if (store.error != null) ...[const SizedBox(height: 16), Text(store.error!, style: TextStyles.ui(t, color: t.danger))],
       ],
     );
   }
@@ -147,7 +141,9 @@ class _Projects extends StatelessWidget {
     final ok = await store.download(p);
     if (!ok || !context.mounted) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PhoneRehearsalScreen(project: p, store: store, folderAccess: store.folderAccess, audio: store.folderAccess)),
+      MaterialPageRoute(
+        builder: (_) => PhoneRehearsalScreen(project: p, store: store, folderAccess: store.folderAccess, audio: store.folderAccess),
+      ),
     );
   }
 
@@ -166,7 +162,9 @@ class _Projects extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(title: Text(p.name, style: TextStyles.ui(t, size: 17, weight: FontWeight.w700))),
+            ListTile(
+              title: Text(p.name, style: TextStyles.ui(t, size: 17, weight: FontWeight.w700)),
+            ),
             if (asked == null)
               ListTile(
                 leading: const Icon(Icons.graphic_eq_rounded),
@@ -208,7 +206,7 @@ class _Projects extends StatelessWidget {
                 final messenger = ScaffoldMessenger.of(context);
                 final r = await store.removeDownload(p);
                 if (r == null) return;
-                messenger.showSnackBar(SnackBar(content: Text(_removedMessage(p, r))));
+                showNotice(messenger, _removedMessage(p, r));
               },
             ),
           ],
@@ -267,7 +265,10 @@ class _Projects extends StatelessWidget {
                 children: [
                   Expanded(child: Text('Projects', style: TextStyles.display(t, size: 32))),
                   if (store.importing)
-                    const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5)))
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5)),
+                    )
                   else
                     IconButton(
                       tooltip: 'Import a PDF',
@@ -286,12 +287,16 @@ class _Projects extends StatelessWidget {
           if (store.requests.isNotEmpty)
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-              sliver: SliverToBoxAdapter(child: _Waiting(store: store, onTap: (p) => _projectMenu(context, p))),
+              sliver: SliverToBoxAdapter(
+                child: _Waiting(store: store, onTap: (p) => _projectMenu(context, p)),
+              ),
             ),
           if (store.error != null)
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-              sliver: SliverToBoxAdapter(child: Text(store.error!, style: TextStyles.ui(t, color: t.danger))),
+              sliver: SliverToBoxAdapter(
+                child: Text(store.error!, style: TextStyles.ui(t, color: t.danger)),
+              ),
             ),
           if (store.loading && store.projects.isEmpty)
             const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
@@ -372,7 +377,11 @@ class _Waiting extends StatelessWidget {
         if (store.requests[p.id] case final r?) (p, r),
     ];
     return Container(
-      decoration: BoxDecoration(color: t.accentSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: t.accentLine)),
+      decoration: BoxDecoration(
+        color: t.accentSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: t.accentLine),
+      ),
       padding: const EdgeInsets.fromLTRB(14, 10, 6, 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,8 +402,16 @@ class _Waiting extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyles.ui(t, size: 16, weight: FontWeight.w600)),
-                          Text('${r.summary[0].toUpperCase()}${r.summary.substring(1)} · asked ${_lowerFirst(friendlyDate(r.requestedAt))}', style: TextStyles.ui(t, size: 13, color: t.muted)),
+                          Text(
+                            p.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyles.ui(t, size: 16, weight: FontWeight.w600),
+                          ),
+                          Text(
+                            '${r.summary[0].toUpperCase()}${r.summary.substring(1)} · asked ${_lowerFirst(friendlyDate(r.requestedAt))}',
+                            style: TextStyles.ui(t, size: 13, color: t.muted),
+                          ),
                         ],
                       ),
                     ),

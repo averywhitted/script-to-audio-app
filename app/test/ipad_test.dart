@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_read/models/models.dart';
 import 'package:table_read/phone/bookmarks.dart';
-import 'package:table_read/phone/ink_layer.dart';
 import 'package:table_read/phone/line_notes.dart';
 import 'package:table_read/phone/pdf_view.dart';
 import 'package:table_read/phone/phone_app.dart';
@@ -290,13 +289,8 @@ void main() {
       expect(find.text('Script PDF'), findsOneWidget);
       expect(find.byTooltip('Mark up with Apple Pencil'), findsOneWidget);
       expect(find.byTooltip('Read one page at a time'), findsOneWidget);
-      await tester.tap(find.byTooltip('Mark up with Apple Pencil'));
-      await tester.pumpAndSettle();
-      expect(find.byTooltip('Draw with a finger too'), findsOneWidget);
-      // The Pencil's own tools: undo / redo (greyed until there is something) and clearing the page.
-      expect(find.byTooltip('Undo'), findsOneWidget);
-      expect(find.byTooltip('Redo'), findsOneWidget);
-      expect(find.byTooltip('Clear this page’s markup'), findsOneWidget);
+      // Marking up is Apple's own native viewer (nothing of ours to draw with here): no tool strip of our own.
+      expect(find.byKey(const Key('inkStrip')), findsNothing);
       await tester.tap(find.byTooltip('Close PDF'));
       await tester.pumpAndSettle();
       expect(find.text('Script PDF'), findsNothing);
@@ -433,33 +427,17 @@ void main() {
   });
 
   group('Markup and characters', () {
-    test('ink: strokes save as JSON, come back, erase by stroke, undo and redo', () {
-      final c = PdfController()..pageCount = 3;
-      final saved = <int, String>{};
-      c.onMarkup = (p, d) => saved[p] = d;
-      InkStroke stroke(double x) => InkStroke(marker: false, color: 0xFF1C1B19, width: 0.005, points: [Offset(x, 0.2), Offset(x + 0.1, 0.3)]);
-      c.commitStroke(stroke(0.1));
-      c.commitStroke(stroke(0.5));
-      expect(c.strokesOnPage.length, 2);
-      expect(decodeInk(saved[0]!).length, 2);
-      c.beginEdit();
-      c.eraseAt(const Offset(0.55, 0.25)); // on the second stroke
-      c.endEdit();
-      expect(c.strokesOnPage.length, 1);
-      c.undo();
-      expect(c.strokesOnPage.length, 2);
-      c.redo();
-      expect(c.strokesOnPage.length, 1);
-      c.clearPage();
-      expect(saved[0], ''); // nothing left on the page
-      c.undo();
-      expect(c.strokesOnPage.length, 1);
-      // A new controller starts from what was saved.
-      final d = PdfController()
-        ..initialMarkup = {
-          '0': encodeInk([stroke(0.1)]),
-        };
-      expect(d.ink[0]!.single.points.length, 2);
+    test('markup: a drawing per page is saved in the project, comes back on another device, and erasing sticks', () async {
+      final dir = Directory.systemTemp.createTempSync('markup');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final a = PdfMarkup(folder: dir.path, deviceId: 'ipad', folderAccess: false);
+      await a.set(0, 'AAA');
+      await a.set(2, 'CCC');
+      final b = PdfMarkup(folder: dir.path, deviceId: 'iphone', folderAccess: false)..load();
+      expect(b.drawings, {'0': 'AAA', '2': 'CCC'});
+      await a.set(2, ''); // erased
+      final again = PdfMarkup(folder: dir.path, deviceId: 'ipad', folderAccess: false)..load();
+      expect(again.drawings, {'0': 'AAA'});
     });
 
     testWidgets('several characters can be picked, and all of their lines are marked', (tester) async {

@@ -1,6 +1,8 @@
 # Dev Log — Table Read
 
 ## Resume here
+
+> Round 5 (latest): markup is now the native PencilKit viewer (see History); round-4 notes below about the Flutter ink layer are obsolete.
 _Updated 2026-11-03 17:40 EST · branch `ipados-port` @ `1b2cc83` + round-3 commit (not pushed) · working tree: **`dart format -l 150 lib test` reformatted ~25 untouched files (lib/ui, lib/state, lib/models, phone_app.dart, other tests, ...): not committed; discard with `git checkout -- app/lib/main.dart app/lib/models app/lib/phone/phone_app.dart app/lib/services/{project_store,python_bridge,settings}.dart app/lib/state app/lib/ui app/test/{fixtures,logic_test,now_playing_test,player_test,rust_core_test,screens_test,worker_test}.dart` and `rm -rf app/test/failures` (the sandbox blocked me doing it)**; plus two untracked ephemeral `sidetrack-*.md`_
 
 **Round 4 (Nov 4): see the newest History entry: Pencil is now our own Flutter ink layer (no PencilKit), PDF is always full screen, reader rework. Not yet installed on the iPad (it was unavailable); install with the Round 2 command, then test Pencil first.**
@@ -93,6 +95,19 @@ _(old header) Updated 2026-11-01 11:46 EST · branch `ios-rehearsal` @ `107a8a0`
 
 ## History
 <!-- newest first -->
+
+### 2026-11-04 — iPad round 5: Apple's own PencilKit markup, short notices
+- Avery tried round 4 on the iPad: Pencil drew but the fit-to-page, single-page markup was unusable in landscape. Asked for the
+  standard iPadOS Pencil tools and continuous scroll like Preview.
+- Dropped the Flutter ink layer (`lib/phone/ink_layer.dart` deleted). The toolbar's pencil button now calls `presentMarkup`
+  (`ios/Runner/PdfPlugin.swift`): a native full-screen `MarkupViewController` (PDFView, continuous scroll, `PKCanvasView` per page via
+  `PDFPageOverlayViewProvider`, system `PKToolPicker`, Done button). Drawings are PKDrawing base64 per page in `Markup/<device>.json`
+  (saved ~0.6 s after a stroke settles, flushed on Done). The reading view shows the ink through the same overlays, read-only.
+  Round-4 ink JSON in existing Markup files is ignored (not valid PKDrawing data).
+- One-page-at-a-time reading now also turns pages with a native left/right swipe (only at fitted zoom) besides the arrows.
+- Passing messages use `showNotice` (`lib/phone/notice.dart`): floating, 1.8 s, replaces the previous one.
+- Not verified on device yet: whether the PencilKit canvases take the Pencil inside the native viewer (the earlier in-Flutter version
+  did not draw); installed on the iPad for Avery to try.
 
 ### 2026-11-04 — iPad round 4: own ink layer, full-screen PDF, reader rework
 **Asked:** Pencil still dead; PDF full screen in landscape; page turning stuck in single-page; no script-view markup; outline left + animated + scrub; jump reliability/smoothness; fixed scene bar; multi-select characters; bookmark preview; faster long-press + floating iPad menu; note flag/animation/pencil icon/delete.

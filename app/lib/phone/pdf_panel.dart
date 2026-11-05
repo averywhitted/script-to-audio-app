@@ -1,12 +1,11 @@
 // The PDF and its toolbar (#115). On iPhone it fills a screen of its own; on iPad it
 // sits beside the script (#121). The toolbar has search, the page / continuous
-// switch (#120) and Apple Pencil markup (#119), the last two on iPad only.
+// switch (#120) and Apple Pencil markup (#119, Apple's own PencilKit viewer), the last two on iPad only.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/tokens.dart';
-import 'ink_layer.dart';
 import 'pdf_view.dart';
 import 'rehearsal_session.dart';
 
@@ -58,15 +57,13 @@ class _PdfPanelState extends State<PdfPanel> {
   Future<void> _openMarkup() async {
     final id = await RehearsalSession.deviceId();
     final m = PdfMarkup(folder: widget.folder, deviceId: id, folderAccess: widget.folderAccess)..load();
-    c.initialMarkup = m.drawings;
-    c.onMarkup = (page, data) => m.set(page, data);
+    c.drawings = m.drawings;
     if (mounted) setState(() => _markup = m);
   }
 
   @override
   void dispose() {
     c.removeListener(_changed);
-    c.onMarkup = null;
     _query.dispose();
     _queryFocus.dispose();
     super.dispose();
@@ -134,7 +131,6 @@ class _PdfPanelState extends State<PdfPanel> {
     return Column(
       children: [
         _searching && widget.onSearch == null ? _searchBar(t) : _toolbar(t),
-        if (widget.pad && c.markup) _inkStrip(t),
         if (widget.linkedQuery != null && widget.linkedQuery!.trim().isNotEmpty) _linkedStrip(t),
         Expanded(
           child: Stack(
@@ -143,7 +139,6 @@ class _PdfPanelState extends State<PdfPanel> {
                 Positioned.fill(
                   child: PdfNativeView(path: widget.pdfPath, controller: c),
                 ),
-              if (_markup != null) Positioned.fill(child: InkOverlay(controller: c)),
               if (c.pageCount > 0)
                 Positioned(
                   bottom: 14,
@@ -206,119 +201,21 @@ class _PdfPanelState extends State<PdfPanel> {
               c.continuous ? 'Read one page at a time' : 'Scroll continuously',
               () => c.setContinuous(!c.continuous),
             ),
-            btn(
-              Icons.draw_rounded,
-              c.markup ? 'Finish marking up' : 'Mark up with Apple Pencil',
-              () => c.setMarkup(enabled: !c.markup),
-              on: c.markup,
-            ),
+            btn(Icons.draw_rounded, 'Mark up with Apple Pencil', _markUp),
           ],
         ],
       ),
     );
   }
 
-  /// Pen, highlighter and eraser; the ink's color and thickness; undo, redo, clear. Shown while marking up.
-  Widget _inkStrip(Tokens t) {
-    Widget tool(IconData icon, String tip, InkTool which) => IconButton(
-      key: Key('ink_${which.name}'),
-      tooltip: tip,
-      icon: Icon(icon, color: c.tool == which ? t.onAccent : t.ink2),
-      style: c.tool == which ? IconButton.styleFrom(backgroundColor: t.accent) : null,
-      onPressed: () => c.setTool(tool: which),
-    );
-    Widget action(IconData icon, String tip, VoidCallback? onTap, {bool on = false}) => IconButton(
-      tooltip: tip,
-      icon: Icon(icon, color: on ? t.onAccent : t.ink2),
-      style: on ? IconButton.styleFrom(backgroundColor: t.accent) : null,
-      onPressed: onTap,
-    );
-    final pen = c.tool == InkTool.pen;
-    final colors = pen ? penColors : markerColors;
-    final picked = pen ? c.penColor : c.markerColor;
-    final thick = pen ? c.penWidth : c.markerWidth;
-    final inking = c.tool != InkTool.eraser;
-    return Container(
-      key: const Key('inkStrip'),
-      height: 52,
-      decoration: BoxDecoration(
-        color: t.panel,
-        border: Border(bottom: BorderSide(color: t.rule)),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Row(
-          children: [
-            tool(Icons.edit_rounded, 'Pen', InkTool.pen),
-            tool(Icons.border_color_rounded, 'Highlighter', InkTool.marker),
-            tool(Icons.auto_fix_normal_rounded, 'Eraser', InkTool.eraser),
-            if (inking) ...[
-              const SizedBox(width: 6),
-              for (final (i, col) in colors.indexed)
-                GestureDetector(
-                  key: Key('ink_color_$i'),
-                  onTap: () => c.setTool(color: i),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    alignment: Alignment.center,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: col,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: i == picked ? t.accent : t.rule, width: i == picked ? 3 : 1),
-                      ),
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 6),
-              for (var i = 0; i < 3; i++)
-                GestureDetector(
-                  key: Key('ink_width_$i'),
-                  onTap: () => c.setTool(width: i),
-                  child: Container(
-                    width: 36,
-                    height: 40,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(color: i == thick ? t.accentSoft : null, borderRadius: BorderRadius.circular(8)),
-                    child: Container(
-                      width: 6.0 + i * 5,
-                      height: pen ? 2.0 + i * 2 : 5.0 + i * 3,
-                      decoration: BoxDecoration(color: t.ink2, borderRadius: BorderRadius.circular(4)),
-                    ),
-                  ),
-                ),
-            ],
-            const SizedBox(width: 10),
-            SizedBox(height: 28, child: VerticalDivider(width: 1, color: t.rule)),
-            action(Icons.undo_rounded, 'Undo', c.canUndo ? c.undo : null),
-            action(Icons.redo_rounded, 'Redo', c.canRedo ? c.redo : null),
-            action(Icons.layers_clear_rounded, 'Clear this page’s markup', _confirmClear),
-            action(
-              Icons.touch_app_rounded,
-              c.finger ? 'Draw with Pencil only' : 'Draw with a finger too',
-              () => c.setMarkup(finger: !c.finger),
-              on: c.finger,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Clearing can be undone (Undo), so one tap is enough.
-  void _confirmClear() {
-    c.clearPage();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Cleared this page’s markup'),
-        action: SnackBarAction(label: 'Undo', onPressed: c.undo),
-        duration: const Duration(seconds: 4),
-      ),
-    );
+  /// Apple's own markup (PencilKit, its tool palette, continuous scroll) opens full screen on the page being read;
+  /// every drawing is saved into the project as it settles, and the view shows the result when it closes.
+  Future<void> _markUp() async {
+    final m = _markup;
+    if (m == null) return;
+    final dark = Tokens.of(context).dark;
+    await PdfService.markUp(path: widget.pdfPath, page: c.page - 1, drawings: m.drawings, dark: dark, onSave: (page, data) => m.set(page, data));
+    c.drawings = m.drawings;
   }
 
   /// The script's search is running: how many times the PDF has the same words, with its own previous / next.
